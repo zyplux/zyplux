@@ -1,0 +1,52 @@
+# apt.toml — declarative config for apt_runner.py
+#
+# Edit this file to add/remove third-party apt repos and packages,
+# then re-run apt_runner.py to apply changes.
+
+# Packages installed at the end of the run (apt install -y).
+# Pin a version with apt's native name=version syntax: "ghostty=1.3.0~us1-0ubuntu1".
+packages = [
+    "brave-browser",
+    "zed",
+    "ghostty",
+    "code-insiders",
+]
+
+# Ubuntu archive suites upranked above third-party repos.
+# {release} is interpolated at runtime (e.g. resolute, questing).
+[ubuntu_pin]
+priority = 900
+suites = ["{release}", "{release}-updates", "{release}-security"]
+
+# Third-party apt repositories. Each [[repo]] becomes a .sources file
+# (and an installed signing key) configured with Signed-By: for per-repo
+# trust isolation.
+#
+# Required:
+#   name      short label; also the default basename for keyring + source_path
+#   key_url   URL to fetch the signing key from (.asc or binary; the runner
+#             auto-detects the format and dearmors if needed)
+#   uris      the repo's base URL (URIs field)
+#
+# Optional (defaults shown):
+#   suites         "stable"   — {release} is interpolated at runtime
+#   components     "main"
+#   architectures  unset      — apt uses the host's dpkg architecture(s)
+#   keyring        /usr/share/keyrings/{name}.gpg
+#   source_path    /etc/apt/sources.list.d/{name}.sources
+
+[[repo]]
+name = "debian.griffo.io"
+key_url = "https://debian.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc"
+uris = "https://debian.griffo.io/apt"
+suites = "{release}"
+
+[[repo]]
+name = "brave-browser"
+key_url = "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg"
+uris = "https://brave-browser-apt-release.s3.brave.com"
+
+[[repo]]
+name = "vscode"
+key_url = "https://packages.microsoft.com/keys/microsoft.asc"
+uris = "https://packages.microsoft.com/repos/code"
