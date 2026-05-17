@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"Override Brave Sync\\\\|^Disabled$\\\\|^Enabled$\\\\|^Default$\" brave-flags-default-dump.txt)"
+    ]
+  }
+}

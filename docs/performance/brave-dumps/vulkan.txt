@@ -1,0 +1,2 @@
+#enable-vulkan
+#force-enable-webgpu-interop

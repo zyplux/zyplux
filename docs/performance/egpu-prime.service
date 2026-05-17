@@ -1,0 +1,16 @@
+[Unit]
+Description=Auto-select PRIME mode based on eGPU presence
+ConditionPathExists=/usr/bin/prime-select
+After=local-fs.target systemd-modules-load.service bolt.service
+Wants=bolt.service
+Before=display-manager.service sddm.service gdm.service lightdm.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/egpu-prime-switch
+TimeoutStartSec=90
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

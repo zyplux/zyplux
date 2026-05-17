@@ -1,0 +1,59 @@
+#!/bin/bash
+# egpu-prime-switch
+#
+# At boot, picks `prime-select nvidia` when an NVIDIA discrete GPU is
+# visible on the PCI bus (i.e. the eGPU is connected and authorized) and
+# `prime-select on-demand` otherwise. Designed to run once, early, before
+# the display manager starts.
+#
+# Logs to the system journal under the tag "egpu-prime".
+
+set -u
+TAG=egpu-prime
+
+log() { logger -t "$TAG" -- "$*"; echo "$TAG: $*" >&2; }
+
+# Thunderbolt authorization sometimes lags PID 1. Give it a few seconds.
+NVIDIA_PRESENT=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if lspci -nn -d 10de: 2>/dev/null | grep -qE '\[0300\]|\[0302\]'; then
+        NVIDIA_PRESENT=1
+        break
+    fi
+    sleep 1
+done
+
+if [ "$NVIDIA_PRESENT" -eq 1 ]; then
+    WANT=nvidia
+else
+    WANT=on-demand
+fi
+
+if ! command -v prime-select >/dev/null 2>&1; then
+    log "prime-select not found; nothing to do"
+    exit 0
+fi
+
+CURRENT=$(prime-select query 2>/dev/null || echo unknown)
+log "eGPU detected=$NVIDIA_PRESENT current=$CURRENT desired=$WANT"
+
+if [ "$CURRENT" = "$WANT" ]; then
+    log "no change needed"
+    exit 0
+fi
+
+# `prime-select nvidia` will refuse if the nvidia driver package isn't
+# installed; just surface that and fall back to on-demand so login still works.
+if ! prime-select "$WANT" >/tmp/egpu-prime.out 2>&1; then
+    log "prime-select $WANT failed: $(tr '\n' '|' </tmp/egpu-prime.out)"
+    if [ "$WANT" = "nvidia" ] && [ "$CURRENT" != "on-demand" ]; then
+        log "falling back to on-demand"
+        prime-select on-demand >>/tmp/egpu-prime.out 2>&1 || true
+    fi
+    rm -f /tmp/egpu-prime.out
+    exit 1
+fi
+
+rm -f /tmp/egpu-prime.out
+log "switched to $WANT"
+exit 0

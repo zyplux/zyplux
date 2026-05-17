@@ -1,0 +1,4827 @@
+[
+  {
+    "title": "V8 Jitless mode",
+    "id": "brave-v8-jitless-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable V8 jitless mode when optimizations are disabled. V8 runs in jitless mode which reduces performance but improves security. This does not affect all pages."
+  },
+  {
+    "title": "Use dev updater url",
+    "id": "use-dev-updater-url",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use the dev url for the component updater. This is for internal testing only."
+  },
+  {
+    "title": "Brave Search Widget on the NTP",
+    "id": "brave-ntp-search-widget",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables searching directly from the New Tab Page"
+  },
+  {
+    "title": "Use filled bookmark folder icon",
+    "id": "brave-filled-bookmark-folder-icon",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Uses the legacy filled bookmark folder icon instead of the default outlined icon"
+  },
+  {
+    "title": "New Tab Page refresh",
+    "id": "brave-ntp-refresh-enabled",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the refreshed version of the New Tab Page"
+  },
+  {
+    "title": "Enable CNAME uncloaking",
+    "id": "brave-adblock-cname-uncloaking",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Take DNS CNAME records into account when making network request blocking decisions."
+  },
+  {
+    "title": "Collapse HTML elements with blocked source attributes",
+    "id": "brave-adblock-collapse-blocked-elements",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Cause iframe and img elements to be collapsed if the URL of their src attribute is blocked"
+  },
+  {
+    "title": "Treat 'Easylist-Cookie List' as a default list source",
+    "id": "brave-adblock-cookie-list-default",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the 'Easylist-Cookie List' regional list if its toggle in brave://adblock hasn't otherwise been modified"
+  },
+  {
+    "title": "Enable cosmetic filtering",
+    "id": "brave-adblock-cosmetic-filtering",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable support for cosmetic filtering"
+  },
+  {
+    "title": "Enable support for CSP rules",
+    "id": "brave-adblock-csp-rules",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Applies additional CSP rules to pages for which a $csp rule has been loaded from a filter list"
+  },
+  {
+    "title": "Shields first-party network blocking",
+    "id": "brave-adblock-default-1p-blocking",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allow Brave Shields to block first-party network requests in Standard blocking mode"
+  },
+  {
+    "title": "Treat 'Fanboy's Mobile Notifications List' as a default list source",
+    "id": "brave-adblock-mobile-notifications-list-default",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the 'Fanboy's Mobile Notifications List' regional list if its toggle in brave://adblock hasn't otherwise been modified"
+  },
+  {
+    "title": "Enable procedural filtering",
+    "id": "brave-adblock-procedural-filtering",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable support for procedural cosmetic filtering"
+  },
+  {
+    "title": "Treat 'Brave Experimental Adblock Rules' as a default list source",
+    "id": "brave-adblock-experimental-list-default",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the 'Brave Experimental Adblock Rules' regional list if its toggle in brave://adblock hasn't otherwise been modified"
+  },
+  {
+    "title": "Enable debug logging for scriptlet injections",
+    "id": "brave-adblock-scriptlet-debug-logs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable console debugging for scriptlets injected by cosmetic filtering, exposing additional information that can be useful for filter authors."
+  },
+  {
+    "title": "Show hidden adblock filter list components",
+    "id": "brave-adblock-show-hidden-components",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Reveals adblock filter list components in brave://settings/shields/filters that would normally be hidden."
+  },
+  {
+    "title": "Enable dark mode blocking fingerprinting protection",
+    "id": "brave-dark-mode-block",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Always report light mode when fingerprinting protections set to Strict"
+  },
+  {
+    "title": "Enable domain blocking",
+    "id": "brave-domain-block",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable support for blocking domains with an interstitial page"
+  },
+  {
+    "title": "Enable domain blocking using First Party Ephemeral Storage",
+    "id": "brave-domain-block-1pes",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When visiting a blocked domain, Brave will try to enable Ephemeral Storage for a first party context, meaning neither cookies nor localStorage data will be persisted after a website is closed. Ephemeral Storage will be auto-enabled only if no data was previously stored for a website"
+  },
+  {
+    "title": "Enable debouncing",
+    "id": "brave-debounce",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable support for skipping top-level redirect tracking URLs"
+  },
+  {
+    "title": "Enable De-AMP",
+    "id": "brave-de-amp",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable De-AMPing feature"
+  },
+  {
+    "title": "Enable Google Sign-In Permission Prompt",
+    "id": "brave-google-sign-in-permission",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable permissioning access to legacy Google Sign-In"
+  },
+  {
+    "title": "Enable extension network blocking",
+    "id": "brave-extension-network-blocking",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable blocking for network requests initiated by extensions"
+  },
+  {
+    "title": "Reduce language identifiability",
+    "id": "brave-reduce-language",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Reduce the identifiability of my language preferences"
+  },
+  {
+    "title": "Enable sync loading of cosmetic filter rules",
+    "id": "brave-cosmetic-filtering-sync-load",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable sync loading of cosmetic filter rules"
+  },
+  {
+    "title": "'Block all cookies' option in Shields global defaults",
+    "id": "block-all-cookies-toggle",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows the 'Block all cookies' toggle in Shields global defaults. This global setting prevents all websites from storing cookies on your device, but is also very likely to lead to site breakage."
+  },
+  {
+    "title": "Enable Block Element feature",
+    "id": "block-element-feature",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allows to block selected HTML element on the page"
+  },
+  {
+    "title": "Enable Brave Farbling",
+    "id": "brave-farbling",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables randomization of fingerprinting-susceptible WebAPIs"
+  },
+  {
+    "title": "Enable Provisional TLDEphemeralLifetime",
+    "id": "brave-provisional-tld-ephemeral-lifetime",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Cleanup third party cookies set during redirects"
+  },
+  {
+    "title": "Enable Ephemeral Storage",
+    "id": "brave-ephemeral-storage",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Use ephemeral storage for third-party frames"
+  },
+  {
+    "title": "Ephemeral Storage Keep Alive",
+    "id": "brave-ephemeral-storage-keep-alive",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Keep ephemeral storage partitions alive for a specified time after all tabs for that origin are closed"
+  },
+  {
+    "title": "Enable First Party Ephemeral Storage",
+    "id": "brave-first-party-ephemeral-storage",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable support for First Party Ephemeral Storage using SESSION_ONLY cookie setting"
+  },
+  {
+    "title": "Enable First Party Storage Cleanup support",
+    "id": "brave-forget-first-party-storage",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Add cookie blocking mode which allows Brave to cleanup first party storage (Cookies, DOM Storage) on website close"
+  },
+  {
+    "title": "Enable Brave Rewards verbose logging",
+    "id": "brave-rewards-verbose-logging",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables detailed logging of Brave Rewards system events to a log file stored on your device. Please note that this log file could include information such as browsing history and credentials such as passwords and access tokens depending on your activity. Please do not share it unless asked to by Brave staff."
+  },
+  {
+    "title": "Always show Brave Rewards custodial connection options",
+    "id": "brave-rewards-allow-unsupported-wallet-providers",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows all custodial options to be selected in Brave Rewards, including those not supported for your Rewards country."
+  },
+  {
+    "title": "Enable Brave Rewards self-custody connection options",
+    "id": "brave-rewards-allow-self-custody-providers",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables self-custody options to be selected in Brave Rewards."
+  },
+  {
+    "title": "Show an animated background on the Rewards UI",
+    "id": "brave-rewards-animated-background",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows an animated background on the Rewards panel and page."
+  },
+  {
+    "title": "Detect Brave Creators on media platform sites",
+    "id": "brave-rewards-platform-creator-detection",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables detection of Brave Creator pages on media platform sites."
+  },
+  {
+    "title": "File System Access API",
+    "id": "file-system-access-api",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the File System Access API, giving websites access to the file system"
+  },
+  {
+    "title": "Web Bluetooth API",
+    "id": "brave-web-bluetooth-api",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Web Bluetooth API, giving websites access to Bluetooth devices"
+  },
+  {
+    "title": "Enable navigator.connection attribute",
+    "id": "navigator-connection-attribute",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the navigator.connection API. Enabling this API will allow sites to learn information about your network and internet connection. Trackers can use this information to fingerprint your browser, or to infer when you are traveling or at home."
+  },
+  {
+    "title": "Restrict WebSockets pool",
+    "id": "restrict-websockets-pool",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Limits simultaneous active WebSockets connections per eTLD+1"
+  },
+  {
+    "title": "Allow permission inheritance in incognito profiles",
+    "id": "allow-incognito-permission-inheritance",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, most permissions set in a normal profile will be inherited in incognito profile if they are less permissive, for ex. Geolocation BLOCK will be automatically set to BLOCK in incognito."
+  },
+  {
+    "title": "Block screen fingerprinting",
+    "id": "brave-block-screen-fingerprinting",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Prevents JavaScript and CSS from learning the user's screen dimensions or window position."
+  },
+  {
+    "title": "Use HTTPS-Only Mode in Private Windows with Tor",
+    "id": "brave-tor-windows-https-only",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Prevents Private Windows with Tor from making any insecure HTTP connections without warning the user first."
+  },
+  {
+    "title": "Round time stamps",
+    "id": "brave-round-time-stamps",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Prevents JavaScript from getting access to high-resolution clocks by rounding all DOMHighResTimeStamps to the nearest millisecond."
+  },
+  {
+    "title": "Restrict Event Source Pool",
+    "id": "restrict-event-source-pool",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Limits simultaneous active WebSockets connections per eTLD+1"
+  },
+  {
+    "title": "Override default copy hotkey with copy clean link",
+    "id": "brave-copy-clean-link-by-default",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Sanitize url before copying, replaces default ctrl+c hotkey for url"
+  },
+  {
+    "title": "Sanitize URLs in the clipboard",
+    "id": "brave-clean-link-js-api",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Sanitize URLs in the clipboard when they are added via the JS API (share/copy buttons)."
+  },
+  {
+    "title": "Enable Global Privacy Control",
+    "id": "brave-global-privacy-control-enabled",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable the Sec-GPC request header and the navigator.globalPrivacyControl JS API"
+  },
+  {
+    "title": "Use HTTPS by Default",
+    "id": "https-by-default",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Attempt to connect to all websites using HTTPS before falling back to HTTP."
+  },
+  {
+    "title": "Use a fallback DoH provider",
+    "id": "fallback-dns-over-https",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "In Automatic DoH mode, use a fallback DoH provider if the current provider doesn't offer Secure DNS."
+  },
+  {
+    "title": "Show Strict Fingerprinting Mode",
+    "id": "brave-show-strict-fingerprinting-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Show Strict (aggressive) option for Fingerprinting Mode in Brave Shields"
+  },
+  {
+    "title": "Override download danger level",
+    "id": "brave-override-download-danger-level",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Disables download warnings for files which are considered dangerous when Safe Browsing is disabled. Use at your own risks. Not recommended."
+  },
+  {
+    "title": "Allow feature exceptions for webcompat",
+    "id": "brave-webcompat-exceptions-service",
+    "type": "feature",
+    "default": "Enabled*",
+    "description": "Disables Brave features for specific websites when they break website functionality."
+  },
+  {
+    "title": "Use rounded corners on main content areas by default",
+    "id": "brave-rounded-corners-by-default",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Renders the main content area and sidebar panel with rounded corners, padding, and a drop shadow by default"
+  },
+  {
+    "title": "Override Brave Sync server URL",
+    "id": "brave-override-sync-server-url",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Allows you to use a self-hosted server with Brave Sync. You can learn more about the server implementation in the repository link mentioned below. Note: Only HTTPS URLs are supported by default. HTTP URLs are only allowed for potentially trustworthy origins like localhost.Insecure URLs that don't meet these requirements will be ignoredin favor of the official Brave-hosted server",
+    "references": [
+      "https://github.com/brave/go-sync"
+    ]
+  },
+  {
+    "title": "Enable Adblock-Only Mode",
+    "id": "brave-ad-block-only-mode",
+    "type": "feature",
+    "default": "Enabled*",
+    "description": "Adblock-Only mode retains core ad blocking rules of Brave Shields. Warning: removes all privacy protections. Please note that for individual websites broken by Brave's privacy protections, you can set Shields to DOWN. This is an experimental mode."
+  },
+  {
+    "title": "Show updated shields panel",
+    "id": "brave-show-updated-shields-panel",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Shows an updated WebUI for the Brave Shields panel."
+  },
+  {
+    "title": "Enable password syncing by default",
+    "id": "brave-sync-default-passwords",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Turn on password syncing when Sync is enabled."
+  },
+  {
+    "title": "Enable Brave 'Shred' Feature",
+    "id": "brave-shred",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable the Brave 'Shred' feature which will allow a user to easily delete all site data on demand or automatically when closing a site or terminating the application."
+  },
+  {
+    "title": "BraveRequestInfo unique_ptr",
+    "id": "brave-request-info-unique-ptr",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable experimental use of unique_ptr/WeakPtr instead of shared_ptrfor BraveRequestInfo"
+  },
+  {
+    "title": "Enable Email Aliases",
+    "id": "brave-email-aliases",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Email Aliases to create unique, private addresses that forward to your primary inbox. This allows you to sign up for services anonymously and keep your main account free from spam."
+  },
+  {
+    "title": "Enable BraveWallet ZCash support",
+    "id": "brave-wallet-zcash",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Zcash support for native Brave Wallet"
+  },
+  {
+    "title": "Enable Brave Wallet Bitcoin support",
+    "id": "brave-wallet-bitcoin",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Bitcoin support for native Brave Wallet"
+  },
+  {
+    "title": "Enable Brave Wallet Cardano support",
+    "id": "brave-wallet-cardano",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Cardano support for native Brave Wallet"
+  },
+  {
+    "title": "Enable Ankr balances",
+    "id": "brave-wallet-enable-ankr-balances",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable usage of Ankr Advanced API for fetching balances in Brave Wallet"
+  },
+  {
+    "title": "Enable transaction simulations",
+    "id": "brave-wallet-enable-transaction-simulations",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable usage of Blowfish API for running transaction simulations in Brave Wallet"
+  },
+  {
+    "title": "Brave News prompts on New Tab Page",
+    "id": "brave-news-peek",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Prompt Brave News via the top featured article peeking up from the bottom of the New Tab Page, after a short delay."
+  },
+  {
+    "title": "Brave News Feed Update",
+    "id": "brave-news-feed-update",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Use the updated Brave News feed"
+  },
+  {
+    "title": "Enable Gemini for Brave Rewards",
+    "id": "brave-rewards-gemini",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables support for Gemini as an external wallet provider for Brave"
+  },
+  {
+    "title": "Enable SpeedReader",
+    "id": "brave-speedreader",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables faster loading of simplified article-style web pages."
+  },
+  {
+    "title": "Enable Request-OTR Tab",
+    "id": "brave-request-otr-tab",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Suggest going off-the-record when visiting potentially sensitive URLs"
+  },
+  {
+    "title": "Playlist",
+    "id": "playlist",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Playlist"
+  },
+  {
+    "title": "PlaylistFakeUA",
+    "id": "playlist-fake-ua",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use fake UA for playlist"
+  },
+  {
+    "title": "Brave Commands",
+    "id": "brave-commands",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable experimental page for viewing and executing commands in Brave"
+  },
+  {
+    "title": "Brave Commands in Omnibox",
+    "id": "brave-commands-omnibox",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable quick commands in the omnibox"
+  },
+  {
+    "title": "Enable Containers",
+    "id": "containers",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows websites to be opened in contained tabs, keeping different identities separate within the same browser profile"
+  },
+  {
+    "title": "Change active tab on scroll event",
+    "id": "brave-change-active-tab-on-scroll-event",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Change the active tab when scroll events occur on tab strip."
+  },
+  {
+    "title": "Shared pinned tab",
+    "id": "brave-shared-pinned-tabs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Pinned tabs are shared across windows"
+  },
+  {
+    "title": "Updated horizontal tabs design",
+    "id": "brave-horizontal-tabs-update",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Updates the look and feel or horizontal tabs"
+  },
+  {
+    "title": "Compact horizontal tabs design",
+    "id": "brave-compact-horizontal-tabs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Reduces the height of horizontal tabs"
+  },
+  {
+    "title": "Show scroll bar on vertical tab strip",
+    "id": "brave-vertical-tab-scroll-bar",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows scroll bar on vertical tab strip when it overflows"
+  },
+  {
+    "title": "Brave Vertical Tab Hide Completely",
+    "id": "brave-vertical-tab-hide-completely",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Hides the vertical tab strip when collapsed"
+  },
+  {
+    "title": "Brave Vertical Tab Expand Delay",
+    "id": "brave-vertical-tab-expand-delay",
+    "type": "choice",
+    "default": "default",
+    "description": "Delay before expanding the vertical tab strip when hovering"
+  },
+  {
+    "title": "Brave Vertical Tab Collapse Delay",
+    "id": "brave-vertical-tab-collapse-delay",
+    "type": "choice",
+    "default": "default",
+    "description": "Delay before collapsing the vertical tab strip when mouse exits"
+  },
+  {
+    "title": "Brave Tree Tab",
+    "id": "brave-tree-tab",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Tree Tab feature"
+  },
+  {
+    "title": "Scrollable horizontal tab strip",
+    "id": "brave-scrollable-tab-strip",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables scrolling for horizontal tab strip when tabs overflow"
+  },
+  {
+    "title": "Brave Ultra Dark Theme",
+    "id": "brave-ultra-dark-theme",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the Brave Ultra Dark theme"
+  },
+  {
+    "title": "Show Brave Shields in Page Info",
+    "id": "brave-shields-page-info",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows Brave Shields settings in the Page Info bubble"
+  },
+  {
+    "title": "Brave AI Chat",
+    "id": "brave-ai-chat",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Summarize articles and engage in conversation with AI"
+  },
+  {
+    "title": "Brave AI Chat First",
+    "id": "brave-ai-first",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Prioritize Leo vs Search within Brave"
+  },
+  {
+    "title": "Brave AI Chat History",
+    "id": "brave-ai-chat-history",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables AI Chat History persistence and management"
+  },
+  {
+    "title": "Brave AI Chat Global Side Panel",
+    "id": "brave-ai-chat-global-side-panel",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Keeps the same conversation when navigating sites or changing active tab"
+  },
+  {
+    "title": "Brave AI Chat Rich Search Widgets",
+    "id": "brave-ai-chat-rich-search-widgets",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables AI Chat Rich Search Widgets"
+  },
+  {
+    "title": "Brave AI Chat User Choice Tool",
+    "id": "brave-ai-chat-user-choice-tool",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "AI can offer a multiple choice question to the user during a conversation."
+  },
+  {
+    "title": "Brave's AI browsing",
+    "id": "brave-ai-chat-agent-profile",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Ai browsing features and only in a separate built-in profile."
+  },
+  {
+    "title": "Brave AI Host-Specific Distillation",
+    "id": "brave-ai-host-specific-distillation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables support for host-specific distillation scripts"
+  },
+  {
+    "title": "Brave AI Chat Rewrite In Place From Context Menu",
+    "id": "brave-ai-chat-context-menu-rewrite-in-place",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables AI Chat rewrite in place feature from the context menu"
+  },
+  {
+    "title": "Private IP Addresses for Custom Model Endpoints",
+    "id": "brave-ai-chat-allow-private-ips",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Permits the use of private IP addresses as model endpoint URLs"
+  },
+  {
+    "title": "Open Leo AI Chat from Brave Search",
+    "id": "brave-ai-chat-open-leo-from-brave-search",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables opening Leo AI Chat from Brave Search"
+  },
+  {
+    "title": "Brave AI Chat Web Content Association Default",
+    "id": "brave-ai-chat-web-content-association-default",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "For AI Chat Conversations which are associated with web content, allow the toggle for sending page content to be set to enabled when the conversation is created."
+  },
+  {
+    "title": "Brave AI Chat Conversation API V2",
+    "id": "brave-ai-chat-conversation-api-v2",
+    "type": "feature",
+    "default": "Enabled*",
+    "description": "Enables Conversation API V2 for AI Chat"
+  },
+  {
+    "title": "Show AI Chat input on the New Tab Page",
+    "id": "brave-ai-chat-show-input-on-new-tab-page",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Show a Brave AI chat input on the New Tab Page."
+  },
+  {
+    "title": "Brave AI Chat Tab Management Tool",
+    "id": "brave-ai-chat-tab-management-tool",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "AI can offer to sort, group, or close tabs to solve a user task during a conversation."
+  },
+  {
+    "title": "Enable Brave Ads custom push notifications",
+    "id": "brave-ads-custom-push-notifications-ads",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Brave Ads custom push notifications to support rich media"
+  },
+  {
+    "title": "Allow Brave Ads to fallback from native to custom push notifications",
+    "id": "brave-ads-allowed-to-fallback-to-custom-push-notification-ads",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allow Brave Ads to fallback from native to custom push notifications on operating systems which do not support native notifications"
+  },
+  {
+    "title": "Brave Local AI Models",
+    "id": "brave-local-ai-models",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables local AI models to be downloaded"
+  },
+  {
+    "title": "Brave Tab Switch by Default",
+    "id": "brave-omnibox-tab-switch-by-default",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Prefer switching to already open tabs, rather than navigating in a new tab"
+  },
+  {
+    "title": "Brave More History",
+    "id": "brave-history-more-search-results",
+    "type": "feature",
+    "default": "Enabled*",
+    "description": "Include more history in the omnibox search results"
+  },
+  {
+    "title": "Middle button autoscroll",
+    "id": "middle-button-autoscroll",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables autoscrolling when the middle mouse button is clicked"
+  },
+  {
+    "title": "Force context menu on Shift + Right Click on elements in pages",
+    "id": "force-context-menu-on-shift-right-click",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Always show the context menu when Shift + Right Click is used, even if a web page is preventing it."
+  },
+  {
+    "title": "Brave Extensions manifest V2",
+    "id": "brave-extensions-manifest-v2",
+    "type": "feature",
+    "default": "Enabled*",
+    "description": "Enables Brave support for some manifest V2 extensions"
+  },
+  {
+    "title": "Show getting started pages",
+    "id": "brave-show-getting-started-page",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Show a getting started page after completing the Welcome UX."
+  },
+  {
+    "title": "Enable PSST (Privacy Site Settings Tool) feature",
+    "id": "enable-psst",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable PSST feature"
+  },
+  {
+    "title": "Force popups to be opened as tab",
+    "id": "force-popup-to-be-opened-as-tab",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Forces all popup windows to be opened in a new tab instead."
+  },
+  {
+    "title": "Temporarily unexpire M146 flags.",
+    "id": "temporary-unexpire-flags-m146",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Temporarily unexpire flags that expired as of M146. These flags will be removed soon."
+  },
+  {
+    "title": "Temporarily unexpire M147 flags.",
+    "id": "temporary-unexpire-flags-m147",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Temporarily unexpire flags that expired as of M147. These flags will be removed soon."
+  },
+  {
+    "title": "Enable benchmarking",
+    "id": "enable-benchmarking",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Sets all features to a fixed state; that is, disables randomization for feature states. If '(Default Feature States)' is selected, sets all features to their default state. If '(Match Field Trial Testing Config)' is selected, sets all features to the state configured in the field trial testing config. This is used by developers and testers to diagnose whether an observed problem is caused by a non-default base::Feature configuration. This flag is automatically reset after 3 restarts and will be off from the 4th restart. On the 3rd restart, the flag will appear to be off but the effect is still active."
+  },
+  {
+    "title": "Override software rendering list",
+    "id": "ignore-gpu-blocklist",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Overrides the built-in software rendering list and enables GPU-acceleration on unsupported system configurations."
+  },
+  {
+    "title": "Accelerated 2D canvas",
+    "id": "disable-accelerated-2d-canvas",
+    "type": "switch",
+    "default": "Enabled",
+    "description": "Enables the use of the GPU to perform 2d canvas rendering instead of using software rendering."
+  },
+  {
+    "title": "Select HW overlay strategies",
+    "id": "overlay-strategies",
+    "type": "choice",
+    "default": "Default",
+    "description": "Select strategies used to promote quads to HW overlays. Note that strategies other than Default may break playback of protected content."
+  },
+  {
+    "title": "Tint composited content",
+    "id": "tint-composited-content",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Tint contents composited using Viz with a shade of red to help debug and study overlay support."
+  },
+  {
+    "title": "Show overdraw feedback",
+    "id": "show-overdraw-feedback",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Visualize overdraw by color-coding elements based on if they have other elements drawn underneath."
+  },
+  {
+    "title": "Partial swap",
+    "id": "ui-disable-partial-swap",
+    "type": "switch",
+    "default": "Enabled",
+    "description": "Sets partial swap behavior."
+  },
+  {
+    "title": "WebRTC PQC for DTLS",
+    "id": "webrtc-pqc-for-dtls",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Support in WebRTC to enable PQC for DTLS"
+  },
+  {
+    "title": "Allow WebRTC to adjust the input volume.",
+    "id": "enable-webrtc-allow-input-volume-adjustment",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allow the Audio Processing Module in WebRTC to adjust the input volume during a real-time call. Disable if microphone muting or clipping issues are observed when the browser is running and used for a real-time call. This flag is experimental and may be removed at any time."
+  },
+  {
+    "title": "WebRTC downmix capture audio method.",
+    "id": "enable-webrtc-apm-downmix-capture-audio-method",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Override the method that the Audio Processing Module in WebRTC uses to downmix the captured audio to mono (when needed) during a real-time call. This flag is experimental and may be removed at any time."
+  },
+  {
+    "title": "Anonymize local IPs exposed by WebRTC.",
+    "id": "enable-webrtc-hide-local-ips-with-mdns",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Conceal local IP addresses with mDNS hostnames."
+  },
+  {
+    "title": "PipeWire Camera support",
+    "id": "enable-webrtc-pipewire-camera",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled the PipeWire multimedia server will be used for cameras."
+  },
+  {
+    "title": "Web HID in WebView",
+    "id": "web-hid-in-web-view",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable WebViews to access Web HID upon embedder's permission."
+  },
+  {
+    "title": "Extensions on chrome:// URLs",
+    "id": "extensions-on-chrome-urls",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables running extensions on chrome:// URLs, where extensions explicitly request this permission."
+  },
+  {
+    "title": "Extensions on chrome-extension:// URLs",
+    "id": "extensions-on-extension-urls",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables running extensions on chrome-extension:// URLs, where extensions explicitly request this permission."
+  },
+  {
+    "title": "Extension Telemetry Enterprise Short Reporting Interval",
+    "id": "extension-telemetry-enterprise-short-reporting-interval",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, reduces the extension telemetry service's enterprise telemetry reporting interval to 30 seconds."
+  },
+  {
+    "title": "Optimize WebRequest proxying",
+    "id": "optimize-web-request-proxy",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables optimization for WebRequest proxying by skipping unnecessary proxy evaluations when possible."
+  },
+  {
+    "title": "Enable SecurityInfo in WebRequest API",
+    "id": "web-request-security-info",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables SecurityInfo in WebRequest API for extensions, allowing listeners to retrieve certificate details of web requests."
+  },
+  {
+    "title": "Show Autofill predictions",
+    "id": "show-autofill-type-predictions",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Annotates web forms with Autofill field type predictions as placeholder text."
+  },
+  {
+    "title": "Smooth Scrolling",
+    "id": "smooth-scrolling",
+    "type": "choice",
+    "default": "Default",
+    "description": "Animate smoothly when scrolling page content."
+  },
+  {
+    "title": "Overlay Scrollbars",
+    "id": "overlay-scrollbars",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adjust scrollbar style to overlay web content and fade out."
+  },
+  {
+    "title": "Flash Overlay Scrollbars When Mouse Enter",
+    "id": "overlay-scrollbars-flash-when-mouse-enter",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Flash Overlay Scrollbars When Mouse Enter a scrollable area. You must also enable Overlay Scrollbars."
+  },
+  {
+    "title": "Flash Overlay Scrollbars Once When Visible",
+    "id": "overlay-scrollbars-flash-once-visible-on-viewport",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Flash Overlay Scrollbars only once per scrollbar and when they become visible on the viewport. You must also enable Overlay Scrollbars."
+  },
+  {
+    "title": "Enable JXL image format",
+    "id": "enable-jxl-image-format",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds image/jxl to the Accept header and enables decoding of JPEG XL (JXL) images."
+  },
+  {
+    "title": "Rust-based BMP image handling",
+    "id": "enable-rusty-bmp",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, uses Rust `image` crate to decode BMP images."
+  },
+  {
+    "title": "Enable split view link opening shortcut",
+    "id": "split-view-link-open",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, adds a Ctrl+Alt+Click (Cmd+Alt+Click on macOS) shortcut to open a link in split view alongside the current tab."
+  },
+  {
+    "title": "Soft Navigation Heuristics",
+    "id": "soft-navigation-heuristics",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the soft navigation heuristics, including support for PerformanceObserver. See the documentation at https://developer.chrome.com/docs/web-platform/soft-navigations-experiment."
+  },
+  {
+    "title": "Experimental QUIC protocol",
+    "id": "enable-quic",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enable experimental QUIC protocol support."
+  },
+  {
+    "title": "WebTransport Developer Mode",
+    "id": "webtransport-developer-mode",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "When enabled, removes the requirement that all certificates used for WebTransport over HTTP/3 are issued by a known certificate root."
+  },
+  {
+    "title": "Structured DNS Errors",
+    "id": "structured-dns-errors",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, signals support for Structured DNS Errors when sending DNS requests, renders Extended DNS Error codes on the net error page when applicable, and interprets filtering details provided via draft-nottingham-public-resolver-errors-02"
+  },
+  {
+    "title": "Latest stable JavaScript features",
+    "id": "disable-javascript-harmony-shipping",
+    "type": "switch",
+    "default": "Enabled",
+    "description": "Some web pages use legacy or non-standard JavaScript extensions that may conflict with the latest JavaScript features. This flag allows disabling support of those features for compatibility with such pages."
+  },
+  {
+    "title": "Experimental JavaScript",
+    "id": "enable-javascript-harmony",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enable web pages to use experimental JavaScript features."
+  },
+  {
+    "title": "Experimental WebAssembly",
+    "id": "enable-experimental-webassembly-features",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enable web pages to use experimental WebAssembly features."
+  },
+  {
+    "title": "Experimental WebAssembly Shared-Everything Threads",
+    "id": "enable-experimental-webassembly-shared-everything",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable web pages to use the experimental WebAssembly Shared-Everything Threads feature. Note that this only covers a subset of the proposal."
+  },
+  {
+    "title": "WebAssembly stack switching",
+    "id": "enable-experimental-webassembly-stack-switching",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables WasmFX."
+  },
+  {
+    "title": "WebAssembly baseline compiler",
+    "id": "enable-webassembly-baseline",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables WebAssembly baseline compilation and tier up."
+  },
+  {
+    "title": "WebAssembly lazy compilation",
+    "id": "enable-webassembly-lazy-compilation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables lazy (JIT on first call) compilation of WebAssembly modules."
+  },
+  {
+    "title": "WebAssembly tiering",
+    "id": "enable-webassembly-tiering",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables tiered compilation of WebAssembly (will tier up to TurboFan if #enable-webassembly-baseline is enabled)."
+  },
+  {
+    "title": "Future V8 VM features",
+    "id": "enable-future-v8-vm-features",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "This enables upcoming and experimental V8 VM features. This flag does not enable experimental JavaScript features."
+  },
+  {
+    "title": "GPU rasterization",
+    "id": "enable-gpu-rasterization",
+    "type": "choice",
+    "default": "Default",
+    "description": "Use GPU to rasterize web content."
+  },
+  {
+    "title": "Fallback to software if GLES3 is not supported",
+    "id": "fallback-to-sw-if-gles3-not-supported",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Controls whether the GPU process falls back to software if GLES3 is not supported."
+  },
+  {
+    "title": "Experimental Web Platform features",
+    "id": "enable-experimental-web-platform-features",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables experimental Web Platform features that are in development."
+  },
+  {
+    "title": "Touch UI Layout",
+    "id": "top-chrome-touch-ui",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables touch UI layout in the browser's top chrome."
+  },
+  {
+    "title": "Hardware-accelerated video decode",
+    "id": "disable-accelerated-video-decode",
+    "type": "switch",
+    "default": "Enabled",
+    "description": "Hardware-accelerated video decode where available."
+  },
+  {
+    "title": "Show autofill signatures.",
+    "id": "enable-show-autofill-signatures",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Annotates web forms with Autofill signatures as HTML attributes. Also marks password fields suitable for password generation."
+  },
+  {
+    "title": "Wallet API Private Passes",
+    "id": "wallet-api-private-passes-enabled",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Wallet API for private passes."
+  },
+  {
+    "title": "Use Google Payments sandbox servers",
+    "id": "wallet-service-use-sandbox",
+    "type": "choice",
+    "default": "Default",
+    "description": "For developers: use the sandbox service for Google Payments API calls."
+  },
+  {
+    "title": "Web Bluetooth",
+    "id": "enable-web-bluetooth",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Web Bluetooth API on platforms without official support"
+  },
+  {
+    "title": "Use the new permissions backend for Web Bluetooth",
+    "id": "enable-web-bluetooth-new-permissions-backend",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the new permissions backend for Web Bluetooth. This will enable persistent storage of device permissions and Web Bluetooth features such as BluetoothDevice.watchAdvertisements() and Bluetooth.getDevices()"
+  },
+  {
+    "title": "Automatic detection of WebUSB-compatible devices",
+    "id": "enable-webusb-device-detection",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, the user will be notified when a device which advertises support for WebUSB is connected. Disable if problems with USB devices are observed when the browser is running."
+  },
+  {
+    "title": "WebGL Developer Extensions",
+    "id": "enable-webgl-developer-extensions",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enabling this option allows web applications to access WebGL extensions intended only for use during development time."
+  },
+  {
+    "title": "WebGL Draft Extensions",
+    "id": "enable-webgl-draft-extensions",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enabling this option allows web applications to access the WebGL extensions that are still in draft status."
+  },
+  {
+    "title": "Zero-copy rasterizer",
+    "id": "enable-zero-copy",
+    "type": "choice",
+    "default": "Default",
+    "description": "Raster threads write directly to GPU memory associated with tiles."
+  },
+  {
+    "title": "Vulkan",
+    "id": "enable-vulkan",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use vulkan as the graphics backend."
+  },
+  {
+    "title": "Force enable WebGPU interop",
+    "id": "force-enable-webgpu-interop",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Force enable the WebGPU on vulkan via GL compositing interop."
+  },
+  {
+    "title": "Default ANGLE Vulkan",
+    "id": "default-angle-vulkan",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use the Vulkan backend for ANGLE by default."
+  },
+  {
+    "title": "Vulkan from ANGLE",
+    "id": "vulkan-from-angle",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Initialize Vulkan from inside ANGLE and share the instance with Chrome."
+  },
+  {
+    "title": "In-Product Help Demo Mode",
+    "id": "in-product-help-demo-mode-choice",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Selects the In-Product Help demo mode."
+  },
+  {
+    "title": "Notify about new Mojo Channel messages using eventfd",
+    "id": "mojo-use-eventfd",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, prefers to use eventfd for mojo Channel over socket. Falls back to socket communication when writing to shared memory is not possible"
+  },
+  {
+    "title": "Enable Isolated Web Apps",
+    "id": "enable-isolated-web-apps",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables experimental support for Isolated Web Apps. See https://github.com/reillyeon/isolated-web-apps for more information."
+  },
+  {
+    "title": "Direct Sockets API in Service Workers",
+    "id": "direct-sockets-in-service-workers",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables access to the Direct Sockets API in service workers. See https://github.com/WICG/direct-sockets for details."
+  },
+  {
+    "title": "Direct Sockets API in Shared Workers",
+    "id": "direct-sockets-in-shared-workers",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables access to the Direct Sockets API in shared workers. See https://github.com/WICG/direct-sockets for details."
+  },
+  {
+    "title": "Enable an allowlist for Isolated Web Apps",
+    "id": "enable-isolated-web-app-allowlist",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables an allowlist for Isolated Web Apps, restricting installation and updates to only those apps that are allowlisted."
+  },
+  {
+    "title": "Enable Isolated Web App Developer Mode",
+    "id": "enable-isolated-web-app-dev-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the installation of unverified Isolated Web Apps"
+  },
+  {
+    "title": "Enable the Iwa Key Distribution component",
+    "id": "enable-iwa-key-distribution-component",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Iwa Key Distribution component that supplies key rotation data for Isolated Web Apps."
+  },
+  {
+    "title": "Experimental cohort for the Iwa Key Distribution component",
+    "id": "iwa-key-distribution-component-exp-cohort",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Specifies the experimental cohort for the Iwa Key Distribution component."
+  },
+  {
+    "title": "Unframed display mode for Isolated Web Apps",
+    "id": "enable-unframed-iwa",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the unframed display mode for Isolated Web Apps."
+  },
+  {
+    "title": "Isolate additional origins",
+    "id": "isolate-origins",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Requires dedicated processes for an additional set of origins, specified as a comma-separated list."
+  },
+  {
+    "title": "Disable site isolation",
+    "id": "site-isolation-trial-opt-out",
+    "type": "choice",
+    "default": "Default",
+    "description": "Disables site isolation (SitePerProcess, IsolateOrigins, etc). Intended for diagnosing bugs that may be due to out-of-process iframes. Opt-out has no effect if site isolation is force-enabled using a command line switch or using an enterprise policy. Caution: this disables important mitigations for the Spectre CPU vulnerability affecting most computers."
+  },
+  {
+    "title": "Tab Strip Declutter",
+    "id": "tab-strip-declutter",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Tab Strip Declutter feature on Desktop."
+  },
+  {
+    "title": "Desktop PWA tab strips",
+    "id": "enable-desktop-pwas-tab-strip",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Tabbed application mode - enables the `tabbed` display mode which allows web apps to add a tab strip to their app."
+  },
+  {
+    "title": "Desktop PWA tab strips settings",
+    "id": "enable-desktop-pwas-tab-strip-settings",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Experimental UI for selecting whether a PWA should open in tabbed mode."
+  },
+  {
+    "title": "Desktop PWA tab strip customizations",
+    "id": "enable-desktop-pwas-tab-strip-customizations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable PWAs to customize their tab strip when in tabbed mode by adding the `tab_strip` manifest field."
+  },
+  {
+    "title": "Sub Apps for Isolated Web Apps",
+    "id": "enable-sub-apps",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable IWAs to install sub apps that have their own manifest and can integrate with the OS, in many ways as if it were a separate app."
+  },
+  {
+    "title": "Desktop PWA Borderless",
+    "id": "enable-desktop-pwas-borderless",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable web app manifests to declare borderless mode as a display override. Prototype implementation of: go/borderless-mode."
+  },
+  {
+    "title": "Desktop PWA Additional Windowing Controls",
+    "id": "enable-desktop-pwas-additional-windowing-controls",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable PWAs to: (1) manually recreate the minimize, maximize and restore window functionalities, (2) set windows (non-/)resizable and (3) listen to window's move events with respective APIs."
+  },
+  {
+    "title": "Record web app debug info",
+    "id": "record-web-app-debug-info",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables recording additional web app related debugging data to be displayed in: chrome://web-app-internals"
+  },
+  {
+    "title": "Use Chrome Sync sandbox",
+    "id": "use-sync-sandbox",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Connects to the testing server for Chrome Sync."
+  },
+  {
+    "title": "Connect to Cast devices on all IP addresses",
+    "id": "media-router-cast-allow-all-ips",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Have the Media Router connect to Cast devices on all IP addresses, not just RFC1918/RFC4193 private addresses."
+  },
+  {
+    "title": "Allow all sites to initiate mirroring",
+    "id": "allow-all-sites-to-initiate-mirroring",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, allows all websites to request to initiate tab mirroring via Presentation API. Requires #cast-media-route-provider to also be enabled"
+  },
+  {
+    "title": "Enables logging of all Cast messages.",
+    "id": "cast-message-logging",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables logging of all messages exchanged between websites, Chrome, and Cast receivers in chrome://media-router-internals."
+  },
+  {
+    "title": "Cast Streaming Exponential Video Bitrate Algorithm",
+    "id": "cast-streaming-exponential-video-bitrate-algorithm",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the exponential video bitrate algorithm for Cast Streaming. This algorithm uses an exponential increase and decrease factor to adjust the bitrate based on network conditions."
+  },
+  {
+    "title": "Toggle hardware accelerated H.264 video encoding for Cast Streaming",
+    "id": "cast-streaming-hardware-h264",
+    "type": "choice",
+    "default": "Default",
+    "description": "The default is to allow hardware H.264 encoding when recommended for the platform. If enabled, hardware H.264 encoding will always be allowed when supported by the platform. If disabled, hardware H.264 encoding will never be used."
+  },
+  {
+    "title": "Toggle hardware accelerated HEVC video encoding for Cast Streaming",
+    "id": "cast-streaming-hardware-hevc",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "The default is to allow hardware HEVC encoding when recommended for the platform. If enabled, hardware HEVC encoding will always be allowed when supported by the platform. If disabled, hardware HEVC encoding will never be used."
+  },
+  {
+    "title": "Toggle hardware accelerated VP8 video encoding for Cast Streaming",
+    "id": "cast-streaming-hardware-vp8",
+    "type": "choice",
+    "default": "Default",
+    "description": "The default is to allow hardware VP8 encoding when recommended for the platform. If enabled, hardware VP8 encoding will always be allowed when supported by the platform (regardless of recommendation). If disabled, hardware VP8 encoding will never be used."
+  },
+  {
+    "title": "Toggle hardware accelerated VP9 video encoding for Cast Streaming",
+    "id": "cast-streaming-hardware-vp9",
+    "type": "choice",
+    "default": "Default",
+    "description": "The default is to allow hardware VP9 encoding when recommended for the platform. If enabled, hardware VP9 encoding will always be allowed when supported by the platform (regardless of recommendation). If disabled, hardware VP9 encoding will never be used."
+  },
+  {
+    "title": "Toggles using the media::VideoEncoder implementation for Cast Streaming",
+    "id": "cast-streaming-media-video-encoder",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, the media base VideoEncoder implementation is used instead of the media cast implementation."
+  },
+  {
+    "title": "Toggle a performance metrics overlay while Cast Streaming",
+    "id": "cast-streaming-performance-overlay",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, a text overlay is rendered on top of each frame sent while Cast Streaming that includes frame duration, resolution, timestamp, low latency mode, capture duration, target playout delay, target bitrate, and encoder utilization."
+  },
+  {
+    "title": "Enable AV1 video encoding for Cast Streaming",
+    "id": "enable-cast-streaming-av1",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Offers the AV1 video codec when negotiating Cast Streaming, and uses AV1 if selected for the session."
+  },
+  {
+    "title": "Enable VP8 video encoding for Cast Streaming",
+    "id": "enable-cast-streaming-vp8",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Offers the VP8 video codec when negotiating Cast Streaming, and uses VP8 if selected for the session. If true, software VP8 encoding will be offered and hardware VP8 encoding may be offered if enabled and available on this platform. If false, software VP8 will not be offered and hardware VP8 will only be offered if #cast-streaming-hardware-vp8 is explicitly set to true."
+  },
+  {
+    "title": "Enable VP9 video encoding for Cast Streaming",
+    "id": "enable-cast-streaming-vp9",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Offers the VP9 video codec when negotiating Cast Streaming, and uses VP9 if selected for the session."
+  },
+  {
+    "title": "HiDPI tab capture support for Cast Streaming",
+    "id": "enable-cast-streaming-with-hidpi",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables HiDPI tab capture during Cast Streaming mirroring sessions. May reduce performance on some platforms and also improve quality of video frames."
+  },
+  {
+    "title": "Wayland session management",
+    "id": "wayland-session-management",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Wayland's xx/xdg-session-management-v1 experimental support."
+  },
+  {
+    "title": "WebXR Incubations",
+    "id": "webxr-incubations",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables experimental features for WebXR."
+  },
+  {
+    "title": "WebXR Internals Debugging Page",
+    "id": "webxr-internals",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the webxr-internals developer page which can be used to help debug issues with the WebXR Device API."
+  },
+  {
+    "title": "Force WebXr Runtime",
+    "id": "webxr-runtime",
+    "type": "choice",
+    "default": "Default",
+    "description": "Force the browser to use a particular runtime, even if it would not usually be enabled or would otherwise not be selected based on the attached hardware."
+  },
+  {
+    "title": "WebXr Hand Anonymization Strategy",
+    "id": "webxr-hand-anonymization",
+    "type": "choice",
+    "default": "Default",
+    "description": "Force the browser to use a particular strategy for anonymizing hand data, the default order has a hierarchy of strategies to try and if all of them fail, then no data will be returned, while this choice does allow the (not recommended) alternative of bypassing these algorithms all together."
+  },
+  {
+    "title": "Experimental system keyboard lock",
+    "id": "system-keyboard-lock",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables websites to use the keyboard.lock() API to intercept system keyboard shortcuts and have the events routed directly to the website when in fullscreen mode."
+  },
+  {
+    "title": "Block scripts loaded via document.write",
+    "id": "disallow-doc-written-script-loads",
+    "type": "choice",
+    "default": "Default",
+    "description": "Disallows fetches for third-party parser-blocking scripts inserted into the main frame via document.write."
+  },
+  {
+    "title": "Enable offering upload of Autofilled credit cards",
+    "id": "enable-autofill-credit-card-upload",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a new option to upload credit cards to Google Payments for sync to all Chrome devices."
+  },
+  {
+    "title": "Force UI direction",
+    "id": "force-ui-direction",
+    "type": "choice",
+    "default": "Default",
+    "description": "Explicitly force the UI to left-to-right (LTR) or right-to-left (RTL) mode, overriding the default direction of the UI language."
+  },
+  {
+    "title": "Force text direction",
+    "id": "force-text-direction",
+    "type": "choice",
+    "default": "Default",
+    "description": "Explicitly force the per-character directionality of UI text to left-to-right (LTR) or right-to-left (RTL) mode, overriding the default direction of the character language."
+  },
+  {
+    "title": "TLS 1.3 Early Data",
+    "id": "enable-tls13-early-data",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "This option enables TLS 1.3 Early Data, allowing GET requests to be sent during the handshake when resuming a connection to a compatible TLS 1.3 server."
+  },
+  {
+    "title": "Ignore SCTs from OCSP",
+    "id": "ct-ignore-scts-from-ocsp",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, SCTs delivered via OCSP responses are not used for satisfying Chrome's CT policy."
+  },
+  {
+    "title": "TLS Trust Anchor IDs",
+    "id": "tls-trust-anchor-ids",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "This option configures TLS Trust Anchor IDs, allowing compatible servers to select between available certificates issued by different CAs."
+  },
+  {
+    "title": "Auto Dark Mode for Web Contents",
+    "id": "enable-force-dark",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Automatically render all web contents using a dark theme."
+  },
+  {
+    "title": "Experimental Web Payments API features",
+    "id": "enable-web-payments-experimental-features",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable experimental Web Payments API features"
+  },
+  {
+    "title": "Web Payments App Store Billing Debug Mode",
+    "id": "enable-debug-for-store-billing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "App-store purchases (e.g., Google Play Store) within a TWA can be requested using the Payment Request API. This flag removes the restriction that the TWA has to be installed from the app-store."
+  },
+  {
+    "title": "Fill passwords on account selection",
+    "id": "fill-on-account-select",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Filling of passwords when an account is explicitly selected by the user rather than autofilling credentials on page load."
+  },
+  {
+    "title": "First Run Desktop Choice Screen Refresh",
+    "id": "first-run-desktop-choice-screen-refresh",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the visually refreshed first run and profile creation flows, including the choice screen (FRE and dialog versions), for users in search engine choice screen regions. It is no-op if `first-run-desktop-refresh` is disabled."
+  },
+  {
+    "title": "First Run Desktop Refresh",
+    "id": "first-run-desktop-refresh",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the visually refreshed first run and profile creation flows in users outside of search engine choice screen regions. To enable the refresh in search engine choice screen regions, enable `first-run-desktop-choice-screen-refresh` as well."
+  },
+  {
+    "title": "First Run Desktop Revamp",
+    "id": "first-run-desktop-revamp",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the first run revamp (new UI and additional effects). It is no-op if `first-run-desktop-refresh` is disabled."
+  },
+  {
+    "title": "Most Visited Tile: New scoring function",
+    "id": "most-visited-tiles-new-scoring",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When showing MV tiles, use a new scoring function to compute the score of each segment."
+  },
+  {
+    "title": "Omnibox Zero Prefix Suggest Prefetch Request Debouncing",
+    "id": "omnibox-zero-suggest-prefetch-debouncing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the use of a request debouncer to throttle the volume of ZPS prefetch requests issued to the remote Suggest service."
+  },
+  {
+    "title": "Omnibox Zero Prefix Suggestion Prefetching on SRP",
+    "id": "omnibox-zero-suggest-prefetching-on-srp",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables prefetching of the zero prefix suggestions for eligible users on the Search Results page."
+  },
+  {
+    "title": "Omnibox Zero Prefix Suggestion Prefetching on the Web",
+    "id": "omnibox-zero-suggest-prefetching-on-web",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables prefetching of the zero prefix suggestions for eligible users on the Web (i.e. non-NTP and non-SRP URLs)."
+  },
+  {
+    "title": "Log Omnibox URL Scoring Signals",
+    "id": "omnibox-ml-log-url-scoring-signals",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Omnibox to log scoring signals of URL suggestions."
+  },
+  {
+    "title": "Omnibox ML URL Score Caching",
+    "id": "omnibox-ml-url-score-caching",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables in-memory caching of ML URL scores."
+  },
+  {
+    "title": "Omnibox ML URL Scoring",
+    "id": "omnibox-ml-url-scoring",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables ML-based relevance scoring for Omnibox URL Suggestions."
+  },
+  {
+    "title": "Omnibox URL Scoring Model",
+    "id": "omnibox-ml-url-scoring-model",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables ML scoring model for Omnibox URL suggestions."
+  },
+  {
+    "title": "Contextual search box uses contextual search provider",
+    "id": "contextual-search-box-uses-contextual-search-provider",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the contextual search box to use the ContextualSearchProvider instead of the ZeroSuggestProvider as the source for suggestions."
+  },
+  {
+    "title": "Contextual search open Lens action uses thumbnail",
+    "id": "contextual-search-open-lens-action-uses-thumbnail",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables web content thumbnail image to override the Lens icon for the omnibox entry point action match."
+  },
+  {
+    "title": "Contextual suggestions ablate others when present",
+    "id": "contextual-suggestions-ablate-others-when-present",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Makes contextual search suggestions exclusive in zero suggest."
+  },
+  {
+    "title": "Enable forced download to OneDrive",
+    "id": "enable-force-download-to-onedrive",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables forced download to OneDrive for enterprise users."
+  },
+  {
+    "title": "Omnibox contextual search on focus suggestions",
+    "id": "omnibox-contextual-search-on-focus-suggestions",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables omnibox contextual search suggestions in zero prefix suggest."
+  },
+  {
+    "title": "Omnibox contextual suggestions",
+    "id": "omnibox-contextual-suggestions",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables omnibox contextual suggestions."
+  },
+  {
+    "title": "Searchbox embedded permission dialogue",
+    "id": "searchbox-embedded-permission",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables embedded permission dialogues for New Tab Page, omnibox popup, and contextual tasks' permission requests."
+  },
+  {
+    "title": "Lens Overlay Omnibox entrypoint",
+    "id": "lens-overlay-omnibox-entry-point",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables icon button for Lens entrypoint in the Omnibox."
+  },
+  {
+    "title": "AI Mode Omnibox entrypoint",
+    "id": "ai-mode-omnibox-entry-point",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables icon button for AI Mode entrypoint in the Omnibox."
+  },
+  {
+    "title": "AI Entrypoint Disabled on User Input",
+    "id": "hide-aim-omnibox-entrypoint-on-user-input",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Hide the Omnibox entrypoint for AI Mode while user is typing."
+  },
+  {
+    "title": "Omnibox toolbelt",
+    "id": "omnibox-toolbelt",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds a row of buttons at the bottom of the omnibox."
+  },
+  {
+    "title": "Omnibox Allow AI Mode Matches",
+    "id": "omnibox-allow-ai-mode-matches",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allow showing AI mode matches if returned from the search server."
+  },
+  {
+    "title": "Omnibox on-focus suggestions on web and SRP",
+    "id": "omnibox-focus-triggers-web-and-srp-zero-suggest",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables zero-prefix suggestions on web and SRP when the omnibox is focused, subject to the same conditions and restrictions as on-clobber suggestions."
+  },
+  {
+    "title": "Show omnibox suggestions popup on mouse released",
+    "id": "omnibox-show-popup-on-mouse-released",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables delaying presentation of the omnibox suggestions popup until the mouse is released."
+  },
+  {
+    "title": "Hide suggestion group headers in the Omnibox popup",
+    "id": "omnibox-hide-suggestion-group-headers",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "If enabled, suggestion group headers will be hidden in the Omnibox popup (e.g. to minimize visual clutter in the zero-prefix state)"
+  },
+  {
+    "title": "Hide contextual suggestion group headers in the Omnibox popup",
+    "id": "omnibox-hide-contextual-group-headers",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, contextual suggestion group headers will be hidden in the Omnibox popup (e.g. to minimize visual clutter in the zero-prefix state)"
+  },
+  {
+    "title": "Omnibox on-focus URL suggestions on web and SRP",
+    "id": "omnibox-url-suggestions-on-focus",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables zero-prefix URL suggestions on web and SRP when the omnibox is focused."
+  },
+  {
+    "title": "Omnibox suggestion limit for zero prefix suggestions",
+    "id": "omnibox-zps-suggestion-limit",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables limits on the total number of suggestions, as well as separate limits for search and URL suggestions in the omnibox."
+  },
+  {
+    "title": "AIM Server Eligibility",
+    "id": "aim-server-eligibility",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable AIM server eligibility checks."
+  },
+  {
+    "title": "Zero suggest prefetching for composebox",
+    "id": "omnibox-zero-suggest-prefetching-for-composebox",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables prefetching of the zero prefix suggestions for composebox contexts."
+  },
+  {
+    "title": "AIM Server Eligibility: Include Client Locale",
+    "id": "aim-server-eligibility-include-client-locale",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Configures whether to include the client locale in the AIM eligibility request."
+  },
+  {
+    "title": "Use PEC API",
+    "id": "aim-use-pec-api",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, all composebox context menus will use the `SearchboxConfig` from the PEC API."
+  },
+  {
+    "title": "Omnibox on device tail suggestions",
+    "id": "omnibox-on-device-tail-suggestions",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Google tail non personalized search suggestions provided by a compact on device model."
+  },
+  {
+    "title": "Force color profile",
+    "id": "force-color-profile",
+    "type": "choice",
+    "default": "Default",
+    "description": "Forces Chrome to use a specific color profile instead of the color of the window's current monitor, as specified by the operating system."
+  },
+  {
+    "title": "Forced Colors",
+    "id": "forced-colors",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables forced colors mode for web content."
+  },
+  {
+    "title": "Adaptive global tone mapping",
+    "id": "hdr-agtm",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables parsing and rendering of adaptive global tone mapping (AGTM) aka SMTPE ST 2094-50 HDR metadata"
+  },
+  {
+    "title": "Chrome heap profiler start mode.",
+    "id": "memlog",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Starts heap profiling service that records sampled memory allocation profile having each sample attributed with a callstack. The sampling resolution is controlled with --memlog-sampling-rate flag. Recorded heap dumps can be obtained at chrome://tracing [category:memory-infra] and chrome://memory-internals. This setting controls which processes will be profiled since their start. To profile any given process at a later time use chrome://memory-internals page."
+  },
+  {
+    "title": "Heap profiling sampling interval (in bytes).",
+    "id": "memlog-sampling-rate",
+    "type": "choice",
+    "default": "Default",
+    "description": "Heap profiling service uses Poisson process to sample allocations. Default value for the interval between samples is 1000000 (1MB). This results in low noise for large and/or frequent allocations [size * frequency >> 1MB]. This means that aggregate numbers [e.g. total size of malloc-ed objects] and large and/or frequent allocations can be trusted with high fidelity. Lower intervals produce higher samples resolution, but come at a cost of higher performance overhead."
+  },
+  {
+    "title": "Heap profiling stack traces type.",
+    "id": "memlog-stack-mode",
+    "type": "choice",
+    "default": "Default",
+    "description": "By default heap profiling service records native stacks. A post-processing step is required to symbolize the stacks. 'Native with thread names' adds the thread name as the first frame of each native stack. It's also possible to record a pseudo stack using trace events as identifiers. It's also possible to do a mix of both."
+  },
+  {
+    "title": "Omnibox Mia ZPS on NTP",
+    "id": "omnibox-mia-zps",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables Mia ZPS suggestions in NTP omnibox"
+  },
+  {
+    "title": "Omnibox Grouping Framework for Typed Suggestions",
+    "id": "omnibox-grouping-framework-non-zps",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables an alternative grouping implementation for omnibox autocompletion."
+  },
+  {
+    "title": "Enable optimization guide debug logs",
+    "id": "optimization-guide-debug-logs",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables the optimization guide to log and save debug messages that can be shown in the internals page."
+  },
+  {
+    "title": "Enables optimization guide on device",
+    "id": "optimization-guide-on-device-model",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the optimization guide to execute models on device."
+  },
+  {
+    "title": "Text Safety Classifier",
+    "id": "text-safety-classifier",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables text safety classifier for on-device models"
+  },
+  {
+    "title": "Organic repeatable queries in Most Visited tiles",
+    "id": "organic-repeatable-queries",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables showing the most repeated queries, from the device browsing history, organically among the most visited sites in the MV tiles."
+  },
+  {
+    "title": "Page content annotations",
+    "id": "page-content-annotations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables page content to be annotated on-device."
+  },
+  {
+    "title": "Page content annotations - Remote page metadata",
+    "id": "page-content-annotations-remote-page-metadata",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables fetching of page load metadata to be persisted on-device."
+  },
+  {
+    "title": "Tab Groups Focusing",
+    "id": "tab-groups-focusing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When a tab group is focused, the tabstrip constrains visiblity to the tabs in that group."
+  },
+  {
+    "title": "Vertical Tabs",
+    "id": "vertical-tabs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables an option for showing tabs to the side."
+  },
+  {
+    "title": "Vertical Tabs Expand On Hover",
+    "id": "vertical-tabs-expand-on-hover",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Vertical tabs (when enabled and collapsed) will expand on mouse hover."
+  },
+  {
+    "title": "Side Panel Flyover Animation",
+    "id": "side-panel-flyover-animation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Simplifies contents animations while animating vertical tabstrip and side panels, reducing jank on most platforms. When enabled, the animating elements will appear to float over the contents, which resize at the beginning or end of the animation."
+  },
+  {
+    "title": "Composebox Drive Context Menu Option",
+    "id": "composebox-drive-context-menu-option",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Google Drive option in the Composebox context menu."
+  },
+  {
+    "title": "Composebox uses chrome-compose client",
+    "id": "composebox-uses-chrome-compose-client",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Composebox will use chrome-compose client when querying suggest for unimodal typed inputs instead of chrome-omni."
+  },
+  {
+    "title": "NTP Calendar Module",
+    "id": "ntp-calendar-module",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Shows the Google Calendar module on the New Tab Page."
+  },
+  {
+    "title": "NTP Composebox",
+    "id": "ntp-composebox",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows the Composebox on the New Tab Page Searchbox upon clicking the entrypoint."
+  },
+  {
+    "title": "NTP Realbox Next",
+    "id": "ntp-realbox-next",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Realbox 'Next' experience."
+  },
+  {
+    "title": "NTP Customize Chrome Auto Promo",
+    "id": "ntp-customize-chrome-auto-open",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows the Customize Chrome on the New Tab Page automatically."
+  },
+  {
+    "title": "NTP Feature Optimization Module Removal",
+    "id": "ntp-feature-optimization-module-removal",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables auto-removal of stale modules from the NTP."
+  },
+  {
+    "title": "NTP Feature Optimization Shortcuts Removal",
+    "id": "ntp-feature-optimization-shortcuts-removal",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables auto-removal of stale shortcuts from the NTP."
+  },
+  {
+    "title": "NTP Simplification Bookmark Bar",
+    "id": "ntp-simplification-bookmark-bar",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Auto-removes the bookmark bar on the New Tab Page and updates bookmark bar visbility settings."
+  },
+  {
+    "title": "NTP Feature Optimization Dismiss Modules Removal",
+    "id": "ntp-feature-optimization-dismiss-modules-removal",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Removes the dismiss module buttons from the NTP modules."
+  },
+  {
+    "title": "NTP Animated Doodles",
+    "id": "ntp-animated-doodles",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables animated Doodles on the NTP."
+  },
+  {
+    "title": "NTP Doodle Murals",
+    "id": "ntp-doodle-murals",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Doodle Murals on the NTP."
+  },
+  {
+    "title": "NTP Next Features",
+    "id": "ntp-next-features",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables features (e.g., AI action chips) in NTP Next"
+  },
+  {
+    "title": "NTP OneGoogleBar Async Bar Parts",
+    "id": "ntp-ogb-async-bar-parts",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the OneGoogleBar async bar parts API on the New Tab Page."
+  },
+  {
+    "title": "NTP Outlook Calendar Module",
+    "id": "ntp-outlook-calendar-module",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Shows the Outlook Calendar module on the New Tab Page."
+  },
+  {
+    "title": "NTP Sharepoint Module",
+    "id": "ntp-sharepoint-module",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Shows the Sharepoint module on the New Tab Page."
+  },
+  {
+    "title": "NTP Tab Groups Module",
+    "id": "ntp-tab-groups-module",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows the Tab Groups module on the New Tab Page."
+  },
+  {
+    "title": "NTP Tab Groups Zero State Card",
+    "id": "ntp-tab-groups-module-zero-state",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the zero-state card for the Tab Groups Module on the New Tab Page."
+  },
+  {
+    "title": "NTP Microsoft Authentication Module",
+    "id": "ntp-microsoft-authentication-module",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Shows the Microsoft Authentication Module on the New Tab Page."
+  },
+  {
+    "title": "NTP Shortcuts Redesign",
+    "id": "ntp-shortcuts-redesign",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the redesigned shortcuts on the New Tab Page."
+  },
+  {
+    "title": "Chrome-wide echo cancellation",
+    "id": "chrome-wide-echo-cancellation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Run WebRTC capture audio processing in the audio process instead of the renderer processes, thereby cancelling echoes from more audio sources."
+  },
+  {
+    "title": "Enable pixel canvas recording",
+    "id": "enable-pixel-canvas-recording",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Pixel canvas recording allows the compositor to raster contents aligned with the pixel and improves text rendering. This should be enabled when a device is using fractional scale factor."
+  },
+  {
+    "title": "Parallel downloading",
+    "id": "enable-parallel-downloading",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable parallel downloading to accelerate download speed."
+  },
+  {
+    "title": "Enable network logging to file",
+    "id": "enable-network-logging-to-file",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables network logging to a file named netlog.json in the user data directory. The file can be imported into chrome://net-internals."
+  },
+  {
+    "title": "Web Authentication Enterprise Attestation",
+    "id": "web-authentication-permit-enterprise-attestation",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Permit a set of origins to request a uniquely identifying enterprise attestation statement from a security key when creating a Web Authentication credential."
+  },
+  {
+    "title": "Exclude Picture-in-Picture windows from screen capture",
+    "id": "exclude-pip-from-screen-capture",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Picture-in-Picture windows will be excluded from screen captures."
+  },
+  {
+    "title": "OOPIF for PDF Viewer",
+    "id": "pdf-oopif",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Use an OOPIF for the PDF Viewer, instead of a GuestView."
+  },
+  {
+    "title": "Use Skia Renderer",
+    "id": "pdf-use-skia-renderer",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use Skia as the PDF renderer. This flag will have no effect if the renderer choice is controlled by an enterprise policy."
+  },
+  {
+    "title": "PDF Ink Signatures",
+    "id": "pdf-ink2",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the ability to annotate PDFs using a new ink library."
+  },
+  {
+    "title": "Save PDF to Drive",
+    "id": "pdf-save-to-drive",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the ability to save PDFs to Google Drive."
+  },
+  {
+    "title": "CUPS IPP Printing Backend",
+    "id": "cups-ipp-printing-backend",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use the CUPS IPP printing backend instead of the original CUPS backend that calls the PPD API."
+  },
+  {
+    "title": "Gemini Antiscam Protection",
+    "id": "gemini-antiscam-protections-metrics-only",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables querying Gemini for antiscam protection signals and collecting metrics."
+  },
+  {
+    "title": "Report Unsafe Site",
+    "id": "report-unsafe-site",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the 'Report Unsafe Site' menu item in the app Help menu, which enables users to report the webpage in the active tab as unsafe."
+  },
+  {
+    "title": "Insecure origins treated as secure",
+    "id": "unsafely-treat-insecure-origin-as-secure",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Treat given (insecure) origins as secure origins. Multiple origins can be supplied as a comma-separated list. Origins must have their protocol specified e.g. \"http://example.com\". For the definition of secure contexts, see https://w3c.github.io/webappsec-secure-contexts/"
+  },
+  {
+    "title": "Disable subframe process reuse",
+    "id": "disable-process-reuse",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Prevents out-of-process iframes from reusing compatible processes from unrelated tabs. This is an experimental mode that will result in more processes being created."
+  },
+  {
+    "title": "Headless Live Captions",
+    "id": "enable-headless-live-caption",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable features related to headless captions exploration. These are very likely unstable."
+  },
+  {
+    "title": "Headless Caption Early Start",
+    "id": "enable-headless-live-caption-early-start",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Start headless captioning as soon as a profile is loaded."
+  },
+  {
+    "title": "Input protection",
+    "id": "enable-input-protection",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables input protection by blocking interaction with views that are currently or were recently obscured by always-on-top windows, and prevents unintended events on security-sensitive UI that appears and activates unexpectedly."
+  },
+  {
+    "title": "Reading Mode Read Aloud Phrase Highlighting",
+    "id": "read-anything-read-aloud-phrase-highlighting",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the experimental Reading Mode feature that highlights by phrases when reading aloud, when the phrase option is selected from the highlight menu."
+  },
+  {
+    "title": "Reading Mode with images added via algorithm",
+    "id": "read-anything-images-via-algorithm",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Have Reading Mode use a local rules based algorithm to include images from webpages."
+  },
+  {
+    "title": "Reading Mode Google Docs Integration",
+    "id": "read-anything-docs-integration",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows Reading Mode to work on Google Docs."
+  },
+  {
+    "title": "Reading Mode Google Docs Load More Button",
+    "id": "read-anything-docs-load-more-button",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds a button to the end of the Reading Mode UI. When clicked, the main page scrolls to show the next page's content."
+  },
+  {
+    "title": "Boundary Event Dispatch Tracks Node Removal",
+    "id": "boundary-event-dispatch-tracks-node-removal",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Mouse and Pointer boundary event dispatch (i.e. dispatch of enter, leave, over, out events) tracks DOM node removal to fix event pairing on ancestor nodes."
+  },
+  {
+    "title": "Enable experimental prediction for scroll events",
+    "id": "enable-resampling-scroll-events-experimental-prediction",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Predicts the scroll amount after the vsync time to more closely match when the frame is visible."
+  },
+  {
+    "title": "Happiness Tracking Surveys Demo",
+    "id": "happiness-tracking-surveys-for-desktop-demo",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable showing Happiness Tracking Surveys Demo to users on Desktop"
+  },
+  {
+    "title": "Enable gpu service logging",
+    "id": "enable-gpu-service-logging",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enable printing the actual GL driver calls."
+  },
+  {
+    "title": "Hardware Media Key Handling",
+    "id": "hardware-media-key-handling",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables using media keys to control the active media session. This requires MediaSessionService to be enabled too"
+  },
+  {
+    "title": "Strict-Origin-Isolation",
+    "id": "strict-origin-isolation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Experimental security mode that strengthens the site isolation policy. Controls whether site isolation should use origins instead of scheme and eTLD+1."
+  },
+  {
+    "title": "Enable the `FencedFrameConfig` constructor.",
+    "id": "enable-fenced-frames-developer-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "The `FencedFrameConfig` constructor allows you to test the <fencedframe> element without running an ad auction, as you can manually supply a URL to navigate the fenced frame to."
+  },
+  {
+    "title": "Unsafe WebGPU Support",
+    "id": "enable-unsafe-webgpu",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Convenience flag for WebGPU development. Enables best-effort WebGPU support on unsupported configurations and more! Note that this flag could expose security issues to websites so only use it for your own development."
+  },
+  {
+    "title": "WebGPU Developer Features",
+    "id": "enable-webgpu-developer-features",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables web applications to access WebGPU features intended only for use during development."
+  },
+  {
+    "title": "Use Shared Image in OOP-VD",
+    "id": "use-shared-image-in-oop-vd",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use shared image interface to transport video frame resources in out of process video decoding."
+  },
+  {
+    "title": "Element Capture cross-tab",
+    "id": "element-capture-cross-tab",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows the Element Capture API to be used cross-tab. (Only has an effect if Element Capture is generally enabled.)"
+  },
+  {
+    "title": "Notification one-tap unsubscribe on Desktop",
+    "id": "notification-one-tap-unsubscribe-on-desktop",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables an experimental UX on Desktop that replaces the [Site settings]button on web push notifications with an [Unsubscribe] button."
+  },
+  {
+    "title": "Heavy ad privacy mitigations",
+    "id": "heavy-ad-privacy-mitigations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables privacy mitigations for the heavy ad intervention. Disabling this makes the intervention deterministic. Defaults to enabled."
+  },
+  {
+    "title": "Enable experimental cookie features",
+    "id": "enable-experimental-cookie-features",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enable new features that affect setting, sending, and managing cookies. The enabled features are subject to change at any time."
+  },
+  {
+    "title": "Enable Extension Install Policy Fetching",
+    "id": "enable-extension-install-policy-fetching",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables fetching of extension install policies from the cloud for the ExtensionInstallCloudPolicyChecksEnabled policy."
+  },
+  {
+    "title": "Enables WebNN API",
+    "id": "web-machine-learning-neural-network",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Web Machine Learning Neural Network (WebNN) API. Spec at https://www.w3.org/TR/webnn/"
+  },
+  {
+    "title": "Enables experimental WebNN API features",
+    "id": "experimental-web-machine-learning-neural-network",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables additional, experimental features in Web Machine Learning Neural Network (WebNN) API. Requires the \"WebNN API\" flag to be enabled."
+  },
+  {
+    "title": "LiteRT backend for WebNN",
+    "id": "webnn-litert",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the LiteRT backend for WebNN. Disabling this flag enables a fallback to TFLite."
+  },
+  {
+    "title": "Privacy Policy Insights",
+    "id": "privacy-policy-insights",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the privacy policy insights UI in page info."
+  },
+  {
+    "title": "Enables Out-of-Process Printer Drivers",
+    "id": "enable-oop-print-drivers",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables printing interactions with the operating system to be performed out-of-process."
+  },
+  {
+    "title": "Privacy Sandbox Internals Page",
+    "id": "privacy-sandbox-internals",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the chrome://privacy-sandbox-internals debugging page."
+  },
+  {
+    "title": "Trees in viz",
+    "id": "trees-in-viz",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the renderer to send a CC LayerTree to the viz/gpu process instead of a CompositorFrame. This allows viz to generate and submit the CompositorFrame directly."
+  },
+  {
+    "title": "Omnibox prefetch Search",
+    "id": "omnibox-search-prefetch",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allows omnibox to prefetch likely search suggestions provided by the Default Search Engine"
+  },
+  {
+    "title": "Omnibox client prefetch Search",
+    "id": "omnibox-search-client-prefetch",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows omnibox to prefetch search suggestions provided by the Default Search Engine that the client thinks are likely to be navigated. Requires chrome://flags/#omnibox-search-prefetch"
+  },
+  {
+    "title": "PDF XFA support",
+    "id": "pdf-xfa-forms",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables support for XFA forms in PDFs. Has no effect if Chrome was not built with XFA support, or if controlled by an enterprise policy."
+  },
+  {
+    "title": "Debugging tools for UI",
+    "id": "ui-debug-tools",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables additional keyboard shortcuts to help debugging."
+  },
+  {
+    "title": "FedCmAutofill",
+    "id": "fedcm-autofill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows RPs to enhance autofill with FedCM."
+  },
+  {
+    "title": "FedCm Ambient UI",
+    "id": "fedcm-ambient-ui",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables FedCM ambient UI in the omnibox."
+  },
+  {
+    "title": "FedCM with delegation support",
+    "id": "fedcm-delegation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables IdPs to delegate presentation to the browser."
+  },
+  {
+    "title": "Email Verification Protocol",
+    "id": "email-verification-protocol",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Email Verification Protocol in Autofill."
+  },
+  {
+    "title": "FedCmErrorAttribute",
+    "id": "fedcm-error-attribute",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the spec-compliant 'error' attribute in IdentityCredentialError while deprecating the legacy 'code' attribute."
+  },
+  {
+    "title": "FedCM with IdP Registration support",
+    "id": "fedcm-idp-registration",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables RPs to get identity credentials from registered IdPs."
+  },
+  {
+    "title": "FedCM in Authenticator",
+    "id": "fedcm-in-authenticator",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables support for FedCM requests through the Authenticator interface."
+  },
+  {
+    "title": "FedCmLightweightMode",
+    "id": "fedcm-lightweight-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables IdPs to store user profile information using the login status API."
+  },
+  {
+    "title": "FedCmMetricsEndpoint",
+    "id": "fedcm-metrics-endpoint",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows the FedCM API to send performance measurement to the metrics endpoint on the identity provider side. Requires FedCM to be enabled."
+  },
+  {
+    "title": "FedCmNonceInParams",
+    "id": "fedcm-nonce-in-params",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Removes nonce as an explicit parameter of the FedCM API. When enabled, a nonce may be passed in params."
+  },
+  {
+    "title": "FedCmWellKnownEndpointValidation",
+    "id": "fedcm-well-known-endpoint-validation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, accounts_endpoint and login_url must be present in .well-known/web-identity if client_metadata is used."
+  },
+  {
+    "title": "FedCmWithoutWellKnownEnforcement",
+    "id": "fedcm-without-well-known-enforcement",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Supports configURL that's not in the IdP's .well-known file."
+  },
+  {
+    "title": "FedCmSegmentationPlatform",
+    "id": "fedcm-segmentation-platform",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the segmentation platform service to provide UI volume recommendations to FedCM."
+  },
+  {
+    "title": "FedCmNavigationInterception",
+    "id": "fedcm-navigation-interception",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows IdP to intercept navigations by initiating a FedCM request."
+  },
+  {
+    "title": "DigitalCredentials",
+    "id": "web-identity-digital-credentials",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the three-party verifier/holder/issuer identity model."
+  },
+  {
+    "title": "DigitalCredentialsCreation",
+    "id": "web-identity-digital-credentials-creation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Digital Credentials Creation API."
+  },
+  {
+    "title": "Lens enable send raw file media types",
+    "id": "lens-enable-raw-file-media-types",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables sending raw file media types in the Lens overlay."
+  },
+  {
+    "title": "Lens enable send urls in composeboxes",
+    "id": "lens-enable-urls-in-composeboxes",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables sending urls in AIM composeboxes."
+  },
+  {
+    "title": "Bind cookies to their setting origin's port",
+    "id": "bind-cookies-to-port",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, cookies will only be accessible by origins with the same port as the one that originally set the cookie."
+  },
+  {
+    "title": "Bind cookies to their setting origin's scheme",
+    "id": "bind-cookies-to-scheme",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, cookies will only be accessible by origins with the same scheme as the one that originally set the cookie"
+  },
+  {
+    "title": "Use primary and tonal buttons for promos",
+    "id": "use-primary-and-tonal-buttons-for-promos",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use consistent primary and tonal buttons for sign-in promos and intercepts."
+  },
+  {
+    "title": "Enable unsafe SwiftShader fallback",
+    "id": "enable-unsafe-swiftshader",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Allow SwiftShader to be used as a fallback for software WebGL. Using this flag is unsafe and should only be used for local development."
+  },
+  {
+    "title": "Prerendering",
+    "id": "prerender2",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, browser features and the speculation rules API can trigger prerendering. If disabled, all prerendering APIs still exist, but a prerender will never successfully take place."
+  },
+  {
+    "title": "Prerender2 Cross-Origin Iframes",
+    "id": "prerender2-cross-origin-iframes",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Prerender2 for cross-origin iframes."
+  },
+  {
+    "title": "Prerender Until Script",
+    "id": "prerender-until-script",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Prerenders pages until a script is about to be executed. The script execution and the page parsing will be deferred until action."
+  },
+  {
+    "title": "Prerender Activation By Form Submission",
+    "id": "prerender-activation-by-form-submission",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allow Prerender activations by form submission."
+  },
+  {
+    "title": "Test Third Party Cookie Phaseout",
+    "id": "test-third-party-cookie-phaseout",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enable to test third-party cookie phaseout. Learn more: https://goo.gle/3pcd-flags"
+  },
+  {
+    "title": "Dialog UI for HTTPS-First Modes",
+    "id": "https-first-dialog-ui",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Use a dialog-based UI for HFM"
+  },
+  {
+    "title": "Enable extension permission omnibox.directInput",
+    "id": "experimental-omnibox-labs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows extensions to request permission omnibox.directInput, which enables unscoped mode in the Omnibox"
+  },
+  {
+    "title": "Extensions Menu Access Control",
+    "id": "extensions-menu-access-control",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a redesigned extensions menu that allows the user to control extensions site access."
+  },
+  {
+    "title": "IPH Extensions Menu",
+    "id": "iph-extensions-menu-feature",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables In-Product-Help that appears when at least one extension has access to the current page. This feature is gated by extensions-menu-access-control."
+  },
+  {
+    "title": "IPH Extensions Request Access Button Feature",
+    "id": "iph-extensions-request-access-button-feature",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables In-Product-Help that appears when at least one extension is requesting access to the current page. This feature is gated by extensions-menu-access-control."
+  },
+  {
+    "title": "Region Capture cross-tab",
+    "id": "region-capture-cross-tab",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allows the Region Capture API to be used cross-tab. (Only has an effect if Region Capture is generally enabled.)"
+  },
+  {
+    "title": "Skia Graphite",
+    "id": "skia-graphite",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Skia Graphite. This will use the Dawn backend by default, but can be overridden with command line flags for testing on non-official developer builds. See --skia-graphite-dawn-backend flag in gpu_switches.h."
+  },
+  {
+    "title": "Tab audio muting UI control",
+    "id": "enable-tab-audio-muting",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, the audio indicators in the tab strip double as tab audio mute controls."
+  },
+  {
+    "title": "Auto picture in picture for video playback",
+    "id": "auto-picture-in-picture-for-video-playback",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables auto picture in picture for video playback"
+  },
+  {
+    "title": "Document Picture-in-Picture Animate Resize",
+    "id": "document-picture-in-picture-animate-resize",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use an animation when programmatically resizing a documentpicture-in-picture window"
+  },
+  {
+    "title": "Browser initiated automatic picture in picture",
+    "id": "browser-initiated-automatic-picture-in-picture",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, allows the browser to automatically enter picture in picture when a series of conditions are met."
+  },
+  {
+    "title": "Browser launch metadata reporting",
+    "id": "browser-launch-metadata-reporting",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the collection and reporting of browser launch-related metadata for Chrome Enterprise, including CLI switches and launch timestamp"
+  },
+  {
+    "title": "Picture-in-Picture Mute Control",
+    "id": "picture-in-picture-mute-control",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds a mute/unmute button to the Video Picture-in-Picture window."
+  },
+  {
+    "title": "Picture-in-Picture show window animation",
+    "id": "picture-in-picture-show-window-animation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, Picture-in-Picture windows will use a fade-in show animation. On Windows OS this is a no-op."
+  },
+  {
+    "title": "Document patching",
+    "id": "document-patching",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allow out-of-order streaming of HTML content using <template patchfor> and node.streamHTMLUnsafe(). See https://github.com/WICG/declarative-partial-updates"
+  },
+  {
+    "title": "Route matching",
+    "id": "route-matching",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allow definition of routes as e.g. URLPattern. Special CSS rules can be used to match active routes. See https://github.com/WICG/declarative-partial-updates/blob/main/route-matching-explainer.md"
+  },
+  {
+    "title": "Use custom disk cache backend for HTTP Cache",
+    "id": "http-cache-custom-backend",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the experimental disk cache backend for HTTP Cache. This flag is overridden by the CacheEncryptionEnabled enterprise policy on supported platforms."
+  },
+  {
+    "title": "Audio Ducking",
+    "id": "audio-ducking",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Allows Chrome to duck (attenuate) audio from other tabs."
+  },
+  {
+    "title": "Origin-keyed Processes by default",
+    "id": "origin-keyed-processes-by-default",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables origin-keyed process isolation for most pages (i.e., those assigned to an origin-keyed agent cluster by default). This improves security but also increases the number of processes created. Note: enabling this feature also enables 'Origin-keyed Agent Clusters by default'."
+  },
+  {
+    "title": "Collaboration Messaging",
+    "id": "collaboration-messaging",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the messaging framework within the collaboration feature, including features such as recent activity, dirty dots, and description action chips."
+  },
+  {
+    "title": "Reduce Linux platform version Client Hint",
+    "id": "reduce-user-agent-data-linux-platform-version",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Set platform version Client Hint on Linux to empty string."
+  },
+  {
+    "title": "Omit TLS client certificates if credential mode disallows",
+    "id": "omit-cors-client-cert",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Strictly conform the Fetch spec to omit TLS client certificates if credential mode disallows. Without this flag enabled, Chrome will always try sending client certificates regardless of the credential mode."
+  },
+  {
+    "title": "Safe Browsing Local Lists use v5 API",
+    "id": "safe-browsing-local-lists-use-sbv5",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Fetch and check local lists using the Safe Browsing v5 API instead of the v4 Update API."
+  },
+  {
+    "title": "XSLT",
+    "id": "xslt",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Toggles whether or not XSLT is supported by the browser."
+  },
+  {
+    "title": "Symphonia Audio Decoding",
+    "id": "symphonia-audio-decoding",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables using the experimental Symphonia audio decoder instead of using FFMPEG for decoding audio."
+  },
+  {
+    "title": "Web Bluetooth confirm pairing support",
+    "id": "enable-web-bluetooth-confirm-pairing-support",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable confirm-only and confirm-pin pairing mode support for Web Bluetooth"
+  },
+  {
+    "title": "Enable Perfetto system tracing",
+    "id": "enable-perfetto-system-tracing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome will attempt to connect to the system tracing service"
+  },
+  {
+    "title": "Background Resource Fetch",
+    "id": "background-resource-fetch",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Process resource requests in a background thread inside Blink."
+  },
+  {
+    "title": "Renderer-side content decoding",
+    "id": "renderer-side-content-decoding",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables renderer-side content decoding (decompression). When enabled, the network service sends compressed HTTP response bodies to the renderer process."
+  },
+  {
+    "title": "AI Mode Omnibox Entrypoint always navigates",
+    "id": "aim-entry-point-direct-navigation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, clicking aim button in omnibox always navigates directly to google.com/aimode."
+  },
+  {
+    "title": "WebUI Omnibox AIM Popup",
+    "id": "webui-omnibox-aim-popup",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, using certain trigger operations the omnibox suggestions popup transition to showing the AI-Mode compose-box input and suggestions."
+  },
+  {
+    "title": "WebUI Omnibox AIM Popup Disable Animation",
+    "id": "webui-omnibox-aim-popup-disable-animation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, there will no longer be animation in the WebUI Omnibox AIM popup."
+  },
+  {
+    "title": "WebUI Omnibox Full Popup",
+    "id": "webui-omnibox-full-popup",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, shows the omnibox suggestions and the search input in the popup in WebUI."
+  },
+  {
+    "title": "WebUI Omnibox Popup",
+    "id": "webui-omnibox-popup",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, shows the omnibox suggestions in the popup in WebUI."
+  },
+  {
+    "title": "WebUI Omnibox Popup Debug Mode",
+    "id": "webui-omnibox-popup-debug",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the WebUI for omnibox suggestions without modifying the popup UI."
+  },
+  {
+    "title": "WebUI Omnibox Popup Selection Control",
+    "id": "webui-omnibox-popup-selection-control",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, the WebUI omnibox popup will control its own selection state."
+  },
+  {
+    "title": "Group Promo Prototype",
+    "id": "group-promo-prototype",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables prototype for group promo."
+  },
+  {
+    "title": "Sync account settings",
+    "id": "sync-account-settings",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables syncing account settings to the server."
+  },
+  {
+    "title": "Sync autofill valuable metadata",
+    "id": "sync-autofill-valuable-metadata",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables syncing valuable metadata for autofill to the server."
+  },
+  {
+    "title": "Sync wallet flight reservations",
+    "id": "sync-wallet-flight-reservations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables syncing flight reservations in the wallet to the server."
+  },
+  {
+    "title": "Sync wallet vehicle registrations",
+    "id": "sync-wallet-vehicle-registrations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables syncing vehicle registrations in the wallet to the server."
+  },
+  {
+    "title": "Compression dictionary transport",
+    "id": "enable-compression-dictionary-transport",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables compression dictionary transport."
+  },
+  {
+    "title": "Compression dictionary transport ttl",
+    "id": "enable-compression-dictionary-ttl",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables support for the 'ttl' parameter in the 'use-as-dictionary' HTTP response header."
+  },
+  {
+    "title": "Changes the target playout delay for Cast mirroring.",
+    "id": "cast-mirroring-target-playout-delay",
+    "type": "choice",
+    "default": "200ms",
+    "description": "Choose a target playout delay for Cast mirroring. A lower delay will decrease latency, but may impact other quality indicators."
+  },
+  {
+    "title": "getDisplayMedia() confers transient activation.",
+    "id": "get-display-media-confers-activation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When getDisplay() is invoked by the application, the user is shown a dialog which allows them to share a tab, a window or a screen. If this flag is enabled, then after the user chooses what to share, transient activation is conferred on the Web application."
+  },
+  {
+    "title": "Glass Toolbar",
+    "id": "glass-toolbar",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a glass effect on the toolbar."
+  },
+  {
+    "title": "Toolbar Glow Up",
+    "id": "toolbar-glow-up",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Toolbar Glow Up feature."
+  },
+  {
+    "title": "Enable RenderDocument",
+    "id": "render-document",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable swapping RenderFrameHosts on same-site navigations"
+  },
+  {
+    "title": "Default SiteInstanceGroups",
+    "id": "default-site-instance-groups",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Put sites that don't need isolation in their own SiteInstance in a defaultSiteInstanceGroup (per BrowsingContextGroup) instead of in a default SiteInstance."
+  },
+  {
+    "title": "CWS Info Fast Check",
+    "id": "cws-info-fast-check",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome checks and fetches metadata for installed extensions more frequently."
+  },
+  {
+    "title": "Dynamic Profile Country",
+    "id": "rcaps-dynamic-profile-country",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome updates the country associated with the profile on open"
+  },
+  {
+    "title": "Desktop PWA Link Capturing",
+    "id": "enable-user-navigation-capturing-pwa",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables opening links from Chrome in an installed PWA. Currently under reimplementation."
+  },
+  {
+    "title": "Protected Audiences Consented Debug Token",
+    "id": "protected-audience-debug-token",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables Protected Audience Consented Debugging with the provided token. Protected Audience auctions running on a Bidding and Auction API trusted server with a matching token will be able to log information about the auction to enable debugging. Note that this logging may include information about the user's browsing history normally kept private."
+  },
+  {
+    "title": "Deprecate the unload event",
+    "id": "deprecate-unload",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Controls the default for Permissions-Policy unload. If enabled, unload handlers are deprecated and will not receive the unload event unless a Permissions-Policy to enable them has been explicitly set. If disabled, unload handlers will continue to receive the unload event unless explicitly disabled by Permissions-Policy, even during the gradual rollout of their deprecation."
+  },
+  {
+    "title": "Enable risk-based authentication for FPAN retrieval",
+    "id": "autofill-enable-fpan-risk-based-authentication",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, server card retrieval will begin with a risk-based check instead of jumping straight to CVC or biometric auth."
+  },
+  {
+    "title": "Ack CopyOutputRequest early for View Transition",
+    "id": "ack-copy-output-request-early-for-view-transition",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "If enabled, send acks for CopyOutputRequest completion immediately to unblock navigation for ViewTransitions while CopyOutputRequests are in progress. This is a fast-path for ViewTransitions."
+  },
+  {
+    "title": "Device Bound Session Credentials",
+    "id": "enable-bound-session-credentials",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Google session credentials binding to cryptographic keys."
+  },
+  {
+    "title": "Device Bound Session Credentials with software keys",
+    "id": "enable-bound-session-credentials-software-keys-for-manual-testing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables mock software-backed cryptographic keys for Google session credentials binding and Chrome refresh tokens binding (not secure). This is intended to be used for manual testing only."
+  },
+  {
+    "title": "Show permission grants from Related Website Sets",
+    "id": "related-website-sets-permission-grants",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows permission grants created by Related Website Sets in Chrome Settings UI and Page Info Bubble, default is hidden"
+  },
+  {
+    "title": "Enable Isolated Web Apps to bypass USB restrictions",
+    "id": "enable-unrestricted-usb",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, allows Isolated Web Apps to access blocklisted devices and protected interfaces through WebUSB API."
+  },
+  {
+    "title": "Enable 3DS authentication for virtual cards",
+    "id": "autofill-enable-vcn-3ds-authentication",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, Chrome will trigger 3DS authentication during a virtual card retrieval if a challenge is required, 3DS authentication is available for the card, and FIDO is not."
+  },
+  {
+    "title": "Link Preview",
+    "id": "link-preview",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Link Preview feature gets to be available to preview a linked page in a dedicated small window before navigating to the linked page. The feature can be triggered from a context menu item, or users' actions. We are evaluating multiple actions in our experiment to understand what's to be the best for users from the viewpoint of security, privacy, and usability. The feature might be unstable and unusable on some platforms, e.g. macOS or touch devices."
+  },
+  {
+    "title": "Send Tab To Self enhanced handoff",
+    "id": "send-tab-to-self-enhanced-handoff",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables an enhanced version of Send Tab To Self that propagates more information, such as form fields and scroll position."
+  },
+  {
+    "title": "Enable data sharing debug logs",
+    "id": "data-sharing-debug-logs",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Enables the data sharing infrastructure to log and save debug messages that can be shown in the internals page."
+  },
+  {
+    "title": "Device Bound Session Credentials (Standard)",
+    "id": "enable-standard-device-bound-session-credentials",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the official version of Device Bound Session Credentials. For more information see https://github.com/WICG/dbsc."
+  },
+  {
+    "title": "Device Bound Session Credentials (Standard) Persistence",
+    "id": "enable-standard-device-bound-session-persistence",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables session persistence for the official version of Device Bound Session Credentials."
+  },
+  {
+    "title": "Device Bound Session Credentials (Standard) - Federated Registrations",
+    "id": "enable-standard-device-bound-session-credentials-federated-sessions",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables federated session registration for the official version of Device Bound Session Credentials."
+  },
+  {
+    "title": "Device Bound Session Credentials (Standard) DevTools Debugging",
+    "id": "enable-standard-device-bound-session-devtools-debugging",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables DevTools debugging for the official version of Device Bound Session Credentials."
+  },
+  {
+    "title": "Device Bound Session Credentials (Standard) on Google",
+    "id": "enable-standard-device-bound-session-google",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Device Bound Session Credentials (Standard) to register sessions on Google sites"
+  },
+  {
+    "title": "Experiment ID for Device Bound Session Credentials (Standard) on Google",
+    "id": "enable-standard-device-bound-session-google-experiment-id",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Sets the experiment ID sent when Device Bound Session Credentials (Standard) registers sessions on Google sites"
+  },
+  {
+    "title": "Responsive Iframes",
+    "id": "responsive-iframes",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable responsively-sized iframes."
+  },
+  {
+    "title": "Replace all sync-related UI with sign-in ones",
+    "id": "replace-sync-promos-with-sign-in-promos-desktop",
+    "type": "choice",
+    "default": "Default",
+    "description": "When enabled, all sync-related UIs will be replaced by sign-in ones."
+  },
+  {
+    "title": "Replace sync promos with sign-in promos (New Sign-in events)",
+    "id": "replace-sync-promos-with-signin-promos-new-signin",
+    "type": "choice",
+    "default": "Default",
+    "description": "When enabled, all sync-related UIs will be replaced by sign-in ones. Similar to #replace-sync-promos-with-sign-in-promos-desktop but only enables extensions and bookmarks sync on new signin events."
+  },
+  {
+    "title": "Uno phase 2 follow-up",
+    "id": "uno-phase-2-follow-up",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "UI tweaks for signin surfaces"
+  },
+  {
+    "title": "Showing password suggestions on autofocused password forms",
+    "id": "pwm-show-suggestions-on-autofocus",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables showing password suggestions without requiring the user to click on the already focused field if the field was autofocused on the page load."
+  },
+  {
+    "title": "In-flow resolution of errors during password saving",
+    "id": "password-save-in-context-error-resolution-on-desktop",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Starts the password manager error resolution flow after offering to save a password."
+  },
+  {
+    "title": "Enable optimization guide dogfood logging",
+    "id": "optimization-guide-enable-dogfood-logging",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "If this client is a Google-internal dogfood client, overrides enterprise policy to enable model quality logs. Googlers: See go/chrome-mqls-debug-logging for details."
+  },
+  {
+    "title": "Prompt API for Gemini Nano",
+    "id": "prompt-api-for-gemini-nano",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the exploratory Prompt API, allowing you to send natural language instructions to a built-in large language model (Gemini Nano in Chrome). Exploratory APIs are designed for local prototyping to help discover potential use cases, and may never launch. These explorations will inform the built-in AI roadmap [1]. This API is primarily intended for natural language processing tasks such as summarizing, classifying, or rephrasing text. It is NOT suitable for use cases that require factual accuracy (e.g. answering knowledge questions). You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "Prompt API for Gemini Nano with Multimodal Input",
+    "id": "prompt-api-for-gemini-nano-multimodal-input",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Extends the exploratory Prompt API with image and audio input types. Allows you to supplement natural language instructions for a built-in large language model (Gemini Nano in Chrome) with image and audio inputs. Exploratory APIs are designed for local prototyping to help discover potential use cases, and may never launch. These explorations will inform the built-in AI roadmap [1]. This API enhancement is primarily intended for natural language processing tasks associated with visual and auditory data, such as generating rough descriptions of pictures and sounds. It is NOT suitable for use cases that require factual accuracy (e.g. answering knowledge questions). You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "Writer API for Gemini Nano",
+    "id": "writer-api-for-gemini-nano",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Writer API, allowing you to write a piece of text with a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "Rewriter API for Gemini Nano",
+    "id": "rewriter-api-for-gemini-nano",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Rewriter API, allowing you to rewrite a piece of text with a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "Proofreader API for Gemini Nano",
+    "id": "proofreader-api-for-gemini-nano",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Proofreader API, allowing you to proofread a piece of textwith a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "Summarizer API with Performance Preference",
+    "id": "summarizer-api-performance-preference",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds the \"preference\" create option to the Summarizer API. Allows the developer to choose between \"capability\", \"speed\", and \"auto\" to hint at the desired balance between performance and capability.",
+    "references": [
+      "https://chromestatus.com/feature/6309243756085248"
+    ]
+  },
+  {
+    "title": "Summarizer API for Gemini Nano",
+    "id": "summarizer-api-for-gemini-nano",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Summarizer API, allowing you to summarize a piece of text with a built-in large language model (Gemini Nano in Chrome). The API may be subject to changes including the supported options. Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
+  },
+  {
+    "title": "LiteRT-LM for On-Device AI",
+    "id": "on-device-model-litert-lm-backend",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use LiteRT-LM runtime for on-device model service inference."
+  },
+  {
+    "title": "CSS Grid Lanes Layout",
+    "id": "css-grid-lanes-layout",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable experimental CSS Grid Lanes Layout implementation. Simple layouts with grid-lanes are supported. Subgrid and fragmentation are not supported yet. The syntax to use CSS Grid Lanes is `display: grid-lanes` together with grid properties (i.e. `grid-column`, `grid-row`, etc.). More details on grid-lanes syntax can be found at https://www.w3.org/TR/css-grid-3/#masonry-model."
+  },
+  {
+    "title": "Lens AIM M3 Side Panel Suggestions",
+    "id": "lens-aim-suggestions",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables suggestions in the Lens composebox. This will have an effect only when the Lens search AIM M3 flag is also enabled."
+  },
+  {
+    "title": "Lens AIM M3 Side Panel Suggestions Gradient Background",
+    "id": "lens-aim-gradient-suggest-background",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a gradient background for the Lens composebox dropdown that does not cover the entire side panel."
+  },
+  {
+    "title": "Data Sharing",
+    "id": "data-sharing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enabled all Data Sharing related UI and features."
+  },
+  {
+    "title": "Collaboration Entreprise V2",
+    "id": "collaboration-entreprise-v2",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the collaboration feature for entreprise users within the same domain."
+  },
+  {
+    "title": "Shared Tab Group messaging sync",
+    "id": "collaboration-shared-tab-group-account-data",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable the messaging sync backend for shared tab groups."
+  },
+  {
+    "title": "Data Sharing Join Only",
+    "id": "data-sharing-join-only",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enabled Data Sharing Joining flow related UI and features."
+  },
+  {
+    "title": "Data Sharing server environment",
+    "id": "data-sharing-non-production-environment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Sets data sharing server environment."
+  },
+  {
+    "title": "Data Sharing Versioning Test Scenarios",
+    "id": "shared-data-types-kill-switch",
+    "type": "choice",
+    "default": "Default",
+    "description": "Testing multiple scenarios for versioning."
+  },
+  {
+    "title": "Enable JavaScript live editing in DevTools",
+    "id": "devtools-live-edit",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Re-enable the deprecated feature in DevTools' Sources panel to apply code edits to the target page live."
+  },
+  {
+    "title": "PermissionsAIv4",
+    "id": "permissions-ai-v4",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use the Permission Predictions Service and the AIv4 model to surface permission notification requests using a quieter UI when the likelihood of the user granting the permission is predicted to be low. Requires `Make Searches and Browsing Better` to be enabled."
+  },
+  {
+    "title": "PermissionsAIP92",
+    "id": "permissions-ai-p92",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Use the Permission Predictions Service and with P92 adjustments to surface permission notification requests using a quieter UI when the likelihood of the user granting the permission is predicted to be low. Requires `Make Searches and Browsing Better` to be enabled."
+  },
+  {
+    "title": "Permissions Gesture Gated Prompts",
+    "id": "permissions-gesture-gated-prompts",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Mute non-user-initiated permission requests."
+  },
+  {
+    "title": "Lens Side Panel Unification",
+    "id": "enable-lens-side-panel-unification",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Unifies the Lens and Contextual Tasks side panels into a single panel."
+  },
+  {
+    "title": "Enable buy now pay later on Autofill",
+    "id": "autofill-enable-buy-now-pay-later",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, users will have the option to pay with buy now pay later on specific merchant webpages."
+  },
+  {
+    "title": "Enable syncing buy now pay later user data.",
+    "id": "autofill-enable-buy-now-pay-later-syncing",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, Chrome will sync user data related to buy now pay later."
+  },
+  {
+    "title": "Enable CVC storage and filling standalone form enhancement for payments autofill",
+    "id": "autofill-enable-cvc-storage-and-filling-standalone-form-enhancement",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, this will enhance the CVV storage project. The enhancement will enable CVV storage suggestions for standalone CVC fields."
+  },
+  {
+    "title": "Translation API streaming split by sentence",
+    "id": "translation-api-streaming-by-sentence",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables sentence-split streaming for on-device translation API."
+  },
+  {
+    "title": "Grouped affiliation password suggestions",
+    "id": "password-form-grouped-affiliations",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables offering credentials coming from grouped domains for filling"
+  },
+  {
+    "title": "Contextual cueing",
+    "id": "contextual-cueing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the contextual cueing system to support showing actions."
+  },
+  {
+    "title": "PartitionAlloc with Advanced Checks",
+    "id": "partition-alloc-with-advanced-checks",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables an extra security layer on PartitionAlloc."
+  },
+  {
+    "title": "Partition the Visited Link Database, including 'self-links'",
+    "id": "partition-visited-link-database-with-self-links",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Style links as visited only if they have been clicked from this top-level site and frame origin before. Additionally, style links pointing to the same URL as the page it is displayed on, which have been :visited from any top-level site and frame origin, if they are displayed in a top-level frame or same-origin subframe."
+  },
+  {
+    "title": "Predictable Reported Quota",
+    "id": "predictable-reported-quota",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables reporting of a predictable quota from the StorageManager's estimate API. This flag is intended only for validating if this change caused an unforeseen bug."
+  },
+  {
+    "title": "BookmarkBarPrefetch",
+    "id": "prefetch-bookmarkbar-trigger",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, bookmarkbar can trigger prefetch"
+  },
+  {
+    "title": "NewTabPagePrefetch",
+    "id": "prefetch-new-tab-page-trigger",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, NewTabPage can trigger prefetch"
+  },
+  {
+    "title": "Glic",
+    "id": "glic",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables glic"
+  },
+  {
+    "title": "Glic actor",
+    "id": "glic-actor",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables the Glic actor."
+  },
+  {
+    "title": "Glic experimental triggering",
+    "id": "glic-experimental-triggering",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables GLIC experimental triggering"
+  },
+  {
+    "title": "Glic actor autofill",
+    "id": "glic-actor-autofill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables autofill actions for the Glic actor. Specific fillable types may also need to be enabled."
+  },
+  {
+    "title": "Glic actor cursor",
+    "id": "glic-actor-cursor",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Glic actor cursor"
+  },
+  {
+    "title": "Glic actor script tools",
+    "id": "glic-actor-script-tools",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables script tools for the Glic actor."
+  },
+  {
+    "title": "Glic detached-only mode",
+    "id": "glic-detached",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Detach only mode forces the Glic UI to always be floating"
+  },
+  {
+    "title": "Glic Tab Restoration",
+    "id": "glic-tab-restoration",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables Glic instance restore when tabs are restored."
+  },
+  {
+    "title": "Glic Print Menu Item",
+    "id": "glic-print-menu-item",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables showing the Glic print contextual menu item."
+  },
+  {
+    "title": "Glic Pre-Warming",
+    "id": "glic-pre-warming",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the pre-warming of the Glic panel's web client."
+  },
+  {
+    "title": "Glic Entrypoint Variations",
+    "id": "glic-entrypoint-variations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables visual tweaks to the Glic entry button in the tab strip."
+  },
+  {
+    "title": "Glic contextual cue bubble",
+    "id": "glic-contextual-cue-bubble",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Show glic contextual cues in a bubble UI."
+  },
+  {
+    "title": "Glic Default To Last Active Conversation",
+    "id": "glic-default-to-last-active-conversation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the last active conversation as the default conversation when opening a new Glic side panel instance."
+  },
+  {
+    "title": "Glic Bind a Shared Tab If Unbound",
+    "id": "glic-bind-pinned-unbound-tab",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When a tab is shared with conversation and not yet bound to any conversation, bind it to the current one"
+  },
+  {
+    "title": "Glic Button Alt Label",
+    "id": "glic-button-alt-label",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables an alternative label for the Glic button."
+  },
+  {
+    "title": "Glic Button Auto Summarize",
+    "id": "glic-button-auto-summarize",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Automatically triggers a summary when the Glic button is clicked on a certain page (ex. PDF)."
+  },
+  {
+    "title": "Glic Button Pressed State",
+    "id": "glic-button-pressed-state",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables visual changes to the Glic entry button when Glic is open."
+  },
+  {
+    "title": "Glic Capture Region",
+    "id": "glic-capture-region",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Glic to capture a region of the screen."
+  },
+  {
+    "title": "Glic Client Zoom Control",
+    "id": "glic-client-zoom-control",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the use of Chrome zoom keyboard controls in the Glic UI."
+  },
+  {
+    "title": "Glic Daisy chain new tabs",
+    "id": "glic-daisy-chain-new-tabs",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Daisy chains new tabs if the active tab when the new tab was create has an open glic side panel"
+  },
+  {
+    "title": "Glic Use Toolbar Height Side Panel",
+    "id": "glic-toolbar-height-side-panel",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Glic to use the toolbar height side panel instead of content height side panel when enabled to use side panel"
+  },
+  {
+    "title": "Glic Live Mode Only Glow",
+    "id": "glic-live-mode-only-glow",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "The Gemini glow around the web contents will only appear when in live mode, rather than being always on the current page."
+  },
+  {
+    "title": "Glic Multi-Instance Tab Context Menu",
+    "id": "glic-mi-tab-context-menu",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the Glic context menu for the tabs in the tabstrip."
+  },
+  {
+    "title": "Glic Share Image",
+    "id": "glic-share-image",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Create Image with Gemini context menu item"
+  },
+  {
+    "title": "Glic Trust First Onboarding",
+    "id": "glic-trust-first-onboarding",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the Trust First Onboarding experiment for Glic."
+  },
+  {
+    "title": "Glic Default Tab Context Setting",
+    "id": "glic-default-tab-context-setting",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Controls whether tab context is enabled by default within new Glic sessions. Required for Side Panel."
+  },
+  {
+    "title": "Glic guest URL presets",
+    "id": "glic-guest-url-presets",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Overrides the Bluebird environment URL used for Glic with user-configured values. Intended for manual testing only."
+  },
+  {
+    "title": "Glic Selection Prompt",
+    "id": "glic-selection-prompt",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Glic prompt suggestion when text is selected."
+  },
+  {
+    "title": "Glic disable actor safety checks",
+    "id": "glic-disable-actor-safety-checks",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "Disables actor safety checks in Glic. Use with extreme caution, intended for testing only."
+  },
+  {
+    "title": "Enable toolbar Gemini button on horizontal tab strip",
+    "id": "glic-horizontal-tab-toolbar-button",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the toolbar Gemini button when the horizontal tab strip is enabled, and disables the tab strip Gemini button."
+  },
+  {
+    "title": "Glic Toolbar Button Location",
+    "id": "glic-toolbar-button-location",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Specifies the location of the toolbar Gemini button."
+  },
+  {
+    "title": "Skills",
+    "id": "skills",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Skills in Gemini in Chrome"
+  },
+  {
+    "title": "Enable Save and Fill",
+    "id": "autofill-enable-save-and-fill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, show an option to offer saving and filling a credit card with a single click when users don't have any cards saved in Autofill."
+  },
+  {
+    "title": "Happy Eyeballs Version 3",
+    "id": "happy-eyeballs-v3",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Happy Eyeballs Version 3 algorithm. See https://datatracker.ietf.org/doc/draft-pauly-v6ops-happy-eyeballs-v3/"
+  },
+  {
+    "title": "Enable OAuthMultilogin Cookies Binding",
+    "id": "enable-oauth-multilogin-cookies-binding",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables binding of cookies returned from OAuthMultilogin to cryptographic keys."
+  },
+  {
+    "title": "Enable OAuthMultilogin Cookies Binding Server Experiment",
+    "id": "enable-oauth-multilogin-cookies-binding-server-experiment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome will send will send a specific URL parameter to Gaia to trigger the server-side experiment for binding the OAuthMultilogin cookies to cryptographic keys. This flag is meant to be used in conjunction with the 'Enable OAuthMultilogin Cookies Binding' flag."
+  },
+  {
+    "title": "Chrome Refresh Token Binding",
+    "id": "enable-chrome-refresh-token-binding",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables binding of Chrome refresh tokens to cryptographic keys."
+  },
+  {
+    "title": "Three Button Password Save Dialog",
+    "id": "three-button-password-save-dialog",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Provides a 'not now' button alongside the 'never' button on the save password dialog."
+  },
+  {
+    "title": "throttle-main-thread-to-60hz",
+    "id": "throttle-main-thread-to-60hz",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Throttle main thread updates to 60fps, even when VSync rate is higher."
+  },
+  {
+    "title": "Enable showing card benefits for BMO cards",
+    "id": "autofill-enable-card-benefits-for-bmo",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, card benefits offered by BMO will be shown in Autofill suggestions."
+  },
+  {
+    "title": "Top Chrome Bookmarks Tree View",
+    "id": "bookmarks-tree-view",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Show the bookmarks side panel in a tree view while in compact mode."
+  },
+  {
+    "title": "Automatically detach USB kernel drivers",
+    "id": "automatic-usb-detach",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Automatically detach kernel drivers when a USB interface is busy."
+  },
+  {
+    "title": "Enable checkout amount extraction.",
+    "id": "autofill-enable-amount-extraction",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome will extract the checkout amount from the checkout page of the allowlisted merchant websites."
+  },
+  {
+    "title": "AXTree Fixing",
+    "id": "enable-ax-tree-fixing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, allows Chrome to dynamically fix the AXTree of sites. This is experimental and may cause breaking changes to users of assistive technology."
+  },
+  {
+    "title": "ClipboardChangeEvent",
+    "id": "enable-clipboardchange-event",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the `clipboardchange` event API. See: https://chromestatus.com/feature/5085102657503232"
+  },
+  {
+    "title": "DevTools Project Settings",
+    "id": "devtools-project-settings",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "If enabled, DevTools will try to fetch project settings in the form of a `com.chrome.devtools.json` file from a well-known URI on local debugging targets."
+  },
+  {
+    "title": "Drop input events while paint-holding is active",
+    "id": "drop-input-events-while-paint-holding",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Drop input events at the browser process until the process receives the first signal that the renderer has sent a frame to GPU. This prevents accidental interaction with a page the user has not seen yet."
+  },
+  {
+    "title": "Default Browser Changed OS Notification",
+    "id": "default-browser-changed-os-notification",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the framework to show OS Notification when Chrome is no longer the default browser."
+  },
+  {
+    "title": "Default Browser Framework",
+    "id": "default-browser-framework",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the default browser framework."
+  },
+  {
+    "title": "Default Browser Prompt Surfaces",
+    "id": "default-browser-prompt-surfaces",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables using various default browser prompt surfaces."
+  },
+  {
+    "title": "Chrome Web Store navigation throttle",
+    "id": "chrome-web-store-navigation-throttle",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, passes DM Token to the Chrome Web Store."
+  },
+  {
+    "title": "Align PDF default print settings with HTML",
+    "id": "align-pdf-default-print-settings-with-html",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Align the default print settings for PDFs with those for HTML, including scaling and centering."
+  },
+  {
+    "title": "Enable URL filter interstitial V3",
+    "id": "supervised-user-block-interstitial-v3",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables URL filter interstitial V3 for Family Link users."
+  },
+  {
+    "title": "Emit device log record separately",
+    "id": "supervised-user-emit-log-record-separately",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Emits one log record per each supervision type, instead of a single combined value. No user-visible effect on other platforms than Android."
+  },
+  {
+    "title": "Merge device parental controls and Family Link prefs",
+    "id": "supervised-user-merge-device-parental-controls-and-family-link-prefs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Merges non-web filtering device parental controls settings with Family Link settings in the SupervisedUserPrefStore. No user-visible effect on other platforms than Android."
+  },
+  {
+    "title": "Use URL filtering service",
+    "id": "supervised-user-use-url-filtering-service",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use the SupervisedUserUrlFilteringService to get URL filtering settings directly from supervision services instead of using PrefService. No user-visible effect on other platforms than Android."
+  },
+  {
+    "title": "Enable amount extraction testing",
+    "id": "autofill-enable-amount-extraction-testing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables testing of the result of checkout amount extraction. This flag will allow amount extraction to run on any website when a CC form is clicked."
+  },
+  {
+    "title": "Make scrollbar follow theme",
+    "id": "root-scrollbar-follows-browser-theme",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled makes the root scrollbar follow the browser's theme color."
+  },
+  {
+    "title": "Local Network Access Checks",
+    "id": "local-network-access-check",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables Local Network Access checks. See: https://chromestatus.com/feature/5152728072060928"
+  },
+  {
+    "title": "Local Network Access Checks for WebRTC",
+    "id": "local-network-access-check-webrtc",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable Local Network Access checks for WebRTC. Requires the #local-network-access-check flag to also be enabled See: https://chromestatus.com/feature/5065884686876672"
+  },
+  {
+    "title": "Local Network Access Checks for WebSockets",
+    "id": "local-network-access-check-websockets",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable Local Network Access checks for WebSockets. Requires the #local-network-access-check flag to also be enabled See: https://chromestatus.com/feature/5197681148428288"
+  },
+  {
+    "title": "Local Network Access Checks for WebTransport",
+    "id": "local-network-access-check-webtransport",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enable Local Network Access checks for WebTransport. Requires the #local-network-access-check flag to also be enabled See: https://chromestatus.com/feature/5126430912544768"
+  },
+  {
+    "title": "Navigation links in the tab-sharing bar",
+    "id": "tab-capture-infobar-links",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables quick-navigation links to the captured and capturing tab in the tab-sharing bar."
+  },
+  {
+    "title": "Enable showing flat rate card benefits sourced from Curinos",
+    "id": "autofill-enable-flat-rate-card-benefits-from-curinos",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, flat rate card benefits sourced from Curinos will be shown in Autofill suggestions."
+  },
+  {
+    "title": "Bundled Security Settings",
+    "id": "bundled-security-settings",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables new Bundled Security Settings UI on chrome://settings/security. This new UI bundles all security settings into either an enhanced or standard bundle which should simplify the security settings page and also help simplify the user's decision."
+  },
+  {
+    "title": "Enable immediate mediation for WebAuthn get requests",
+    "id": "web-authentication-immediate-get",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables immediate mediation for WebAuthn and passwords for a navigator.credentials.get() request. This will return a NotAllowedError if there are no credentials for a given get request. The request can also request passwords."
+  },
+  {
+    "title": "Open Dragged Links in the Same Tab",
+    "id": "open-dragged-links-same-tab",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows users to drag a single link to a tab to open in that tab."
+  },
+  {
+    "title": "Discount Autofill",
+    "id": "discount-autofill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable discount autofill experiment."
+  },
+  {
+    "title": "Change scrolling scheduling to reduce checkerboarding",
+    "id": "new-content-for-checkerboarded-scrolls",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "If enabled, scrolling that would generate blank frames will now prioritize the new content over scrolling with the intention of decreasing the amount of checkerboarded frames."
+  },
+  {
+    "title": "Page actions migration",
+    "id": "page-actions-migration",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables a new internal framework for driving page actions behavior."
+  },
+  {
+    "title": "Disable the Autofill strike system",
+    "id": "disable-autofill-strike-system",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, the Autofill strike system will not block a feature from being offered."
+  },
+  {
+    "title": "Web App Install Element",
+    "id": "web-app-install-element",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the <install> HTML element which allows web apps to be installed declaratively."
+  },
+  {
+    "title": "Web App Installation API",
+    "id": "web-app-installation-api",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the Web App Installation API which allows web apps to be installed programmatically using navigator.install()."
+  },
+  {
+    "title": "Web App Migration API",
+    "id": "web-app-migration-api",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the API for same-site web app migrations."
+  },
+  {
+    "title": "Enable buy now pay later on Autofill for Klarna",
+    "id": "autofill-enable-buy-now-pay-later-for-klarna",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, users will have the option to pay with buy now pay later with Klarna on specific merchant webpages."
+  },
+  {
+    "title": "Customize tab group color palette",
+    "id": "customize-tab-group-color-palette",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables parsing of the `tab_group_color_palette` key in the manifest.json file, which allows customization of the tab group color palette. Disabling this flag will cause the key to be ignored."
+  },
+  {
+    "title": "Enable showing in-product help UI for downstream card awareness",
+    "id": "autofill-enable-downstream-card-awareness-iph",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, in-product help UI will be shown the first time a card added outside of Chrome appears in Autofill card suggestions."
+  },
+  {
+    "title": "Enable new tab page browser feature suggestions",
+    "id": "enable-ntp-browser-promos",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows suggestions to explore browser capabilities (eg. signing in) on the new tab page."
+  },
+  {
+    "title": "Extensibility API support for deep-links within DevTools",
+    "id": "enable-devtools-deep-link-via-extensibility-api",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Extends console.timestamp to support adding deep-links into the DevTools Performance Panel, which (when clicked) call into a DevTools extension"
+  },
+  {
+    "title": "Enable buy now pay later for externally linked BNPL issuer",
+    "id": "autofill-enable-buy-now-pay-later-for-externally-linked",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, users will have the option to pay with buy now pay later with externally linked issuer on specific merchant webpages."
+  },
+  {
+    "title": "Safety Hub - unused permission revocation from all surfaces",
+    "id": "safety-hub-unused-permission-revocation-for-all-surfaces",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables autorevoking of unused permissions granted from all UI surfaces."
+  },
+  {
+    "title": "Bookmark and tab group conversion",
+    "id": "bookmark-tab-group-conversion",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable conversion between bookmark and tab group"
+  },
+  {
+    "title": "Default search engine prewarm",
+    "id": "default-search-engine-prewarm",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Performance optimization to prewarm the default search engine used in the Omnibox"
+  },
+  {
+    "title": "Apply clientside model predictions for password forms.",
+    "id": "apply-clientside-model-predictions-for-password-types",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable using clientside model predictions to fill password forms."
+  },
+  {
+    "title": "HTML-in-Canvas",
+    "id": "canvas-draw-element",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Canvas 2D drawElement API and the WebGL texElement2D API for drawing HTML content into a canvas. See: https://github.com/WICG/html-in-canvas"
+  },
+  {
+    "title": "Lens overlay force empty CSB query",
+    "id": "enable-lens-overlay-force-empty-csb-query",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Forces Lens overlay to issue an empty CSB query on invocation."
+  },
+  {
+    "title": "Browsing History Actor Integration M2",
+    "id": "browsing-history-actor-integration-M2",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the browsing history glic actor integration M2."
+  },
+  {
+    "title": "Browsing History Actor Integration M3",
+    "id": "browsing-history-actor-integration-M3",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the browsing history glic actor integration M3. Requires browsing-history-actor-integration-M2 to be enabled as well."
+  },
+  {
+    "title": "Browsing History Grouping Improvements",
+    "id": "browsing-history-similar-visits-grouping",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables improvements to grouping of similar browsing history on the history page."
+  },
+  {
+    "title": "Add new tabs to active tab group.",
+    "id": "new-tab-adds-to-active-group",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, and there is a tab group is focused, then new tabs will be added to the focused tab group."
+  },
+  {
+    "title": "Support for name and email addresses in Autofill",
+    "id": "autofill-enable-support-for-name-and-email-profile",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, a name and email profile with data comming from the account will be created for autofilling."
+  },
+  {
+    "title": "Force iOS Promo Type",
+    "id": "mobile-promo-on-desktop-force-promo-type",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Force the iOS promo to be a specific type (QRCode or Reminder) for testing purposes."
+  },
+  {
+    "title": "Mobile Promo On Desktop - QRCode",
+    "id": "mobile-promo-on-desktop-with-qr-code",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, shows a mobile promo with a QR code on desktop for eligible users."
+  },
+  {
+    "title": "Mobile Promo On Desktop - Reminder",
+    "id": "mobile-promo-on-desktop-with-reminder",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, shows a mobile promo with a reminder flow on desktop for eligible users."
+  },
+  {
+    "title": "Reintroduce hybrid passkey entry point",
+    "id": "reintroduce-hybrid-passkey-entry-point",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Reintroduces the hybrid passkey entry point to the Autofill dropdown menu."
+  },
+  {
+    "title": "Make options menus to include more tab group actions",
+    "id": "tab-group-more-entry-points",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Add options to menus to facilitate tab group creation and interaction"
+  },
+  {
+    "title": "Tab group header hover cards",
+    "id": "tab-group-hover-cards",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables hover cards for tab group headers in the tab strip."
+  },
+  {
+    "title": "Enable SecurityInfo in WebRequest API for ControlledFrame",
+    "id": "controlled-frame-web-request-security-info",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables SecurityInfo in WebRequest API for ControlledFrames, allowing listeners to retrieve certificate details of web requests."
+  },
+  {
+    "title": "Source-Specific Multicast in Direct Sockets API",
+    "id": "source-specific-multicast-in-direct-sockets",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Source-Specific Multicast support in Direct Sockets API. See https://github.com/WICG/direct-sockets/blob/main/docs/multicast-explainer.md for details."
+  },
+  {
+    "title": "Enable Cross-Device Pref Tracker",
+    "id": "enable-cross-device-pref-tracker",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the tracking and sharing of select non-syncing preference values across a user's signed-in devices."
+  },
+  {
+    "title": "Contextual suggestions UI improvements",
+    "id": "contextual-suggestion-ui-improvements",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables UI improvements for contextual suggestions (e.g. icon and animation)."
+  },
+  {
+    "title": "Verify QWACs",
+    "id": "verify-qwacs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables verification of qualified certificates for website authentication as described in ETSI TS 119 411-5 V2.1.1 (2025-02)."
+  },
+  {
+    "title": "Prefer blocklists instead of allowlists for Payments Autofill Buy Now Pay Later (BNPL)",
+    "id": "autofill-prefer-buy-now-pay-later-blocklists",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, Payments Autofill Buy Now Pay Later (BNPL) will use each corresponding issuer's blocklist instead of allowlist to check for website eligibility."
+  },
+  {
+    "title": "Enable AI-based checkout amount extraction on Chrome",
+    "id": "autofill-enable-ai-based-amount-extraction",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, Chrome will extract the checkout amount from the checkout page using server-side AI."
+  },
+  {
+    "title": "Contextual Tasks",
+    "id": "contextual-tasks",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable the contextual tasks feature."
+  },
+  {
+    "title": "Omnibox debug logs",
+    "id": "omnibox-debug-logs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables logging that can be read from an internals page."
+  },
+  {
+    "title": "Contextual Tasks Context",
+    "id": "contextual-tasks-context",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables relevant context determination for contextual tasks."
+  },
+  {
+    "title": "Contextual Tasks Suggestions Enabled",
+    "id": "contextual-tasks-suggestions-enabled",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables suggestions for contextual tasks."
+  },
+  {
+    "title": "Contextual Tasks Context Library",
+    "id": "contextual-tasks-context-library",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables integration with the server side context library."
+  },
+  {
+    "title": "Create new tab group menu option at the top level of the app menu",
+    "id": "create-new-tab-group-app-menu-top-level",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "In the app menu, add an option to create a new tab group at the top level"
+  },
+  {
+    "title": "Enable issuer names in the second line of a BNPL suggestion",
+    "id": "autofill-enable-buy-now-pay-later-updated-suggestion-second-line-string",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, the second line of a BNPL suggestion is updated to include the issuer names for better brand recognition."
+  },
+  {
+    "title": "Cryptography Compliance (CNSA)",
+    "id": "cryptography-compliance-cnsa",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, Chrome will configure its preferred algorithms for TLS to prefer algorithms that satisfy the requirements of the Commercial National Security Algorithm Suite (CNSA) versions 1.0 and 2.0. Enabling this flag does not guarantee that any specific algorithms will be negotiated. This flag is not required for security."
+  },
+  {
+    "title": "Lens search reinvocation affordance",
+    "id": "lens-reinvocation-affordance",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Lens button in the AIM Searchbox for reinvocation of selection overlay."
+  },
+  {
+    "title": "Lens search zero state CSB",
+    "id": "lens-search-zero-state-csb",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a zero state CSB query in Lens."
+  },
+  {
+    "title": "Lens updated feedback entrypoint",
+    "id": "lens-updated-feedback-entrypoint",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables an updated feedback entry point in the Lens side panel."
+  },
+  {
+    "title": "Lens video citations",
+    "id": "lens-video-citations",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables special handling for video citations in Lens."
+  },
+  {
+    "title": "Variations seed corpus",
+    "id": "variations-seed-corpus",
+    "type": "switch",
+    "default": "Disabled",
+    "description": "The value of the 'corpus' parameter in the variations seed request. If unspecified, the 'corpus' parameter is omitted from the request."
+  },
+  {
+    "title": "Passkey Unlock Manager",
+    "id": "passkey-unlock-manager",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the Passkey Unlock Manager, which tracks the state of passkeys and publishes the corresponding metrics."
+  },
+  {
+    "title": "Passkey Unlock Error UI",
+    "id": "passkey-unlock-error-ui",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables showing the passkey unlock error UI to passkey users in case when their access to passkeys is \u201clocked\u201d and when they have an available user verification mechanism (either a system UV or a GPM PIN). This flag requires the flag `PasskeyUnlockManager` to be active."
+  },
+  {
+    "title": "Automatic JS Optimizer Control",
+    "id": "block-v8-optimizer-on-unfamiliar-sites",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Adds an option to the V8 optimizer content setting that disables the JavaScript optimizer on sites that are unfamiliar to the user."
+  },
+  {
+    "title": "ServiceWorkerSyntheticResponse",
+    "id": "service-worker-synthetic-response",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable service worker synthetic response feature."
+  },
+  {
+    "title": "Mdm error handling for dasher accounts",
+    "id": "mdm-errors-for-dasher-accounts-handling",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the mdm error handling feature for dasher accounts"
+  },
+  {
+    "title": "Disable U18 Feedback Desktop",
+    "id": "disable-u18-feedback-desktop",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Disables the feedback for U18 users on desktop platforms."
+  },
+  {
+    "title": "Enable CTA experiment for sign-in level up",
+    "id": "profile-creation-decline-signin-cta-experiment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the Sign In Level Up experiment, changes the decline sign in CTA string in profile creation entry points"
+  },
+  {
+    "title": "Enable prefill name requirement for profile creation for friction reduction experiment",
+    "id": "profile-creation-friction-reduction-experiment-prefill-name-requirement",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the profile creation friction reduction experiment, prefills the name requirement in profile customization bubble"
+  },
+  {
+    "title": "Remove sign-in step from profile creation for friction reduction experiment",
+    "id": "profile-creation-friction-reduction-experiment-remove-signin-step",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the profile creation friction reduction experiment, removes the sign-in step"
+  },
+  {
+    "title": "Skip customize profile step for friction reduction experiment",
+    "id": "profile-creation-friction-reduction-experiment-skip-customize-profile",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the profile creation friction reduction experiment, skips the customize profile bubble"
+  },
+  {
+    "title": "Search Settings Update",
+    "id": "search-settings-update",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables refactoring of the search settings pages in chrome://settings/search"
+  },
+  {
+    "title": "Show profile picker to all users",
+    "id": "show-profile-picker-to-all-users-experiment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the Growth experiments, show the profile picker to users who only have one profile"
+  },
+  {
+    "title": "Add button to open all profiles from profile picker",
+    "id": "open-all-profiles-from-profile-picker-experiment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the Growth experiments, add a button to open all profiles from the profile picker."
+  },
+  {
+    "title": "Profile Signals Reporting Enabled",
+    "id": "profile-signals-reporting-enabled",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the profile signals reporting flow for Chrome Enterprise."
+  },
+  {
+    "title": "Projects Panel",
+    "id": "projects-panel",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Projects Panel."
+  },
+  {
+    "title": "Sync AI Threads",
+    "id": "sync-ai-threads",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Acquire AI Threads via sync."
+  },
+  {
+    "title": "Sync Gemini Threads",
+    "id": "sync-gemini-threads",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Acquire Gemini Threads via sync."
+  },
+  {
+    "title": "Enable UnexportableKeyService mojo service in the browser process.",
+    "id": "use-unexportable-key-service-in-browser-process",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, the browser process will create an Unexportable Key Service which can be used by other, less privileged processes. This enables DBSC in platforms where access to TPM-like features is privileged."
+  },
+  {
+    "title": "Profile Picker Text Variations",
+    "id": "profile-picker-text-variations",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "As part of the Profile experiments, enables variations of the profile picker text."
+  },
+  {
+    "title": "Lens Overlay optimization filter",
+    "id": "lens-overlay-optimization-filter",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables using the optimization filter for triggering the action chip."
+  },
+  {
+    "title": "Migrate preinstalled Chat app",
+    "id": "web-app-migrate-preinstalled-chat",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, the preinstalled Chat web app will be migrated from its old URL to a new URL. This migration only applies to users who have not manually installed the Chat app."
+  },
+  {
+    "title": "Web App install dialog",
+    "id": "web-app-install-dialog",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the new web app install dialog."
+  },
+  {
+    "title": "Connection Allowlists",
+    "id": "connection-allowlists",
+    "type": "choice",
+    "default": "Default",
+    "description": "Enables a prototype implementation of `Connection-Allowlist` header parsing and enforcement. See https://github.com/mikewest/anti-exfil/"
+  },
+  {
+    "title": "Reading Mode Experimental Webpage Distilation",
+    "id": "read-anything-with-readability-enabled",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the experimental text webpage distillation using readability.js method for reading mode."
+  },
+  {
+    "title": "Reading Mode Omnibox Chip",
+    "id": "read-anything-omnibox-chip",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the omnibox chip entry point for Reading mode"
+  },
+  {
+    "title": "Disable the country check for BNPL testing",
+    "id": "autofill-disable-bnpl-country-check-for-testing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables testing BNPL in countries where it would otherwise be disabled."
+  },
+  {
+    "title": "Infobar Prioritization",
+    "id": "infobar-prioritization",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Shows the infobars by priority starting by critical ones by respecting a given caps."
+  },
+  {
+    "title": "Infobar Refresh",
+    "id": "infobar-refresh",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Renders infobars with a refreshed UI."
+  },
+  {
+    "title": "Reading Mode Experimental Immersive Mode",
+    "id": "read-anything-immersive-reading-mode",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the infrastructure for Immersive Reading Mode."
+  },
+  {
+    "title": "Lens overlay non-blocking privacy notice",
+    "id": "lens-overlay-non-blocking-privacy-notice",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables non-blocking privacy notice in the Lens overlay."
+  },
+  {
+    "title": "Migrate syncing user to signed in state",
+    "id": "migrate-syncing-user-to-signed-in",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, a syncing user is migrated to the signed in non-syncing state on the next browser startup."
+  },
+  {
+    "title": "Undo the migration of syncing users to signed-in state",
+    "id": "undo-migration-of-syncing-user-to-signed-in",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, reverts the migration of syncing users who were previously migrated to the signed-in, non-syncing state."
+  },
+  {
+    "title": "DOM Storage SQLite Backend",
+    "id": "dom-storage-sqlite",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Uses a SQLite-powered backing store for local and session storage. No data is migrated from existing backing stores, including LevelDB stores or SQLite stores with older schemas; use at your own peril."
+  },
+  {
+    "title": "IDB SQLite Backing Store",
+    "id": "idb-sqlite-backing-store",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Uses a SQLite-powered backing store for IndexedDB. No data is migrated from existing backing stores, including LevelDB stores or SQLite stores with older schemas; use at your own peril."
+  },
+  {
+    "title": "Your Saved Info settings page",
+    "id": "enable-your-saved-info-settings-page",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the experimental \"Your saved info\" settings page, replacing the existing \"Autofill and passwords\" page."
+  },
+  {
+    "title": "Enable Chrome Web Store Promotion Banner",
+    "id": "cws-promotion-banner-flag",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables showing the promotion banner on chromewebstore page."
+  },
+  {
+    "title": "Update Google Pay branding to Wallet where applicable",
+    "id": "autofill-enable-wallet-branding",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, certain strings and logos referencing Google Account, Google Payments, and Google Pay will instead reference Google Wallet."
+  },
+  {
+    "title": "Enable Private User Metrics",
+    "id": "private-metrics-enable-puma",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables collection of Private User Metrics."
+  },
+  {
+    "title": "Enable Private User Metrics for Regional Capabilities",
+    "id": "private-metrics-enable-puma-rc",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables collection of Private User Metrics for Regional Capabilities. For it to work, Private User Metrics need to be enabled too."
+  },
+  {
+    "title": "Enable ignore AI-based Amount Extraction Terms Acknowledgement",
+    "id": "autofill-ai-based-amount-extraction-ignore-seen-terms-for-testing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, the BNPL flow acts as if the user has not yet seen or the AI terms. This allows the AI terms to be shown repeatedly for testing purposes, regardless of the actual stored user preference."
+  },
+  {
+    "title": "Autofill AI always trigger server model",
+    "id": "autofill-ai-always-trigger-server-model",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Queries the server model for every form encountered, ignoring server-side instructions. Intended for testing only."
+  },
+  {
+    "title": "Autofill AI available by default",
+    "id": "autofill-ai-available-by-default",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Makes Autofill AI available by default, with the enable toggle controlling online model runs and logging."
+  },
+  {
+    "title": "Autofill AI create entity data manager",
+    "id": "autofill-ai-create-entity-data-manager",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Ensures the EntityDataManager for Autofill AI is created regardless of other feature states. Useful for data cleanup."
+  },
+  {
+    "title": "Autofill AI dedupe entities",
+    "id": "autofill-ai-dedupe-entities",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables periodic deduplication of Autofill AI entities."
+  },
+  {
+    "title": "Autofill AI no filling icons experiment",
+    "id": "autofill-ai-no-filling-icons-experiment",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "If enabled, Autofill AI filling suggestions do not have an icon."
+  },
+  {
+    "title": "Autofill AI re-authentication required",
+    "id": "autofill-ai-reauth-required",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Requires re-authentication when filling or viewing sensitive fields with Autofill AI."
+  },
+  {
+    "title": "Autofill AI server model",
+    "id": "autofill-ai-server-model",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Allows the client to trigger the server model for Autofill AI type predictions."
+  },
+  {
+    "title": "IPH Autofill AI Valuables",
+    "id": "autofill-ai-valuables-iph",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the In-Product Help for Autofill AI valuables."
+  },
+  {
+    "title": "Autofill AI Google Wallet flight reservations",
+    "id": "autofill-ai-wallet-flight-reservation",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables Autofill AI support for flight reservation entities from Google Wallet."
+  },
+  {
+    "title": "Autofill AI Google Wallet private passes",
+    "id": "autofill-ai-wallet-private-passes",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Autofill AI support for private passes from Google Wallet."
+  },
+  {
+    "title": "Autofill AI Google Wallet private passes deep link",
+    "id": "autofill-ai-wallet-private-passes-deep-link",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Autofill AI support for deep linking to private passes from Google Wallet."
+  },
+  {
+    "title": "Autofill AI Google Wallet vehicle registration",
+    "id": "autofill-ai-wallet-vehicle-registration",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables Autofill AI support for vehicle registration entities from Google Wallet."
+  },
+  {
+    "title": "Autofill AI with data schema",
+    "id": "autofill-ai-with-data-schema",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Enables the second iteration of Autofill AI, which uses a more advanced data schema."
+  },
+  {
+    "title": "Reading Mode Line Focus",
+    "id": "read-anything-line-focus",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the experimental line focus mode for Reading mode."
+  },
+  {
+    "title": "Verify MTCs",
+    "id": "verify-mtcs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables verification of Merkle Tree Certificates as described in https://datatracker.ietf.org/doc/draft-davidben-tls-merkle-tree-certs/. Requires #tls-trust-anchor-ids."
+  },
+  {
+    "title": "Password Upload UI Update",
+    "id": "password-upload-ui-update",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Adds new entry points for uploading passwords to account storage and updates existing ones."
+  },
+  {
+    "title": "Saas Usage Reporting",
+    "id": "saas-usage-reporting",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enable reporting of SaaS usage. This feature only takes effect if a related enterprise policy is also configured by an administrator."
+  },
+  {
+    "title": "Enable Pay Now Pay Later tabs UI for payments autofill on Chrome",
+    "id": "autofill-enable-pay-now-pay-later-tabs",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, Chrome will use the Pay Now Pay Later tabs UI for payments autofill when buy now pay later options are available for the merchant webpage."
+  },
+  {
+    "title": "Enable Ambient sign-in for WebAuthn get requests",
+    "id": "web-authentication-ambient-signin",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables ambient sign-in for passkeys and passwords from a navigator.credentials.get() request. This is similar to conditional UI with the main difference being it does not use autofill UI."
+  },
+  {
+    "title": "Enable protocol monitor in DevTools",
+    "id": "devtools-protocol-monitor",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the protocol monitor panel, which displays the Chrome DevTools Protocol (CDP) traffic between DevTools and the browser."
+  },
+  {
+    "title": "WebMCP support in DevTools",
+    "id": "devtools-webmcp-support",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables WebMCP support in DevTools."
+  },
+  {
+    "title": "Bundled Security Settings Secure Dns V2",
+    "id": "bundled-security-settings-secure-dns-v2",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Secure DNS V2 setting in the bundles on the chrome://settings/security page. The setting will move from the advanced section to the bundled section."
+  },
+  {
+    "title": "Stop resending LaunchParams on user reload",
+    "id": "launch-queue-stop-sending-on-reload",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "Disables the Launch Queue re-sending LaunchParams on reloads."
+  },
+  {
+    "title": "Credential Management Unified UI",
+    "id": "credential-management-unified-ui",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Unified UI for the credential management password APIs."
+  },
+  {
+    "title": "WebMCP for testing",
+    "id": "enable-webmcp-testing",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the WebMCP API and its associated testing interfaces."
+  },
+  {
+    "title": "Enable new American Express network art",
+    "id": "autofill-enable-new-amex-network-art",
+    "type": "feature",
+    "default": "Enabled",
+    "description": "When enabled, updates the American Express network art in Autofill."
+  },
+  {
+    "title": "Chrome Finds Internals",
+    "id": "chrome-finds-internals",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the chrome://chrome-finds-internals page."
+  },
+  {
+    "title": "Preserve HTTP message bodies across navigations for DevTools",
+    "id": "devtools-enable-durable-messages",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables a durable message storing mechanism, which allows preserving HTTP message bodies for debugging."
+  },
+  {
+    "title": "Unthrottle async touch moves",
+    "id": "unthrottle-async-touch-moves",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, touch move events to javascript handlers are unthrottled if they are sent as async to Renderer."
+  },
+  {
+    "title": "Horizontal Tab Strip Combo Button",
+    "id": "horizontal-tab-strip-combo-button",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the combo button in the horizontal tab strip."
+  },
+  {
+    "title": "Mobile NTP Promo on Desktop",
+    "id": "mobile-ntp-promo-on-desktop",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Mobile NTP Promo on Desktop."
+  },
+  {
+    "title": "Sign in promo on avatar pill",
+    "id": "signin-promo-on-avatar-pill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Feature that shows a Sign in promo on the avatar pill at startup"
+  },
+  {
+    "title": "Mobile Promo On Desktop - QR Code (Wave 1)",
+    "id": "mobile-promo-on-desktop-with-qr-code-wave-1",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, shows a mobile promo with a QR code on desktop for eligible users. This version highlights features not included in the existing Mobile promos."
+  },
+  {
+    "title": "Mobile Promo On Desktop - Reminder (Wave 1)",
+    "id": "mobile-promo-on-desktop-with-reminder-wave-1",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, shows a mobile promo with a reminder flow on desktop for eligible users. This version highlights features not included in the existing mobile promos."
+  },
+  {
+    "title": "Enable Omnibox Autofill chip for payments",
+    "id": "autofill-enable-omnibox-autofill",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, an Autofill payments omnibox chip will appear for relevant payment checkout forms."
+  },
+  {
+    "title": "Further update Google Pay and Google Wallet branding where applicable",
+    "id": "autofill-enable-wallet-branding-v2",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "When enabled, further brings certain strings and images referencing Google Pay and Google Wallet into consistency with branding requirements."
+  },
+  {
+    "title": "WebCrypto PQC",
+    "id": "webcrypto-pqc",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables Post-Quantum Cryptography (PQC) algorithms (ML-DSA and ML-KEM) and ChaCha20-Poly1305 in WebCrypto."
+  },
+  {
+    "title": "Defer OS Clipboard Read Call To GetType",
+    "id": "defer-os-clipboard-read-call-to-get-type",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Defers Async Clipboard Read API data retrieval from the OS until ClipboardItem.getType() is called, instead of eagerly fetching all formats at read() time."
+  },
+  {
+    "title": "Import and export flags",
+    "id": "import-export-flags",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables importing and exporting flags from chrome://flags."
+  },
+  {
+    "title": "Use PersistentCache for Code Cache",
+    "id": "use-persistent-cache-for-code-cache",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Use PersistentCache backend for code cache for JavaScript and WebAssembly."
+  },
+  {
+    "title": "Inline Script Cache",
+    "id": "inline-script-cache",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables caching of inline scripts. This flag only works if #use-persistent-cache-for-code-cache is enabled."
+  },
+  {
+    "title": "Migrate Enhanced Safe Browsing User to Enhanced Bundle",
+    "id": "migrate-enhanced-sb-user-to-enhanced-bundle",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the migration of enhanced Safe Browsing users to the enhanced bundle. Requires chrome://flags#bundled-security-settings to be enabled."
+  },
+  {
+    "title": "Energy Effect",
+    "id": "energy-effect",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables the Energy Effect for the Realbox."
+  },
+  {
+    "title": "Energy Effect Animation",
+    "id": "energy-effect-animation",
+    "type": "feature",
+    "default": "Disabled",
+    "description": "Enables animations for the Energy Effect for the Realbox."
+  }
+]
