@@ -8,8 +8,8 @@ packages = [
     "just",
     "ghostty",
     "nala",
-    "libva-nvidia-driver",  # VA-API -> NVDEC shim; required for VaapiOnNvidiaGPUs in Brave
-    "vainfo",               # diagnose VA-API: `LIBVA_DRIVER_NAME=nvidia vainfo`
+    "nvidia-vaapi-driver", # VA-API -> NVDEC shim; required for VaapiOnNvidiaGPUs in Brave                            
+    "vainfo",              # diagnose VA-API: `LIBVA_DRIVER_NAME=nvidia vainfo`
 
     # Ubuntu archive (restricted)
     # RISK: when Ubuntu retires a branch they rebuild the old metapackage as a

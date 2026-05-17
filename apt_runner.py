@@ -244,12 +244,24 @@ def main() -> None:
     nala("update", note="Refreshing apt cache with new repos")
     # `nala list --upgradable` exits 1 when nothing matches (grep convention).
     nala("list", "--upgradable", note="Upgradable packages:", check=False)
-    nala("full-upgrade", "-y", note="Running nala full-upgrade")
 
+    rows = [policy_row(p) for p in packages]
     print_toon(
-        [policy_row(p) for p in packages],
+        rows,
         note="Verification — installed/candidate versions and effective pin priorities:",
     )
+    # Fail fast before full-upgrade: priority 0 = package not found in any configured repo.
+    # Cheaper than letting nala discover it half a minute into the install transaction.
+    if missing := [r["package"] for r in rows if r["priority"] == 0]:
+        sys.exit(
+            f"ERROR: package(s) not available in any configured repo: {', '.join(missing)}\n"
+            "  - Check release-specific naming (e.g. libva-nvidia-driver -> nvidia-vaapi-driver on Ubuntu 26.04+).\n"
+            "  - Confirm the package's component is enabled (main / universe / multiverse / restricted).\n"
+            "  - For a third-party package, confirm its [[repo]] block is in apt.toml."
+        )
+
+    nala("full-upgrade", "-y", note="Running nala full-upgrade")
+
     run("lsattr", "-d", str(TRUSTED_GPGD), note=f"{TRUSTED_GPGD} attributes (expect 'i' set):")
 
     if packages:

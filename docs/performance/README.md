@@ -93,15 +93,14 @@ sudo systemctl daemon-reload
 ## Related: hardware video decode
 
 `prime-select nvidia` puts rendering on the RTX, but video decode in
-Chromium-based browsers also needs `libva-nvidia-driver` (the VA-API to
-NVDEC shim; upstream name `nvidia-vaapi-driver`). NVIDIA GPUs don't speak
-VA-API natively, so without this shim Brave decodes 4K video on the CPU
-even when the RTX is the active GPU.
+Chromium-based browsers also needs the VA-API → NVDEC shim. NVIDIA GPUs
+don't speak VA-API natively, so without this shim Brave decodes 4K video
+on the CPU even when the RTX is the active GPU.
 
-Install (Ubuntu 24.04+):
+Install (Ubuntu 26.04):
 
 ```bash
-sudo apt install libva-nvidia-driver vainfo
+sudo apt install nvidia-vaapi-driver vainfo
 ```
 
 Confirm it loads against the RTX:
