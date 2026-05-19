@@ -29,7 +29,13 @@ switches = [
 
 # Joined into one --enable-features=A,B,C per group. Comment a group to disable.
 [brave.features]
-video_decode = ["VaapiOnNvidiaGPUs", "AcceleratedVideoDecodeLinuxGL", "AcceleratedVideoDecodeLinuxZeroCopyGL", "VaapiIgnoreDriverChecks"]
+# VaapiIgnoreDriverChecks removed 2026-05-19 — it bypasses Chromium's per-driver
+# profile allowlist, and was only needed because nvidia-vaapi-driver isn't on the
+# allowlist. With it on, Chromium attempts decode on profiles the bridge driver
+# advertises but NVDEC actually refuses, producing the vaEndPicture / "internal
+# decoding error" lines seen in journalctl. Re-add only if nvidia-vaapi-driver
+# stays load-bearing for a codec (e.g. AV1) that Intel iHD doesn't expose.
+video_decode = ["VaapiOnNvidiaGPUs", "AcceleratedVideoDecodeLinuxGL", "AcceleratedVideoDecodeLinuxZeroCopyGL"]
 video_encode = ["AcceleratedVideoEncoder"]
 pipewire     = ["WebRTCPipeWireCapturer"]
 wayland_sync = ["WaylandLinuxDrmSyncobj"]
@@ -50,4 +56,4 @@ switches = []
 "ozone-platform-hint"     = "auto"
 "enable-gpu-rasterization" = true
 "ignore-gpu-blocklist"    = true
-"enable-features"         = "VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiIgnoreDriverChecks,WaylandLinuxDrmSyncobj"
+"enable-features"         = "VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,WaylandLinuxDrmSyncobj"
