@@ -10,7 +10,7 @@ bootstrap and ongoing daily-driver maintenance. Actions run through nala
 (parallel downloads + `nala history undo` for rollback); nala is
 bootstrapped via apt-get on the first run.
 
-Config in apt.toml:
+Config in apt_config.toml:
   packages       installed at the end of the run
   [ubuntu_pin]   uprank Ubuntu archives ({release} interpolated)
   [[repo]]       one block per third-party apt repo
@@ -59,7 +59,7 @@ TRUSTED_GPGD = Path("/etc/apt/trusted.gpg.d")
 TRUSTED_GPGD_HOOK = Path("/etc/apt/apt.conf.d/99-trusted-gpgd-autounlock")
 
 SCRIPT = Path(__file__).resolve()
-APT_TOML = SRC_DIR / "apt.toml"
+APT_CONFIG_TOML = SRC_DIR / "apt_config.toml"
 FILES_DIR = SRC_DIR / "files"
 
 
@@ -195,7 +195,7 @@ def install_repo_key(repo: dict, keyring: Path) -> None:
     keyring.parent.mkdir(parents=True, exist_ok=True)
     # Signal's CDN (and likely others behind WAFs) 403s the default
     # `Python-urllib/*` UA — identify as the project instead.
-    request = Request(repo["key_url"], headers={"User-Agent": "sys-conf-py/run_apt.py"})
+    request = Request(repo["key_url"], headers={"User-Agent": "sys-conf-py/configure_with_apt.py"})
     with urlopen(request) as r:
         data = r.read()
     # ASCII-armored keys start with the RFC 4880 §6.2 header; binary OpenPGP
@@ -229,7 +229,7 @@ def configure_repo(repo: dict, release: str) -> None:
 
 def main() -> None:
     # Load config pre-sudo so TOML errors surface before the sudo re-exec.
-    with APT_TOML.open("rb") as f:
+    with APT_CONFIG_TOML.open("rb") as f:
         config = tomllib.load(f)
     repos = config.get("repo", [])
     packages = config.get("packages", [])
@@ -239,7 +239,7 @@ def main() -> None:
     log_file = start_log_tee(SCRIPT)
     logger.info(f"Logging this run to {log_file}")
     logger.info(
-        f"Loaded config from {APT_TOML} ({len(repos)} repo(s), {len(packages)} package(s))"
+        f"Loaded config from {APT_CONFIG_TOML} ({len(repos)} repo(s), {len(packages)} package(s))"
     )
 
     release = detect_release()
@@ -269,7 +269,7 @@ def main() -> None:
             f"ERROR: package(s) not available in any configured repo: {', '.join(missing)}\n"
             "  - Check release-specific naming (e.g. libva-nvidia-driver -> nvidia-vaapi-driver on Ubuntu 26.04+).\n"
             "  - Confirm the package's component is enabled (main / universe / multiverse / restricted).\n"
-            "  - For a third-party package, confirm its [[repo]] block is in apt.toml."
+            "  - For a third-party package, confirm its [[repo]] block is in apt_config.toml."
         )
 
     nala("full-upgrade", "-y", note="Running nala full-upgrade")

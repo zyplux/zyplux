@@ -1,4 +1,4 @@
-# Always prefer Ubuntu archives over third-party repos. Generated from apt.toml.
+# Always prefer Ubuntu archives over third-party repos. Generated from apt_config.toml.
 #
 # Default repo priority is 500. Ubuntu main/updates/security are upranked
 # to {priority}, so any third-party package colliding by name with an

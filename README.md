@@ -8,11 +8,11 @@ ongoing upkeep.
 ## One-time setup
 
 ```bash
-./src/run_url_installs.py             # user-scoped CLIs (bun, uv, claude, rustup, cargo-binstall)
-./src/run_cargo.py                    # user-scoped cargo packages (just, just-lsp, rumdl, cargo-update)
-sudo ./src/run_apt.py                 # repos, keys, pin priorities, full-upgrade, packages
-sudo ./src/run_gpu_conf.py            # egpu-prime.service (boot-time prime-select)
-sudo ./src/run_apps_conf.py           # Brave/Code Insiders launcher + flag overrides
+./src/install_from_urls.py            # user-scoped CLIs (bun, uv, claude, rustup, cargo-binstall)
+./src/install_cargo_packages.py       # user-scoped cargo packages (just, just-lsp, rumdl, cargo-update)
+sudo ./src/configure_with_apt.py      # repos, keys, pin priorities, full-upgrade, packages
+sudo ./src/configure_gpu.py           # egpu-prime.service (boot-time prime-select)
+sudo ./src/configure_apps.py          # Brave/Code Insiders launcher + flag overrides
 sudo reboot
 ```
 
@@ -26,17 +26,17 @@ No manual commands.
 
 | File | Purpose |
 |---|---|
-| `src/apt.toml` | repos, packages, pin priorities |
-| `src/perf.toml` | Shared `[env]`; one section per app (`desktop` path + flags via `features`/`switches`/`local_state_flags`/`argv` as appropriate) |
-| `src/urls.toml` | user-scoped CLI installers (vendor `curl \| bash` scripts) |
-| `src/cargo.toml` | user-scoped cargo packages installed via `cargo-binstall` |
+| `src/apt_config.toml` | repos, packages, pin priorities |
+| `src/apps_config.toml` | Shared `[env]`; one section per app (`desktop` path + flags via `features`/`switches`/`local_state_flags`/`argv` as appropriate) |
+| `src/url_config.toml` | user-scoped CLI installers (vendor `curl \| bash` scripts) |
+| `src/cargo_config.toml` | user-scoped cargo packages installed via `cargo-binstall` |
 | `src/files/` | static assets installed verbatim (apt hooks, prefs, egpu-prime sources) |
-| `src/harness.py` | shared subprocess / log-tee / sudo plumbing imported by every `run_*.py` |
+| `src/harness.py` | shared subprocess / log-tee / sudo plumbing imported by every playbook script |
 | `logs/` | timestamped per-run log (chowned to invoking user) |
 
-Edit a TOML, re-run the matching script (`run_apt.py` for `apt.toml`,
-`run_apps_conf.py` for `perf.toml`, `run_url_installs.py` for `urls.toml`,
-`run_cargo.py` for `cargo.toml`; `run_gpu_conf.py` takes no config). All
+Edit a TOML, re-run the matching script (`configure_with_apt.py` for `apt_config.toml`,
+`configure_apps.py` for `apps_config.toml`, `install_from_urls.py` for `url_config.toml`,
+`install_cargo_packages.py` for `cargo_config.toml`; `configure_gpu.py` takes no config). All
 scripts only rewrite files whose contents would actually change, so idle
 re-runs are cheap.
 

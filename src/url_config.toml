@@ -1,5 +1,5 @@
-# urls.toml — vendor-bootstrapped CLI tools installed into $HOME by
-# run_url_installs.py. Each [[install]] block: skip if `bin` is already
+# url_config.toml — vendor-bootstrapped CLI tools installed into $HOME by
+# install_from_urls.py. Each [[install]] block: skip if `bin` is already
 # on PATH (or in a known bootstrap dir like ~/.cargo/bin, ~/.bun/bin,
 # ~/.local/bin, ~/.claude/local); else fetch `url` and pipe it into bash
 # with optional `args`.

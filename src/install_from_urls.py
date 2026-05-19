@@ -7,7 +7,7 @@
 Idempotent installer for user-scoped CLI tools whose vendors ship a
 piped-shell-script bootstrapper (bun, uv, claude, rustup, cargo-binstall).
 
-For each [[install]] block in urls.toml: skip if `bin` is reachable on
+For each [[install]] block in url_config.toml: skip if `bin` is reachable on
 PATH or in a known bootstrap dir (~/.cargo/bin, ~/.bun/bin, ~/.local/bin,
 ~/.claude/local); else fetch the installer and pipe it to bash with the
 block's `args`.
@@ -17,7 +17,7 @@ script refuses to run as root (otherwise toolchains land in /root rather
 than the user's home).
 
 Note: the installers themselves shell out to curl to fetch their binaries.
-On a truly fresh system, `apt install curl` (or running run_apt.py, which
+On a truly fresh system, `apt install curl` (or running configure_with_apt.py, which
 installs curl as a prereq) is a precondition.
 """
 
@@ -33,7 +33,7 @@ from loguru import logger
 from harness import SRC_DIR, find_binary, start_log_tee
 
 SCRIPT = Path(__file__).resolve()
-URLS_TOML = SRC_DIR / "urls.toml"
+URL_CONFIG_TOML = SRC_DIR / "url_config.toml"
 
 
 def install_from_url(name: str, url: str, bin_name: str, args: list[str]) -> None:
@@ -62,16 +62,16 @@ def main() -> None:
             "write into $HOME and would land under /root if run as root."
         )
 
-    with URLS_TOML.open("rb") as f:
+    with URL_CONFIG_TOML.open("rb") as f:
         config = tomllib.load(f)
     installs = config.get("install", [])
     if not installs:
-        logger.info(f"No [[install]] blocks in {URLS_TOML}; nothing to do")
+        logger.info(f"No [[install]] blocks in {URL_CONFIG_TOML}; nothing to do")
         return
 
     log_file = start_log_tee(SCRIPT)
     logger.info(f"Logging this run to {log_file}")
-    logger.info(f"Loaded {len(installs)} install(s) from {URLS_TOML}")
+    logger.info(f"Loaded {len(installs)} install(s) from {URL_CONFIG_TOML}")
 
     for install_block in installs:
         install_from_url(

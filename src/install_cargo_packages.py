@@ -4,14 +4,14 @@
 # dependencies = ["loguru>=0.7"]
 # ///
 """
-Idempotent cargo package installer driven by cargo.toml.
+Idempotent cargo package installer driven by cargo_config.toml.
 
 For each `packages` entry: skip if `cargo install --list` already reports
 the crate; else invoke cargo-binstall by absolute path (sidestepping the
-bootstrap PATH problem — see logs/run_url_installs-*.log for context).
+bootstrap PATH problem — see logs/install_from_urls-*.log for context).
 
 Requires cargo and cargo-binstall to be installed first; run
-./src/run_url_installs.py if either is missing.
+./src/install_from_urls.py if either is missing.
 
 Runs as the invoking user — cargo writes into ~/.cargo, so the script
 refuses to run as root (toolchains would land under /root otherwise).
@@ -28,7 +28,7 @@ from loguru import logger
 from harness import SRC_DIR, find_binary, start_log_tee
 
 SCRIPT = Path(__file__).resolve()
-CARGO_TOML = SRC_DIR / "cargo.toml"
+CARGO_CONFIG_TOML = SRC_DIR / "cargo_config.toml"
 
 
 def list_installed_crates(cargo: Path) -> set[str]:
@@ -65,21 +65,21 @@ def main() -> None:
     if not cargo or not binstall:
         sys.exit(
             "ERROR: cargo and cargo-binstall must be installed first. "
-            "Run ./src/run_url_installs.py."
+            "Run ./src/install_from_urls.py."
         )
 
-    with CARGO_TOML.open("rb") as f:
+    with CARGO_CONFIG_TOML.open("rb") as f:
         config = tomllib.load(f)
     requested_crates = config.get("packages", [])
     if not requested_crates:
-        logger.info(f"No `packages` entries in {CARGO_TOML}; nothing to do")
+        logger.info(f"No `packages` entries in {CARGO_CONFIG_TOML}; nothing to do")
         return
 
     log_file = start_log_tee(SCRIPT)
     logger.info(f"Logging this run to {log_file}")
     logger.info(f"Using cargo:          {cargo}")
     logger.info(f"Using cargo-binstall: {binstall}")
-    logger.info(f"Loaded {len(requested_crates)} package(s) from {CARGO_TOML}")
+    logger.info(f"Loaded {len(requested_crates)} package(s) from {CARGO_CONFIG_TOML}")
 
     installed_crates = list_installed_crates(cargo)
     for name in requested_crates:

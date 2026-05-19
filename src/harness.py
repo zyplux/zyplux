@@ -1,12 +1,12 @@
-"""Shared execution scaffolding for sys-conf-py run_*.py scripts.
+"""Shared execution scaffolding for sys-conf-py playbook scripts.
 
 These scripts are PEP 723 single-file installers that share a common shape:
 re-exec under sudo, tee stdout/stderr to a timestamped log under logs/, and
 idempotently write system files. This module owns the plumbing so each
-run_*.py can focus on what it configures.
+playbook script can focus on what it configures.
 
 Exports:
-  SRC_DIR              this module's directory (also the run_*.py scripts')
+  SRC_DIR              this module's directory (also where the playbook scripts live)
   REPO_ROOT            repo root (parent of src/)
   LOG_DIR              repo_root/logs — where per-run logs land
   BOOTSTRAP_BIN_DIRS   per-user dirs vendor installers write into

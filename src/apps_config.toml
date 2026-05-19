@@ -1,8 +1,8 @@
-# perf.toml — config for run_apps_conf.py. The [chromium] table holds features
+# apps_config.toml — config for configure_apps.py. The [chromium] table holds features
 # shared by all Chromium-derived apps on this box; each app's own `features` are
 # appended to those. Each app is its own [<app>] table identified by a `desktop`
 # key, optionally with local_state(+_flags) for Chromium Local State or
-# argv_json(+argv) for Electron. (run_gpu_conf.py installs the egpu-prime boot
+# argv_json(+argv) for Electron. (configure_gpu.py installs the egpu-prime boot
 # service and reads no config here — its inputs are static assets in files/.)
 
 # Shared by every Chromium-derived app on this box.

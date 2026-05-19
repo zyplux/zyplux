@@ -4,7 +4,7 @@
 # dependencies = ["loguru>=0.7"]
 # ///
 """
-Idempotent per-app Chromium/Electron config from perf.toml.
+Idempotent per-app Chromium/Electron config from apps_config.toml.
 
 For each section with `desktop = "..."`: writes a per-user .desktop
 override with env prefix + --enable-features + --<switch>es. Optionally
@@ -32,7 +32,7 @@ from harness import (
 )
 
 SCRIPT = Path(__file__).resolve()
-PERF_TOML = SRC_DIR / "perf.toml"
+APPS_CONFIG_TOML = SRC_DIR / "apps_config.toml"
 
 
 def rewrite_exec_line(
@@ -52,7 +52,7 @@ def rewrite_exec_line(
         tokens = tokens[i:]
 
     # Switches may be bare ("enable-foo") or key=value ("render-node-override=/x"); dedupe
-    # by key so a value change in perf.toml replaces the old token instead of duplicating.
+    # by key so a value change in apps_config.toml replaces the old token instead of duplicating.
     managed_keys = {f"--{s.split('=', 1)[0]}" for s in switches}
     tokens = [
         t
@@ -93,7 +93,7 @@ def write_desktop_override(
     if not system_desktop.exists():
         logger.warning(
             f"{system_desktop} not found; skipping .desktop override "
-            "(install package via run_apt.py first)"
+            "(install package via configure_with_apt.py first)"
         )
         return False
 
@@ -152,7 +152,7 @@ def patch_chromium_local_state(
             f"{process_name} is running; skipping Local State patch (would race the write)."
         )
         logger.warning(
-            f"Quit {process_name} and re-run run_apps_conf.py to sync flag UI state."
+            f"Quit {process_name} and re-run configure_apps.py to sync flag UI state."
         )
         return False
 
@@ -269,14 +269,14 @@ def refresh_kde_cache(sudo_user: str) -> None:
 
 
 def main() -> None:
-    with PERF_TOML.open("rb") as f:
+    with APPS_CONFIG_TOML.open("rb") as f:
         config = tomllib.load(f)
 
     reexec_under_sudo(SCRIPT)
 
     log_file = start_log_tee(SCRIPT)
     logger.info(f"Logging this run to {log_file}")
-    logger.info(f"Loaded config from {PERF_TOML}")
+    logger.info(f"Loaded config from {APPS_CONFIG_TOML}")
 
     sudo_user, uid, gid, home = get_invoking_user()
     logger.info(f"Acting on behalf of {sudo_user}  (uid={uid}, home={home})")
@@ -292,7 +292,7 @@ def main() -> None:
     ]
     if not apps:
         logger.info(
-            "No app sections in perf.toml (need a `desktop = ...` key); nothing to do"
+            "No app sections in apps_config.toml (need a `desktop = ...` key); nothing to do"
         )
         return
 

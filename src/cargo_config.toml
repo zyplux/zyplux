@@ -1,9 +1,9 @@
-# cargo.toml — Rust packages installed via cargo-binstall by run_cargo.py.
+# cargo_config.toml — Rust packages installed via cargo-binstall by install_cargo_packages.py.
 # Each entry is the crate name as published on crates.io; `cargo install --list`
 # reports the same name (cargo-binstall writes to cargo's own .crates.toml
 # registry, so binstall'd and source-built packages share one index).
 #
-# Re-run src/run_cargo.py after editing. Missing entries are NOT uninstalled.
+# Re-run src/install_cargo_packages.py after editing. Missing entries are NOT uninstalled.
 
 packages = [
     "cargo-update",

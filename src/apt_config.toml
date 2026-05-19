@@ -1,4 +1,4 @@
-# apt.toml — declarative config for run_apt.py. Edit, re-run to apply.
+# apt_config.toml — declarative config for configure_with_apt.py. Edit, re-run to apply.
 
 # Packages installed at the end (apt install -y).
 # Version pin: name=version, e.g. "ghostty=1.3.0~us1-0ubuntu1".
