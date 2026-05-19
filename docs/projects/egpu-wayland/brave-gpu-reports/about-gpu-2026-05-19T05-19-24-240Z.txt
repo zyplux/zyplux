@@ -19,19 +19,19 @@ Graphics Feature Status
 
 Version Information
 ===================
-Data exported              : 2026-05-19T02:30:19.696Z
+Data exported              : 2026-05-19T05:19:21.920Z
 Chrome version             : Chrome/148.0.7778.167
 Operating system           : Linux 7.0.0-15-generic
 Software rendering list URL: https://chromium.googlesource.com/chromium/src/+/65db666ac2cf205fcc36db8bb5b9cd87f94808ac/gpu/config/software_rendering_list.json
 Driver bug list URL        : https://chromium.googlesource.com/chromium/src/+/65db666ac2cf205fcc36db8bb5b9cd87f94808ac/gpu/config/gpu_driver_bug_list.json
 ANGLE commit id            : 6c71c70ec7e8
 2D graphics backend        : Skia/148 a2888b27a98e4ff30085d4d2dba8a1a99baf6dfb
-Command Line               : /opt/brave.com/brave/brave --disable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --enable-features=VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,VaapiIgnoreDriverChecks,AcceleratedVideoEncoder,WebRTCPipeWireCapturer,WaylandLinuxDrmSyncobj --disable-domain-reliability --enable-dom-distiller --enable-distillability-service --origin-trial-public-key=bYUKPJoPnCxeNvu72j4EmPuK7tr1PAC7SHh8ld9Mw3E=,fMS4mpO6buLQ/QMd+zJmxzty/VQ6B1EUZqoCU04zoRU= --lso-url=https://no-thanks.invalid --variations-server-url=https://variations.brave.com/seed --variations-insecure-server-url=https://variations.brave.com/seed --flag-switches-begin --flag-switches-end --ozone-platform=wayland --component-updater=url-source=https://go-updater.brave.com/extensions --render-node-override=/dev/dri/renderD128
+Command Line               : /opt/brave.com/brave/brave --enable-features=VaapiOnNvidiaGPUs,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,WaylandLinuxDrmSyncobj,AcceleratedVideoEncoder,WebRTCPipeWireCapturer --disable-domain-reliability --enable-dom-distiller --enable-distillability-service --origin-trial-public-key=bYUKPJoPnCxeNvu72j4EmPuK7tr1PAC7SHh8ld9Mw3E=,fMS4mpO6buLQ/QMd+zJmxzty/VQ6B1EUZqoCU04zoRU= --lso-url=https://no-thanks.invalid --variations-server-url=https://variations.brave.com/seed --variations-insecure-server-url=https://variations.brave.com/seed --flag-switches-begin --flag-switches-end --ozone-platform=wayland --component-updater=url-source=https://go-updater.brave.com/extensions --render-node-override=/dev/dri/renderD128
 Executable path            :
 
 Driver Information
 ==================
-Initialization time             : 2587
+Initialization time             : 265
 In-process GPU                  : false
 Skia Backend                    : GaneshGL
 Passthrough Command Decoder     : true
@@ -1222,16 +1222,15 @@ Bits per pixel                : 24
 Video Acceleration Information
 ==============================
 Decoding                      : 
-Decode h264 baseline          : 48x16 to 4096x4096 pixels
-Decode h264 main              : 48x16 to 4096x4096 pixels
-Decode h264 high              : 48x16 to 4096x4096 pixels
-Decode vp8                    : 48x16 to 4096x4096 pixels
-Decode vp9 profile0           : 128x128 to 8192x8192 pixels
-Decode vp9 profile2           : 128x128 to 8192x8192 pixels
-Decode hevc main              : 144x144 to 8192x8192 pixels
-Decode hevc main 10           : 144x144 to 8192x8192 pixels
-Decode hevc main still-picture: 144x144 to 8192x8192 pixels
-Decode av1 profile main       : 128x128 to 8192x8192 pixels
+Decode h264 baseline          : 16x16 to 4096x4096 pixels
+Decode h264 main              : 16x16 to 4096x4096 pixels
+Decode h264 high              : 16x16 to 4096x4096 pixels
+Decode vp8                    : 16x16 to 4096x4096 pixels
+Decode vp9 profile0           : 16x16 to 16384x16384 pixels
+Decode vp9 profile2           : 16x16 to 16384x16384 pixels
+Decode hevc main              : 16x16 to 16384x16384 pixels
+Decode hevc main 10           : 16x16 to 16384x16384 pixels
+Decode hevc main still-picture: 16x16 to 16384x16384 pixels
 Encoding                      :
 
 Vulkan Information
@@ -1242,58 +1241,6 @@ Device Performance Information
 
 Log Messages
 ============
-[3111:3111:0519/112946.241902:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] : InitializeSandbox() called with multiple threads in process gpu-process.
-[3111:5767:0519/115305.883307:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5767:0519/115305.883479:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5828:0519/115308.619722:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5832:0519/115308.619876:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5832:0519/115308.619954:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5828:0519/115308.619955:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5893:0519/115321.937112:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5893:0519/115321.937193:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:3111:0519/115327.592724:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.592829:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.592871:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.592912:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.592935:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.604448:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.604532:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.604550:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.604593:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.604623:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.655051:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.655112:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.655137:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.655189:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.655218:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.757843:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.757996:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.758165:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.758371:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.758453:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.789893:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.790102:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.790273:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.790416:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.790556:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.804229:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.804308:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.804336:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.804375:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.804401:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:3111:0519/115327.821103:ERROR:ui/gl/angle_platform_impl.cc:47] : ImageEGL.cpp:112 (operator()): eglCreateImage failed with 0x00003009
-[3111:3111:0519/115327.821231:ERROR:ui/gl/scoped_egl_image.cc:23] : Failed to create EGLImage: EGL_SUCCESS
-[3111:3111:0519/115327.821311:ERROR:ui/ozone/common/native_pixmap_egl_binding.cc:75] : Unable to initialize binding from pixmap
-[3111:3111:0519/115327.821377:ERROR:gpu/command_buffer/service/shared_image/ozone_image_backing.cc:315] : OzoneImageBacking::ProduceSkiaGanesh failed to create GL representation
-[3111:3111:0519/115327.821417:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:260] : SharedImageManager::ProduceSkia: Trying to produce a Skia representation from an incompatible backing: CompoundImageBacking
-[3111:5931:0519/115328.426644:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5931:0519/115328.426808:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5946:0519/115329.143353:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5946:0519/115329.143444:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5957:0519/115331.074506:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5957:0519/115331.074610:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:5961:0519/115331.074734:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:5961:0519/115331.074812:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:6019:0519/115347.838503:ERROR:media/gpu/vaapi/vaapi_wrapper.cc:3552] : vaEndPicture failed, VA error: internal decoding error
-[3111:6019:0519/115347.838638:ERROR:media/gpu/vaapi/vaapi_video_decoder.cc:1224] : error decoding stream
-[3111:3111:0519/123017.626216:ERROR:ui/gl/egl_util.cc:92] : EGL Driver message (Error) eglCreateContext: Requested version is not supported
+[51568:51568:0519/151829.778980:WARNING:sandbox/policy/linux/sandbox_linux.cc:404] : InitializeSandbox() called with multiple threads in process gpu-process.
+[51568:51568:0519/151850.871324:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:253] : SharedImageManager::ProduceSkia: Trying to Produce a Skia representation from a non-existent mailbox.
+[51568:51568:0519/151921.698961:ERROR:ui/gl/egl_util.cc:92] : EGL Driver message (Error) eglCreateContext: Requested version is not supported
