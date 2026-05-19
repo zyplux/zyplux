@@ -38,10 +38,12 @@ wayland_sync = ["WaylandLinuxDrmSyncobj"]
 desktop   = "/usr/share/applications/code-insiders.desktop"
 argv_json = ".vscode-insiders/argv.json"
 
-# Likely a no-op like Brave's render-node-override; not verified.
-switches = [
-    "render-node-override=/dev/dri/renderD129",
-]
+# Don't add --render-node-override here: empirically this is NOT a no-op for
+# VS Code Insiders' Electron 39 — passing renderD129 makes the GPU process
+# never spawn, the singleton hangs, and the next launch SIGTRAPs on the IPC
+# handshake (coredumps in journal, repro 2026-05-19). Brave silently overrides
+# it on Optimus; Electron does not.
+switches = []
 
 # Keys go through VS Code's hardcoded allowlist; anything outside it is dropped.
 [code_insiders.argv]
