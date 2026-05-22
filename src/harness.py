@@ -16,6 +16,7 @@ Exports:
   run()                subprocess.run with optional pre-log of the action
   write_if_changed()   write file only when contents differ (returns bool)
   find_binary()        locate executable via PATH or known bootstrap dirs
+  fetch_url()          HTTP GET that survives vendor UA gates (Signal, herdr, …)
 """
 
 import os
@@ -25,6 +26,7 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 from loguru import logger
 
@@ -125,3 +127,18 @@ def find_binary(name: str) -> Path | None:
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return candidate
     return None
+
+
+USER_AGENT = "sys-conf-py"
+
+
+def fetch_url(url: str) -> bytes:
+    """HTTP GET `url`, return the response body as bytes.
+
+    Identifies as `sys-conf-py` rather than the urllib default — vendor CDNs
+    behind WAFs (Signal's repo, herdr.dev's installer, likely others) 403 the
+    literal `Python-urllib/*` UA but accept any non-default identifier.
+    """
+    request = Request(url, headers={"User-Agent": USER_AGENT})
+    with urlopen(request) as response:
+        return response.read()

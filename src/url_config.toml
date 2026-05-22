@@ -1,39 +1,53 @@
 # url_config.toml — vendor-bootstrapped CLI tools installed into $HOME by
-# install_from_urls.py. Each [[install]] block: skip if `bin` is already
-# on PATH (or in a known bootstrap dir like ~/.cargo/bin, ~/.bun/bin,
-# ~/.local/bin, ~/.claude/local); else fetch `url` and pipe it into bash
-# with optional `args`.
+# install_from_urls.py. Each [[install]] block: if `bin` is missing, fetch
+# `url` and pipe it into bash with optional `args`; if `bin` is present,
+# dispatch on `update_action` to update in place.
 #
 # Required:
-#   name   short label used in logs
-#   url    https URL of the installer script
-#   bin    binary name to probe for idempotency
+#   name           short label used in logs
+#   url            https URL of the installer script
+#   bin            binary name to probe for idempotency
 #
 # Optional:
-#   args   list of args appended after `bash -s --` (e.g. ["-y"] for non-interactive)
+#   args           list of args appended after `bash -s --` (e.g. ["-y"] for non-interactive)
+#   update_action  how to update when `bin` already exists:
+#                    list of strings   -> run `<bin> <update_action...>`
+#                    "rerun-installer" -> re-fetch and re-pipe the install URL
+#                    absent            -> no update; leave as-is
 
 [[install]]
 name = "bun"
 url = "https://bun.sh/install"
 bin = "bun"
+update_action = ["upgrade"]
 
 [[install]]
 name = "uv"
 url = "https://astral.sh/uv/install.sh"
 bin = "uv"
+update_action = ["self", "update"]
 
 [[install]]
 name = "claude"
 url = "https://claude.ai/install.sh"
 bin = "claude"
+update_action = ["update"]
 
 [[install]]
 name = "rustup"
 url = "https://sh.rustup.rs"
 bin = "rustup"
 args = ["-y"]
+update_action = ["self", "update"]
 
 [[install]]
 name = "cargo-binstall"
 url = "https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh"
 bin = "cargo-binstall"
+update_action = "rerun-installer"
+
+[[install]]
+name = "herdr"
+url = "https://herdr.dev/install.sh"
+bin = "herdr"
+update_action = ["update"]

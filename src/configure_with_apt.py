@@ -40,13 +40,13 @@ import sys
 import tomllib
 from pathlib import Path
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
 
 from loguru import logger
 from toon_format import encode
 
 from harness import (
     SRC_DIR,
+    fetch_url,
     reexec_under_sudo,
     run,
     start_log_tee,
@@ -190,14 +190,24 @@ def write_ubuntu_pin(pin: dict, release: str) -> None:
     )
 
 
+def apply_debconf_selections(selections: list[dict]) -> None:
+    if not selections:
+        return
+    logger.info(
+        f"Applying {len(selections)} debconf selection(s): "
+        + ", ".join(s["package"] for s in selections)
+    )
+    payload = "\n".join(
+        f"{s['package']} {s['question']} {s['type']} {s['value']}"
+        for s in selections
+    )
+    run("debconf-set-selections", input=payload.encode())
+
+
 def install_repo_key(repo: dict, keyring: Path) -> None:
     logger.info(f"Installing {repo['name']} GPG key to {keyring}")
     keyring.parent.mkdir(parents=True, exist_ok=True)
-    # Signal's CDN (and likely others behind WAFs) 403s the default
-    # `Python-urllib/*` UA — identify as the project instead.
-    request = Request(repo["key_url"], headers={"User-Agent": "sys-conf-py/configure_with_apt.py"})
-    with urlopen(request) as r:
-        data = r.read()
+    data = fetch_url(repo["key_url"])
     # ASCII-armored keys start with the RFC 4880 §6.2 header; binary OpenPGP
     # packets start with a high-bit-set tag byte and never match.
     if data.lstrip().startswith(b"-----BEGIN PGP"):
@@ -247,6 +257,7 @@ def main() -> None:
 
     ensure_trusted_gpgd_hardened()
     write_ubuntu_pin(config["ubuntu_pin"], release)
+    apply_debconf_selections(config.get("debconf", []))
 
     install_prereqs()
 

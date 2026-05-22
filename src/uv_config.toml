@@ -1,0 +1,10 @@
+# uv_config.toml — Python CLI tools installed via `uv tool install` by
+# install_uv_packages.py. Each entry is a PyPI distribution name; uv puts
+# the tool in its own isolated venv under ~/.local/share/uv/tools/ and
+# symlinks its executables into ~/.local/bin.
+#
+# Re-run src/install_uv_packages.py after editing. Missing entries are NOT uninstalled.
+
+packages = [
+    "ruff",
+]

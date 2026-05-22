@@ -1,4 +1,4 @@
-up: _prime-sudo urls cargo apt gpu apps
+up: _prime-sudo urls cargo uv apt gpu apps
 
 _prime-sudo:
     sudo -v
@@ -8,6 +8,9 @@ urls:
 
 cargo:
     ./src/install_cargo_packages.py
+
+uv:
+    ./src/install_uv_packages.py
 
 apt:
     ./src/configure_with_apt.py

@@ -73,3 +73,20 @@ name = "signal-desktop"
 key_url = "https://updates.signal.org/desktop/apt/keys.asc"
 uris = "https://updates.signal.org/desktop/apt"
 suites = "xenial"
+
+# Debconf selections applied via debconf-set-selections before any apt
+# operation. Use to override package postinst behavior declaratively —
+# e.g. tell code-insiders not to rewrite /etc/apt/sources.list.d/vscode.sources
+# on every reconfigure, so our [[repo]] block stays the source of truth.
+#
+# Required fields per entry:
+#   package   dpkg package name
+#   question  full debconf question template path
+#   type      boolean | string | select | multiselect | password | note | text | title
+#   value     the value to set
+
+[[debconf]]
+package = "code-insiders"
+question = "code-insiders/add-microsoft-repo"
+type = "boolean"
+value = "false"
