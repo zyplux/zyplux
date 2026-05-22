@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = ["loguru>=0.7", "toon-format>=0.9.0b1"]
-# ///
 """
 Idempotent declarative apt state: repos, keys, pinning, full-upgrade,
 package install, autoremove. Idempotent; same script for first-run

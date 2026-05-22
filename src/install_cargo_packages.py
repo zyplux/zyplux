@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = ["loguru>=0.7"]
-# ///
 """
 Idempotent cargo installer/updater driven by cargo_config.toml.
 

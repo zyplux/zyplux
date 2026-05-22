@@ -1,9 +1,10 @@
 """Shared execution scaffolding for sys-conf-py playbook scripts.
 
-These scripts are PEP 723 single-file installers that share a common shape:
-re-exec under sudo, tee stdout/stderr to a timestamped log under logs/, and
-idempotently write system files. This module owns the plumbing so each
-playbook script can focus on what it configures.
+The playbooks share a common shape: re-exec under sudo when needed, tee
+stdout/stderr to a per-run log under logs/, and idempotently write system
+files. This module owns the plumbing so each playbook can focus on what
+it configures. main.py spawns the playbooks as subprocesses under the
+project venv's python (uv-managed); harness.py is imported into each.
 
 Exports:
   SRC_DIR              this module's directory (also where the playbook scripts live)
@@ -67,10 +68,11 @@ def start_log_tee() -> Path:
     """Tee stdout/stderr into the shared per-run log under logs/.
 
     If SYS_CONF_PY_LOG_FILE is set (the `just up` umbrella exports it from
-    one bash shell so every sub-just invocation inherits it), append to that
-    file — the whole run lands in one log. Otherwise (a standalone
-    invocation like `just gpu`), create a fresh sys-conf-py-<timestamp>.log
-    and export it so any sudo re-exec inherits it via --preserve-env.
+    one bash shell so every script it execs inherits it), append to that
+    file — the whole run lands in one log. Otherwise (a direct script
+    invocation like `./src/configure_gpu.py`), create a fresh
+    sys-conf-py-<timestamp>.log and export it so any sudo re-exec inherits
+    it via --preserve-env.
 
     Pre-chowning to SUDO_USER lets root-written content keep the original
     owner — tee runs as root post-sudo but only appends to an already-owned

@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = ["loguru>=0.7"]
-# ///
 """
 Idempotent uv-tool installer/updater driven by uv_config.toml.
 

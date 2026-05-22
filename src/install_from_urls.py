@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = ["loguru>=0.7"]
-# ///
 """
 Idempotent installer/updater for user-scoped CLI tools whose vendors ship
 a piped-shell-script bootstrapper (bun, uv, claude, rustup, cargo-binstall,

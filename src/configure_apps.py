@@ -1,8 +1,3 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.14"
-# dependencies = ["loguru>=0.7"]
-# ///
 """
 Idempotent per-app config from apps_config.toml.
 
