@@ -45,3 +45,8 @@ name = "herdr"
 url = "https://herdr.dev/install.sh"
 bin = "herdr"
 update_action = ["update"]
+
+[[install]]
+name = "agy"
+url = "https://antigravity.google/cli/install.sh"
+bin = "agy"

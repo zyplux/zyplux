@@ -29,9 +29,6 @@ packages = [
 
     # signal-desktop
     "signal-desktop",
-
-    # antigravity
-    "antigravity",
 ]
 
 # Ubuntu archive suites upranked above third-party repos.
@@ -76,12 +73,6 @@ name = "signal-desktop"
 key_url = "https://updates.signal.org/desktop/apt/keys.asc"
 uris = "https://updates.signal.org/desktop/apt"
 suites = "xenial"
-
-[[repo]]
-name = "antigravity"
-key_url = "https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg"
-uris = "https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev"
-suites = "antigravity-debian"
 
 # Debconf selections applied via debconf-set-selections before any apt
 # operation. Use to override package postinst behavior declaratively —
