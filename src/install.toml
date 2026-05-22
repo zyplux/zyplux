@@ -1,0 +1,196 @@
+# install.toml — PROPOSED unified config replacing url_config, cargo_config,
+# uv_config, and apt_config. Draft artifact under plan/ for review; once shape
+# is confirmed, it moves to src/install.toml and the four originals are
+# deleted.
+#
+# Top-level sections, one per managed tool:
+#   [apt]            apt packages, plus nested [apt.ubuntu_pin],
+#                    [apt.repo.<name>], [apt.debconf.<name>]
+#   [cargo]          cargo crates (via cargo-binstall)
+#   [uv]             uv-managed Python CLI tools
+#   [bash.<name>]    vendor-bootstrapped CLI tools installed by piping a URL
+#                    into bash (`curl <url> | bash -s -- <args>`); each
+#                    section names the CLI being installed
+#
+# Section-name convention: each top-level section names the *installer tool*
+# (apt / cargo / uv / bash). The thing being installed is identified inside
+# the section — either as a string in a `packages` array, or as the
+# subtable header for items with extra fields.
+#
+# Shape convention: items that have a stable identifier — repos, debconf
+# selections, bash-installed CLIs — are written as named subtables. The
+# section header IS the name; no separate `name = "..."` field. Items that
+# are pure lists (apt/cargo/uv packages, ubuntu_pin suites) stay as arrays.
+
+# ---------------------------------------------------------------------------
+# apt
+# ---------------------------------------------------------------------------
+
+[apt]
+# Installed at the end of the apt recipe (`apt install -y` via nala).
+# Version pin: name=version, e.g. "ghostty=1.3.0~us1-0ubuntu1".
+# Grouped by source repo (comments only — no semantic effect).
+packages = [
+    # Ubuntu archive (universe)
+    "just",
+    "ghostty",
+    "nala",
+    "vainfo",              # diagnose VA-API: `vainfo` alone auto-picks iHD
+    "linux-crashdump",     # kdump + crash tools; captures full kernel oops to /var/crash
+
+    # Ubuntu archive (restricted)
+    # RISK: when Ubuntu retires a branch they rebuild the old metapackage as a
+    # transitional shim (Depends: nvidia-driver-<NEW>-open) -> apt full-upgrade
+    # silently jumps branches. Mitigation: apt-preferences file pinning every
+    # other nvidia-driver-* to Pin-Priority: -1.
+    "nvidia-driver-580-open",
+
+    # debian.griffo.io
+    "zed",
+
+    # brave-browser
+    "brave-browser",
+
+    # vscode (Microsoft)
+    "code-insiders",
+
+    # signal-desktop
+    "signal-desktop",
+]
+
+# Ubuntu archive suites upranked above third-party repos.
+# {release} is interpolated at runtime (e.g. resolute, questing).
+[apt.ubuntu_pin]
+priority = 900
+suites = ["{release}", "{release}-updates", "{release}-security"]
+
+# ---- Third-party apt repos ----
+# Each [apt.repo.<name>] becomes a .sources file + installed signing key with
+# Signed-By: for per-repo trust isolation. The subtable name (after `apt.repo.`)
+# is the repo identifier — it's also the default basename for the keyring
+# (/usr/share/keyrings/<name>.gpg) and source file (/etc/apt/sources.list.d/
+# <name>.sources). Dotted names (e.g. "debian.griffo.io") must be quoted in
+# the section header per TOML syntax.
+#
+# Required fields:
+#   key_url   signing key URL (.asc or binary; auto-detected, dearmored if needed)
+#   uris      repo base URL
+#
+# Optional (defaults shown):
+#   suites         "stable"   — {release} interpolated at runtime
+#   components     "main"
+#   architectures  unset      — apt uses the host's dpkg arch(s)
+#   keyring        /usr/share/keyrings/<name>.gpg
+#   source_path    /etc/apt/sources.list.d/<name>.sources
+
+[apt.repo."debian.griffo.io"]
+key_url = "https://debian.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc"
+uris = "https://debian.griffo.io/apt"
+suites = "{release}"
+
+[apt.repo.brave-browser]
+key_url = "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg"
+uris = "https://brave-browser-apt-release.s3.brave.com"
+
+[apt.repo.vscode]
+key_url = "https://packages.microsoft.com/keys/microsoft.asc"
+uris = "https://packages.microsoft.com/repos/code"
+
+[apt.repo.signal-desktop]
+key_url = "https://updates.signal.org/desktop/apt/keys.asc"
+uris = "https://updates.signal.org/desktop/apt"
+suites = "xenial"
+
+# ---- Debconf selections ----
+# Applied via debconf-set-selections before any apt operation. Use to override
+# package postinst behavior declaratively — e.g. tell code-insiders not to
+# rewrite /etc/apt/sources.list.d/vscode.sources on every reconfigure, so our
+# [apt.repo.vscode] block stays the source of truth.
+#
+# Subtable name is a synthetic handle (the package name works when one debconf
+# selection per package is enough; otherwise pick any unique label).
+#
+# Required fields:
+#   package   dpkg package name
+#   question  full debconf question template path
+#   type      boolean | string | select | multiselect | password | note | text | title
+#   value     value to set
+
+[apt.debconf.code-insiders]
+package = "code-insiders"
+question = "code-insiders/add-microsoft-repo"
+type = "boolean"
+value = "false"
+
+# ---------------------------------------------------------------------------
+# cargo (via cargo-binstall)
+# ---------------------------------------------------------------------------
+
+[cargo]
+# Rust packages installed via cargo-binstall. Each entry is the crate name as
+# published on crates.io; cargo-binstall writes to ~/.cargo/.crates.toml so
+# binstall'd and source-built packages share one index.
+packages = [
+    "cargo-binstall",
+    "cargo-update",
+    "just",
+    "just-lsp",
+    "rumdl",
+]
+
+# ---------------------------------------------------------------------------
+# uv (Python CLI tools)
+# ---------------------------------------------------------------------------
+
+[uv]
+# `uv tool install <pkg>` puts each tool in its own isolated venv under
+# ~/.local/share/uv/tools/ and symlinks executables into ~/.local/bin.
+packages = [
+    "ruff",
+]
+
+# ---------------------------------------------------------------------------
+# bash — vendor-bootstrapped CLI tools (curl | bash pattern)
+# ---------------------------------------------------------------------------
+#
+# Each [bash.<name>]: if `bin` (default <name>) is missing, fetch `url` and
+# pipe into bash with optional `args`; if `bin` exists, dispatch on
+# `update_action`. The subtable name is both the CLI's logical id and the
+# default for `bin` when not specified — symmetric with [apt.<pkg>] /
+# [cargo.<crate>] / [uv.<tool>] in that the section header names the thing
+# being installed, while the section's parent (`bash`) names the installer.
+#
+# Required:
+#   url            https URL of the installer script
+#
+# Optional:
+#   bin            binary name to probe for idempotency (default: subtable name)
+#   args           list of args appended after `bash -s --` (e.g. ["-y"] for non-interactive)
+#   update_action  how to update when `bin` already exists:
+#                    list of strings   -> run `<bin> <update_action...>`
+#                    "rerun-installer" -> re-fetch and re-pipe the install URL
+#                    absent            -> no update; leave as-is
+
+[bash.bun]
+url = "https://bun.sh/install"
+update_action = ["upgrade"]
+
+[bash.uv]
+url = "https://astral.sh/uv/install.sh"
+update_action = ["self", "update"]
+
+[bash.claude]
+url = "https://claude.ai/install.sh"
+update_action = ["update"]
+
+[bash.rustup]
+url = "https://sh.rustup.rs"
+args = ["-y"]
+update_action = ["self", "update"]
+
+[bash.herdr]
+url = "https://herdr.dev/install.sh"
+update_action = ["update"]
+
+[bash.agy]
+url = "https://antigravity.google/cli/install.sh"
