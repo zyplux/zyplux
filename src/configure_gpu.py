@@ -140,7 +140,8 @@ def build_gpu_state_row() -> dict:
         completed = subprocess.run(list(cmd), capture_output=True, text=True)
         return completed.stdout.strip() if completed.returncode == 0 else "(error)"
 
-    is_nvidia_on_pci = bool(capture_stdout("lspci", "-nn", "-d", "10de:"))
+    nvidia_devices = capture_stdout("lspci", "-nn", "-d", "10de:")
+    is_nvidia_on_pci = bool(re.search(r"\[030[02]\]", nvidia_devices))
     prime_mode = capture_stdout("prime-select", "query") or "(not installed)"
     return {
         "nvidia_on_pci": "yes" if is_nvidia_on_pci else "no",

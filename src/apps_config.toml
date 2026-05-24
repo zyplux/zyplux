@@ -25,7 +25,8 @@ local_state_flags = [
     # "enable-unsafe-webgpu@1",
 ]
 
-# render-node-override is silently overridden by Chromium on Optimus.
+# render-node-override is silently overridden by Chromium on this hybrid
+# Intel + NVIDIA (eGPU) PRIME setup.
 switches = []
 
 # Browser-only, on top of [chromium].features.
@@ -41,7 +42,8 @@ desktop   = "/usr/share/applications/code-insiders.desktop"
 argv_json = ".vscode-insiders/argv.json"
 
 # render-node-override here hangs the GPU process at startup — Electron does
-# not silently override it the way Brave's Chromium does on Optimus.
+# not silently override it the way Brave's Chromium does on this hybrid
+# Intel + NVIDIA (eGPU) PRIME setup.
 switches = []
 
 # No app-specific features; only [chromium].features apply.
@@ -50,6 +52,25 @@ switches = []
 # is dropped. enable-features is auto-synthesized from [chromium].features +
 # [code_insiders].features (the latter is empty for this app).
 [code_insiders.argv]
+"ozone-platform-hint"      = "auto"
+"enable-gpu-rasterization" = true
+"ignore-gpu-blocklist"     = true
+
+# Stable VS Code — same hybrid-GPU tuning as [code_insiders], with stable's own
+# paths (.vscode/ instead of .vscode-insiders/, /usr/bin/code). Both are recipe-
+# installed, so both carry the flags; the argv.json merge preserves the existing
+# crash-reporter-id.
+[code]
+desktop   = "/usr/share/applications/code.desktop"
+argv_json = ".vscode/argv.json"
+
+# render-node-override here hangs the GPU process at startup — Electron does
+# not silently override it the way Brave's Chromium does on this hybrid
+# Intel + NVIDIA (eGPU) PRIME setup.
+switches = []
+
+# No app-specific features; only [chromium].features apply.
+[code.argv]
 "ozone-platform-hint"      = "auto"
 "enable-gpu-rasterization" = true
 "ignore-gpu-blocklist"     = true
