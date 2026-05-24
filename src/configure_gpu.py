@@ -11,6 +11,12 @@ Also configures suspend behavior to avoid s2idle-related kernel oopses on
 this Tiger Lake + NVIDIA hybrid setup (see docs/investigations/sleep-crash.md):
 forces deep S3 via GRUB cmdline and pins NVIDIA power-management options.
 
+Makes the eGPU the primary render GPU so Wayland clients render on it instead of
+the iGPU (see docs/projects/laptop-rendering-sluggishness/investigation.md). Two
+layers: egpu-prime-switch flips boot_vga at boot (the seat-primary lever logind +
+KWin + clients follow), and this playbook writes /etc/environment.d so KWin and
+Vulkan clients get the same hint.
+
 NVIDIA driver packages live in recipe.toml; the [apt_pkg] cook runs first
 (this playbook declares depends_on = ["apt_pkg"]).
 """
@@ -54,6 +60,12 @@ GRUB_CMDLINE_RE = re.compile(
     r'^(GRUB_CMDLINE_LINUX_DEFAULT=)(["\'])(.*?)\2',
     re.MULTILINE,
 )
+
+EGPU_PRIMARY_ENV = Path("/etc/environment.d/10-egpu-primary.conf")
+PCI_DEVICES = Path("/sys/bus/pci/devices")
+NVIDIA_VENDOR = "0x10de"
+INTEL_VENDOR = "0x8086"
+DRI_BY_PATH = Path("/dev/dri/by-path")
 
 
 def install_egpu_prime() -> None:
@@ -135,6 +147,50 @@ def configure_grub_sleep() -> None:
     stream_subprocess(["update-grub"], note="update-grub")
 
 
+def find_card_by_path(vendor: str) -> Path | None:
+    """The stable /dev/dri/by-path/*-card symlink for the GPU of the given PCI
+    vendor, or None if absent (e.g. eGPU unplugged). by-path is keyed by PCI
+    address, so it survives card0/card1 renumbering across reboots."""
+    for card in sorted(DRI_BY_PATH.glob("pci-*-card")):
+        address = card.name.removeprefix("pci-").removesuffix("-card")
+        if read_pci_attr(address, "vendor") == vendor:
+            return card
+    return None
+
+
+def read_pci_attr(address: str, attr: str) -> str:
+    try:
+        return (PCI_DEVICES / address / attr).read_text().strip()
+    except OSError:
+        return ""
+
+
+def configure_egpu_primary() -> None:
+    """Method 3 (compositor hint): point KWin (KWIN_DRM_DEVICES) and Vulkan clients
+    (VULKAN_ADAPTER) at the eGPU as primary, reinforcing the boot_vga switch that
+    egpu-prime-switch performs. Written only when the eGPU is connected so an
+    undocked re-run leaves any existing file untouched (idle re-runs stay quiet)."""
+    egpu_card = find_card_by_path(NVIDIA_VENDOR)
+    igpu_card = find_card_by_path(INTEL_VENDOR)
+    if egpu_card is None or igpu_card is None:
+        logger.info(f"Skipped : {EGPU_PRIMARY_ENV}  (eGPU not detected; leaving as-is)")
+        return
+
+    lines = [f"KWIN_DRM_DEVICES={egpu_card}:{igpu_card}"]
+    egpu_address = egpu_card.name.removeprefix("pci-").removesuffix("-card")
+    vendor = read_pci_attr(egpu_address, "vendor").removeprefix("0x")
+    device = read_pci_attr(egpu_address, "device").removeprefix("0x")
+    if vendor and device:
+        lines.append(f"VULKAN_ADAPTER={vendor}:{device}")
+
+    write_if_changed(
+        EGPU_PRIMARY_ENV,
+        "\n".join(lines) + "\n",
+        0o644,
+        note="KWin + Vulkan eGPU-primary hint",
+    )
+
+
 def build_gpu_state_row() -> dict:
     def capture_stdout(*cmd: str) -> str:
         completed = subprocess.run(list(cmd), capture_output=True, text=True)
@@ -155,6 +211,7 @@ def main() -> None:
     install_egpu_prime()
     configure_nvidia_power()
     configure_grub_sleep()
+    configure_egpu_primary()
 
     logger.info("Current GPU state:")
     for line in encode([build_gpu_state_row()]).splitlines():

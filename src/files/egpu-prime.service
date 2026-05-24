@@ -1,5 +1,5 @@
 [Unit]
-Description=Auto-select PRIME mode based on eGPU presence
+Description=Auto-select PRIME mode and seat-primary GPU (boot_vga) based on eGPU presence
 ConditionPathExists=/usr/bin/prime-select
 After=local-fs.target systemd-modules-load.service bolt.service
 Wants=bolt.service

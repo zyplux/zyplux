@@ -13,6 +13,36 @@ TAG=egpu-prime
 
 log() { logger -t "$TAG" -- "$*"; echo "$TAG: $*" >&2; }
 
+# Method 2 (boot_vga switch): make the eGPU the seat-primary GPU so logind hands
+# it to KWin as the main device and Wayland clients render on it directly. Without
+# this, boot_vga stays on the iGPU, KWin advertises the iGPU as primary, and every
+# GPU client (Electron, Ghostty, …) renders on the iGPU — forcing KWin to copy each
+# frame across the bus to the eGPU for any eGPU-attached display (the 4K-monitor lag).
+# sysfs boot_vga is kernel-read-only, so we bind-mount a fake value over it; a reboot
+# resets it (that is the revert path). The value checks below keep it idempotent, and
+# it only runs when the eGPU is present, so an undocked boot stays on the iGPU.
+flip_boot_vga() {
+    local src_dir=/run/egpu-boot-vga
+    mkdir -p "$src_dir"
+    printf 1 > "$src_dir/one"
+    printf 0 > "$src_dir/zero"
+    local bvpath devdir vendor
+    for bvpath in /sys/bus/pci/devices/*/boot_vga; do
+        [ -e "$bvpath" ] || continue
+        devdir=$(dirname "$bvpath")
+        vendor=$(cat "$devdir/vendor" 2>/dev/null || true)
+        if [ "$vendor" = "0x10de" ]; then
+            grep -q 1 "$bvpath" || {
+                mount --bind -o ro "$src_dir/one" "$bvpath" \
+                    && log "boot_vga: $(basename "$devdir") -> 1 (eGPU primary)"
+            }
+        elif grep -q 1 "$bvpath"; then
+            mount --bind -o ro "$src_dir/zero" "$bvpath" \
+                && log "boot_vga: $(basename "$devdir") -> 0 (was primary)"
+        fi
+    done
+}
+
 # Thunderbolt authorization sometimes lags PID 1. Give it a few seconds.
 NVIDIA_PRESENT=0
 for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -25,6 +55,7 @@ done
 
 if [ "$NVIDIA_PRESENT" -eq 1 ]; then
     WANT=nvidia
+    flip_boot_vga
 else
     WANT=on-demand
 fi
