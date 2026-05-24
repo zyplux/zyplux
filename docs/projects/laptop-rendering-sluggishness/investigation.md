@@ -26,6 +26,15 @@ monitors**; snappy on the internal 1080p panel.
 - `__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia` does **not** move VS Code
   off Intel (isolated instance still held 7 handles on `renderD128`). glvnd GLX path does
   flip (`glxinfo` Intel→NVIDIA), but Chromium opens the DRM node directly via GBM.
+- The first Option C attempt caused a **login loop** (greeter → black screen → greeter),
+  docked *and* undocked. Root cause: `KWIN_DRM_DEVICES` is colon-separated, but we wrote the
+  `/dev/dri/by-path/pci-0000:04:00.0-card` symlinks — whose names embed the colon-bearing PCI
+  address. KWin split on every colon (`journalctl -b -3`: `Failed to open drm device
+  /dev/dri/by-path/pci-0000` / `04` / `00.0-card` … `No suitable DRM devices have been
+  found`) → compositor aborts. Static file written once while docked → poisoned every boot,
+  hence undocked failed too. Card device paths (`/dev/dri/cardN`) are colon-free but renumber
+  per boot; the by-path symlinks are stable but colon-bearing — there is no stable+colon-free
+  name, so the list must be resolved at boot.
 
 ## What We Suspect
 
@@ -37,16 +46,23 @@ monitors**; snappy on the internal 1080p panel.
 
 ## Action Log
 
-- 2026-05-24: Applied Option C (modeled on `all-ways-egpu`, replicated in-repo):
-  - `src/files/egpu-prime-switch`: `flip_boot_vga()` bind-mounts `boot_vga` (eGPU→1,
-    iGPU→0) at boot, guarded by the existing eGPU-present check. Reboot reverts.
-  - `src/configure_gpu.py`: `configure_egpu_primary()` writes
-    `/etc/environment.d/10-egpu-primary.conf` (`KWIN_DRM_DEVICES` eGPU-first via by-path,
-    `VULKAN_ADAPTER`) only when the eGPU is detected.
+- 2026-05-24: Applied Option C (boot_vga flip + `KWIN_DRM_DEVICES`/`VULKAN_ADAPTER` env
+  file). Rebooted → **login loop**, recovered via TTY (disabled service, removed conf).
+- 2026-05-24: Fixed and reworked. `egpu-prime-switch` is now a standalone `/usr/bin/python3`
+  stdlib-only script (no repo/uv/loguru deps — it runs as root before login). At boot, when
+  the eGPU is present it: flips `boot_vga`, and writes `/etc/environment.d/10-egpu-primary.conf`
+  resolving each `by-path` symlink to its colon-free `/dev/dri/cardN` (eGPU first), skipping
+  any node that can't open; when absent it removes the file. `configure_gpu.py` no longer
+  writes the env file (static install-time file was the staleness trap). Dry-run on the docked
+  system now yields `KWIN_DRM_DEVICES=/dev/dri/card0:/dev/dri/card1` (card0 = eGPU), both nodes
+  present — the colon-split crash is gone. Not yet reboot-tested.
 
 ## Next
 
-- `just up`, reboot docked, then verify clients moved to `renderD129`:
+- `just up`, reboot docked. (`boot_vga` flip is still unverified in isolation — keep a TTY
+  ready: `sudo systemctl disable --now egpu-prime.service && sudo rm -f /etc/environment.d/10-egpu-primary.conf`,
+  then reboot, recovers it.)
+- Verify clients moved off Intel:
   `for p in $(pgrep -f /usr/share/code/code); do ls -l /proc/$p/fd; done | grep -oE 'renderD[0-9]+' | sort | uniq -c`
 - Confirm `cat /sys/bus/pci/devices/0000:04:00.0/boot_vga` = `1` and typing on a 4K screen
   is snappy.

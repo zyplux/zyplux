@@ -67,14 +67,14 @@ Apt's cross-repo safety (Ubuntu pin → priority 900), the `trusted.gpg.d` `chat
 
 Declared in `recipe.toml` as `[configure_gpu]` / `[configure_apps]` (`needs_root = true`, `depends_on = ["apt_pkg"]`); chef dispatches them through the graph like any cook. Their internal logic is unchanged (not yet converted to the `CookBase` shape) — they read their own config and don't take a recipe slice.
 
-- **`configure_gpu.py`** — installs `/usr/local/sbin/egpu-prime-switch` and `/etc/systemd/system/egpu-prime.service` (the service picks `prime-select nvidia` if the eGPU is on PCI, else `on-demand`, before SDDM starts at boot). Also writes `/etc/modprobe.d/nvidia-power.conf` and adds `mem_sleep_default=deep` to `GRUB_CMDLINE_LINUX_DEFAULT` — both mitigate the s2idle / NVIDIA suspend crash documented in `docs/investigations/sleep-crash.md`.
+- **`configure_gpu.py`** — installs `/usr/local/sbin/egpu-prime-switch` and `/etc/systemd/system/egpu-prime.service` (the service runs the switch before SDDM at boot). Also writes `/etc/modprobe.d/nvidia-power.conf` and adds `mem_sleep_default=deep` to `GRUB_CMDLINE_LINUX_DEFAULT` — both mitigate the s2idle / NVIDIA suspend crash documented in `docs/projects/sleep-crash/sleep-crash.md`. It does **not** write the eGPU-primary env file — that's owned by `egpu-prime-switch` (boot-time, because the device paths depend on the live card numbering; see `docs/projects/laptop-rendering-sluggishness/investigation.md`).
 - **`configure_apps.py`** — reads `src/apps_config.toml`. Dispatches per app section on which marker key(s) are present: `desktop` (per-user `.desktop` override under `~/.local/share/applications/` with `env` prefix + `--<switch>`es + `--enable-features=`), `local_state` (Chromium-family `Local State` JSON merge for `brave://flags`-style UI mirroring — **skipped if the target browser is running** to avoid racing the write), `argv_json` (Electron-style allowlisted flag merge, e.g. VS Code), `settings_json` (merge an `env` block into a JSON settings file, e.g. `~/.claude/settings.json`). If any `.desktop` was rewritten, `kbuildsycoca6 --noincremental` runs as the invoking user — without it, KDE's launcher keeps spawning apps with the previously-cached `Exec` line.
 
 ### Static assets (`src/files/`)
 
 Installed verbatim by `configure_gpu.py`:
 
-- `egpu-prime-switch`, `egpu-prime.service` — the boot-time PRIME selector + its systemd unit.
+- `egpu-prime-switch`, `egpu-prime.service` — the boot-time eGPU-primary selector + its systemd unit. `egpu-prime-switch` is a **standalone `/usr/bin/python3`, stdlib-only** script (no `harness`/`loguru`/uv imports — it runs as root before login, where none of that is importable). When the eGPU is on PCI it flips `boot_vga` onto it, writes `/etc/environment.d/10-egpu-primary.conf` (`KWIN_DRM_DEVICES` resolved to colon-free `/dev/dri/cardN` + `VULKAN_ADAPTER`), and selects `prime-select nvidia`; otherwise it removes that file and selects `on-demand`. A reboot drops the `boot_vga` bind-mount and the file is regenerated, so nothing goes stale.
 
 (The former `ubuntu-archives.pref` and `99-trusted-gpgd-autounlock` are gone — their content is now inlined as heredocs in the `[bash.*]` entries of `recipe.toml`.)
 
