@@ -1,4 +1,4 @@
-# "Choose which screen to share" Popup on Wayland
+# Spurious Screen-Share Popup on Wayland (code-insiders 1.122)
 
 >Note: keep this file minimalist and concise, less is more!
 
@@ -6,36 +6,49 @@
 
 KDE Plasma on Wayland. Starting 2026-05-22, a Portal dialog ("Choose which
 screen to share with the requesting application") pops up unprompted, names no
-requester, and reappears every few minutes. Identify the requester and stop it.
+requester, and reappears every ~30–60 s. The requester is **code-insiders**.
 
 ## What we know 100%
 
-- Requester is **code-insiders** (the main browser process). Confirmed three ways: journal timestamp lock-step, live `busctl --user status` on the D-Bus sender (PID = the running code-insiders), and the captured handshake in `logs/screencast.log`.
-- It is a Chromium `getDisplayMedia()` call: the D-Bus session path uses the `webrtc_session<n>` token, hard-coded in Chromium's `screencast_portal.cc` and emitted only by `getDisplayMedia`. On Wayland that call must go through `xdg-desktop-portal` → `xdg-desktop-portal-kde`, which paints the chooser. No app name shows because the frame has no Flatpak/Snap app-id and passes an empty `parent_window`.
-- Triggered by **any webview being shown**: startup (Welcome tab), Open Preview on any markdown file, and opening any extension's details page. It also re-fires on a ~30–60 s loop while the window is open.
-- **Not** caused by anything in the user's setup. A throwaway instance with a fresh `--user-data-dir` and an empty `--extensions-dir` (zero extensions, no workspace, no settings) still fires the full `CreateSession → SelectSources → Start` handshake at startup and loops (clean-profile probe: 3 requests in 90 s). Rules out all extensions, profile, settings, workspace, and restored tabs.
-- **Onset matches a runtime bump, not a config change.** `~/.vscode-insiders/argv.json` was last written 2026-05-19; the GPU flags did not change. code-insiders upgraded **1.121.0 → 1.122.0 on 2026-05-22 19:30** (`product.json` date `2026-05-22T10:00:03-07:00`, Electron 39.8.8); first popup 21:33 the same day.
-- The only `getDisplayMedia` call site in all of VS Code core is the Issue Reporter's `RecordingService`; no extension references `mediaDevices`. So the spurious call originates in the **1.122 framework layer**, not app/extension JS.
-- Forcing `--ozone-platform=x11` does **not** suppress it (under a Wayland login, XWayland still routes through the KDE portal). X11 is not a fix.
-- `[chromium].features` reaching code-insiders are video-decode only (`VaapiOnNvidiaGPUs`, `AcceleratedVideoDecodeLinuxGL`, `AcceleratedVideoDecodeLinuxZeroCopyGL`, `WaylandLinuxDrmSyncobj`). `WebRTCPipeWireCapturer` is Brave-only and absent from code-insiders.
-- apt still serves 1.121.0 builds (`apt-cache madison code-insiders` lists `1.121.0-1779185827` … `1.121.0-1778865554`); downgrade is feasible. Stable `code` is not installed.
+- Root cause is a **VS Code Insiders 1.122.0** (Electron 39.8.8) regression, confirmed by two
+  upstream issues: `RecordingService.startRecording` (the Issue Reporter's only `getDisplayMedia`
+  call site) fires at workbench boot and on a timer, instead of only on user capture.
+  - [microsoft/vscode#317948](https://github.com/microsoft/vscode/issues/317948) — KDE, names the boot-time `startRecording`.
+  - [microsoft/vscode#317955](https://github.com/microsoft/vscode/issues/317955) — GNOME, same trigger, also crashes `xdg-desktop-portal-gnome` (SIGSEGV); assigned to `deepak1556`.
+- On Wayland that call routes through `xdg-desktop-portal-kde`, which paints the chooser. No app
+  name shows because the frame carries no Flatpak/Snap app-id and an empty `parent_window`.
+- Requester confirmed three ways: journal timestamp lock-step, live `busctl --user status` on the
+  D-Bus sender (PID = running code-insiders), and the handshake in `logs/screencast.log`. The
+  D-Bus session path uses the `webrtc_session<n>` token — emitted only by Chromium's `getDisplayMedia`.
+- Triggered by any webview shown (Welcome tab, markdown preview, extension details) and re-fires on a loop.
+- **Not** caused by the user's setup: a throwaway instance with fresh `--user-data-dir` and empty
+  `--extensions-dir` still fires the full `CreateSession → SelectSources → Start` handshake (3
+  requests in 90 s). Rules out all extensions, profile, settings, workspace, and restored tabs.
+- Onset matches the 1.121.0 → 1.122.0 bump on 2026-05-22 19:30; first popup 21:33 the same day.
+  `argv.json`/GPU flags unchanged (last written 2026-05-19).
+- `--ozone-platform=x11` does **not** suppress it (XWayland still routes through the KDE portal).
+- apt still serves 1.121.0 (`apt-cache madison code-insiders`); stable `code` is not installed.
 
 ## What we suspect
 
-- **VS Code Insiders 1.122 regression** (Electron/Chromium bump) where webview creation and a periodic timer initiate an unwanted screen capture. Likely fixed in a later daily Insiders build.
-- GPU flags not fully excluded as a contributing factor: probes still read `argv.json` (its path is not relocated by `--user-data-dir`), so a flags-stripped run was not measured. Low priority — none of the reaching flags is a capture feature.
+- No fix is merged upstream yet (both issues open as of 2026-05-26); a later daily Insiders build
+  likely resolves it, but the timeline is open-ended.
 
 ## Action Log
 
 ### 2026-05-23 — Root cause isolated
 
-Diagnosed via `busctl --user monitor/status`, journal correlation, and a grep
-sweep of VS Code core + all extensions. Confirmed framework cause with a
-controlled experiment: throwaway-profile + no-extensions instance reproduces the
-popup at startup and on a ~30–60 s loop. X11 ozone tested, does not suppress.
-Read-only; no repo or system changes made.
+Diagnosed via `busctl --user monitor/status`, journal correlation, and a grep sweep of VS Code
+core + all extensions. Confirmed framework cause with a throwaway-profile + no-extensions instance.
+X11 ozone tested, does not suppress. Read-only; no repo or system changes made.
+
+### 2026-05-26 — Matched to upstream
+
+Located issues #317948 and #317955, which pin the cause to `RecordingService.startRecording`
+firing at boot. No mitigation applied yet.
 
 ## Next
 
-- **Decide mitigation** (no fix applied yet): (a) downgrade `apt install code-insiders=1.121.0-1779185827` + `apt-mark hold` until upstream fixes it; (b) install stable `code` and switch to it; (c) wait for a newer Insiders build and re-test. Codify whichever is chosen (version pin belongs in `recipe.toml`).
-- File/locate the upstream `microsoft/vscode` issue for the 1.122 spurious-screencast regression and link it here.
+- **Decide mitigation** (no fix applied yet): (a) downgrade `apt install code-insiders=1.121.0-1779185827`
+  + `apt-mark hold` until upstream fixes it; (b) install stable `code` and switch to it; (c) wait
+  for a newer Insiders build and re-test. Codify the chosen version pin in `recipe.toml`.
