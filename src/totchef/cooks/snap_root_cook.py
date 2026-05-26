@@ -3,8 +3,8 @@
 import shutil
 import subprocess
 
+from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
-from totchef.harness import stream_subprocess
 
 
 def parse_snap_list(output: str) -> dict[str, str]:
@@ -35,12 +35,12 @@ def parse_refresh_list(output: str) -> dict[str, str]:
 
 
 def parse_installed_snaps() -> dict[str, str]:
-    completed = subprocess.run(["snap", "list"], capture_output=True, text=True, check=True)
+    completed = shell.run("snap", "list", check=True)
     return parse_snap_list(completed.stdout)
 
 
 def find_refreshable_snaps() -> dict[str, str]:
-    completed = subprocess.run(["snap", "refresh", "--list"], capture_output=True, text=True)
+    completed = shell.run("snap", "refresh", "--list")
     return parse_refresh_list(completed.stdout)
 
 
@@ -69,7 +69,7 @@ class SnapCook(PackageListCook):
         refresh_failures: list[str] = []
         for verb, name in work:
             try:
-                stream_subprocess(
+                shell.stream(
                     ["snap", verb, name],
                     f"[{name:>{tag_width}}]",
                     note="Installing" if verb == "install" else "Refreshing",

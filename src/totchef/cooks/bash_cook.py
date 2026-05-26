@@ -4,8 +4,8 @@ import subprocess
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import StateChangeOutcome, StateCook, StateEntrySpec
-from totchef.harness import stream_subprocess
 
 
 class BashEntry(StateEntrySpec):
@@ -23,7 +23,7 @@ class BashCook(StateCook[BashEntry]):
             if not entry.current_state:
                 states[name] = "(no check)"
                 continue
-            completed = subprocess.run(["bash", "-c", entry.current_state], capture_output=True, text=True)
+            completed = shell.run("bash", "-c", entry.current_state)
             states[name] = completed.stdout.strip() or "(empty)"
         return states
 
@@ -33,7 +33,7 @@ class BashCook(StateCook[BashEntry]):
     def apply_resource(self, name: str) -> StateChangeOutcome:
         entry = self.entries[name]
         try:
-            stream_subprocess(["bash", "-c", entry.apply], note="apply")
+            shell.stream(["bash", "-c", entry.apply], note="apply")
         except subprocess.CalledProcessError as exc:
             return StateChangeOutcome(
                 changed=False,

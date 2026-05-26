@@ -1,14 +1,14 @@
 """VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run concurrently behind uv's own locks. Runs as the invoking user; depends on [url]."""
 
 import json
-import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
-from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary, stream_subprocess
+from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary
 
 PYPI_JSON = "https://pypi.org/pypi/{name}/json"
 
@@ -34,12 +34,7 @@ def parse_tool_list(output: str) -> dict[str, str]:
 
 
 def parse_tool_versions(uv: Path) -> dict[str, str]:
-    completed = subprocess.run(
-        [str(uv), "tool", "list"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    completed = shell.run(str(uv), "tool", "list", check=True)
     return parse_tool_list(completed.stdout)
 
 
@@ -86,4 +81,4 @@ class UvCook(PackageListCook):
     @staticmethod
     def _run_one(uv: Path, verb: str, name: str, tag_width: int) -> None:
         action = "Installing" if verb == "install" else "Upgrading"
-        stream_subprocess([str(uv), "tool", verb, name], f"[{name:>{tag_width}}]", note=action)
+        shell.stream([str(uv), "tool", verb, name], f"[{name:>{tag_width}}]", note=action)

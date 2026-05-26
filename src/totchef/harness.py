@@ -1,11 +1,9 @@
-"""Shared cook scaffolding: privilege drop, streamed subprocess wrapping, idempotent file writes, binary discovery, URL fetch (logging lives in logs.py)."""
+"""Shared cook scaffolding: privilege drop, idempotent file writes, binary discovery, URL fetch (bash execution lives in shell.py, logging in logs.py)."""
 
 import os
 import pwd
 import shutil
-import subprocess
 import sys
-import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -40,61 +38,6 @@ def become_user() -> None:
     # bootstrap can find what an earlier cook just dropped here.
     bootstrap = ":".join(str(d) for d in bootstrap_bin_dirs())
     os.environ["PATH"] = f"{bootstrap}:{os.environ.get('PATH', '')}"
-
-
-def run(*cmd: str, note: str = "", check: bool = True, **kwargs) -> subprocess.CompletedProcess:
-    if note:
-        logger.info(note)
-    return subprocess.run(list(cmd), check=check, **kwargs)
-
-
-def stream_subprocess(
-    cmd: list[str],
-    tag: str = "",
-    *,
-    note: str = "",
-    stdin: bytes | None = None,
-    check: bool = True,
-) -> None:
-    """Run `cmd`, streaming merged stdout/stderr through logger.info; raises CalledProcessError on non-zero unless check=False; TERM=dumb/NO_COLOR/start_new_session suppress ANSI and /dev/tty bypass."""
-    prefix = f"{tag} " if tag else ""
-    if note:
-        logger.info(f"{prefix}{note}")
-    proc_env = {**os.environ, "TERM": "dumb", "NO_COLOR": "1"}
-    proc = subprocess.Popen(
-        cmd,
-        stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        env=proc_env,
-        start_new_session=True,
-    )
-    proc_stdout = proc.stdout
-    assert proc_stdout is not None
-    writer: threading.Thread | None = None
-    if stdin is not None:
-        proc_stdin = proc.stdin
-        assert proc_stdin is not None
-
-        def feed_stdin() -> None:
-            try:
-                proc_stdin.write(stdin)
-            finally:
-                proc_stdin.close()
-
-        writer = threading.Thread(target=feed_stdin, daemon=True)
-        writer.start()
-    for raw in proc_stdout:
-        decoded = raw.decode("utf-8", errors="replace").rstrip("\n")
-        for segment in decoded.split("\r"):
-            segment = segment.rstrip()
-            if segment:
-                logger.info(f"{prefix}{segment}")
-    if writer is not None:
-        writer.join()
-    exit_code = proc.wait()
-    if check and exit_code != 0:
-        raise subprocess.CalledProcessError(exit_code, cmd)
 
 
 def write_if_changed(path: Path, content: bytes | str, mode: int = 0o644, note: str = "") -> bool:

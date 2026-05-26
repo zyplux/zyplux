@@ -6,8 +6,9 @@ from pathlib import Path
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import StateChangeOutcome, StateCook, StateEntrySpec
-from totchef.harness import fetch_url, run, write_if_changed
+from totchef.harness import fetch_url, write_if_changed
 
 
 class AptRepoEntry(StateEntrySpec):
@@ -41,7 +42,7 @@ def install_repo_key(name: str, key_url: str, keyring: Path) -> bool:
     # ASCII-armored keys start with the RFC 4880 §6.2 header; binary OpenPGP
     # packets start with a high-bit-set tag byte and never match.
     if data.lstrip().startswith(b"-----BEGIN PGP"):
-        data = run("gpg", "--dearmor", input=data, capture_output=True).stdout
+        data = shell.run("gpg", "--dearmor", stdin=data, text=False, check=True).stdout
     return write_if_changed(keyring, data, note=f"{name} GPG key")
 
 

@@ -1,13 +1,13 @@
 """VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate skip-if-current, bootstrapping cargo-binstall once. Runs as the invoking user; depends on [url]."""
 
 import json
-import subprocess
 from pathlib import Path
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
-from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary, stream_subprocess
+from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary
 
 CRATES_API = "https://crates.io/api/v1/crates/{name}"
 
@@ -38,7 +38,7 @@ def parse_installed_crates() -> dict[str, str]:
     cargo = find_binary("cargo")
     if not cargo:
         return {}
-    completed = subprocess.run([str(cargo), "install", "--list"], capture_output=True, text=True)
+    completed = shell.run(str(cargo), "install", "--list")
     return parse_crate_list(completed.stdout)
 
 
@@ -56,7 +56,7 @@ class CargoCook(PackageListCook):
         if not cargo:
             return None
         logger.info("cargo-binstall missing — bootstrapping via `cargo install` (slow source compile; happens once per fresh system)")
-        stream_subprocess([str(cargo), "install", "cargo-binstall"])
+        shell.stream([str(cargo), "install", "cargo-binstall"])
         return find_binary("cargo-binstall")
 
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
@@ -77,5 +77,5 @@ class CargoCook(PackageListCook):
             )
 
         logger.info(f"Installing/upgrading {len(targets)} crate(s): " + ", ".join(targets))
-        stream_subprocess([str(binstall), "--no-confirm", *targets])
+        shell.stream([str(binstall), "--no-confirm", *targets])
         return SyncOutcome("ok")

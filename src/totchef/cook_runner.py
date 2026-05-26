@@ -10,8 +10,9 @@ from graphlib import TopologicalSorter
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import CookBase, CookResult, ReportRow, StateCook, Status, VersionedCook
-from totchef.harness import become_user, stream_subprocess
+from totchef.harness import become_user
 from totchef.logs import cook_context
 from totchef.recipe_graph import (
     Node,
@@ -60,7 +61,7 @@ def format_duration(seconds: float) -> str:
 def run_pre_hook(snippet: str) -> bool:
     """A `pre_hook` guard: zero exit proceeds, non-zero skips this item (a benign skip, e.g. "browser is running", not a failure)."""
     try:
-        stream_subprocess(["bash", "-c", snippet], note=f"pre_hook: {snippet}")
+        shell.stream(["bash", "-c", snippet], note=f"pre_hook: {snippet}")
         return True
     except Exception:
         logger.info("pre_hook not satisfied; skipping")
@@ -70,7 +71,7 @@ def run_pre_hook(snippet: str) -> bool:
 def run_post_hook(snippet: str) -> Status:
     """A `post_hook` runs after a successful change; non-zero -> soft failure."""
     try:
-        stream_subprocess(["bash", "-c", snippet], note=f"post_hook: {snippet}")
+        shell.stream(["bash", "-c", snippet], note=f"post_hook: {snippet}")
         return "ok"
     except Exception as exc:
         logger.warning(f"post_hook failed: {exc}")

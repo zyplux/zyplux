@@ -8,8 +8,9 @@ from typing import Literal
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import EntrySpec, SyncOutcome, VersionedCook
-from totchef.harness import fetch_url, find_binary, stream_subprocess
+from totchef.harness import fetch_url, find_binary
 
 RERUN_INSTALLER = "rerun-installer"
 
@@ -26,7 +27,7 @@ def parse_version(output: str) -> str:
 def probe_version(bin_path: Path) -> str:
     """Best-effort installed version of a vendor CLI; presence is what the cook actually diffs, so any probe failure degrades to 'present' rather than raising."""
     try:
-        completed = subprocess.run([str(bin_path), "--version"], capture_output=True, text=True, timeout=5)
+        completed = shell.run(str(bin_path), "--version", timeout=5)
     except OSError, subprocess.SubprocessError:
         return "present"
     return parse_version(completed.stdout or completed.stderr)
@@ -41,7 +42,7 @@ class UrlEntry(EntrySpec):
 
 
 def run_installer(url: str, args: list[str], note: str) -> None:
-    stream_subprocess(["bash", "-s", "--", *args], note=note, stdin=fetch_url(url))
+    shell.stream(["bash", "-s", "--", *args], note=note, stdin=fetch_url(url))
 
 
 def update_existing(entry: UrlEntry, bin_path: Path) -> None:
@@ -50,12 +51,12 @@ def update_existing(entry: UrlEntry, bin_path: Path) -> None:
         logger.info(f"No update_action; leaving {bin_path} as-is")
         return
     if guard := entry.update_guard:
-        shell = f"PATH={shlex.quote(str(bin_path.parent))}:$PATH; {guard}"
-        stream_subprocess(["bash", "-c", shell], note=f"Update guard: {guard}")
+        guard_command = f"PATH={shlex.quote(str(bin_path.parent))}:$PATH; {guard}"
+        shell.stream(["bash", "-c", guard_command], note=f"Update guard: {guard}")
     if action == RERUN_INSTALLER:
         run_installer(entry.url, entry.args, note=f"Updating from {entry.url}")
     elif isinstance(action, list) and action:
-        stream_subprocess(
+        shell.stream(
             [str(bin_path), *action],
             note=f"Updating via `{bin_path.name} {' '.join(action)}`",
         )

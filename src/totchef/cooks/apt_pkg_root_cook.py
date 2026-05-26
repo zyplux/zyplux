@@ -1,20 +1,19 @@
 """VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
 
-import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
 from loguru import logger
 
+from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
-from totchef.harness import stream_subprocess
 from totchef.logs import log_toon
 
 TRUSTED_GPGD = Path("/etc/apt/trusted.gpg.d")
 
 
 def nala(*args: str, note: str = "", check: bool = True) -> None:
-    stream_subprocess(["nala", *args], note=note, check=check)
+    shell.stream(["nala", *args], note=note, check=check)
 
 
 def parse_policy(package: str, output: str) -> dict:
@@ -59,7 +58,7 @@ def parse_policy(package: str, output: str) -> dict:
 
 
 def build_policy_row(package: str) -> dict:
-    output = subprocess.run(["apt-cache", "policy", package], capture_output=True, text=True).stdout
+    output = shell.run("apt-cache", "policy", package).stdout
     return parse_policy(package, output)
 
 
@@ -110,7 +109,7 @@ class AptPkgCook(PackageListCook):
             )
 
         nala("full-upgrade", "-y", note="Running nala full-upgrade")
-        stream_subprocess(
+        shell.stream(
             ["lsattr", "-d", str(TRUSTED_GPGD)],
             note=f"{TRUSTED_GPGD} attributes (expect 'i' set):",
         )
