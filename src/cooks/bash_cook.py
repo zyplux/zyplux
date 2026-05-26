@@ -1,18 +1,4 @@
-"""StateCook for [bash.<name>] entries — a generic idempotent shell executor,
-home for system-config one-offs that read more honestly as shell than Python
-(apt prerequisites, debconf, the trusted.gpg.d hardening, the Ubuntu pin).
-
-The three snippet keys mirror the StateCook lifecycle one-to-one, so bash reads
-as the contract written into TOML: `current_state` (a read-only probe that echoes
-the current token -> get_current_state), `desired_state` (the target token ->
-get_desired_state), and `apply` (run only when they differ -> apply_resource),
-with `pre_hook` / `post_hook` around it. Snippets pipe file writes through the
-`write-if-changed` command rather than writing directly. Fields: see
-recipe.toml's header.
-
-Privilege-agnostic: a shell snippet isn't inherently root (needs_root = False by
-default); recipe.toml grants root per entry.
-"""
+"""StateCook for [bash.<name>] — a generic idempotent shell executor whose current_state/desired_state/apply snippet keys mirror the StateCook lifecycle. Privilege-agnostic; recipe.toml grants root per entry."""
 
 import subprocess
 

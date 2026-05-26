@@ -1,7 +1,4 @@
-"""chef.main's privilege gate. `just plan` (--dry-run) is contractually "no
-changes, no root", so main must skip ensure_root on a dry-run and still call it
-on a real apply. The surrounding I/O (logging, recipe load, run_recipe, report)
-is stubbed so only the gating branch is exercised."""
+"""chef.main's privilege gate: a `just plan` dry-run skips ensure_root, a real apply calls it; surrounding I/O is stubbed so only the gating branch is exercised."""
 
 import chef
 

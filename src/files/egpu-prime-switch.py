@@ -1,33 +1,5 @@
 #!/usr/bin/python3
-"""egpu-prime-switch — boot-time eGPU-primary selector.
-
-Runs once at boot via egpu-prime.service (before the display manager), as root.
-
-STANDALONE: system /usr/bin/python3, standard library ONLY. It must not import
-anything from this repo (e.g. harness) or any pip/uv-installed package (loguru,
-toon-format, …). At boot, as root, none of that is on sys.path — an ImportError
-here means the graphical session never starts. Keep every import stdlib.
-
-When an NVIDIA discrete GPU is present on the PCI bus (the eGPU is connected and
-Thunderbolt-authorized) this:
-  - flips boot_vga onto the eGPU so logind/KWin treat it as the seat-primary GPU
-    (bind-mounts a fake value; sysfs boot_vga is kernel-read-only, and a reboot
-    drops the bind-mount — that is the revert path),
-  - writes /etc/environment.d/10-egpu-primary.conf with KWIN_DRM_DEVICES (eGPU
-    first) and VULKAN_ADAPTER so KWin and Vulkan clients also prefer the eGPU,
-  - selects `prime-select nvidia`.
-Otherwise it removes that env file and selects `prime-select on-demand`.
-
-KWIN_DRM_DEVICES is colon-separated and so must hold colon-free device paths.
-The stable /dev/dri/by-path symlinks embed the colon-bearing PCI address, so
-they are resolved to their real /dev/dri/cardN here, at boot, when the card
-numbering is known. Baking a card number into a static file at install time is
-what caused an earlier login loop, so the file is regenerated every boot and any
-node that does not resolve or open makes us drop the file rather than keep a
-stale one.
-
-Logs to the journal under the tag "egpu-prime".
-"""
+"""Boot-time eGPU-primary selector (egpu-prime.service, as root): when an NVIDIA eGPU is on the bus, flip boot_vga + write KWIN_DRM_DEVICES/VULKAN_ADAPTER + `prime-select nvidia`, else revert. STANDALONE: system python3 + stdlib only — a non-stdlib import breaks the graphical session at boot. Resolves /dev/dri/by-path to cardN every boot (a baked-in card number caused an earlier login loop)."""
 
 import glob
 import os

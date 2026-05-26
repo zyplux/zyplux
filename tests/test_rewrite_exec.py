@@ -1,7 +1,4 @@
-"""rewrite_exec_line — the idempotent .desktop Exec= rewrite. Pure string surgery
-(env prefix, --switches, --enable-features, field-code placement), so it is the
-one piece of desktop_cook worth pinning directly: a regression here silently
-ships the wrong launch command."""
+"""rewrite_exec_line — the idempotent .desktop Exec= rewrite (env prefix, --switches, --enable-features, field-code placement); pure string surgery worth pinning directly."""
 
 from functools import partial
 

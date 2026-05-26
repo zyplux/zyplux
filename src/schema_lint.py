@@ -1,9 +1,4 @@
-"""Lint recipe.toml before chef runs it: every section resolves to a cook, the
-depends_on graph is acyclic, and each node's slice satisfies its cook's
-`entry_model`. `validate` is the `--lint` entry point and the gate chef calls
-before a real run. This layer sits on top of recipe_graph (graph construction)
-and adds no graph logic of its own.
-"""
+"""Lint recipe.toml before chef runs it: every section resolves to a cook, the depends_on graph is acyclic, and each node's slice satisfies its cook's `entry_model`."""
 
 import sys
 from graphlib import CycleError, TopologicalSorter

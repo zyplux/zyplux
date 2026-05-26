@@ -1,13 +1,4 @@
-"""StateCook for [desktop.<app>] — per-user .desktop Exec= overrides.
-
-For each [desktop.<app>] entry, copies the system
-.desktop, rewrites each Exec= line with an `env` prefix + `--<switch>`es +
-`--enable-features=`, and writes the override under
-~/.local/share/applications/. Diffable: desired = hash of the rendered override,
-current = hash of what's on disk, so chef skips unchanged apps and fires the
-KDE-cache refresh `post_hook` only when a .desktop actually changed. Runs as the
-invoking user, writing into $HOME; depends_on the packages it tunes.
-"""
+"""StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + --enable-features) under ~/.local/share/applications, diffed by content hash. Runs as the invoking user."""
 
 from pathlib import Path
 

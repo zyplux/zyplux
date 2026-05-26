@@ -1,18 +1,4 @@
-"""VersionedCook for the [uv] section — Python CLI tools in isolated venvs.
-
-Chef decides per tool whether it needs installing or upgrading (from a single
-up-front `uv tool list` parse); this cook executes that split:
-  to_install -> `uv tool install <pkg>`
-  to_upgrade -> `uv tool upgrade <pkg>`
-both run concurrently (uv serializes conflicting filesystem work with its own
-locks). `latest_available` is left as "—": uv has no cheap "latest on PyPI"
-probe, and chef derives the actual change from the installed version moving.
-
-Requires uv (installed by [url], so depends_on = ["url"]).
-
-Runs as the invoking user (chef forks + drops privilege) — uv writes into
-~/.local/share/uv and ~/.local/bin.
-"""
+"""VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run concurrently behind uv's own locks. Runs as the invoking user; depends on [url]."""
 
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed

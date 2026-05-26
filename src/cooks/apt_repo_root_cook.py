@@ -1,15 +1,4 @@
-"""StateCook for [apt_repo.<name>] entries — third-party apt repositories.
-
-Each repo is one resource. Its desired state is "configured": a signing key
-under /usr/share/keyrings/<name>.gpg (outside trusted.gpg.d, modern layout) and
-a `.sources` file with `Signed-By:` pointing at that key, so each key only
-authorises its own repo. Chef compares current vs desired and only calls
-apply_resource for repos that aren't fully in place — so a re-run does no key fetch.
-Fields: see recipe.toml's header.
-
-Runs as root (writes under /usr/share/keyrings and /etc/apt); depends on
-bash.apt_prereqs (gnupg for key dearmor).
-"""
+"""StateCook for [apt_repo.<name>] — third-party apt repos, each configured with a keyring under /usr/share/keyrings and a `Signed-By:` `.sources` file. Runs as root; depends on bash.apt_prereqs."""
 
 import platform
 import sys

@@ -1,12 +1,4 @@
-"""StateCook for [settings.<app>] — merge an env block into a JSON settings file.
-
-For each [settings.<app>] entry, merges its
-`settings_env` table into the top-level `env` key of that JSON file (e.g.
-~/.claude/settings.json), preserving every other key the user has set. The TOML
-declares the desired state, so same-named env entries are overridden. Diffable:
-desired = hash of the merged JSON, current = hash on disk. Runs as the invoking
-user, writing into $HOME.
-"""
+"""StateCook for [settings.<app>] — merge a `settings_env` block into the `env` key of a JSON settings file, preserving other keys, diffed by merged-JSON hash. Runs as the invoking user."""
 
 import json
 from pathlib import Path

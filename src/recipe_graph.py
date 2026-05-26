@@ -1,11 +1,4 @@
-"""Recipe -> scheduling graph: turn recipe.toml into a DAG of Nodes and resolve
-each section to its cook class. A section with named subtables expands to one Node
-per entry; a plain-data or empty section is a single Node. `depends_on` and
-`needs_root` are read per entry (falling back to the section, then — for
-needs_root — the cook class). See recipe.toml's header for the field semantics.
-Validation of the graph (cooks exist, no cycles, schemas match) lives in
-schema_lint, which builds on this module.
-"""
+"""Recipe -> scheduling graph: turn recipe.toml into a DAG of Nodes and resolve each section to its cook class (graph validation lives in schema_lint)."""
 
 import importlib
 import importlib.util
@@ -54,8 +47,7 @@ def load_cook_class(section: str) -> type[CookBase]:
 
 @dataclass(frozen=True)
 class Node:
-    """One unit of work chef schedules — one entry of a subtable section, or a
-    whole plain-data/empty section."""
+    """One unit of work chef schedules — one entry of a subtable section, or a whole plain-data/empty section."""
 
     id: str
     section: str

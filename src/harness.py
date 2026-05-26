@@ -1,7 +1,4 @@
-"""Shared scaffolding for sys-conf-py cooks: privilege drop, streamed subprocess
-wrapping, idempotent file writes, binary discovery, URL fetch. Logging (the log
-pump, drain barrier, loguru config, TOON) lives in logs.py.
-"""
+"""Shared cook scaffolding: privilege drop, streamed subprocess wrapping, idempotent file writes, binary discovery, URL fetch (logging lives in logs.py)."""
 
 import os
 import pwd

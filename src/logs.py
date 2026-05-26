@@ -1,14 +1,4 @@
-"""Logging core for sys-conf-py: the log pump (one thread owns the file + terminal),
-the FIFO drain barrier, loguru configuration, and TOON logging.
-
-The pump is what lets a rich live region (table / progress bar) coexist with logs:
-fd 1/2 are redirected into a pipe that one parent thread reads, so the parent's and
-every forked cook's output funnels through a single writer — the terminal therefore
-has exactly one writer and a live region never interleaves with log lines. See
-terminal.py, which registers LINE_SINK to route pumped lines through its rich Console.
-
-This module is a leaf (stdlib + loguru + toon only); everything else may import it.
-"""
+"""Logging core: the log pump (one thread owns the file + terminal so a live region never interleaves with log lines), the FIFO drain barrier, loguru config, and TOON logging."""
 
 import os
 import pwd

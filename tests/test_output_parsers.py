@@ -1,8 +1,4 @@
-"""Pure parsers over external CLI output. These pin the column/format assumptions
-that break silently when a tool reformats its output — the failure mode is a
-mis-read version or a missing entry, not a crash, so it goes unnoticed without a
-test. Each parser takes the captured text; the subprocess wrappers around them
-have no logic left to cover."""
+"""Pure parsers over external CLI output, pinning the column/format assumptions that break silently (a mis-read version, not a crash) when a tool reformats."""
 
 from cooks.apt_pkg_root_cook import parse_policy
 from cooks.cargo_cook import parse_crate_list

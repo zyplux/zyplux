@@ -1,24 +1,4 @@
-"""Terminal presentation layer: minimalist TOON in the log, pretty tables and
-progress bars on the terminal.
-
-The terminal has a single writer — the rich Console here — because every log line
-(parent + forked cooks) reaches the terminal through `logs`'s log pump, which
-this module registers a sink on (`_emit_log_line`). Routing logs through the same
-Console that draws tables/progress lets rich interleave them: logs scroll above, a
-live region redraws below, never corrupting each other.
-
-`show_table` and `progress_region` are TTY-gated off `logs.TERMINAL_FD`'s
-`is_terminal`:
-- interactive terminal -> rich table / live progress bar to the terminal, with the
-  table's rows appended as TOON to the log file (rich output never hits the file);
-- non-terminal stdout (piped / consumed programmatically) -> plain TOON via the
-  loguru path, and progress bars degrade to no-ops (the per-step log lines already
-  convey progress).
-
-Drive these only from chef, the scheduler parent. Every cook runs in a forked
-child that inherits the fds but must not draw to the terminal — a cook emits line
-logs (the pump serialises those) and the parent renders after collecting results.
-"""
+"""Terminal presentation: minimalist TOON in the log, rich tables/progress bars on an interactive terminal, all routed through the single Console the log pump feeds."""
 
 import os
 from collections.abc import Generator
@@ -117,8 +97,7 @@ def _append_toon(rows: list[dict], title: str) -> None:
 
 
 class ProgressHandle:
-    """No-op progress handle (the non-interactive yield). The live subclass drives a
-    rich bar; callers advance through this interface regardless of TTY."""
+    """No-op progress handle (the non-interactive yield); the live subclass drives a rich bar, callers advance through this interface regardless of TTY."""
 
     def advance(self, amount: int = 1) -> None: ...
 

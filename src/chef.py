@@ -1,10 +1,5 @@
 #!/usr/bin/env -S uv run
-"""Orchestrator for `just up`: re-exec as root, parse recipe.toml into a graph
-(recipe_graph), run the cooks (cook_runner), and report. Chef owns every
-diff/idempotency decision; cooks only probe and act.
-
-Exit codes: 0 success, 75 soft fail (named in a banner), 1 hard fail (aborts).
-"""
+"""Orchestrator for `just up`: re-exec as root, parse recipe.toml into a graph, run the cooks, report. Exit codes: 0 ok, 75 soft fail, 1 hard fail (aborts)."""
 
 import os
 import sys

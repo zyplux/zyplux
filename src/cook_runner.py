@@ -1,12 +1,4 @@
-"""Cook execution engine: chef diffs each cook (VersionedCook by install/upgrade
-split, StateCook by current vs desired) and acts. `run_recipe` walks the graph with
-graphlib.TopologicalSorter, running ready nodes concurrently — every node in a
-forked child that pipes its CookResult back: a user node drops privilege via
-harness.become_user(), a root node keeps root. User nodes run with unbounded
-concurrency; root nodes are serialized to one at a time (they share the dpkg lock
-and write the same /etc), so a long root cook no longer blocks independent user
-work from starting the moment its own dependencies clear.
-"""
+"""Cook execution engine: chef diffs each cook and acts; `run_recipe` topo-sorts the graph and forks every node (user nodes concurrent and privilege-dropped, root nodes serialized)."""
 
 import os
 import pickle

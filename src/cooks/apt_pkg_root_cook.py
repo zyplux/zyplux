@@ -1,26 +1,4 @@
-"""VersionedCook for the [apt_pkg] section — package install/upgrade via nala.
-
-Unlike the other versioned cooks, apt has a *cheap* latest: `apt-cache policy`
-yields both the installed and candidate version in one call, so this cook fills
-the report's "latest" column from the candidate.
-
-apt is also the one cook that ignores chef's install/upgrade split and always
-runs its full transaction, because `nala full-upgrade` is system-wide
-maintenance (it moves packages chef never asked about) and `nala install` is the
-single idempotent verb that both installs and upgrades the requested set:
-  nala update         refresh the cache (third-party repos already in place)
-  policy check        fail fast before full-upgrade if any requested package has
-                      apt-cache priority 0 (not in any configured repo)
-  nala full-upgrade   bring the whole system current
-  nala install        install/upgrade the requested packages
-  nala autoremove     drop now-unused dependencies
-Chef still derives accurate per-package changes by re-probing installed versions
-after the transaction.
-
-Cross-repo safety, the trusted.gpg.d immutable bit, the DPkg unlock hook,
-debconf, and prerequisites are set up upstream in [bash.*]; this cook only does
-the package transaction. Runs as root; depends on [bash] and [apt_repo].
-"""
+"""VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
 
 import subprocess
 from pathlib import Path

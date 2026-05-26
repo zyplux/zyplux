@@ -1,9 +1,4 @@
-"""Shared contract for sys-conf-py cooks. A cook is a thin manager that probes
-and acts but holds no diff logic — chef owns the diff. Two shapes share
-`CookBase`: VersionedCook (list_requested/list_installed/find_latest/sync) for
-versioned packages, and StateCook (list_resources/get_current_state/get_desired_state/get_hooks/apply_resource)
-for desired-state resources. The full contract is in CLAUDE.md.
-"""
+"""Shared contract for sys-conf-py cooks: a cook probes and acts but holds no diff logic (chef owns the diff); VersionedCook covers versioned packages, StateCook desired-state resources. See CLAUDE.md."""
 
 import hashlib
 from dataclasses import dataclass, field
@@ -16,22 +11,13 @@ Status = Literal["ok", "soft_fail", "hard_fail"]
 
 
 class EntrySpec(BaseModel):
-    """Base for every cook's recipe-entry schema. `extra='forbid'` rejects any key
-    the cook doesn't declare, so a typo'd recipe key fails the run with a clear
-    error instead of being silently ignored. A field without a default is a
-    required key; the annotation is the type contract."""
+    """Base for every cook's recipe-entry schema; `extra='forbid'` fails a typo'd recipe key instead of silently ignoring it."""
 
     model_config = ConfigDict(extra="forbid")
 
 
 class StateEntrySpec(EntrySpec):
-    """Base for a StateCook entry schema. Adds the hook pair every desired-state
-    entry accepts: chef runs `pre_hook` as a guard (non-zero skips the item) and
-    `post_hook` after a change. They live here, not on EntrySpec, because only
-    StateCook honors hooks — a versioned section (cargo, uv, snap, apt_pkg, url)
-    keeps the bare EntrySpec, so `extra='forbid'` rejects a hook there at lint time
-    rather than accepting one the runtime would silently never run. A cook with an
-    intrinsic hook composes it with these (see chain_hooks)."""
+    """A StateCook entry schema, adding the `pre_hook` guard / `post_hook` pair only StateCook honors — declaring one on a versioned section fails the lint."""
 
     pre_hook: str | None = None
     post_hook: str | None = None
@@ -51,8 +37,7 @@ class PackagesConfig(EntrySpec):
 
 @dataclass(frozen=True)
 class SyncOutcome:
-    """Outcome of a VersionedCook.sync (or any cook-level act). Expected
-    failures land here as a status; only bugs raise."""
+    """Outcome of a VersionedCook.sync (or any cook-level act); expected failures land here as a status, only bugs raise."""
 
     status: Status = "ok"
     message: str = ""
@@ -82,10 +67,7 @@ class ReportRow:
 
 @dataclass
 class CookResult:
-    """Everything chef needs from one cook: an aggregate status, the report rows,
-    and an optional cook-level message. Travels back from forked
-    user-cook children to the root parent over a pipe (so it must stay
-    picklable — plain dataclasses only)."""
+    """Everything chef needs from one cook — status, report rows, optional message — pickled back from a forked child, so plain dataclasses only."""
 
     cook: str
     status: Status
@@ -94,12 +76,7 @@ class CookResult:
 
 
 class CookBase:
-    """Base for every cook. Subclasses set `manager`; an always-root cook also
-    sets `needs_root = True` and is named `<section>_root_cook.py`.
-
-    `needs_root` is the cook's privilege default — False here, i.e. least
-    privilege. Chef reads it as the final fallback when recipe.toml grants no
-    per-entry needs_root."""
+    """Base for every cook; subclasses set `manager`, and an always-root `<section>_root_cook.py` sets `needs_root = True` (else least privilege)."""
 
     needs_root: bool = False
     manager: str = ""
@@ -133,12 +110,7 @@ class VersionedCook(CookBase):
 
 
 class PackageListCook(VersionedCook):
-    """VersionedCook over a plain `packages = [...]` section (cargo, uv, snap,
-    apt_pkg). The base validates the list into `self.packages` and serves
-    `list_requested` plus a no-op `find_latest` — most managers have no cheap
-    "latest" probe, so chef derives the change from the installed version moving.
-    A manager with a cheap candidate (apt) overrides `find_latest`; every cook
-    still implements `list_installed` and `sync`."""
+    """VersionedCook over a plain `packages = [...]` section (cargo, uv, snap, apt_pkg), with a no-op `find_latest` a manager with a cheap candidate (apt) overrides."""
 
     entry_model = PackagesConfig
 
@@ -154,12 +126,7 @@ class PackageListCook(VersionedCook):
 
 
 class StateCook[EntryModel: StateEntrySpec](CookBase):
-    """Desired-state cook over a subtable section. The base validates every entry
-    against `entry_model` into `self.entries` (name -> typed StateEntrySpec) and
-    serves the two members every such cook shares: `list_resources` and the default
-    `get_hooks` (pre_hook/post_hook straight off the entry). Subclasses implement
-    the diff — `get_current_state` / `get_desired_state` / `apply_resource` — and
-    override `get_hooks` only to compose an intrinsic hook (see chain_hooks)."""
+    """Desired-state cook over a subtable section; the base serves `list_resources` and default `get_hooks`, subclasses implement the get_current_state/get_desired_state/apply_resource diff."""
 
     def __init__(self, section: dict) -> None:
         super().__init__(section)
@@ -185,13 +152,7 @@ class StateCook[EntryModel: StateEntrySpec](CookBase):
 
 
 class FileStateCook[EntryModel: StateEntrySpec](StateCook[EntryModel]):
-    """A StateCook whose diff is a content hash: current state is the sha256 of the
-    file on disk (or "absent"), desired is the sha256 of the rendered bytes (or
-    `_unrendered_label`, when there is no base file present to render against).
-    Subclasses provide `_target_path` (where the file lives) and `_render` (its
-    desired bytes, or None when there is no base to patch); they keep their own
-    `apply_resource`, since the write's mode and its user-facing messages differ
-    per cook."""
+    """A StateCook whose diff is a content hash — sha256 of the on-disk file vs the rendered bytes; subclasses supply `_target_path` and `_render` and keep their own `apply_resource`."""
 
     _unrendered_label = "absent"
 

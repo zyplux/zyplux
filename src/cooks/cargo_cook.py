@@ -1,22 +1,4 @@
-"""VersionedCook for the [cargo] section — crates via cargo-binstall.
-
-cargo-binstall resolves each crate's latest release, compares against the
-installed version in ~/.cargo/.crates.toml, and installs / upgrades / skips per
-crate in one batched, parallel `cargo binstall --no-confirm pkg1 pkg2 ...`. So
-this cook reports installed versions for chef's diff/report, but hands chef's
-whole install+upgrade set to a single binstall call rather than splitting it —
-binstall does the per-crate skip-if-current itself, and one process avoids
-per-crate cache-lock contention. `latest_available` is left as "—": binstall
-already knows the latest, and re-deriving it here would be a second network
-round-trip per crate for no gain.
-
-Bootstraps cargo-binstall via a one-time source `cargo install` if it isn't on
-disk; thereafter it is in [cargo].packages and updates itself in the same batch.
-Requires cargo (from rustup in [url], so depends_on = ["url"]).
-
-Runs as the invoking user (chef forks + drops privilege) — cargo writes into
-~/.cargo, which must not land under /root.
-"""
+"""VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate skip-if-current, bootstrapping cargo-binstall once. Runs as the invoking user; depends on [url]."""
 
 import subprocess
 from pathlib import Path

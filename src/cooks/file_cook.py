@@ -1,14 +1,4 @@
-"""StateCook for [file.<name>] entries — install a file with exact content.
-
-A FileStateCook: it supplies `_target_path` (the install path) and `_render` (the
-intended bytes — inline `content`, or a `source` under src/files/), and the base
-diffs by content hash so a `post_hook` (daemon-reload, update-initramfs, …) fires
-only when the file changed. Fields: see recipe.toml's header.
-
-Privilege-agnostic: writing a file isn't inherently root (needs_root = False by
-default); recipe.toml grants root per entry where it writes under /usr/local or
-/etc.
-"""
+"""StateCook for [file.<name>] — install a file with exact content (inline or from src/files/), diffed by content hash so a `post_hook` fires only on change. Privilege-agnostic; recipe.toml grants root per entry."""
 
 from pathlib import Path
 

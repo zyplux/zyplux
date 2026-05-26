@@ -1,23 +1,4 @@
-"""VersionedCook for the [snap] section — snap install/refresh via snapd.
-
-Chef decides the split from a single up-front `snap list` parse; this cook runs:
-  to_install -> `snap install <name>`
-  to_upgrade -> `snap refresh <name>`  (no-op + exit 0 when already current)
-sequentially, because snapd serializes everything behind a global lock anyway.
-
-`latest_available` is "—": snap has no latest-version probe without an extra
-network round-trip (the plan's best-effort column). Chef derives the actual
-change from the installed version moving across the refresh.
-
-Some browsers on Ubuntu (firefox, chromium) ship *only* as snaps — the apt
-packages of the same name are transitional debs that just pull the snap. Snaps
-run confined, so a host-side VA-API driver may not be visible inside the
-sandbox; this cook only installs, it cannot make a snap browser HW-decode video.
-Strictly-confined snaps only (no --classic).
-
-Install failure is hard (a requested browser is missing); refresh failure is
-soft (the snap stays usable). Runs as root (chef runs root cooks in-process).
-"""
+"""VersionedCook for [snap] — snap install/refresh via snapd, run sequentially behind snapd's global lock; install failure is hard, refresh soft. Runs as root."""
 
 import shutil
 import subprocess

@@ -1,16 +1,4 @@
-"""StateCook for [chromium_flags.<app>] — GPU-flag injection for Chromium apps.
-
-Two delivery mechanisms, picked per app by which marker it carries:
-- `local_state`  Chromium `Local State` JSON: union brave://flags ids into
-                 browser.enabled_labs_experiments. Guarded by a `pre_hook` that
-                 skips the write while the browser is running (it would race the
-                 browser's own write); a skip is benign, not a failure.
-- `argv_json`    Electron argv.json: merge allowlisted flags + a synthesized
-                 enable-features built from the entry's `features`.
-
-Diffable: desired = hash of the rendered JSON, current = hash of what's on disk,
-so unchanged apps are skipped. Runs as the invoking user, writing into $HOME.
-"""
+"""StateCook for [chromium_flags.<app>] — GPU-flag injection into a Chromium `Local State` JSON or an Electron argv.json, picked per app by marker and diffed by rendered-JSON hash. Runs as the invoking user."""
 
 import json
 from pathlib import Path

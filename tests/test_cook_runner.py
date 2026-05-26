@@ -1,7 +1,4 @@
-"""The diff engine — chef's idempotency guarantee. run_versioned and run_state
-turn a cook's probes into the install/upgrade/unchanged/missing/failed verdict and
-drive the pre/apply/post lifecycle. Fakes stand in for real cooks so the
-classification logic is exercised without a package manager or the filesystem."""
+"""The diff engine — chef's idempotency guarantee: run_versioned/run_state turn a cook's probes into the install/upgrade/unchanged/missing/failed verdict, with fakes for real cooks."""
 
 import contextlib
 import types

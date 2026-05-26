@@ -1,8 +1,4 @@
-"""become_user is the single privilege-drop chokepoint. A real `just up` enters
-it as root and drops to SUDO_USER; a `just plan` dry-run enters it already
-unprivileged with no sudo, so it must be an early no-op rather than touching
-setgid/setuid or exiting on the missing SUDO_USER. Fakes stand in for the
-syscalls so the branch is exercised without real privilege changes."""
+"""become_user, the single privilege-drop chokepoint: root on a real `just up`, an early no-op on an unprivileged dry-run; fakes stand in for the syscalls."""
 
 import pytest
 

@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Idempotent file writer for [bash.*] snippets: read stdin, write it to the
-destination path only if the bytes differ, and log Unchanged:/Writing  : to
-match harness.write_if_changed.
-
-Installed verbatim to /usr/local/bin by the [file.write_if_changed] entry, so it
-is on $PATH before any bash snippet runs. Standalone /usr/bin/python3 + stdlib only
-(no harness/loguru import): it must work the same when invoked by a root bash
-snippet that has no access to the project venv.
-
-Usage:  <producer> | write-if-changed <dest-path> [octal-mode]
-"""
+"""Idempotent file writer for [bash.*] snippets: read stdin, write to the dest path only if bytes differ. Installed verbatim to /usr/local/bin; standalone python3 + stdlib only. Usage: <producer> | write-if-changed <dest-path> [octal-mode]."""
 
 import sys
 from pathlib import Path

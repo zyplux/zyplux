@@ -1,12 +1,4 @@
-"""Cook for [url.<name>] entries — vendor `curl | bash` bootstrappers.
-
-VersionedCook degraded to presence: there is no version to compare, so
-`latest_available` is None ("—") and chef's diff is install-if-missing /
-upgrade-if-present. Each [url.<name>] is its own node, so chef runs the
-installers concurrently and this cook only ever handles its one entry. Install
-errors are hard (downstream may need the tool); update errors are soft (the tool
-stays usable). Runs as the invoking user. Fields: see recipe.toml's header.
-"""
+"""Cook for [url.<name>] — vendor `curl | bash` bootstrappers as a presence-only VersionedCook (install-if-missing / upgrade-if-present); install errors hard, update errors soft. Runs as the invoking user."""
 
 import shlex
 import subprocess
