@@ -1,5 +1,6 @@
 """VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
 
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,6 +14,7 @@ TRUSTED_GPGD = Path("/etc/apt/trusted.gpg.d")
 
 
 def nala(*args: str, note: str = "", check: bool = True) -> None:
+    os.environ["DEBIAN_FRONTEND"] = "noninteractive"
     shell.stream(["nala", *args], note=note, check=check)
 
 

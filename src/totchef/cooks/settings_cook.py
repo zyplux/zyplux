@@ -3,11 +3,11 @@
 import json
 from pathlib import Path
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, StateEntrySpec
+from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec
 from totchef.harness import write_if_changed
 
 
-class SettingsEntry(StateEntrySpec):
+class SettingsEntry(EntrySpec):
     settings_json: str
     settings_env: dict[str, str] = {}
 

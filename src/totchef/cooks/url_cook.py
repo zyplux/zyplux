@@ -74,6 +74,10 @@ class UrlCook(VersionedCook):
     def list_requested(self) -> list[str]:
         return list(self.installs)
 
+    def get_hooks(self) -> tuple[str | None, str | None]:
+        [entry] = self.installs.values()
+        return (entry.pre_hook, entry.post_hook)
+
     def list_installed(self) -> dict[str, str]:
         found = {name: find_binary(entry.bin or name) for name, entry in self.installs.items()}
         return {name: probe_version(path) for name, path in found.items() if path}

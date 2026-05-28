@@ -9,6 +9,30 @@ That makes them behavior tests, not unit tests: a green test means the real pipe
 works for that scenario. For isolated, fast checks of pure logic (parsers, the graph
 builder, schema validation), see the unit tests alongside.
 
+## Source of truth — one direction only
+
+`user-stories.md` is the source of truth for these tests; the tests are the source of
+truth for production code. The arrow never points back:
+
+- **Stories know nothing about tests.** A story describes user-facing behavior. **Never
+  edit a story to make it easier to test** — if a criterion is hard to assert, that is a
+  fact about the test harness, not a reason to weaken the story. Either find a way to
+  observe the real behavior (e.g. the `apply_in_container` fixture for the privilege
+  drop) or leave the story as-is and note the gap.
+- **Tests chase stories.** If a test asserts something the story doesn't claim — or
+  something internal — then either it isn't testing the story, or the story is wrong;
+  fix the test (or the story, *as a deliberate spec change*, never to fit a test).
+- **Production chases tests.** Code exists to make the behavior the tests assert true.
+
+## Prefer full-snapshot assertions
+
+Where a command's output is deterministic, assert the **whole thing** at once
+(`CliResult.assert_output`, `RunReport.assert_report`) rather than picking at it row by
+row. A full snapshot reads as exactly what the software returns, so a reviewer sees the
+real shape and a regression shows up as a clear diff. Fall back to a targeted assertion
+(`assert_lists`, `assert_shows`) only when the output carries a run-varying value a
+snapshot can't pin — a `local:<path>` origin, a temp path, a timestamp.
+
 ## The fixtures
 
 - `recipe` — build the recipe.toml: `recipe.declares("bash", "deep_sleep", apply=...)`
@@ -34,10 +58,13 @@ builder, schema validation), see the unit tests alongside.
   Returns a report with `assert_shows(node, action)`, `assert_logged(snippet)`,
   `assert_report(toon)`, `assert_succeeded()`, `assert_soft_failed()`,
   `assert_hard_failed()`.
-
-A handful of CLI-plumbing criteria (recipe discovery, `cooks`, `--version`,
-escalation) live below the chef facade; those tests call the real `cli`/`recipe`/
-`registry`/`logs` functions directly, with `capsys`/`monkeypatch`/`tmp_path`.
+- `cli` — invoke a real `totchef <command>` (`where`/`lint`/`--version`/`--list-cooks`)
+  and read what it printed: `assert_prints`, `assert_output` (full snapshot),
+  `assert_lists` (targeted row), `assert_succeeded`/`assert_failed`.
+- `apply_in_container` — run a real `totchef up` inside a throwaway container as a
+  non-root user and read back ownership (`run.owners[path]`, `run.log_owner`). For the
+  few stories whose criterion is the real privilege drop (§7.3.2, §8.3.1), which the
+  in-process suite can't observe. Skips when podman is absent. See `container_fixtures`.
 
 ## Arrange, act, check — each line says which it is
 

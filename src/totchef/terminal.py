@@ -71,11 +71,17 @@ RUNNER_PALETTE = (
 
 
 @cache
+def _pump_console() -> Console:
+    """rich Console on the saved real-stdout fd (duped, owned independently of TERMINAL_FD) so is_terminal reflects the real terminal, not the log pipe. Cached: the dup happens once and the one console the pump feeds stays stable."""
+    assert logs.TERMINAL_FD is not None, "_pump_console requires a running pump; reach it through console()"
+    return Console(file=os.fdopen(os.dup(logs.TERMINAL_FD), "w"))
+
+
 def console() -> Console:
-    """rich Console on the saved real-stdout fd (duped, owned independently of TERMINAL_FD) so is_terminal reflects the real terminal, not the log pipe."""
+    """The presentation console. With a pump running it's the cached terminal-fd console; without one (inline/foreground, before start_logging) a fresh Console on the live stdout, so its color and is_terminal track the current environment per call."""
     if logs.TERMINAL_FD is None:
         return Console()
-    return Console(file=os.fdopen(os.dup(logs.TERMINAL_FD), "w"))
+    return _pump_console()
 
 
 def is_interactive() -> bool:
@@ -138,12 +144,12 @@ def show_table(rows: list[dict], title: str = "", summary: list[dict] | None = N
 
 
 def _report_cell(column: str, value: str, action: str) -> Text:
-    """Style one report cell as a diff: the verb colors `action`, the target `latest` echoes that verb (the value the action drives toward), and `current` dims as the prior state; the identity column carries its cook's color."""
+    """Style one report cell as a diff: the verb colors `action`, the target `latest` echoes that verb (the value the action drives toward), `current` is the present truth in plain text, `before` dims as the prior state; the identity column carries its cook's color."""
     if column == "action":
         return Text(value, style=ACTION_STYLES.get(value, ""))
     if column == "latest":
         return Text(value, style=ACTION_STYLES.get(action, ""))
-    if column == "current":
+    if column == "before":
         return Text(value, style="dim")
     if column == "cook-node":
         return Text(value, style=_runner_style(value))

@@ -13,7 +13,7 @@ from loguru import logger
 from totchef import shell
 from totchef.cook_base import CookBase, CookResult, ReportRow, StateCook, Status, VersionedCook
 from totchef.harness import become_user
-from totchef.logs import cook_context
+from totchef.logs import cook_context, inline_mode
 from totchef.recipe_graph import (
     Node,
     build_node_graph,
@@ -100,6 +100,7 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
                 ReportRow(
                     name,
                     installed or "(none)",
+                    installed or "(none)",
                     format_version(available),
                     action,
                     changed,
@@ -109,6 +110,23 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
 
     to_install = [n for n in requested if n not in installed_before]
     to_upgrade = [n for n in requested if n in installed_before and (latest.get(n) is None or latest[n] != installed_before[n])]
+    pending = set(to_install) | set(to_upgrade)
+    pre_hook, post_hook = cook.get_hooks()
+
+    if pending and pre_hook and not run_pre_hook(pre_hook):
+        rows = [
+            ReportRow(
+                name,
+                installed_before.get(name) or "(none)",
+                installed_before.get(name) or "(none)",
+                format_version(latest.get(name)),
+                "skipped" if name in pending else "unchanged",
+                False,
+            )
+            for name in requested
+        ]
+        return CookResult(section, "ok", rows)
+
     result = cook.sync(to_install, to_upgrade)
     if result.message:
         (logger.error if result.status == "hard_fail" else logger.info)(result.message)
@@ -131,12 +149,42 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
             ReportRow(
                 name,
                 before or "(none)",
+                after or before or "(none)",
                 format_version(latest.get(name)),
                 action,
                 changed,
             )
         )
-    return CookResult(section, result.status, rows, result.message)
+
+    status = result.status
+    if status == "ok" and post_hook and any(row.changed for row in rows):
+        if run_post_hook(post_hook) == "soft_fail":
+            status = "soft_fail"
+    return CookResult(section, status, rows, result.message)
+
+
+def apply_state_resource(cook: StateCook, name: str, current_label: str, desired_label: str) -> tuple[ReportRow, Status]:
+    """Apply one state-cook resource and build its row: pre_hook gates, apply mutates, post_hook fires on a real change; a pre_hook-gated skip reports as `ok`."""
+    pre_hook, post_hook = cook.get_hooks(name)
+    if pre_hook and not run_pre_hook(pre_hook):
+        return ReportRow(name, current_label, current_label, desired_label, "skipped", False), "ok"
+
+    outcome = cook.apply_resource(name)
+    if outcome.message:
+        (logger.error if outcome.status == "hard_fail" else logger.info)(outcome.message)
+    status: Status = outcome.status
+    if outcome.status == "ok" and outcome.changed and post_hook and run_post_hook(post_hook) == "soft_fail":
+        status = "soft_fail"
+
+    if status == "hard_fail":
+        action, post_label = "failed", current_label  # didn't move
+    elif status == "soft_fail":
+        action, post_label = "post-failed", desired_label  # apply landed; the hook failed
+    elif outcome.changed:
+        action, post_label = "applied", desired_label
+    else:
+        action, post_label = "unchanged", current_label
+    return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status
 
 
 def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
@@ -146,49 +194,31 @@ def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
     to_apply = [n for n in resources if current.get(n) != desired.get(n)]
 
     def labels(name: str) -> tuple[str, str]:
-        """The shared `current`/`latest` cells: pre-run state (a drifting digest reads 'stale') and the desired state, so the plan and the end report fill the same columns."""
+        """Pre-state and desired labels: a drifting digest reads 'stale'; otherwise the raw token (or 'present' for a matching digest)."""
         current_token = current.get(name, "?")
         current_label = "stale" if name in to_apply and CONTENT_DIGEST.fullmatch(current_token) else format_state(current_token)
         return current_label, format_state(desired.get(name, "?"))
 
-    rows: list[ReportRow] = []
-    if dry_run:
-        for name in resources:
-            current_label, desired_label = labels(name)
-            will = name in to_apply
-            rows.append(ReportRow(name, current_label, desired_label, "would apply" if will else "ok", will))
-        return CookResult(section, "ok", rows)
+    def row_for(name: str) -> tuple[ReportRow, Status]:
+        """The (row, status) one resource contributes: a dry-run preview, an unchanged-on-up row, or a real apply."""
+        current_label, desired_label = labels(name)
+        will = name in to_apply
 
+        if dry_run:
+            action = "would apply" if will else "ok"
+            return ReportRow(name, current_label, current_label, desired_label, action, will), "ok"
+
+        if will:
+            return apply_state_resource(cook, name, current_label, desired_label)
+
+        return ReportRow(name, current_label, current_label, desired_label, "unchanged", False), "ok"
+
+    rows: list[ReportRow] = []
     statuses: list[Status] = []
     for name in resources:
-        current_label, desired_label = labels(name)
-        if name not in to_apply:
-            rows.append(ReportRow(name, current_label, desired_label, "unchanged", False))
-            continue
-
-        pre_hook, post_hook = cook.get_hooks(name)
-        if pre_hook and not run_pre_hook(pre_hook):
-            rows.append(ReportRow(name, current_label, desired_label, "skipped", False))
-            continue
-
-        outcome = cook.apply_resource(name)
-        if outcome.message:
-            (logger.error if outcome.status == "hard_fail" else logger.info)(outcome.message)
-        status: Status = outcome.status
-        if outcome.status == "ok" and outcome.changed and post_hook:
-            if run_post_hook(post_hook) == "soft_fail":
-                status = "soft_fail"
-
-        if status == "hard_fail":
-            action = "failed"
-        elif status == "soft_fail":
-            action = "post-failed"
-        elif outcome.changed:
-            action = "applied"
-        else:
-            action = "unchanged"
+        row, status = row_for(name)
+        rows.append(row)
         statuses.append(status)
-        rows.append(ReportRow(name, current_label, desired_label, action, outcome.changed, status))
 
     return CookResult(section, pick_worst_status(statuses), rows)
 
@@ -345,8 +375,32 @@ def log_completion(
             emit(f"completed with failure {timing}: {message}{blocked}")
 
 
+def run_recipe_inline(config: dict, dry_run: bool) -> dict[str, CookResult]:
+    """Run the DAG in this process — no fork, no privilege drop — one node at a time in topological order. The foreground/debug path (and the seam tests drive the CLI on); intra-cook concurrency (a cook's own thread pool) still applies."""
+    nodes = build_nodes(config)
+    graph = build_node_graph(nodes)
+    dependents = build_dependents(graph)
+    weights = build_weights(config, nodes)
+    reach = build_reach(dependents, weights)
+    blocker_count = {node_id: len(deps) for node_id, deps in graph.items()}
+    satisfied: dict[str, int] = dict.fromkeys(graph, 0)
+    results: dict[str, CookResult] = {}
+    for node_id in TopologicalSorter(graph).static_order():
+        started = time.monotonic()
+        result = run_cook_guarded(nodes[node_id], config, dry_run, dependents[node_id], reach, weights)
+        results[node_id] = result
+        for dependant in dependents[node_id]:
+            satisfied[dependant] += 1
+        log_completion(node_id, result, dependents[node_id], satisfied, blocker_count, time.monotonic() - started)
+        if result.status == "hard_fail":
+            break
+    return results
+
+
 def run_recipe(config: dict, dry_run: bool) -> dict[str, CookResult]:
     """Schedule the DAG: fork ready user nodes concurrently, serialize root nodes in their own lane, reap as they finish; ties broken by reach (highest gated work first)."""
+    if inline_mode():
+        return run_recipe_inline(config, dry_run)
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
     dependents = build_dependents(graph)

@@ -4,11 +4,11 @@ from pathlib import Path
 
 from pydantic import model_validator
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, StateEntrySpec
+from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec
 from totchef.harness import FILES_DIR, write_if_changed
 
 
-class FileEntry(StateEntrySpec):
+class FileEntry(EntrySpec):
     path: str
     source: str | None = None
     content: str | None = None

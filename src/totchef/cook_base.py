@@ -11,13 +11,9 @@ Status = Literal["ok", "soft_fail", "hard_fail"]
 
 
 class EntrySpec(BaseModel):
-    """Base for every cook's recipe-entry schema; `extra='forbid'` fails a typo'd recipe key instead of silently ignoring it."""
+    """Base for every cook's recipe-entry schema; `extra='forbid'` fails a typo'd recipe key instead of silently ignoring it. Carries the `pre_hook` guard / `post_hook` pair every cook honors — a versioned cook gates/refreshes the whole section, a state cook gates/refreshes each resource."""
 
     model_config = ConfigDict(extra="forbid")
-
-
-class StateEntrySpec(EntrySpec):
-    """A StateCook entry schema, adding the `pre_hook` guard / `post_hook` pair only StateCook honors — declaring one on a versioned section fails the lint."""
 
     pre_hook: str | None = None
     post_hook: str | None = None
@@ -54,10 +50,11 @@ class StateChangeOutcome:
 
 @dataclass(frozen=True)
 class ReportRow:
-    """One row of the end-of-run report, assembled by chef."""
+    """One row of the end-of-run report, assembled by chef. `before`/`current`/`latest` form a past/present/future triple: pre-run state (or `—` in a plan), state right now (post-sync on `up`), upgrade target."""
 
     name: str
-    installed: str
+    before: str
+    current: str
     latest: str
     action: str
     changed: bool
@@ -94,6 +91,10 @@ class VersionedCook(CookBase):
     def unit_count(self) -> int:
         return len(self.list_requested())
 
+    def get_hooks(self) -> tuple[str | None, str | None]:
+        """The section-level (pre_hook, post_hook): the pre_hook gates the whole sync, the post_hook fires once after a change. None unless the cook reads them off its entry_model."""
+        return (None, None)
+
     def list_requested(self) -> list[str]:
         raise NotImplementedError
 
@@ -114,16 +115,21 @@ class PackageListCook(VersionedCook):
 
     def __init__(self, section: dict) -> None:
         super().__init__(section)
-        self.packages = PackagesConfig.model_validate(section).packages
+        config = PackagesConfig.model_validate(section)
+        self.packages = config.packages
+        self.hooks = (config.pre_hook, config.post_hook)
 
     def list_requested(self) -> list[str]:
         return self.packages
+
+    def get_hooks(self) -> tuple[str | None, str | None]:
+        return self.hooks
 
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return dict.fromkeys(names)
 
 
-class StateCook[EntryModel: StateEntrySpec](CookBase):
+class StateCook[EntryModel: EntrySpec](CookBase):
     """Desired-state cook over a subtable section; the base serves `list_resources` and default `get_hooks`, subclasses implement the get_current_state/get_desired_state/apply_resource diff."""
 
     def __init__(self, section: dict) -> None:
@@ -149,7 +155,7 @@ class StateCook[EntryModel: StateEntrySpec](CookBase):
         raise NotImplementedError
 
 
-class FileStateCook[EntryModel: StateEntrySpec](StateCook[EntryModel]):
+class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
     """A StateCook whose diff is a content hash — sha256 of the on-disk file vs the rendered bytes; subclasses supply `_target_path` and `_render` and keep their own `apply_resource`."""
 
     _unrendered_label = "absent"

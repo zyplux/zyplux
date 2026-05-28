@@ -17,11 +17,11 @@ Tooling is `uv` (Python ≥ 3.14) driven through `just`. The dev `just` targets 
 - `just lint` — `ruff check --fix` + `ruff format` + `rumdl` + `totchef lint` (validate the recipe against cook schemas).
 - `just tc` — lint, then `uvx pyright`.
 - `just test` — typecheck, then `uv run pytest`.
-- `just cooks` — list every resolvable cook (built-in / plugin / local).
+- `just cooks` — list every resolvable cook (built-in / plugin / local) via `totchef --list-cooks`.
 - Single test: `uv run pytest tests/test_recipe_graph.py::test_name`.
 - `just clone <owner/name|url> [ref]` — shallow-clone a reference repo into `reference_clones/` for browsing; with a `ref`, keep history back to (but excluding) that commit. Not part of `up`/idempotency — a manual dev helper.
 
-The CLI is subcommand-based (`totchef up|plan|lint|cooks|where`, `--version`), with a global `--recipe/-r PATH`.
+The CLI is subcommand-based (`totchef up|plan|lint|where`, plus `--version` and `--list-cooks` flags), with a global `--recipe/-r PATH`.
 
 ## Architecture
 

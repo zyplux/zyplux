@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, StateEntrySpec, chain_hooks
+from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
 from totchef.harness import logger, write_if_changed
 
 # Refresh KDE's ksycoca so the launcher stops spawning apps with the stale Exec
@@ -48,7 +48,7 @@ def rewrite_exec_line(
     return " ".join(tokens)
 
 
-class DesktopEntry(StateEntrySpec):
+class DesktopEntry(EntrySpec):
     desktop: str
     features: list[str] = []
     switches: list[str] = []

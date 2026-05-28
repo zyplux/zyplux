@@ -9,14 +9,13 @@ from typing import Annotated
 
 import typer
 from loguru import logger
-from rich.console import Console
-from rich.table import Table
+from toon_format import encode
 
 from totchef import __version__
 from totchef.cook_base import CookResult
 from totchef.cook_runner import format_duration, run_recipe
 from totchef.harness import SOFT_FAIL_EXIT
-from totchef.logs import SHARED_LOG_ENV, drain_logs, set_terminal_echo, start_logging
+from totchef.logs import SHARED_LOG_ENV, drain_logs, inline_mode, set_terminal_echo, start_logging, write_log
 from totchef.recipe import RECIPE_ENV, find_recipe
 from totchef.registry import cook_registry
 from totchef.schema_lint import validate
@@ -60,6 +59,7 @@ def summary_rows(unchanged: int, elapsed: float | None) -> list[dict]:
     return [
         {
             "cook-node": f"{unchanged} unchanged" if unchanged else "elapsed",
+            "before": "",
             "current": "",
             "latest": "",
             "action": format_duration(elapsed) if elapsed is not None else "",
@@ -67,27 +67,33 @@ def summary_rows(unchanged: int, elapsed: float | None) -> list[dict]:
     ]
 
 
+def report_row(node_id: str, row) -> dict:
+    """One report row as the flat dict the table/TOON render from: the cook-node identity plus its before/current/latest/action cells (past, present, target, verb)."""
+    return {"cook-node": cook_node(node_id, row.name), "before": row.before, "current": row.current, "latest": row.latest, "action": row.action}
+
+
+def log_report_block(all_rows: list[dict], shown_rows: list[dict], summary: list[dict], title: str, nothing_changed: str) -> None:
+    """Inline mode records the report to the log file as a structured block: the full node table (every row, including unchanged) and the terse view an operator sees, between sentinels so it can be read back machine-cleanly."""
+    full = encode(all_rows) if all_rows else ""
+    terse = encode(shown_rows + summary) if shown_rows else nothing_changed
+    write_log(f"##totchef-report##\ntitle={title}\n##full##\n{full}\n##shown##\n{terse}\n##end##\n")
+
+
 def print_report(results: dict[str, CookResult], dry_run: bool, title: str = "Report", elapsed: float | None = None) -> None:
     rows = [(result.cook, row) for result in results.values() for row in result.rows]
     shown = rows if dry_run else [(node_id, row) for node_id, row in rows if row.changed or row.status != "ok"]
+    summary = summary_rows(len(rows) - len(shown), elapsed)
+    shown_rows = [report_row(node_id, row) for node_id, row in shown]
+    suffix = f" ({format_duration(elapsed)})" if elapsed is not None else ""
+    nothing_changed = f"=== {title}: nothing changed{suffix} ==="
+
+    if inline_mode():
+        log_report_block([report_row(node_id, row) for node_id, row in rows], shown_rows, summary, title, nothing_changed)
 
     if shown:
-        show_table(
-            [
-                {
-                    "cook-node": cook_node(node_id, row.name),
-                    "current": row.installed,
-                    "latest": row.latest,
-                    "action": row.action,
-                }
-                for node_id, row in shown
-            ],
-            title=title,
-            summary=summary_rows(len(rows) - len(shown), elapsed),
-        )
+        show_table(shown_rows, title=title, summary=summary)
     else:
-        suffix = f" ({format_duration(elapsed)})" if elapsed is not None else ""
-        logger.info(f"=== {title}: nothing changed{suffix} ===")
+        logger.info(nothing_changed)
 
 
 def preview_plan(config: dict) -> None:
@@ -101,7 +107,7 @@ def preview_plan(config: dict) -> None:
 
 def apply(recipe_path: Path, dry_run: bool) -> None:
     """Load, validate, and run the recipe; an apply escalates to root and previews the plan first, then reports and signals failures through the exit code."""
-    if not dry_run:
+    if not dry_run and not inline_mode():
         ensure_root(recipe_path)
     start_logging(echo_to_terminal=not dry_run)
     start = time.monotonic()
@@ -159,26 +165,31 @@ def where(recipe: RecipeOption = None) -> None:
     typer.echo(find_recipe(recipe))
 
 
-@app.command()
-def cooks() -> None:
-    """List every available cook — built-in, plugin, or local — and the recipe section it serves."""
-    table = Table(title="Available cooks", title_style="bold", header_style="bold cyan")
-    for column in ("section", "scope", "origin"):
-        table.add_column(column)
-    for section, entry in sorted(cook_registry().items()):
-        table.add_row(section, "root" if entry.needs_root else "user", entry.origin)
-    Console().print(table)
-
-
 def version_callback(value: bool) -> None:
     if value:
         typer.echo(f"totchef {__version__}")
         raise typer.Exit()
 
 
+def list_cooks_callback(value: bool) -> None:
+    """Print every resolvable cook — section, scope (root/user), and origin (built-in / plugin:<dist> / local:<path>) — as TOON, then exit."""
+    if value:
+        rows = [
+            {"section": section, "scope": "root" if entry.needs_root else "user", "origin": entry.origin} for section, entry in sorted(cook_registry().items())
+        ]
+        typer.echo(encode(rows))
+        raise typer.Exit()
+
+
 @app.callback()
 def root(
-    version: Annotated[bool, typer.Option("--version", callback=version_callback, is_eager=True, help="Show the version and exit.")] = False,
+    _version: Annotated[bool, typer.Option("--version", callback=version_callback, is_eager=True, help="Show the version and exit.")] = False,
+    _list_cooks: Annotated[
+        bool,
+        typer.Option(
+            "--list-cooks", callback=list_cooks_callback, is_eager=True, help="List every resolvable cook and the recipe section it serves, then exit."
+        ),
+    ] = False,
 ) -> None:
     pass
 

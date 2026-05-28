@@ -115,6 +115,11 @@ sees the rest:
 | `needs_root` | `true` runs this step as root; otherwise it runs as you. Grant it on the **leaf entry** that needs it, never on a subtable header — that would hand root to every entry under it. Most cooks default sensibly (apt/snap are root, vendor installers are not). |
 | `depends_on` | A list of steps that must finish first. Name an entry (`"url.rustup"`), a single-step section (`"apt_pkg"`), or a whole section (`"apt_repo"`, which waits on all its entries). `totchef` topologically sorts the result; a cycle is a lint error. |
 
+Any entry may also carry a `pre_hook` (a guard: a non-zero exit **skips** the step)
+and a `post_hook` (a shell command run **only when the step changed something**) —
+on a versioned section like `[bun]` these gate and follow the whole sync, on a
+per-resource section like `[file.<name>]` they gate and follow each resource.
+
 ### Section defaults
 
 In a subtable section, keys set on the header are inherited by every entry: lists
@@ -153,6 +158,7 @@ the box:
 | `[url.<name>]` | vendor `curl \| bash` installers | `url`, `bin`, `args`, `update_action`, `update_guard` |
 | `[cargo]` | Rust crates via `cargo-binstall` | `packages` |
 | `[uv]` | Python CLI tools in isolated venvs | `packages` |
+| `[bun]` | global npm packages via `bun add -g` | `packages` |
 | `[file.<name>]` | install a file with exact content | `path`, `source` or `content`, `mode`, `pre_hook`, `post_hook` |
 | `[bash.<name>]` | idempotent shell snippets | `current_state`, `desired_state`, `apply`, `pre_hook`, `post_hook` |
 | `[apt_repo.<name>]` | third-party apt repos + keys (root) | `key_url`, `uris`, `suites`, `components`, `architectures` |
@@ -242,6 +248,8 @@ decision about what changed and what to run.
 | `totchef --version` | Print the version. |
 
 All recipe commands accept `--recipe/-r PATH`.
+
+Set `TOTCHEF_INLINE=1` to run every cook in the foreground — no fork, no `sudo` — with logs streamed straight to the terminal. Use it to debug a cook or to apply under an existing root shell.
 
 ---
 

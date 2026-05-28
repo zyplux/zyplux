@@ -32,6 +32,16 @@ LOG_FORMAT = "[{time:YYYY-MM-DD HH:mm:ss}] {extra[runner]: <28} {level: <7} {mes
 
 SHARED_LOG_ENV = "TOTCHEF_LOG_FILE"
 
+# Inline mode: run every cook in this process (no fork, no sudo) and stream logs
+# straight to the live stderr instead of through the fd-pump. A foreground/debug
+# run, and the seam the story tests drive totchef through their public CLI on.
+INLINE_ENV = "TOTCHEF_INLINE"
+
+
+def inline_mode() -> bool:
+    return bool(os.environ.get(INLINE_ENV))
+
+
 # A dup of the real stdout, saved before start_logging redirects fd 1/2 into the
 # log pipe. terminal.py renders rich tables/progress bars here so they reach the
 # human terminal without landing in the TOON log file.
@@ -112,9 +122,8 @@ def drain_logs(timeout: float = 5.0) -> None:
     event.wait(timeout)
 
 
-def start_logging(echo_to_terminal: bool = True) -> Path:
-    """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe one thread reads); honor SHARED_LOG_ENV or create a timestamped file, chowned to SUDO_USER."""
-    set_terminal_echo(echo_to_terminal)
+def open_log_file() -> Path:
+    """Resolve the run's log file under the user's state dir (honoring SHARED_LOG_ENV), create it, and chown it back to SUDO_USER; shared by the pumped and inline starts."""
     directory = log_dir()
     directory.mkdir(parents=True, exist_ok=True)
     if existing := os.environ.get(SHARED_LOG_ENV):
@@ -127,6 +136,26 @@ def start_logging(echo_to_terminal: bool = True) -> Path:
         pw = pwd.getpwnam(sudo_user)
         for path in (directory.parent, directory, log_file):
             os.chown(path, pw.pw_uid, pw.pw_gid)
+    return log_file
+
+
+def start_inline_logging() -> Path:
+    """Inline start: no fd redirect, no pump. Open the log file for the structured report block and re-point loguru at the live stderr so logs scroll straight to the terminal (and are captured when a caller runs totchef through its CLI)."""
+    global LOG_HANDLE
+    log_file = open_log_file()
+    LOG_HANDLE = open(log_file, "a")
+    logger.remove()
+    logger.configure(extra={"runner": DEFAULT_RUNNER})
+    logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
+    return log_file
+
+
+def start_logging(echo_to_terminal: bool = True) -> Path:
+    """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe one thread reads); honor SHARED_LOG_ENV or create a timestamped file, chowned to SUDO_USER."""
+    set_terminal_echo(echo_to_terminal)
+    if inline_mode():
+        return start_inline_logging()
+    log_file = open_log_file()
 
     global TERMINAL_FD, LOG_HANDLE, LOG_PIPE_WRITE
     if TERMINAL_FD is None:

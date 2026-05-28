@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import model_validator
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, StateEntrySpec, chain_hooks
+from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
 from totchef.harness import logger, write_if_changed
 
 
@@ -13,7 +13,7 @@ def _strip_json_comments(text: str) -> str:
     return "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("//"))
 
 
-class ChromiumFlagsEntry(StateEntrySpec):
+class ChromiumFlagsEntry(EntrySpec):
     local_state: str | None = None
     local_state_flags: list[str] = []
     argv_json: str | None = None

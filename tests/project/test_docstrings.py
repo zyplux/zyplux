@@ -1,10 +1,10 @@
-"""Repo hygiene: every docstring — module, class, function, method — stays one line."""
+"""Source and test hygiene: every docstring under `src` and `tests` — module, class, function, method — stays one line."""
 
 import ast
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-SCANNED_DIRS = (REPO_ROOT / "src", REPO_ROOT / "tests")
+from project_paths import REPO_ROOT, SRC, TESTS
+
+SCANNED_DIRS = (SRC, TESTS)
 
 type Documentable = ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)

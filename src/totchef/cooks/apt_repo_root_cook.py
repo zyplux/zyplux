@@ -7,11 +7,11 @@ from pathlib import Path
 from loguru import logger
 
 from totchef import shell
-from totchef.cook_base import StateChangeOutcome, StateCook, StateEntrySpec
+from totchef.cook_base import StateChangeOutcome, StateCook, EntrySpec
 from totchef.harness import fetch_url, write_if_changed
 
 
-class AptRepoEntry(StateEntrySpec):
+class AptRepoEntry(EntrySpec):
     key_url: str
     uris: str
     suites: str = "stable"
@@ -39,7 +39,7 @@ def build_source_path(name: str, repo: AptRepoEntry) -> Path:
 
 def install_repo_key(name: str, key_url: str, keyring: Path) -> bool:
     data = fetch_url(key_url)
-    # ASCII-armored keys start with the RFC 4880 §6.2 header; binary OpenPGP
+    # ASCII-armored keys start with the RFC 4880 §7.2 header; binary OpenPGP
     # packets start with a high-bit-set tag byte and never match.
     if data.lstrip().startswith(b"-----BEGIN PGP"):
         data = shell.run("gpg", "--dearmor", stdin=data, text=False, check=True).stdout

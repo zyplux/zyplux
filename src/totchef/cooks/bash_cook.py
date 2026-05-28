@@ -5,10 +5,10 @@ import subprocess
 from loguru import logger
 
 from totchef import shell
-from totchef.cook_base import StateChangeOutcome, StateCook, StateEntrySpec
+from totchef.cook_base import StateChangeOutcome, StateCook, EntrySpec
 
 
-class BashEntry(StateEntrySpec):
+class BashEntry(EntrySpec):
     current_state: str | None = None
     desired_state: str = ""
     apply: str

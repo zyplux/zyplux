@@ -39,6 +39,13 @@ packages = [
     "ruff",
 ]
 
+[bun]
+depends_on = ["url.bun"]
+packages = [
+    "@earendil-works/pi-coding-agent",
+]
+post_hook = 'mkdir -p "$HOME/.local/bin" && ln -sf "${BUN_INSTALL:-$HOME/.bun}/bin/pi" "$HOME/.local/bin/pi"'
+
 [file.write_if_changed]
 needs_root = true
 source = "write-if-changed.py"
@@ -179,6 +186,7 @@ packages = [
     "code-insiders",
     "gh",
     "signal-desktop",
+    "podman",
 ]
 
 [snap]
