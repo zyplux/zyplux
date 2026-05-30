@@ -13,7 +13,7 @@ update_action = ["update"]
 [url.rustup]
 url = "https://sh.rustup.rs"
 args = ["-y"]
-update_action = ["self", "update"]
+update_action = ["update"]
 
 [url.herdr]
 url = "https://herdr.dev/install.sh"
