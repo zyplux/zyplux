@@ -102,7 +102,8 @@ export const noInferrableReturnType = createRule({
     },
     fixable: 'code',
     messages: {
-      removeReturnType: 'Explicit return type annotation is unnecessary; let TypeScript infer it.',
+      removeReturnType:
+        'Explicit return type annotation is unnecessary; let TypeScript infer it. If `tsc` needs it for declaration-emit portability (TS2742/TS2883), annotate the returned value with `satisfies` or export the referenced type instead of annotating the return position.',
     },
     schema: [],
     type: 'suggestion',
