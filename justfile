@@ -55,9 +55,9 @@ check:
     bunx prettier --check .
     bun run test
 
-# Publish @totvibe/eslint-config to npm (bun resolves catalog/workspace protocols).
-publish:
-    cd packages/eslint-config && bun publish
+# Cut a GitHub release for the current package version, then watch the publish workflow and verify it on npm.
+release:
+    bun run release
 
 # Remove dependencies and caches.
 clean:
