@@ -1,8 +1,9 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
 #
 # Code owners are auto-requested for review on PRs that touch matching paths.
-# Combined with `require_code_owner_reviews: true` in .github/settings.yml,
-# the matching files require an approving review from a listed owner before
-# merge into `main`.
+# require_code_owner_reviews is off in .github/settings.yml, so this is
+# advisory only — a single-owner path would otherwise deadlock the owner's
+# own PRs (GitHub never counts a self-approval). Re-enable it once a path has
+# two or more owners who can review each other.
 
 /.github/ @realSergiy
