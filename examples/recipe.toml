@@ -52,6 +52,11 @@ source = "write-if-changed.py"
 path = "/usr/local/bin/write-if-changed"
 mode = "0755"
 
+[file.vsx_profile]
+source = "vsx-profile.py"
+path = "~/.local/bin/vsx-profile"
+mode = "0755"
+
 [file.trusted_gpgd_hardening]
 needs_root = true
 path = "/etc/apt/apt.conf.d/99-trusted-gpgd-autounlock"
@@ -144,6 +149,7 @@ needs_root = true
 apply = "curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --no-confirm"
 current_state = "test -e /nix/var/nix/profiles/default/bin/nix && echo present || echo absent"
 depends_on = ["bash.apt_prereqs"]
+post_hook = 'echo "extra-experimental-features = nix-command flakes" >> /etc/nix/nix.custom.conf'
 
 [apt_repo]
 depends_on = ["bash.apt_prereqs"]

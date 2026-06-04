@@ -121,7 +121,18 @@ def test_5_2_3_post_hook_runs_only_when_the_file_changed(recipe, terminal, totch
     terminal.expect_not_ran("update-grub")
 
 
-def test_5_2_4_file_is_privilege_agnostic_root_per_entry(recipe, totchef, cli, tmp_path):
+def test_5_2_4_file_path_expands_tilde_for_per_user_installs(recipe, home, totchef):
+    """A `~` in path resolves against `$HOME`, so per-user entries stay portable across machines."""
+    recipe.declares("file", "tool", path="~/.local/bin/tool", content="#!/usr/bin/env python3\n", mode="0755")
+
+    totchef.up().assert_shows("file.tool", "applied")
+
+    installed = home / ".local/bin/tool"
+    assert installed.read_text() == "#!/usr/bin/env python3\n"
+    assert (installed.stat().st_mode & 0o777) == 0o755
+
+
+def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe, totchef, cli, tmp_path):
     """Privilege-agnostic: set needs_root per entry for files under /etc, /usr, etc."""
     cli.run("--list-cooks").assert_lists("file", scope="user")  # the cook itself is privilege-agnostic
 

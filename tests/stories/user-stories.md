@@ -457,7 +457,12 @@ A `post_hook` runs **only when the file changed** — e.g. `update-grub` after a
 GRUB drop-in, or `systemctl daemon-reload` after a unit. This makes expensive
 refresh actions fire exactly when needed and never on a no-op run.
 
-#### 5.2.4 file is privilege agnostic root per entry
+#### 5.2.4 file path expands tilde for per user installs
+
+A `~` in `path` resolves against `$HOME`, so per-user entries (e.g.
+`~/.local/bin` tools) stay portable across machines and users.
+
+#### 5.2.5 file is privilege agnostic root per entry
 
 Privilege-agnostic: set `needs_root = true` per entry for files under `/etc`,
 `/usr`, etc.
