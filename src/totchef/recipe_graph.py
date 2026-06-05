@@ -43,8 +43,8 @@ class Node:
 def build_nodes(config: dict) -> dict[str, Node]:
     nodes: dict[str, Node] = {}
     for section, data in config.items():
-        sec_root = data.get("needs_root", load_cook_class(section).needs_root)
-        sec_deps = data.get("depends_on", [])
+        sec_root: bool = data.get("needs_root", load_cook_class(section).needs_root)
+        sec_deps: list[str] = data.get("depends_on", [])
         children = {k: v for k, v in data.items() if k not in META_KEYS and isinstance(v, dict)}
         if children:
             for entry, entry_data in children.items():

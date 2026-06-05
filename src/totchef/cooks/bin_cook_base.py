@@ -35,12 +35,17 @@ def find_contract_problems(command_path: Path) -> list[str]:
 
 
 class BinEntry(EntrySpec):
-    source: str | None = None
+    source: str
+
+    @model_validator(mode="before")
+    @staticmethod
+    def _default_source_to_bundled(entry_input: object, info: ValidationInfo) -> object:
+        if isinstance(entry_input, dict) and "source" not in entry_input:
+            return {**entry_input, "source": harness.resolve_bundled_source(get_entry_name(info))}
+        return entry_input
 
     @model_validator(mode="after")
-    def _command_honors_contract(self, info: ValidationInfo) -> "BinEntry":
-        if self.source is None:
-            self.source = harness.resolve_bundled_source(get_entry_name(info))
+    def _command_honors_contract(self) -> "BinEntry":
         if problems := find_contract_problems(harness.FILES_DIR / self.source):
             raise ValueError("; ".join(problems))
         return self

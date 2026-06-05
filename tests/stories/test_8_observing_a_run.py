@@ -190,7 +190,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, t
     monkeypatch.setattr(log_internals, "LINE_SINK", emitted.append)
 
     set_terminal_echo(False)  # dry-run suppresses cook log echo to the terminal …
-    assert log_internals.ECHO_LOGS_TO_TERMINAL is False
+    assert not log_internals.ECHO_LOGS_TO_TERMINAL
     log_internals._emit_terminal("cook chatter\n")  # what the pump would mirror for a cook's line
     write_log("cook chatter\n")
 
@@ -198,7 +198,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, t
     assert log_file.read_text() == "cook chatter\n"  # … yet the log file still recorded every line
 
     set_terminal_echo(True)
-    assert log_internals.ECHO_LOGS_TO_TERMINAL is True
+    assert log_internals.ECHO_LOGS_TO_TERMINAL
 
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
     plan = totchef.plan()

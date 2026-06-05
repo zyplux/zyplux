@@ -1,4 +1,4 @@
-"""Links each h3 story header to its section's test file; h4 criterion headers stay plain but track tests by id. Run as a script to refresh the links."""
+"""Links each h3 story header to its section's test file; h4 criterion headers stay plain but track tests by id. The sync test refreshes stale links in place."""
 
 import ast
 import re
@@ -96,5 +96,7 @@ def sync_links() -> bool:
     return relinked != doc
 
 
-if __name__ == "__main__":
-    print("user-stories.md links refreshed" if sync_links() else "user-stories.md links already current")
+def test_sync_links_converges():
+    sync_links()
+    doc = STORIES_DOC.read_text()
+    assert doc == render_linked_doc(doc, collect_story_tests()), "sync_links left stale links behind — render_linked_doc is not a fixed point"

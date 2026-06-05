@@ -73,7 +73,7 @@ def label_role(cmdline: list[str], process_name: str, is_main: bool) -> str:
             return prefix + EXTENSION_VERSION_SUFFIX.sub("", extension_dir.group(1))
         case None if process_name in VSCODE_PROCESS_NAMES:
             return describe_script(cmdline, process_name)
-        case None:
+        case _:
             return process_name
 
 

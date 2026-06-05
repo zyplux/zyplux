@@ -37,6 +37,7 @@ packages = [
 depends_on = ["url.uv"]
 packages = [
     "ruff",
+    "pyrefly",
 ]
 
 [bun]

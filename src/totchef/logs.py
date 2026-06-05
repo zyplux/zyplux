@@ -63,7 +63,7 @@ LINE_SINK: Callable[[str], None] | None = None
 
 # Whether the pump also mirrors log lines to the terminal. Dry-run turns this off
 # so `just plan` shows only the report table; the log file still records every line.
-ECHO_LOGS_TO_TERMINAL = True
+ECHO_LOGS_TO_TERMINAL: bool = True
 
 # Configured at import so pre-sudo messages get timestamped too.
 logger.remove()
