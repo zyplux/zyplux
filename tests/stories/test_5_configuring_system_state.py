@@ -334,3 +334,53 @@ def test_5_4_7_usr_local_sbin_installs_admin_commands_always_as_root(recipe, usr
     assert installed.read_text() == helper
     assert (installed.stat().st_mode & 0o777) == 0o755
     cli.run("--list-cooks").assert_lists("usr_local_sbin", scope="root")
+
+
+# 5.5 Set specific lines in a config file
+
+
+def test_5_5_1_conf_replaces_matching_lines_in_place_and_appends_missing_ones(recipe, totchef, tmp_path):
+    """`[conf.<name>]` keys each declared line on the text before `=` (the whole line when there is none): a line with the same key is replaced in place, a missing one is appended, and every other line — comments included — is left untouched."""
+    target = tmp_path / "nala.conf"
+    target.write_text("[Nala]\n# full_upgrade = true is what we want\nfull_upgrade = false\nassume_yes = false\n")
+    recipe.declares("conf", "nala", target=str(target), lines=["[Nala]", "full_upgrade = true", "update_show_packages = true"])
+
+    totchef.up().assert_shows("conf.nala", "applied")
+
+    assert target.read_text() == "[Nala]\n# full_upgrade = true is what we want\nfull_upgrade = true\nassume_yes = false\nupdate_show_packages = true\n"
+
+
+def test_5_5_2_conf_creates_a_missing_target(recipe, totchef, tmp_path):
+    """A missing `target` is created (parents included) holding exactly the declared lines."""
+    target = tmp_path / "etc" / "fresh.conf"
+    recipe.declares("conf", "fresh", target=str(target), lines=["[Nala]", "full_upgrade = true"])
+
+    totchef.up().assert_shows("conf.fresh", "applied")
+
+    assert target.read_text() == "[Nala]\nfull_upgrade = true\n"
+
+
+def test_5_5_3_conf_rewrites_only_when_a_line_differs(recipe, terminal, totchef, tmp_path):
+    """Diffed by content hash: a compliant file is never rewritten and a post_hook fires only on a real change."""
+    target = tmp_path / "app.conf"
+    target.write_text("mode = fast\n")
+    recipe.declares("conf", "app", target=str(target), line="mode = fast", post_hook="reload-app")
+
+    totchef.up().assert_shows("conf.app", "unchanged")
+    terminal.expect_not_ran("reload-app")
+
+    target.write_text("mode = slow\n")
+
+    totchef.up().assert_shows("conf.app", "applied")
+    terminal.expect_ran("reload-app")
+    assert target.read_text() == "mode = fast\n"
+
+
+def test_5_5_4_lint_rejects_line_and_lines_together(recipe, scenario, chef, totchef, tmp_path):
+    """An entry declares a single `line` or a `lines` array — declaring both, or neither, is rejected at lint."""
+    target = tmp_path / "c.conf"
+    recipe.declares("conf", "both", target=str(target), line="a = 1", lines=["b = 2"])
+    totchef.lint().assert_rejected("not both")
+
+    neither = scenario().declares("conf", "neither", target=str(target))
+    chef(neither).lint().assert_rejected("set `line` or `lines`")

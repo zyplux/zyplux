@@ -130,6 +130,8 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
     result = cook.sync(to_install, to_upgrade)
     if result.message:
         (logger.error if result.status == "hard_fail" else logger.info)(result.message)
+    if result.delayed_message:
+        logger.info(result.delayed_message)
 
     installed_after = cook.list_installed()
     rows = []
@@ -160,18 +162,20 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
     if status == "ok" and post_hook and any(row.changed for row in rows):
         if run_post_hook(post_hook) == "soft_fail":
             status = "soft_fail"
-    return CookResult(section, status, rows, result.message)
+    return CookResult(section, status, rows, result.message, delayed_messages=[result.delayed_message] if result.delayed_message else [])
 
 
-def apply_state_resource(cook: StateCook, name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status]:
-    """Apply one state-cook resource and build its row: pre_hook gates, apply mutates, post_hook fires on a real change; a pre_hook-gated skip reports as `ok`."""
+def apply_state_resource(cook: StateCook, name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status, str]:
+    """Apply one state-cook resource and build its row plus any delayed operator follow-up: pre_hook gates, apply mutates, post_hook fires on a real change; a pre_hook-gated skip reports as `ok`."""
     pre_hook, post_hook = cook.get_hooks(name)
     if pre_hook and not run_pre_hook(pre_hook):
-        return ReportRow(name, current_label, current_label, desired_label, "skipped", False), "ok"
+        return ReportRow(name, current_label, current_label, desired_label, "skipped", False), "ok", ""
 
     outcome = cook.apply_resource(name)
     if outcome.message:
         (logger.error if outcome.status == "hard_fail" else logger.info)(outcome.message)
+    if outcome.delayed_message:
+        logger.info(outcome.delayed_message)
     status: Status = outcome.status
     if outcome.status == "ok" and outcome.changed and post_hook and run_post_hook(post_hook) == "soft_fail":
         status = "soft_fail"
@@ -184,7 +188,7 @@ def apply_state_resource(cook: StateCook, name: str, current_label: str, desired
         action, post_label = "applied", applied_label
     else:
         action, post_label = "unchanged", current_label
-    return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status
+    return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status, outcome.delayed_message
 
 
 def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
@@ -203,28 +207,31 @@ def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
         applied_label = "matches" if CONTENT_DIGEST.fullmatch(desired_token) else desired_token
         return current_label, format_state(desired_token), applied_label
 
-    def row_for(name: str) -> tuple[ReportRow, Status]:
-        """The (row, status) one resource contributes: a dry-run preview, an unchanged-on-up row, or a real apply."""
+    def row_for(name: str) -> tuple[ReportRow, Status, str]:
+        """The (row, status, delayed follow-up) one resource contributes: a dry-run preview, an unchanged-on-up row, or a real apply."""
         current_label, desired_label, applied_label = labels(name)
         will = name in to_apply
 
         if dry_run:
             action = "would apply" if will else "ok"
-            return ReportRow(name, current_label, current_label, desired_label, action, will), "ok"
+            return ReportRow(name, current_label, current_label, desired_label, action, will), "ok", ""
 
         if will:
             return apply_state_resource(cook, name, current_label, desired_label, applied_label)
 
-        return ReportRow(name, current_label, current_label, desired_label, "unchanged", False), "ok"
+        return ReportRow(name, current_label, current_label, desired_label, "unchanged", False), "ok", ""
 
     rows: list[ReportRow] = []
     statuses: list[Status] = []
+    delayed_messages: list[str] = []
     for name in resources:
-        row, status = row_for(name)
+        row, status, delayed = row_for(name)
         rows.append(row)
         statuses.append(status)
+        if delayed:
+            delayed_messages.append(delayed)
 
-    return CookResult(section, pick_worst_status(statuses), rows)
+    return CookResult(section, pick_worst_status(statuses), rows, delayed_messages=delayed_messages)
 
 
 def build_cook(node: Node, config: dict) -> CookBase:

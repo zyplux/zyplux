@@ -203,3 +203,28 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, t
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
     plan = totchef.plan()
     assert '{"cook-node"' in plan.report  # and the plan table itself is still produced
+
+
+# 8.4 See follow-up actions after the report
+
+
+def test_8_4_1_delayed_messages_print_after_the_report_labeled_by_cook_node(recipe, totchef, tmp_path):
+    """A cook's delayed_message is logged live during the run, then repeated in an `Action required` block after the report table, labeled with its cook node; no messages, no block; a dry run collects none."""
+    source = tmp_path / "brave.desktop"
+    source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
+    recipe.declares("desktop", "brave", desktop=str(source), switches=["use-gl=egl"])
+
+    plan = totchef.plan()
+    assert "Action required" not in plan.terminal_report  # a dry run applies nothing, so no follow-ups
+
+    report = totchef.up()
+
+    report.assert_logged("Restart the app to apply the new Exec= line.")  # still emitted live during the session
+    shown = report.terminal_report
+    assert shown.index("Report") < shown.index("Action required")  # the block follows the report table
+    block = shown.split("Action required", 1)[1]
+    assert "desktop.brave" in block  # labeled with the cook node that asks for it
+    assert "Restart the app to apply the new Exec= line." in block
+
+    rerun = totchef.up()
+    assert "Action required" not in rerun.terminal_report  # nothing changed, nothing to follow up

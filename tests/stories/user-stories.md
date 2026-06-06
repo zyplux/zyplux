@@ -259,6 +259,12 @@ repo). If any package has **priority 0** (not found in any configured repo), the
 Runs as root; in the example recipe it depends on the apt prereqs and repos
 being in place first.
 
+#### 3.1.4 reboot required notice survives to the end of the run
+
+After the transaction, `[apt_pkg]` reads `/var/run/reboot-required` (and its
+`.pkgs` companion naming the packages that caused it); when present, the
+notice is carried as a delayed message into the `Action required` block.
+
 ### 3.2 [Install and refresh snaps](test_3_managing_packages.py)
 
 > As an operator, I want to declare snap packages and have them installed and
@@ -575,6 +581,35 @@ several matches fail lint, asking for an explicit `source`.
 and daemon helpers (e.g. a boot service's switch script), outside ordinary
 users' PATH — always as root, under the same version contract.
 
+### 5.5 [Set specific lines in a config file](test_5_configuring_system_state.py)
+
+> As an operator, I want to own specific settings inside a config file another
+> package ships — replacing just those lines and leaving the rest alone — so
+> that I can tune a tool without templating its whole config.
+
+#### 5.5.1 conf replaces matching lines in place and appends missing ones
+
+`[conf.<name>]` ensures each declared line is in `target`, keyed on the text
+before `=` (a line without `=` keys on the whole line, so a section header
+like `[Nala]` can be ensured too): a line with the same key is replaced in
+place, a missing one is appended, and every other line — comments included —
+is left untouched.
+
+#### 5.5.2 conf creates a missing target
+
+A missing `target` is created (parents included) holding exactly the declared
+lines.
+
+#### 5.5.3 conf rewrites only when a line differs
+
+Diffed by content hash like `[file]`: a compliant file is never rewritten and
+a `post_hook` fires only on a real change.
+
+#### 5.5.4 lint rejects line and lines together
+
+An entry declares a single `line` or a `lines` array — declaring both, or
+neither, is rejected at lint.
+
 ---
 
 ## 6. Tuning desktop applications (per-user domains)
@@ -857,6 +892,20 @@ region.
 
 A dry run shows only the plan table on the terminal while still recording every
 line to the log file.
+
+### 8.4 [See follow-up actions after the report](test_8_observing_a_run.py)
+
+> As an operator, I want any "do this next" notices — restart an app, reboot
+> the machine — gathered in one block after the report table, so that they
+> don't scroll away with the run's logs.
+
+#### 8.4.1 delayed messages print after the report labeled by cook node
+
+A cook returns an optional `delayed_message` on its outcome
+(`SyncOutcome`/`StateChangeOutcome`). The runner logs it live as the cook
+completes — keeping the in-session reminder — and repeats every collected
+message in an `Action required` block after the report table, labeled with
+its cook node. No messages, no block; a dry run collects none.
 
 ---
 

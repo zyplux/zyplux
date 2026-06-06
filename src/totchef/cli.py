@@ -95,6 +95,10 @@ def print_report(results: dict[str, CookResult], dry_run: bool, title: str = "Re
     else:
         logger.info(nothing_changed)
 
+    delayed_rows = [{"cook-node": result.cook, "message": message} for result in results.values() for message in result.delayed_messages]
+    if delayed_rows:
+        show_table(delayed_rows, title="Action required")
+
 
 def preview_plan(config: dict) -> None:
     """Before a real run, print the plan table to the terminal from a probe-only pass; the probe's cook logs go to the file only, so the terminal shows just the table."""

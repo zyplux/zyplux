@@ -27,6 +27,7 @@ cargo = "totchef.cooks.cargo_cook:CargoCook"
 uv = "totchef.cooks.uv_cook:UvCook"
 bun = "totchef.cooks.bun_cook:BunCook"
 file = "totchef.cooks.file_cook:FileCook"
+conf = "totchef.cooks.conf_cook:ConfCook"
 usr_local_bin = "totchef.cooks.usr_local_bin_root_cook:UsrLocalBinCook"
 usr_local_sbin = "totchef.cooks.usr_local_sbin_root_cook:UsrLocalSbinCook"
 local_bin = "totchef.cooks.local_bin_cook:LocalBinCook"
@@ -44,6 +45,14 @@ dev = [
     "pytest-cov>=6",
     "tomli-w>=1.1",
     "types-psutil>=7.2.2.20260518",
+]
+lint = [
+    "ruff>=0.11",
+    "rumdl>=0.1.84",
+    "vulture>=2.14",
+]
+typecheck = [
+    "pyrefly>=1.0.0",
 ]
 
 [build-system]

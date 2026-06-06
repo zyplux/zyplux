@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import model_validator
 
 from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
-from totchef.harness import logger, write_if_changed
+from totchef.harness import write_if_changed
 
 
 def _strip_json_comments(text: str) -> str:
@@ -96,6 +96,4 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
                 message=f"{target} not found; launch the app once, then re-run.",
             )
         changed = write_if_changed(self._target_path(name), content, note=name)
-        if changed:
-            logger.info(f"{name}: restart the app to apply the new flags.")
-        return StateChangeOutcome(changed=changed)
+        return StateChangeOutcome(changed=changed, delayed_message=f"{name}: restart the app to apply the new flags." if changed else "")

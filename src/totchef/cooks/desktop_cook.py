@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
-from totchef.harness import logger, write_if_changed
+from totchef.harness import write_if_changed
 
 # Refresh KDE's ksycoca so the launcher stops spawning apps with the stale Exec
 # line; tolerant of non-KDE systems where kbuildsycoca6 is absent.
@@ -91,6 +91,4 @@ class DesktopCook(FileStateCook[DesktopEntry]):
                 message=f"{self.entries[name].desktop} not found; install the package first.",
             )
         changed = write_if_changed(self._target_path(name), content, note=name)
-        if changed:
-            logger.info("Restart the app to apply the new Exec= line.")
-        return StateChangeOutcome(changed=changed)
+        return StateChangeOutcome(changed=changed, delayed_message="Restart the app to apply the new Exec= line." if changed else "")

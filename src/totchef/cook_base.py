@@ -38,19 +38,21 @@ class PackagesConfig(EntrySpec):
 
 @dataclass(frozen=True)
 class SyncOutcome:
-    """Outcome of a VersionedCook.sync (or any cook-level act); expected failures land here as a status, only bugs raise."""
+    """Outcome of a VersionedCook.sync (or any cook-level act); expected failures land here as a status, only bugs raise. A `delayed_message` is an operator follow-up (restart the app, reboot) the runner logs live and repeats after the report table."""
 
     status: Status = "ok"
     message: str = ""
+    delayed_message: str = ""
 
 
 @dataclass(frozen=True)
 class StateChangeOutcome:
-    """Outcome of a StateCook.apply_resource for one resource."""
+    """Outcome of a StateCook.apply_resource for one resource. A `delayed_message` is an operator follow-up (restart the app, reboot) the runner logs live and repeats after the report table."""
 
     changed: bool
     status: Status = "ok"
     message: str = ""
+    delayed_message: str = ""
 
 
 @dataclass(frozen=True)
@@ -68,12 +70,13 @@ class ReportRow:
 
 @dataclass
 class CookResult:
-    """Everything chef needs from one cook — status, report rows, optional message — pickled back from a forked child, so plain dataclasses only."""
+    """Everything chef needs from one cook — status, report rows, optional message, the delayed operator follow-ups — pickled back from a forked child, so plain dataclasses only."""
 
     cook: str
     status: Status
     rows: list[ReportRow] = field(default_factory=list)
     message: str = ""
+    delayed_messages: list[str] = field(default_factory=list)
 
 
 class CookBase:

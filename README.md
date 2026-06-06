@@ -160,6 +160,7 @@ the box:
 | `[uv]` | Python CLI tools in isolated venvs | `packages` |
 | `[bun]` | global npm packages via `bun add -g` | `packages` |
 | `[file.<name>]` | install a file with exact content | `path`, `source` or `content`, `mode`, `pre_hook`, `post_hook` |
+| `[conf.<name>]` | own specific lines of a config file | `target`, `line` or `lines`, `pre_hook`, `post_hook` |
 | `[bash.<name>]` | idempotent shell snippets | `current_state`, `desired_state`, `apply`, `pre_hook`, `post_hook` |
 | `[apt_repo.<name>]` | third-party apt repos + keys (root) | `key_url`, `uris`, `suites`, `components`, `architectures` |
 | `[apt_pkg]` | apt packages via `nala` (root) | `packages` |
@@ -268,10 +269,13 @@ Tooling is `uv` (Python ≥ 3.14) driven through `just`:
 
 | Command | What it does |
 |---|---|
+| `just install` | Install dependencies (`uv sync --all-groups`). |
 | `just plan` | Dry-run the example recipe. |
 | `just up` | Apply the example recipe. |
-| `just lint` | `ruff` + `rumdl` + dead-code + recipe lint. |
-| `just tc` | Lint, then `pyright`. |
-| `just test` | Typecheck, then `pytest`. |
+| `just knip` | Dead code (`vulture`). |
+| `just tc` | Typecheck (`pyrefly`). |
+| `just lint` | `ruff` + story links + `rumdl` + recipe lint, autofix. |
+| `just test` | `pytest`. |
+| `just check` | Full gate: install, knip, typecheck, lint, test. |
 
 License: MIT.

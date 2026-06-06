@@ -235,13 +235,14 @@ def test_1_4_3_no_recipe_found_lists_searched_locations(cli, tmp_path, monkeypat
 def test_1_5_1_cooks_lists_section_scope_and_origin(cli):
     """`totchef --list-cooks` prints section, scope (root/user), and origin (built-in / plugin:<dist> / local:<path>) for every resolvable cook."""
     cli.run("--list-cooks").assert_output("""
-        [15]{section,scope,origin}:
+        [16]{section,scope,origin}:
           apt_pkg,root,built-in
           apt_repo,root,built-in
           bash,user,built-in
           bun,user,built-in
           cargo,user,built-in
           chromium_flags,user,built-in
+          conf,user,built-in
           desktop,user,built-in
           file,user,built-in
           local_bin,user,built-in

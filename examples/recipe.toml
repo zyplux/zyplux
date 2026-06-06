@@ -133,12 +133,27 @@ apt-get install -y --no-install-recommends curl gnupg ca-certificates nala
 '''
 current_state = "command -v nala >/dev/null && echo present || echo absent"
 
+[conf.nala]
+needs_root = true
+target = "/etc/nala/nala.conf"
+depends_on = ["bash.apt_prereqs"]
+lines = [
+    "[Nala]",
+    "full_upgrade = true",
+    "update_show_packages = true",
+]
+
 [bash.nix]
 needs_root = true
 apply = "curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --no-confirm"
 current_state = "test -e /nix/var/nix/profiles/default/bin/nix && echo present || echo absent"
 depends_on = ["bash.apt_prereqs"]
-post_hook = 'echo "extra-experimental-features = nix-command flakes" >> /etc/nix/nix.custom.conf'
+
+[conf.nix]
+needs_root = true
+target = "/etc/nix/nix.custom.conf"
+depends_on = ["bash.nix"]
+line = "extra-experimental-features = nix-command flakes"
 
 [apt_repo]
 depends_on = ["bash.apt_prereqs"]
@@ -190,10 +205,16 @@ packages = [
     "code",
     "code-insiders",
     "gh",
+    "lazygit",
     "signal-desktop",
     "podman",
     "labwc",
     "hyprland",
+    "gimp",
+    "blender",
+    "openshot-qt",
+    "shotcut",
+    "kdenlive",
 ]
 
 [snap]

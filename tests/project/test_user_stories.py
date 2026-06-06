@@ -1,7 +1,7 @@
 """Meta-test: the user-stories.md h4 headers and the tests/stories test functions stay in lockstep, each h3 story header linked to its section's test file."""
 
 from project_paths import STORIES_DOC
-from test_story_links import collect_story_tests, parse_headers, render_linked_doc
+from sync_story_links import collect_story_tests, parse_headers, render_linked_doc
 
 
 def test_every_story_test_has_a_header():
@@ -27,4 +27,10 @@ def test_header_titles_match_test_names():
 
 def test_every_header_links_to_its_test():
     doc = STORIES_DOC.read_text()
-    assert doc == render_linked_doc(doc, collect_story_tests()), "story header links are stale — run `just test` to refresh them"
+    assert doc == render_linked_doc(doc, collect_story_tests()), "story header links are stale — run `just lint` to refresh them"
+
+
+def test_render_linked_doc_is_a_fixed_point():
+    tests = collect_story_tests()
+    linked = render_linked_doc(STORIES_DOC.read_text(), tests)
+    assert linked == render_linked_doc(linked, tests), "render_linked_doc keeps rewriting its own output"

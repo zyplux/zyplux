@@ -64,6 +64,15 @@ def build_policy_row(package: str) -> dict:
     return parse_policy(package, output)
 
 
+def find_reboot_notice() -> str:
+    """The pending-reboot notice update-notifier leaves under /var/run after a kernel/driver transaction — empty when none; the .pkgs companion names the packages that caused it (deduped, it logs one line per dpkg trigger)."""
+    notice = shell.run("cat", "/var/run/reboot-required").stdout.strip()
+    if not notice:
+        return ""
+    packages = list(dict.fromkeys(shell.run("cat", "/var/run/reboot-required.pkgs").stdout.split()))
+    return f"{notice} ({', '.join(packages)})" if packages else notice
+
+
 class AptPkgCook(PackageListCook):
     needs_root = True
 
@@ -116,12 +125,19 @@ class AptPkgCook(PackageListCook):
             note=f"{TRUSTED_GPGD} attributes (expect 'i' set):",
         )
         if self.packages:
+            # --no-fix-broken: nala's fix-broken path pre-marks each new package
+            # without its dependencies and leans on apt's ProblemResolver to repair
+            # the breakage; the resolver gives up on or-group dependencies (e.g.
+            # python3-openshot's libqt5gui5t64 | libqt5gui5-gles) when several new
+            # packages are requested at once. Without the flag nala marks each
+            # package recursively — the same full marking apt-get uses.
             nala(
                 "install",
                 "-y",
+                "--no-fix-broken",
                 *self.packages,
                 note=f"Installing packages: {' '.join(self.packages)}",
             )
         nala("autoremove", "-y", note="Removing unused packages with nala autoremove")
         logger.info(f"Done. Installed/upgraded {len(self.packages)} package(s).")
-        return SyncOutcome("ok")
+        return SyncOutcome("ok", delayed_message=find_reboot_notice())

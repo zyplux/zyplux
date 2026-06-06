@@ -21,7 +21,7 @@ def test_3_1_1_apt_pkg_installed_via_nala_full_transaction(recipe, terminal, tot
     report.assert_succeeded()
     terminal.expect_ran("nala update")
     terminal.expect_ran("nala full-upgrade")
-    terminal.expect_ran("nala install -y git")
+    terminal.expect_ran("nala install -y --no-fix-broken git")
     terminal.expect_ran("nala autoremove")
 
 
@@ -50,6 +50,23 @@ def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(recipe, terminal, to
     plan = totchef.plan()
     plan.assert_ran_before("bash.apt_prereqs", "apt_pkg.git")  # after the prereqs
     plan.assert_ran_before("apt_repo.vendor", "apt_pkg.git")  # after the repos
+
+
+def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe, terminal, totchef):
+    """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the `Action required` block."""
+    recipe.declares("apt_pkg", packages=["git"])
+    terminal.arrange("apt-cache policy git", POLICY_ABSENT)
+    terminal.arrange("nala install", effect=lambda: terminal.arrange("apt-cache policy git", POLICY_PRESENT))
+    terminal.arrange("cat /var/run/reboot-required", "*** System restart required ***\n")
+    terminal.arrange("cat /var/run/reboot-required.pkgs", "nvidia-driver-580-open\nnvidia-driver-580-open\n")
+
+    report = totchef.up()
+
+    report.assert_logged("System restart required")  # still emitted live during the session
+    block = report.terminal_report.split("Action required", 1)
+    assert len(block) == 2  # the notice survives to the end of the run
+    assert "apt_pkg" in block[1]
+    assert block[1].count("nvidia-driver-580-open") == 1  # the causing packages, deduped
 
 
 # 3.2 Install and refresh snaps
