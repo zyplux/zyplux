@@ -1,11 +1,11 @@
-# 3. Managing packages
+# 3. [Managing packages](test_3_managing_packages.py)
 
 These cooks track what's installed and reconcile it against the recipe — apt and
 snap by version (installing or upgrading only what differs), the `url` vendor cook
 by presence. For each, the report shows the current and target state and whether the
 resource was installed, upgraded, or left alone.
 
-## 3.1 [Install and upgrade apt packages](test_3_managing_packages.py)
+## 3.1 Install and upgrade apt packages
 
 > As an operator, I want to declare a list of apt packages and have them installed
 > and kept up to date, so that my system software matches my recipe.
@@ -35,7 +35,7 @@ After the transaction, `[apt_pkg]` reads `/var/run/reboot-required` (and its
 `.pkgs` companion naming the packages that caused it); when present, the
 notice is carried as a delayed message into the `Action required` block.
 
-## 3.2 [Install and refresh snaps](test_3_managing_packages.py)
+## 3.2 Install and refresh snaps
 
 > As an operator, I want to declare snap packages and have them installed and
 > refreshed, so that snap apps are managed the same declarative way.
@@ -55,7 +55,7 @@ the run warns but continues).
 If `snapd` isn't present, asking to install a snap is a hard failure with a
 clear message.
 
-## 3.3 [Bootstrap vendor CLIs from their official installers](test_3_managing_packages.py)
+## 3.3 Bootstrap vendor CLIs from their official installers
 
 > As an operator, I want to install vendor tools from their `curl | bash` install
 > scripts and keep them updated, so that tools like `bun`, `uv`, `rustup`, or

@@ -1,10 +1,10 @@
-# 6. Tuning desktop applications (per-user domains)
+# 6. [Tuning desktop applications (per-user domains)](test_6_tuning_desktop_applications.py)
 
 These cooks edit per-user files in the operator's home directory (resolved to the
 invoking user even though the apply runs under sudo). They're typically used to
 push GPU acceleration flags into browsers and Electron apps.
 
-## 6.1 [Override an app's desktop launcher](test_6_tuning_desktop_applications.py)
+## 6.1 Override an app's desktop launcher
 
 > As an operator, I want to inject environment variables, switches, and feature
 > flags into an app's launcher, so that the app always starts with my GPU/Wayland
@@ -33,7 +33,7 @@ restart the app.
 If the source `.desktop` doesn't exist yet, it reports that the package must be
 installed first (rather than failing the whole run).
 
-## 6.2 [Inject flags into Chromium and Electron apps](test_6_tuning_desktop_applications.py)
+## 6.2 Inject flags into Chromium and Electron apps
 
 > As an operator, I want to enable Chromium feature flags (and Electron `argv.json`
 > options) for browsers and Electron-based editors, so that hardware video
@@ -71,7 +71,7 @@ once and re-run; invalid JSON is left untouched and soft-fails.
 
 On change it reminds the operator to restart the app.
 
-## 6.3 [Merge environment settings into a JSON config](test_6_tuning_desktop_applications.py)
+## 6.3 Merge environment settings into a JSON config
 
 > As an operator, I want to merge a block of environment values into the `env` key
 > of an app's JSON settings file while preserving everything else, so that I can

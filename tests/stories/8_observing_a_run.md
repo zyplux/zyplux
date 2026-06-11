@@ -1,6 +1,6 @@
-# 8. Observing a run
+# 8. [Observing a run](test_8_observing_a_run.py)
 
-## 8.1 [See a clear, color-coded report of what happened](test_8_observing_a_run.py)
+## 8.1 See a clear, color-coded report of what happened
 
 > As an operator, I want a readable summary table at the end of a run, so that I can
 > tell at a glance what was installed, upgraded, applied, or left alone.
@@ -42,7 +42,7 @@ sides show `(none)` because nothing landed, while `latest` shows the unmet
 target. The operator can see at a glance that the requested version did not
 arrive.
 
-## 8.2 [Watch progress while a long run executes](test_8_observing_a_run.py)
+## 8.2 Watch progress while a long run executes
 
 > As an operator, I want live feedback during a run, so that I know it's working and
 > roughly how far along it is.
@@ -64,7 +64,7 @@ Start lines announce who is running (and, for user nodes, what they're waiting
 on and what they unblock); completion lines report timing and which downstream
 resources just unlocked.
 
-## 8.3 [Keep a timestamped log of every run](test_8_observing_a_run.py)
+## 8.3 Keep a timestamped log of every run
 
 > As an operator, I want each run recorded to a log file owned by me, so that I can
 > audit or debug after the fact, even though the apply ran as root.
@@ -86,7 +86,7 @@ region.
 A dry run shows only the plan table on the terminal while still recording every
 line to the log file.
 
-## 8.4 [See follow-up actions after the report](test_8_observing_a_run.py)
+## 8.4 See follow-up actions after the report
 
 > As an operator, I want any "do this next" notices — restart an app, reboot
 > the machine — gathered in one block after the report table, so that they

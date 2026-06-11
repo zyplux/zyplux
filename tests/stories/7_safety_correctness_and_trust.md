@@ -1,6 +1,6 @@
-# 7. Safety, correctness, and trust
+# 7. [Safety, correctness, and trust](test_7_safety_correctness_and_trust.py)
 
-## 7.1 [Trust that re-runs only change what drifted](test_7_safety_correctness_and_trust.py)
+## 7.1 Trust that re-runs only change what drifted
 
 > As an operator, I want every run to be safe to repeat, so that I can run totchef
 > on a schedule or whenever I'm unsure, without fear of redundant or destructive
@@ -18,7 +18,7 @@ tool re-runs its `update_action` each run rather than being skipped (§3.3.1).
 `post_hook`s fire only on actual change, so expensive refreshes don't run on
 no-op passes.
 
-## 7.2 [Understand that totchef creates and updates but never prunes](test_7_safety_correctness_and_trust.py)
+## 7.2 Understand that totchef creates and updates but never prunes
 
 > As an operator, I want to know that removing a section from my recipe leaves the
 > existing artifact in place, so that I'm not surprised by what teardown does (and
@@ -31,7 +31,7 @@ uninstalling its target) leaves prior artifacts — a written `/etc` drop-in, a 
 keyring + `.sources`, a `.desktop` override — in place. Teardown is manual and
 deliberate.
 
-## 7.3 [Escalate to root only for the apply, and drop privilege otherwise](test_7_safety_correctness_and_trust.py)
+## 7.3 Escalate to root only for the apply, and drop privilege otherwise
 
 > As an operator, I want totchef to request root only when applying, and to run
 > each user-scoped step as me rather than as root, so that the privilege surface is
@@ -54,7 +54,7 @@ the next step's PATH.
 
 `plan` and `lint` never escalate.
 
-## 7.4 [Distinguish recoverable failures from fatal ones](test_7_safety_correctness_and_trust.py)
+## 7.4 Distinguish recoverable failures from fatal ones
 
 > As an operator, I want failures classified by severity, so that a cosmetic
 > hiccup doesn't abort my whole run but a real problem does.
@@ -79,7 +79,7 @@ An unexpected exception outside any cook is a totchef bug, not a recipe
 failure: the run still exits `1` with the full traceback logged to the
 terminal and the log file — never a silent death.
 
-## 7.5 [Skip steps that shouldn't run right now](test_7_safety_correctness_and_trust.py)
+## 7.5 Skip steps that shouldn't run right now
 
 > As an operator, I want a guard that can skip a step when a precondition isn't met,
 > so that, for example, a browser config isn't rewritten while the browser is

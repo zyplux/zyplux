@@ -1,4 +1,4 @@
-"""Derives the story-header links in the numbered story docs from the tests/stories test files — each h2 story header links to its section's test file, h3 criterion headers stay plain; run as a script (`just lint` does) it refreshes stale links in place."""
+"""Derives the story-header links in the numbered story docs from the tests/stories test files — each h1 doc title links to its section's test file, h2 story and h3 criterion headers stay plain; run as a script (`just lint` does) it refreshes stale links in place."""
 
 import ast
 import re
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from project_paths import STORIES_DIR, list_story_docs
 
+DOC_TITLE = re.compile(r"^# (\d+)\. (.+)$")
 STORY_HEADER = re.compile(r"^## (\d+\.\d+) (.+)$")
 CRITERION_HEADER = re.compile(r"^### (\d+(?:\.\d+)+) (.+)$")
 LINKED_TITLE = re.compile(r"^\[(?P<title>.+)\]\((?P<target>[^)]+)\)$")
@@ -74,12 +75,16 @@ def render_linked_doc(doc: str, tests: dict[str, StoryTest]) -> str:
     for raw in doc.splitlines(keepends=True):
         stripped = raw.rstrip("\n")
         newline = raw[len(stripped) :]
+        doc_title = DOC_TITLE.match(stripped)
         story = STORY_HEADER.match(stripped)
         criterion = CRITERION_HEADER.match(stripped)
-        if story:
+        if doc_title:
+            section, title = doc_title.group(1), strip_link(doc_title.group(2))
+            file = files.get(section)
+            rendered.append(raw if file is None else f"# {section}. [{title}]({file}){newline}")
+        elif story:
             story_id, title = story.group(1), strip_link(story.group(2))
-            file = files.get(story_id.split(".")[0])
-            rendered.append(raw if file is None else f"## {story_id} [{title}]({file}){newline}")
+            rendered.append(f"## {story_id} {title}{newline}")
         elif criterion:
             story_id, title = criterion.group(1), strip_link(criterion.group(2))
             rendered.append(f"### {story_id} {title}{newline}")

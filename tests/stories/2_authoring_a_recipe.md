@@ -1,6 +1,6 @@
-# 2. Authoring a recipe
+# 2. [Authoring a recipe](test_2_authoring_a_recipe.py)
 
-## 2.1 [Declare the machine I want in one TOML file](test_2_authoring_a_recipe.py)
+## 2.1 Declare the machine I want in one TOML file
 
 > As an operator, I want the entire machine configuration expressed in a single
 > declarative `recipe.toml`, so that the file is the single source of truth and a
@@ -24,7 +24,7 @@ like any subtable: `[apt_pkg.<group>]` makes each group its own unit of work
 with its own `packages` and `depends_on`, so a small group can unblock its
 dependants without waiting for the rest of the section.
 
-## 2.2 [Express ordering between resources](test_2_authoring_a_recipe.py)
+## 2.2 Express ordering between resources
 
 > As an operator, I want to declare that one resource must be configured before
 > another, so that, for example, apt repos exist before packages from them are
@@ -41,12 +41,10 @@ Any entry can carry `depends_on = [...]`, naming another entry
 totchef builds a dependency DAG and runs resources in topological order; a
 node only starts once all of its dependencies have succeeded.
 
-### 2.2.3 bad dependency is caught at lint
+A bad dependency — a missing node, a cycle, a self-dependency — is caught at
+lint ([§10.2.2](10_recipe_linting_rules.md)).
 
-A dependency on a node that doesn't exist, or a cycle, or a self-dependency,
-is caught at lint time with a message that explains how to fix it.
-
-## 2.3 [Set shared defaults across a section's entries](test_2_authoring_a_recipe.py)
+## 2.3 Set shared defaults across a section's entries
 
 > As an operator, I want to set options once at the section level and have each
 > entry inherit them, so that I don't repeat the same flags on every app.
@@ -62,7 +60,7 @@ shared list; for everything else, the entry **overrides** the default.
 Example: `[desktop]` declares a shared `features = [...]`, and
 `[desktop.brave]` adds a couple more — Brave ends up with the union.
 
-## 2.4 [Grant root only where it's needed](test_2_authoring_a_recipe.py)
+## 2.4 Grant root only where it's needed
 
 > As an operator, I want privilege granted per resource at the finest grain, so
 > that a user-scoped step never runs as root unnecessarily.
@@ -73,13 +71,10 @@ Whether a cook needs root is driven by the cook's own `needs_root` attribute,
 but a recipe entry can also set `needs_root = true` to escalate a privilege-agnostic
 cook (`bash`, `file`) for that one entry.
 
-### 2.4.2 lint forbids needs root on a subtable header
+`needs_root` on a subtable section header is forbidden — lint rejects it
+([§10.2.3](10_recipe_linting_rules.md)).
 
-The lint **forbids** `needs_root` on a subtable section header, because that
-would grant root to every entry wholesale — it must be set per leaf entry (least
-privilege), and the error says so.
-
-## 2.5 [Declare when a temporary entry expires](test_2_authoring_a_recipe.py)
+## 2.5 Declare when a temporary entry expires
 
 > As an operator, I want a temporary workaround entry to declare the upstream
 > condition that makes it obsolete, so that every run tells me the moment it
@@ -108,7 +103,5 @@ carries the generic notice that the entry can be removed.
 accepts them — a subtable entry (`[file.<name>]`) and a plain-data section
 (`[uv]`) alike.
 
-### 2.5.4 lint rejects remove how without remove when
-
-`remove_how` without `remove_when` is an orphan instruction; lint rejects it
-naming the missing condition.
+`remove_how` without `remove_when` is rejected at lint
+([§10.2.4](10_recipe_linting_rules.md)).

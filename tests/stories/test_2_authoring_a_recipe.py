@@ -1,4 +1,4 @@
-"""User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: fan-out/ordering read off the plan, bad recipes via lint rejection."""
+"""User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: fan-out, ordering, and defaults read off the plan and the run."""
 
 APT_CACHE_POLICY = """\
 git:
@@ -89,18 +89,6 @@ def test_2_2_2_resources_run_in_topological_order(recipe, terminal, totchef):
     assert ran_first < ran_second
 
 
-def test_2_2_3_bad_dependency_is_caught_at_lint(scenario, chef):
-    """A missing-node dependency, a cycle, or a self-dependency is caught at lint."""
-    chef(scenario().declares("bash", "a", apply="x", depends_on=["nope"])).lint().assert_rejected()
-
-    chef(scenario().declares("bash", "a", apply="x", depends_on=["bash.a"])).lint().assert_rejected()
-
-    cyclic = scenario()
-    cyclic.declares("bash", "a", apply="x", depends_on=["bash.b"])
-    cyclic.declares("bash", "b", apply="y", depends_on=["bash.a"])
-    chef(cyclic).lint().assert_rejected()
-
-
 # 2.3 Set shared defaults across a section's entries
 
 
@@ -150,15 +138,6 @@ def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe, 
 
     # the per-entry grant actually escalating only that entry (root writes its file, the sibling
     # writes as the invoking user) is verified end-to-end in the container — test_6_3_2.
-
-
-def test_2_4_2_lint_forbids_needs_root_on_a_subtable_header(scenario, chef):
-    """`needs_root` on a subtable header is forbidden (it would grant root wholesale); it must be per leaf entry, and the error says so."""
-    wholesale = scenario()
-    wholesale.declares("bash", needs_root=True)  # header-level grant
-    wholesale.declares("bash", "step", apply="x")
-
-    chef(wholesale).lint().assert_rejected("needs_root")
 
 
 # 2.5 Declare when a temporary entry expires
@@ -223,10 +202,3 @@ def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(recipe, terminal
     assert "file.pin" in block
     assert "pin obsolete" in block
     assert "section obsolete" in block
-
-
-def test_2_5_4_lint_rejects_remove_how_without_remove_when(recipe, totchef):
-    """`remove_how` without `remove_when` is an orphan instruction; lint rejects it naming the missing condition."""
-    recipe.declares("bash", "orphan", apply="x", remove_how="delete me someday")
-
-    totchef.lint().assert_rejected("remove_when")

@@ -1,6 +1,6 @@
-# 5. Configuring system state (root domains)
+# 5. [Configuring system state (root domains)](test_5_configuring_system_state.py)
 
-## 5.1 [Add third-party apt repositories securely](test_5_configuring_system_state.py)
+## 5.1 Add third-party apt repositories securely
 
 > As an operator, I want to declare a third-party apt repo with its signing key and
 > have it configured the modern signed-by way, so that I can install vendor
@@ -59,7 +59,7 @@ key_url = "githubcli-archive-keyring.gpg"
 pin_priority = 1001
 ```
 
-## 5.2 [Install files with exact content](test_5_configuring_system_state.py)
+## 5.2 Install files with exact content
 
 > As an operator, I want to install a file with exact bytes — either inline content
 > or a bundled asset — and have a follow-up action fire only when it actually
@@ -100,7 +100,7 @@ file whose stem matches the entry name (`[file.egpu-prime]` →
 `egpu-prime.service`). Zero or several matches fail lint, asking for an
 explicit `source`.
 
-## 5.3 [Run arbitrary idempotent shell steps](test_5_configuring_system_state.py)
+## 5.3 Run arbitrary idempotent shell steps
 
 > As an operator, I want an escape hatch to run a shell command idempotently — with
 > a check that decides whether it's even needed — so that I can handle the
@@ -126,7 +126,7 @@ no-ops.
 
 Privilege-agnostic: grant root per entry.
 
-## 5.4 [Install versioned commands onto the PATH](test_5_configuring_system_state.py)
+## 5.4 Install versioned commands onto the PATH
 
 > As an operator, I want bundled tools installed as commands — system-wide or
 > per-user — and updated only when their version changes, so that PATH tools roll
@@ -145,36 +145,33 @@ absent) install is rewritten; equal versions leave the file alone even when its
 bytes differ. The report's `before`/`current`/`latest` columns carry the
 versions.
 
-### 5.4.3 lint statically rejects scripts missing version or help
+A command that doesn't embed `__version__` or offer `--version`/`--help` is
+rejected at lint ([§10.3.1](10_recipe_linting_rules.md)).
 
-A command that doesn't embed `__version__ = "<version>"` or offer
-`--version`/`--help` can't enter a bin cook: lint rejects the entry.
-The check is static — read off the file's bytes, never executing it.
+### 5.4.3 command may be any language even a binary
 
-### 5.4.4 command may be any language even a binary
-
-The contract markers are byte-level, so a bash script (`__version__="1.0"`), a
+The contract markers (§10.3.1) are byte-level, so a bash script (`__version__="1.0"`), a
 compiled binary with the marker baked in as a constant string, or anything else
 qualifies — not just Python.
 
-### 5.4.5 usr local bin is always root local bin is user scoped
+### 5.4.4 usr local bin is always root local bin is user scoped
 
 `usr_local_bin` is an always-root cook (its domain is `/usr/local/bin`);
 `local_bin` stays user-scoped.
 
-### 5.4.6 source defaults to the bundled command named after the entry
+### 5.4.5 source defaults to the bundled command named after the entry
 
 With no `source`, the entry installs the unique bundled command whose stem
 matches the entry name — `[local_bin.ctop]` needs no keys at all. Zero or
 several matches fail lint, asking for an explicit `source`.
 
-### 5.4.7 usr local sbin installs admin commands always as root
+### 5.4.6 usr local sbin installs admin commands always as root
 
 `[usr_local_sbin.<name>]` installs to `/usr/local/sbin` — the home of admin
 and daemon helpers (e.g. a boot service's switch script), outside ordinary
 users' PATH — always as root, under the same version contract.
 
-## 5.5 [Set specific lines in a config file](test_5_configuring_system_state.py)
+## 5.5 Set specific lines in a config file
 
 > As an operator, I want to own specific settings inside a config file another
 > package ships — replacing just those lines and leaving the rest alone — so
@@ -198,7 +195,5 @@ lines.
 Diffed by content hash like `[file]`: a compliant file is never rewritten and
 a `post_hook` fires only on a real change.
 
-### 5.5.4 lint rejects line and lines together
-
-An entry declares a single `line` or a `lines` array — declaring both, or
-neither, is rejected at lint.
+An entry declaring both `line` and `lines`, or neither, is rejected at lint
+([§10.3.2](10_recipe_linting_rules.md)).

@@ -22,4 +22,4 @@ STORIES_DIR = REPO_ROOT / "tests" / "stories"
 
 
 def list_story_docs() -> list[Path]:
-    return sorted(STORIES_DIR.glob("[0-9]_*.md"))
+    return sorted(STORIES_DIR.glob("[0-9]*_*.md"), key=lambda path: int(path.name.split("_")[0]))

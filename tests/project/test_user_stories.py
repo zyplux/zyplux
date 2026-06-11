@@ -1,4 +1,4 @@
-"""Meta-test: the numbered story docs' h3 criterion headers and the tests/stories test functions stay in lockstep, each h2 story header linked to its section's test file."""
+"""Meta-test: the numbered story docs' h3 criterion headers and the tests/stories test functions stay in lockstep, each h1 doc title linked to its section's test file."""
 
 from project_paths import list_story_docs
 from sync_story_links import collect_story_tests, parse_headers, render_linked_doc

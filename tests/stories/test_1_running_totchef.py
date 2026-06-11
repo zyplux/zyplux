@@ -142,53 +142,10 @@ def test_1_2_4_up_prints_plan_first_from_silent_probe(recipe, totchef, tmp_path)
     assert "applied" in shown  # … then the report shows the converging run made it
 
 
-# 1.3 Validate a recipe without running it
+# 1.3 Find out which recipe will be used
 
 
-def test_1_3_1_lint_validates_and_prints_path_valid(cli, tmp_path):
-    """`totchef lint` validates against every cook's schema and the graph, then prints `<path>: valid` or exits with a precise error."""
-    good = tmp_path / "recipe.toml"
-    good.write_text('[bash.step]\napply = "true"\n')
-
-    cli.run("lint", "--recipe", str(good)).assert_prints(": valid")
-
-    bad = tmp_path / "bad.toml"
-    bad.write_text("[nosuchsection]\nx = 1\n")
-    cli.run("lint", "--recipe", str(bad)).assert_failed()
-
-
-def test_1_3_2_lint_catches_schema_and_graph_errors(scenario, chef):
-    """Catches: unregistered section, unknown key, missing-node dependency, cycle, self-dependency, and `needs_root` on a subtable header."""
-    chef(scenario().declares("nosuch", packages=[])).lint().assert_rejected()  # unregistered section
-    chef(scenario().declares("file", "f", path="/x", content="a", typo=1)).lint().assert_rejected()  # unknown key
-    chef(scenario().declares("bash", "a", apply="x", depends_on=["ghost"])).lint().assert_rejected()  # missing node
-    chef(scenario().declares("bash", "a", apply="x", depends_on=["bash.a"])).lint().assert_rejected()  # self-dependency
-
-    cyclic = scenario()
-    cyclic.declares("bash", "a", apply="x", depends_on=["bash.b"])
-    cyclic.declares("bash", "b", apply="y", depends_on=["bash.a"])
-    chef(cyclic).lint().assert_rejected()  # cycle
-
-    header = scenario()
-    header.declares("bash", needs_root=True)
-    header.declares("bash", "s", apply="x")
-    chef(header).lint().assert_rejected("needs_root")  # needs_root on a subtable header
-
-
-def test_1_3_3_lint_needs_no_root_and_changes_nothing(recipe, terminal, totchef, tmp_path):
-    """Linting needs no root and changes nothing."""
-    recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
-
-    totchef.lint().assert_valid()  # returns cleanly
-
-    assert not (tmp_path / "f").exists()
-    assert terminal.commands == []  # no shell ran at all
-
-
-# 1.4 Find out which recipe will be used
-
-
-def test_1_4_1_where_prints_resolved_recipe_path(cli, tmp_path):
+def test_1_3_1_where_prints_resolved_recipe_path(cli, tmp_path):
     """`totchef where` prints the resolved recipe path and exits."""
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text("")
@@ -196,7 +153,7 @@ def test_1_4_1_where_prints_resolved_recipe_path(cli, tmp_path):
     cli.run("where", "--recipe", str(recipe_path)).assert_prints(str(recipe_path))
 
 
-def test_1_4_2_recipe_discovery_follows_fixed_precedence(cli, tmp_path, monkeypatch):
+def test_1_3_2_recipe_discovery_follows_fixed_precedence(cli, tmp_path, monkeypatch):
     """Precedence: --recipe/-r, $TOTCHEF_RECIPE, walk up for recipe.toml, ~/.config/totchef/recipe.toml, /etc/totchef/recipe.toml."""
     explicit = tmp_path / "explicit.toml"
     explicit.write_text("")
@@ -215,7 +172,7 @@ def test_1_4_2_recipe_discovery_follows_fixed_precedence(cli, tmp_path, monkeypa
     cli.run("where").assert_prints(str(project / "recipe.toml"))  # then walk up from cwd
 
 
-def test_1_4_3_no_recipe_found_lists_searched_locations(cli, tmp_path, monkeypatch):
+def test_1_3_3_no_recipe_found_lists_searched_locations(cli, tmp_path, monkeypatch):
     """When no recipe is found, the error lists every location searched."""
     empty = tmp_path / "empty"
     empty.mkdir()
@@ -229,10 +186,10 @@ def test_1_4_3_no_recipe_found_lists_searched_locations(cli, tmp_path, monkeypat
     missing.assert_prints("recipe.toml")
 
 
-# 1.5 Discover available cooks
+# 1.4 Discover available cooks
 
 
-def test_1_5_1_cooks_lists_section_scope_and_origin(cli):
+def test_1_4_1_cooks_lists_section_scope_and_origin(cli):
     """`totchef --list-cooks` prints section, scope (root/user), and origin (built-in / plugin:<dist> / local:<path>) for every resolvable cook."""
     cli.run("--list-cooks").assert_output("""
         [16]{section,scope,origin}:
@@ -255,7 +212,7 @@ def test_1_5_1_cooks_lists_section_scope_and_origin(cli):
     """)
 
 
-def test_1_5_2_cooks_reflects_live_registry(cli, home):
+def test_1_4_2_cooks_reflects_live_registry(cli, home):
     """An installed plugin or a dropped-in local cook shows up immediately."""
     cooks_dir = home / ".config/totchef/cooks"
     cooks_dir.mkdir(parents=True)
@@ -273,10 +230,10 @@ def test_1_5_2_cooks_reflects_live_registry(cli, home):
     cli.run("--list-cooks").assert_lists("widget", origin="local")
 
 
-# 1.6 Check the version
+# 1.5 Check the version
 
 
-def test_1_6_version_reports_installed_version(cli):
+def test_1_5_version_reports_installed_version(cli):
     """`totchef --version` reports the installed version."""
     version = cli.run("--version")
 

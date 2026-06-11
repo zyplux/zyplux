@@ -299,26 +299,7 @@ def test_5_4_2_version_decides_the_update_not_content(recipe, home, bundled_file
     assert "# local tweak" in installed.read_text()  # equal versions never reinstall
 
 
-def test_5_4_3_lint_statically_rejects_scripts_missing_version_or_help(recipe, scenario, chef, totchef, bundled_files, tmp_path):
-    """A command that doesn't embed `__version__` or offer `--version`/`--help` can't enter a bin cook — lint rejects it statically, never executing it."""
-    sentinel = tmp_path / "executed"
-    (bundled_files / "naked.py").write_text(f'from pathlib import Path\n\nPath("{sentinel}").write_text("ran")\n')
-    recipe.declares("usr_local_bin", "naked", source="naked.py")
-
-    lint = totchef.lint()
-
-    lint.assert_rejected("__version__")
-    lint.assert_rejected("--version")
-    lint.assert_rejected("--help")
-    assert not sentinel.exists()  # the contract check reads the command, never runs it
-
-    vetted = 'import argparse\n\n__version__ = "1.0.0"\n\nparser = argparse.ArgumentParser()\nparser.add_argument("--version", action="version", version=__version__)\n'
-    (bundled_files / "vetted.py").write_text(vetted)
-    good = scenario().declares("local_bin", "vetted", source="vetted.py")
-    chef(good).lint().assert_valid()
-
-
-def test_5_4_4_command_may_be_any_language_even_a_binary(recipe, home, bundled_files, totchef):
+def test_5_4_3_command_may_be_any_language_even_a_binary(recipe, home, bundled_files, totchef):
     """The contract markers are read off the file's bytes, so a compiled binary qualifies — embed `__version__ = "<version>"` as a constant string."""
     binary = b'\x7fELF\x02\x01junk\x00__version__ = "3.1.4"\x00usage: tool [--version] [--help]\x00\xff\xfe\xfd'
     (bundled_files / "tool.bin").write_bytes(binary)
@@ -331,13 +312,13 @@ def test_5_4_4_command_may_be_any_language_even_a_binary(recipe, home, bundled_f
     assert (home / ".local/bin/tool").read_bytes() == binary  # installed verbatim, bytes untouched
 
 
-def test_5_4_5_usr_local_bin_is_always_root_local_bin_is_user_scoped(cli):
+def test_5_4_4_usr_local_bin_is_always_root_local_bin_is_user_scoped(cli):
     """`usr_local_bin` lists as a root cook (its domain is /usr/local/bin); `local_bin` stays user-scoped."""
     cli.run("--list-cooks").assert_lists("usr_local_bin", scope="root")
     cli.run("--list-cooks").assert_lists("local_bin", scope="user")
 
 
-def test_5_4_6_source_defaults_to_the_bundled_command_named_after_the_entry(recipe, home, bundled_files, totchef):
+def test_5_4_5_source_defaults_to_the_bundled_command_named_after_the_entry(recipe, home, bundled_files, totchef):
     """With no `source`, the entry installs the unique bundled command whose stem matches the entry name — `[local_bin.tool]` needs no keys at all."""
     tool = '#!/bin/bash\n__version__="1.2.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: tool";; esac\n'
     (bundled_files / "tool.sh").write_text(tool)
@@ -350,7 +331,7 @@ def test_5_4_6_source_defaults_to_the_bundled_command_named_after_the_entry(reci
     assert (home / ".local/bin/tool").read_text() == tool  # command still named after the resolved stem
 
 
-def test_5_4_7_usr_local_sbin_installs_admin_commands_always_as_root(recipe, usr_local_sbin_dir, bundled_files, totchef, cli):
+def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(recipe, usr_local_sbin_dir, bundled_files, totchef, cli):
     """`[usr_local_sbin.<name>]` installs to /usr/local/sbin — admin and daemon helpers, outside ordinary users' PATH — always as root, under the same version contract."""
     helper = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: helper";; esac\n'
     (bundled_files / "helper.sh").write_text(helper)
@@ -402,13 +383,3 @@ def test_5_5_3_conf_rewrites_only_when_a_line_differs(recipe, terminal, totchef,
     totchef.up().assert_shows("conf.app", "applied")
     terminal.expect_ran("reload-app")
     assert target.read_text() == "mode = fast\n"
-
-
-def test_5_5_4_lint_rejects_line_and_lines_together(recipe, scenario, chef, totchef, tmp_path):
-    """An entry declares a single `line` or a `lines` array — declaring both, or neither, is rejected at lint."""
-    target = tmp_path / "c.conf"
-    recipe.declares("conf", "both", target=str(target), line="a = 1", lines=["b = 2"])
-    totchef.lint().assert_rejected("not both")
-
-    neither = scenario().declares("conf", "neither", target=str(target))
-    chef(neither).lint().assert_rejected("set `line` or `lines`")

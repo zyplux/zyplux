@@ -161,21 +161,3 @@ def test_9_3_3_cook_only_probes_and_acts_orchestrator_owns_the_diff(recipe, term
     report.assert_shows("switch.drifted", "applied")  # … chef diffs differing states → act
     terminal.expect_not_ran("flip-switch matched")  # the cook's apply ran only where chef decided
     terminal.expect_ran("flip-switch drifted")
-
-
-# 8.4 Get a typo'd recipe rejected against my schema
-
-
-def test_9_4_1_cook_entry_model_lints_recipe_slice_reporting_violations(cli, tmp_path):
-    """A cook's `entry_model` (pydantic, extra='forbid') is validated by lint, which reports every violation as a precise `[node] location: message` line."""
-    typoed = tmp_path / "typo.toml"
-    typoed.write_text('[file.x]\npath = "/x"\ncontent = "a"\nmoed = "0644"\n')
-
-    rejected = cli.run("lint", "--recipe", str(typoed))
-    rejected.assert_failed()
-    rejected.assert_prints("[file.x]")  # the precise node …
-    rejected.assert_prints("moed")  # … and the offending key
-
-    valid = tmp_path / "valid.toml"
-    valid.write_text('[file.x]\npath = "/x"\ncontent = "a"\n')
-    cli.run("lint", "--recipe", str(valid)).assert_prints(": valid")

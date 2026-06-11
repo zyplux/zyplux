@@ -1,4 +1,4 @@
-# 4. Language package-manager wrappers
+# 4. [Language package-manager wrappers](test_4_package_manager_wrappers.py)
 
 These cooks wrap a language ecosystem's own package manager — `cargo` for Rust,
 `uv` for Python, `bun` for global npm CLIs — installing tools into the invoking
@@ -6,7 +6,7 @@ user's home and keeping them current. Each needs its runtime present first (via 
 matching `[url]` installer) and looks up latest versions from the ecosystem's
 registry.
 
-## 4.1 [Install and update Rust crates](test_4_package_manager_wrappers.py)
+## 4.1 Install and update Rust crates
 
 > As an operator, I want to declare Rust CLI crates and have them installed via
 > prebuilt binaries, so that I get tools like `just` or `ripgrep` without a slow
@@ -38,7 +38,7 @@ Every crates.io probe passes a timeout, so a stalled registry connection fails
 fast to "unknown latest" rather than wedging the thread pool and hanging the
 plan forever — the failure mode that left `just plan` stuck near 97%.
 
-## 4.2 [Install and upgrade Python CLI tools](test_4_package_manager_wrappers.py)
+## 4.2 Install and upgrade Python CLI tools
 
 > As an operator, I want to declare Python CLI tools and have each installed in its
 > own isolated environment, so that tools like `ruff` don't collide with each
@@ -58,7 +58,7 @@ If any tool fails, the run reports a hard failure naming the failed tools.
 Requires `uv` to be present (depends on the `[url]` uv installer); latest
 versions are looked up concurrently from PyPI for the plan.
 
-## 4.3 [Install and upgrade global bun packages](test_4_package_manager_wrappers.py)
+## 4.3 Install and upgrade global bun packages
 
 > As an operator, I want to declare global npm CLI tools and have them installed
 > and kept current with `bun`, so that tools like a coding agent are managed
