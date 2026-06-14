@@ -1,8 +1,8 @@
-import { totvibe } from '@totvibe/eslint-config';
+import { zyplux } from '@zyplux/eslint-config';
 import { describe, expect, it } from 'bun:test';
 import { Linter } from 'eslint';
 
-const config = totvibe();
+const config = zyplux();
 const arrowOnlyEntry = config.find(entry => entry.rules?.['no-restricted-syntax'] !== undefined);
 const arrowOnlyRule = arrowOnlyEntry?.rules?.['no-restricted-syntax'] ?? 'off';
 

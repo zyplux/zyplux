@@ -30,7 +30,7 @@ export const castToEslintRule = (rule: LooseRuleDefinition) => {
 };
 
 const ruleCreator = ESLintUtils.RuleCreator(
-  name => `https://github.com/zyplux/zyp-cerberus/blob/main/src/rules/${name}.ts`,
+  name => `https://github.com/zyplux/zyp-cerberus/blob/main/packages/eslint-config/src/rules/${name}.ts`,
 );
 
 export const createRule = <Options extends readonly unknown[], MessageIds extends string>(

@@ -1,9 +1,9 @@
-import { totvibe } from '@totvibe/eslint-config';
+import { zyplux } from '@zyplux/eslint-config';
 import { describe, expect, it } from 'bun:test';
 import { Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
 
-const config = totvibe();
+const config = zyplux();
 const restrictedImportsEntry = config.find(
   entry => entry.rules?.['@typescript-eslint/no-restricted-imports'] !== undefined,
 );

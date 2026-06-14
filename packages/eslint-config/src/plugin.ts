@@ -6,7 +6,7 @@ import { rules } from './rules/index';
 
 export const plugin = {
   meta: {
-    name: '@totvibe/eslint-config',
+    name: '@zyplux/eslint-config',
     version,
   },
   rules,

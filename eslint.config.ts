@@ -1,3 +1,3 @@
-import { totvibe } from './packages/eslint-config/src/index';
+import { zyplux } from './packages/eslint-config/src/index';
 
-export default totvibe({ tsconfigRootDir: import.meta.dirname });
+export default zyplux({ tsconfigRootDir: import.meta.dirname });

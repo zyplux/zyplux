@@ -5,7 +5,7 @@
     "": {
       "name": "totvibe-eslint",
       "devDependencies": {
-        "@totvibe/eslint-config": "workspace:*",
+        "@zyplux/eslint-config": "workspace:*",
         "bun-types": "catalog:",
         "eslint": "catalog:",
         "knip": "catalog:",
@@ -16,8 +16,8 @@
       },
     },
     "packages/eslint-config": {
-      "name": "@totvibe/eslint-config",
-      "version": "0.1.1",
+      "name": "@zyplux/eslint-config",
+      "version": "0.3.0",
       "dependencies": {
         "@eslint/js": "catalog:",
         "@typescript-eslint/utils": "catalog:",
@@ -41,18 +41,18 @@
       },
     },
     "tests/public-interface": {
-      "name": "@totvibe/tests-eslint-config",
+      "name": "@zyplux/tests-eslint-config",
       "version": "0.1.0",
       "devDependencies": {
-        "@totvibe/eslint-config": "workspace:*",
+        "@zyplux/eslint-config": "workspace:*",
         "bun-types": "catalog:",
       },
     },
     "tests/rules": {
-      "name": "@totvibe/tests-rules",
+      "name": "@zyplux/tests-rules",
       "version": "0.1.0",
       "devDependencies": {
-        "@totvibe/eslint-config": "workspace:*",
+        "@zyplux/eslint-config": "workspace:*",
         "bun-types": "catalog:",
         "eslint": "catalog:",
         "typescript-eslint": "catalog:",
@@ -272,12 +272,6 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@totvibe/eslint-config": ["@totvibe/eslint-config@workspace:packages/eslint-config"],
-
-    "@totvibe/tests-eslint-config": ["@totvibe/tests-eslint-config@workspace:tests/public-interface"],
-
-    "@totvibe/tests-rules": ["@totvibe/tests-rules@workspace:tests/rules"],
-
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.2", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg=="],
 
     "@types/chai": ["@types/chai@5.2.3", "", { "dependencies": { "@types/deep-eql": "*", "assertion-error": "^2.0.1" } }, "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA=="],
@@ -327,6 +321,12 @@
     "@vitest/spy": ["@vitest/spy@4.1.7", "", {}, "sha512-kbkI5LMWakyuTIvs6fUJ5qdIVb1XVKsYJAT4OJ938cHMROYMSfmoQdZy0aaAnjbbc8F61vkoTqz/Az+/HiIu5Q=="],
 
     "@vitest/utils": ["@vitest/utils@4.1.7", "", { "dependencies": { "@vitest/pretty-format": "4.1.7", "convert-source-map": "^2.0.0", "tinyrainbow": "^3.1.0" } }, "sha512-T532WBu791cBxJlCl6SO+J14l81DQx6uQHm1bQbmCDY7nqlEIgkza/UFnSBNaUtSf41unldDFjdOBYEQC4b5Hw=="],
+
+    "@zyplux/eslint-config": ["@zyplux/eslint-config@workspace:packages/eslint-config"],
+
+    "@zyplux/tests-eslint-config": ["@zyplux/tests-eslint-config@workspace:tests/public-interface"],
+
+    "@zyplux/tests-rules": ["@zyplux/tests-rules@workspace:tests/rules"],
 
     "acorn": ["acorn@8.16.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw=="],
 

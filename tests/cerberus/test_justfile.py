@@ -1,4 +1,11 @@
+import shutil
+
+import pytest
 from cerberus import justfile
+
+pytestmark = pytest.mark.skipif(
+    shutil.which("just") is None, reason="requires the `just` binary on PATH"
+)
 
 WITH_INTERPOLATION = """
 recipe := "examples/recipe.toml"

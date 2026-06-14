@@ -1,11 +1,11 @@
-# @totvibe/eslint-config
+# @zyplux/eslint-config
 
 Shared ESLint flat config and custom rules. Ships TypeScript source — consumed directly under Bun.
 
 ## Install
 
 ```sh
-bun add -D @totvibe/eslint-config eslint typescript
+bun add -D @zyplux/eslint-config eslint typescript
 ```
 
 ## Use
@@ -13,19 +13,19 @@ bun add -D @totvibe/eslint-config eslint typescript
 `eslint.config.ts`:
 
 ```ts
-import { totvibe } from '@totvibe/eslint-config';
+import { zyplux } from '@zyplux/eslint-config';
 
-export default totvibe({ tsconfigRootDir: import.meta.dirname });
+export default zyplux({ tsconfigRootDir: import.meta.dirname });
 ```
 
-One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), the custom `@totvibe` rules, and prettier last. React is off until you ask for it.
+One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), the custom `@zyplux` rules, and prettier last. React is off until you ask for it.
 
 ## React renderers
 
 `react` takes a renderer → globs map. Only listed globs receive React rules, so non-React packages match nothing.
 
 ```ts
-export default totvibe({
+export default zyplux({
   react: {
     dom: ['apps/web/**/*.{ts,tsx}'], // full eslint-plugin-react (DOM)
     opentui: ['apps/tui/**/*.{ts,tsx}'], // non-DOM renderer
@@ -41,13 +41,13 @@ export default totvibe({
 
 ## Monorepos
 
-One `totvibe()` call with a renderer map covers a whole repo: set `tsconfigRootDir` once and `projectService` resolves each package's nearest `tsconfig.json`. When packages need genuinely different baselines, scope whole presets with `defineConfig` and share options through `withDefaults`:
+One `zyplux()` call with a renderer map covers a whole repo: set `tsconfigRootDir` once and `projectService` resolves each package's nearest `tsconfig.json`. When packages need genuinely different baselines, scope whole presets with `defineConfig` and share options through `withDefaults`:
 
 ```ts
 import { defineConfig } from 'eslint/config';
-import { totvibe } from '@totvibe/eslint-config';
+import { zyplux } from '@zyplux/eslint-config';
 
-const tv = totvibe.withDefaults({ tsconfigRootDir: import.meta.dirname });
+const tv = zyplux.withDefaults({ tsconfigRootDir: import.meta.dirname });
 
 export default defineConfig(
   { files: ['packages/api/**'], extends: [tv()] },
@@ -69,7 +69,7 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 
 ## What's always on
 
-- Custom `@totvibe` rules: `no-identity-cast`, `no-inferrable-return-type`, `no-type-predicate`, `no-zod-custom`, `prefer-arrow-functions`.
+- Custom `@zyplux` rules: `no-identity-cast`, `no-inferrable-return-type`, `no-type-predicate`, `no-zod-custom`, `prefer-arrow-functions`.
 - Type-checked TypeScript (`strictTypeChecked` + `stylisticTypeChecked`), arrow-only functions, `type` over `interface`, no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).
 - unicorn + perfectionist (natural sorting); prettier last, so formatting rules are off.
@@ -83,5 +83,5 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 Flat config is last-wins — append an override after the preset:
 
 ```ts
-export default [...totvibe({ tsconfigRootDir: import.meta.dirname }), { rules: { 'unicorn/no-null': 'off' } }];
+export default [...zyplux({ tsconfigRootDir: import.meta.dirname }), { rules: { 'unicorn/no-null': 'off' } }];
 ```

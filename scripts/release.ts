@@ -1,9 +1,9 @@
-import pkg from '@totvibe/eslint-config/package.json' with { type: 'json' };
+import pkg from '@zyplux/eslint-config/package.json' with { type: 'json' };
 
 import { $ } from './shell-harness';
 import { ensure, poll } from './util';
 
-const packageName = '@totvibe/eslint-config';
+const packageName = '@zyplux/eslint-config';
 const { version } = pkg;
 const tag = `v${version}`;
 const spec = `${packageName}@${version}`;

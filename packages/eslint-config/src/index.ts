@@ -5,9 +5,9 @@ import { base } from './configs/base';
 import { perfectionistConfig } from './configs/perfectionist';
 import { reactPresets, type RendererGlobs } from './configs/react';
 import { tanstackRoutes } from './configs/tanstack';
-import { totvibeRules } from './configs/totvibe';
 import { typescript } from './configs/typescript';
 import { unicornConfig } from './configs/unicorn';
+import { zypluxRules } from './configs/zyplux';
 
 export type { ReactRenderer, RendererGlobs } from './configs/react';
 export { plugin } from './plugin';
@@ -29,7 +29,7 @@ const defaultDomFiles = ['**/src/**/*.{ts,tsx}'];
 
 export type ReactOption = boolean | RendererGlobs;
 
-export type TotvibeOptions = {
+export type ZypluxOptions = {
   ignores?: string[];
   nonDomReactFiles?: string[];
   react?: ReactOption;
@@ -47,7 +47,7 @@ const resolveRenderers = (react: ReactOption, domFiles: string[], nonDomFiles: s
   return react;
 };
 
-const create = (options: TotvibeOptions = {}) => {
+const create = (options: ZypluxOptions = {}) => {
   const {
     ignores = [],
     nonDomReactFiles = [],
@@ -68,14 +68,14 @@ const create = (options: TotvibeOptions = {}) => {
     perfectionistConfig,
     unicornConfig,
     ...(tanstack ? [tanstackRoutes] : []),
-    totvibeRules,
+    zypluxRules,
     prettier,
   );
 };
 
-export const totvibe = Object.assign(create, {
+export const zyplux = Object.assign(create, {
   withDefaults:
-    (defaults: TotvibeOptions) =>
-    (options: TotvibeOptions = {}) =>
+    (defaults: ZypluxOptions) =>
+    (options: ZypluxOptions = {}) =>
       create({ ...defaults, ...options }),
 });

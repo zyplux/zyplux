@@ -8,7 +8,7 @@ from cerberus.context import Context
 from cerberus.model import CheckResult, Repo
 
 ID = "ci-workflow"
-SUMMARY = "ci.yml exists, exposes a `ci` check, runs on PRs and pushes to main"
+SUMMARY = "ci.yml exists, exposes a `ci` check, runs on PRs (push to main recommended)"
 
 YamlMapping = dict[str | bool, Any]
 ON_KEY_AS_PYYAML_BOOL = True

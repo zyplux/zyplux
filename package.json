@@ -47,7 +47,7 @@
     "push": "bun scripts/pusher.ts"
   },
   "devDependencies": {
-    "@totvibe/eslint-config": "workspace:*",
+    "@zyplux/eslint-config": "workspace:*",
     "bun-types": "catalog:",
     "eslint": "catalog:",
     "knip": "catalog:",

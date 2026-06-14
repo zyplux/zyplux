@@ -1,5 +1,5 @@
 {
-  "name": "@totvibe/tests-rules",
+  "name": "@zyplux/tests-rules",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
-    "@totvibe/eslint-config": "workspace:*",
+    "@zyplux/eslint-config": "workspace:*",
     "bun-types": "catalog:",
     "eslint": "catalog:",
     "typescript-eslint": "catalog:",

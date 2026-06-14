@@ -9,6 +9,13 @@ SUMMARY = "CODEOWNERS present and covers /.github/"
 _LOCATIONS = (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS")
 
 
+def _covers_github(pattern: str) -> bool:
+    if pattern == "*":
+        return True
+    top = pattern.lstrip("/").split("/", 1)[0]
+    return top == ".github"
+
+
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
 
@@ -24,7 +31,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     ]
     if not owned_lines:
         res.fail("CODEOWNERS has no ownership rules")
-    elif not any(".github" in line for line in owned_lines):
+    elif not any(_covers_github(line.split()[0]) for line in owned_lines):
         res.warn("CODEOWNERS does not cover `/.github/`")
 
     if not res.problems:
