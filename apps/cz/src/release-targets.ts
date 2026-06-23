@@ -37,7 +37,7 @@ const ghcrImagePublished = async (repo: string, tag: string) => {
   return manifest.ok;
 };
 
-const fromRoot = (path: string) => new URL(`../${path}`, import.meta.url);
+const fromRoot = (path: string) => new URL(`../../../${path}`, import.meta.url);
 
 const readJsonVersion = async (dir: string) => {
   const parsed: unknown = JSON.parse(await readFile(fromRoot(`${dir}/package.json`), 'utf8'));

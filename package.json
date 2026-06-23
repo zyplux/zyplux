@@ -10,7 +10,7 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "scripts",
+      "apps/*",
       "tests/*"
     ],
     "catalog": {
@@ -44,9 +44,7 @@
     "lint:fix": "bun run lint --fix",
     "test": "vitest run",
     "upgrade": "npm-check-updates --root --workspaces --format group",
-    "release": "bun run --filter @zyplux/scripts release",
-    "push": "bun run --filter @zyplux/scripts push",
-    "clone": "bun run --filter @zyplux/scripts clone"
+    "cli": "bun apps/cz/src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "catalog:",

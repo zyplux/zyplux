@@ -1,4 +1,4 @@
-import { type ReleaseTarget, releaseTargets } from '@zyplux/scripts/release-targets';
+import { type ReleaseTarget, releaseTargets } from '@zyplux/cz/release-targets';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';

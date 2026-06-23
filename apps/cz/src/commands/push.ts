@@ -1,11 +1,30 @@
-import { $ } from './shell-harness';
-import { ensure, poll, readTrimmed } from './util';
+import type { InferValue } from '@optique/core/parser';
 
-const isReady = process.argv.includes('--ready') || process.argv.includes('-r');
+import { object } from '@optique/core/constructs';
+import { message } from '@optique/core/message';
+import { command, constant, option } from '@optique/core/primitives';
+
+import { $ } from '#shell-harness';
+import { ensure, poll, readTrimmed } from '#util';
+
+export const pushCommand = command(
+  'push',
+  object({
+    command: constant('push' as const),
+    ready: option('-r', '--ready', {
+      description: message`Mark the PR ready for review and enable auto-merge once checks are clean.`,
+    }),
+  }),
+  {
+    brief: message`Push the current branch and open or advance its draft PR.`,
+  },
+);
+
+type PushConfig = InferValue<typeof pushCommand>;
 
 const readPrField = async (json: string, jq: string) => readTrimmed($.gh.pr.view({ jq, json }));
 
-const push = async () => {
+export const runPush = async ({ ready }: PushConfig) => {
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');
@@ -26,12 +45,12 @@ const push = async () => {
   if (existing !== 'OPEN') {
     await $.gh.pr.create({ base: 'main', body: '', draft: true, title: branch });
   }
-  if (isReady && (await readPrField('isDraft', '.isDraft')) === 'true') {
+  if (ready && (await readPrField('isDraft', '.isDraft')) === 'true') {
     await $.gh.pr.ready();
   }
 
   const url = await readPrField('url', '.url');
-  if (!isReady) {
+  if (!ready) {
     console.log(`PR (draft): ${url}`);
     return;
   }
@@ -55,10 +74,3 @@ const push = async () => {
     console.log(`PR ready, auto-merge scheduled (${mergeState}): ${url}`);
   }
 };
-
-try {
-  await push();
-} catch (error) {
-  console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-}

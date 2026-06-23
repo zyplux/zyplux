@@ -1,6 +1,20 @@
-import { releaseTargets } from './release-targets';
-import { $ } from './shell-harness';
-import { ensure, poll, readTrimmed } from './util';
+import { object } from '@optique/core/constructs';
+import { message } from '@optique/core/message';
+import { command, constant } from '@optique/core/primitives';
+
+import { releaseTargets } from '#release-targets';
+import { $ } from '#shell-harness';
+import { ensure, poll, readTrimmed } from '#util';
+
+export const releaseCommand = command(
+  'release',
+  object({
+    command: constant('release' as const),
+  }),
+  {
+    brief: message`Publish any bumped release target (npm, PyPI, GHCR) via a GitHub release.`,
+  },
+);
 
 type Target = {
   isPublished: () => Promise<boolean>;
@@ -63,7 +77,7 @@ const publish = async (target: Target, remoteHead: string) => {
   console.log(`Published ${target.label} ${target.version}`);
 };
 
-const release = async () => {
+export const runRelease = async () => {
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch === 'main', `releases are cut from main, not '${branch}'`);
 
@@ -92,10 +106,3 @@ const release = async () => {
     await publish(target, remoteHead);
   }
 };
-
-try {
-  await release();
-} catch (error) {
-  console.error(`error: ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
-}

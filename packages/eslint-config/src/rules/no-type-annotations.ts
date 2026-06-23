@@ -173,8 +173,11 @@ const collectReturnExpressions = (node: ts.Node, found: ts.Expression[]) => {
   });
 };
 
-const hasFixedFields = (annotationType: ts.Type) =>
-  annotationType.getProperties().length > 0 && !annotationType.getStringIndexType();
+const isCallableType = (type: ts.Type) =>
+  type.getCallSignatures().length > 0 || type.getConstructSignatures().length > 0;
+
+const isClosedShape = (annotationType: ts.Type) =>
+  (annotationType.getProperties().length > 0 || isCallableType(annotationType)) && !annotationType.getStringIndexType();
 
 const isNamedField = (member: ts.Symbol) => !member.getName().startsWith('__');
 
@@ -351,7 +354,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
     };
 
     const reportNarrowing = ({ annotationNode, annotationType, fix, messageId, valueTypes }: NarrowingReport) => {
-      if (!hasFixedFields(annotationType)) return;
+      if (!isClosedShape(annotationType)) return;
       const hidden = findHiddenMembers(annotationType, valueTypes);
       if (hidden.length === 0) return;
 
@@ -462,7 +465,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
   meta: {
     docs: {
       description:
-        "Disallow type annotations that add nothing — either restating a type TypeScript already infers (`redundant`) or narrowing a value to a supertype that hides members it actually has (`narrowing`) — and remove or suggest removing them. Each concern is an independent option, `error` by default, so a config may enforce one without the other. The cheap `redundant` checks run first and a redundant report short-circuits the type-comparing `narrowing` pass for the same node. `redundant` (autofix), exempt at a module boundary (exported declarations, whose annotations may be load-bearing for declaration emit): (1) arrow-function return types — skipping type predicates, generic returns that reference a type parameter, and recursive arrows; (2) arrow parameters whose type is fixed by a contextual function type independent of the annotation (`arr.map((x: number) => …)`, `const f: (a: T) => … = (a: T) => …`) — a parameter with no contextual type, one that widens past it, or one whose contextual type merely echoes the annotation (a self-referential `Object.assign` source object, or a generic higher-order function that infers its own type parameter from the callback, `pipe<A>(f: (a: A) => void)`) keeps its annotation; (3) `const`/`let`/class-property declarations whose annotation matches the type inferred from a self-determined initializer (identifier, member access, template literal, unary or binary expression) — call/`new`/object/array/arrow initializers are left alone, since their inferred type can depend on the annotation. `narrowing` (suggestion, since removal widens the exposed type), applied everywhere including exported declarations — narrowing discards information regardless of visibility, so there is no module-boundary excuse: function return types (arrow, function, and method, comparing the annotation against the members common to every `return`) and `const`/`let`/class-field declarations. Skipped: type predicates, recursive functions, generic returns referencing a type parameter, async and generator functions, and a reassigned `let` or class field (whose wider annotation may be load-bearing for a later assignment). Only annotations that hide a member are reported, so an index-signature ('open dictionary') type, erasure to `any`/`unknown`/`{}`, and literal widening (`number` for `5`) never are — while narrowing through any named type, base class, interface, or readonly collection view such as `ReadonlySet` or `readonly T[]` is.",
+        "Disallow type annotations that add nothing — either restating a type TypeScript already infers (`redundant`) or narrowing a value to a supertype that hides members it actually has (`narrowing`) — and remove or suggest removing them. Each concern is an independent option, `error` by default, so a config may enforce one without the other. The cheap `redundant` checks run first and a redundant report short-circuits the type-comparing `narrowing` pass for the same node. `redundant` (autofix), exempt at a module boundary (exported declarations, whose annotations may be load-bearing for declaration emit): (1) arrow-function return types — skipping type predicates, generic returns that reference a type parameter, and recursive arrows; (2) arrow parameters whose type is fixed by a contextual function type independent of the annotation (`arr.map((x: number) => …)`, `const f: (a: T) => … = (a: T) => …`) — a parameter with no contextual type, one that widens past it, or one whose contextual type merely echoes the annotation (a self-referential `Object.assign` source object, or a generic higher-order function that infers its own type parameter from the callback, `pipe<A>(f: (a: A) => void)`) keeps its annotation; (3) `const`/`let`/class-property declarations whose annotation matches the type inferred from a self-determined initializer (identifier, member access, template literal, unary or binary expression) — call/`new`/object/array/arrow initializers are left alone, since their inferred type can depend on the annotation. `narrowing` (suggestion, since removal widens the exposed type), applied everywhere including exported declarations — narrowing discards information regardless of visibility, so there is no module-boundary excuse: function return types (arrow, function, and method, comparing the annotation against the members common to every `return`) and `const`/`let`/class-field declarations. Skipped: type predicates, recursive functions, generic returns referencing a type parameter, async and generator functions, and a reassigned `let` or class field (whose wider annotation may be load-bearing for a later assignment). Only annotations that hide a member are reported, so an index-signature ('open dictionary') type, erasure to `any`/`unknown`/`{}`, and literal widening (`number` for `5`) never are — while narrowing through any named type, base class, interface, or readonly collection view such as `ReadonlySet` or `readonly T[]` is — as is a bare function or constructor type that drops a property the callable value actually carries (`const f: (x: number) => void = callableWithExtraProp`).",
     },
     fixable: 'code',
     hasSuggestions: true,

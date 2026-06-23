@@ -410,6 +410,39 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
       name: 'a field of an exported class narrows just like any other — a module boundary is no excuse',
       options: narrowingOnly,
     },
+    {
+      code: 'declare const wide: { (x: number): void; extra: number }; const f: (x: number) => void = wide;',
+      errors: [
+        {
+          messageId: 'narrowVarType',
+          suggestions: [
+            {
+              messageId: 'removeAnnotation',
+              output: 'declare const wide: { (x: number): void; extra: number }; const f = wide;',
+            },
+          ],
+        },
+      ],
+      name: 'a bare function-type annotation hides a property the callable value actually has',
+      options: narrowingOnly,
+    },
+    {
+      code: 'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = (): Fn => wide;',
+      errors: [
+        {
+          messageId: 'narrowReturnType',
+          suggestions: [
+            {
+              messageId: 'removeAnnotation',
+              output:
+                'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = () => wide;',
+            },
+          ],
+        },
+      ],
+      name: 'a function-type return annotation hides a property of the returned callable value',
+      options: narrowingOnly,
+    },
   ],
   valid: [
     {
@@ -485,6 +518,16 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
     {
       code: 'class C { count: number = 5; }',
       name: 'widening a numeric literal field to `number` hides no member',
+      options: narrowingOnly,
+    },
+    {
+      code: 'type Ctx = { id: string }; type StrictCreate = (context: Ctx) => Record<string, () => void>; const create: StrictCreate = context => ({});',
+      name: 'a function-type variable annotation over a plain function value hides nothing — the load-bearing form from create-rule.ts stays valid',
+      options: narrowingOnly,
+    },
+    {
+      code: 'declare const fn: (x: number) => void; const g: (x: number) => void = fn;',
+      name: 'a function-type annotation matching a plain function value exactly hides nothing',
       options: narrowingOnly,
     },
   ],

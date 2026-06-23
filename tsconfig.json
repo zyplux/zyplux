@@ -2,7 +2,7 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.tooling.json" },
-    { "path": "./scripts" },
+    { "path": "./apps/cz" },
     { "path": "./packages/eslint-config" },
     { "path": "./tests/rules" },
     { "path": "./tests/public-interface" },

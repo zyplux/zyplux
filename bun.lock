@@ -16,6 +16,21 @@
         "vitest": "catalog:",
       },
     },
+    "apps/cz": {
+      "name": "@zyplux/cz",
+      "version": "0.0.0",
+      "bin": {
+        "cz": "./src/index.ts",
+      },
+      "dependencies": {
+        "@optique/core": "^1.1.0",
+        "@optique/run": "^1.1.0",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@zyplux/tsconfig": "workspace:*",
+      },
+    },
     "packages/eslint-config": {
       "name": "@zyplux/eslint-config",
       "version": "0.6.0",
@@ -48,14 +63,6 @@
       "name": "@zyplux/tsconfig",
       "version": "0.1.0",
     },
-    "scripts": {
-      "name": "@zyplux/scripts",
-      "version": "0.0.0",
-      "devDependencies": {
-        "@types/bun": "catalog:",
-        "@zyplux/tsconfig": "workspace:*",
-      },
-    },
     "tests/public-interface": {
       "name": "@zyplux/tests-eslint-config",
       "version": "0.1.0",
@@ -71,7 +78,7 @@
       "version": "0.1.0",
       "devDependencies": {
         "@types/bun": "catalog:",
-        "@zyplux/scripts": "workspace:*",
+        "@zyplux/cz": "workspace:*",
         "@zyplux/tsconfig": "workspace:*",
         "vitest": "catalog:",
       },
@@ -188,6 +195,10 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.4", "", { "dependencies": { "@tybys/wasm-util": "^0.10.1" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow=="],
+
+    "@optique/core": ["@optique/core@1.1.0", "", {}, "sha512-eBqai76tHiFDoShlTNXN9AAPs9XznCJRrk4qmGhjZUSMmePCF9o1XU3okUHxHdDXXCHj4auKoIvCN79KNKErxA=="],
+
+    "@optique/run": ["@optique/run@1.1.0", "", { "dependencies": { "@optique/core": "1.1.0" } }, "sha512-dcuqqqU1Cpm9CLGEkCkpT/cpJ6H6a+hs0rP+iD8Tgwb+CPPZtX/hCfdIrqYyZ2RtYLxgc3S6KqC81AZAwEUPew=="],
 
     "@oxc-parser/binding-android-arm-eabi": ["@oxc-parser/binding-android-arm-eabi@0.135.0", "", { "os": "android", "cpu": "arm" }, "sha512-sHeZItACNcA5WRAWqF6ixriR4GkZDyY10gVgnZU7pXku1DjHFATSqnwZM809jl0gXPHxb6fKzYQCK7bNK5cACQ=="],
 
@@ -357,9 +368,9 @@
 
     "@vitest/utils": ["@vitest/utils@4.1.9", "", { "dependencies": { "@vitest/pretty-format": "4.1.9", "convert-source-map": "^2.0.0", "tinyrainbow": "^3.1.0" } }, "sha512-A51o8ymO5PpqlWNnBP9ZHPXDIpuMtTLlGSjN7la4US+LJzoUMyhwjA5QXlm39JexgwHKW4Xjs8Z2d3dLCXOeuA=="],
 
-    "@zyplux/eslint-config": ["@zyplux/eslint-config@workspace:packages/eslint-config"],
+    "@zyplux/cz": ["@zyplux/cz@workspace:apps/cz"],
 
-    "@zyplux/scripts": ["@zyplux/scripts@workspace:scripts"],
+    "@zyplux/eslint-config": ["@zyplux/eslint-config@workspace:packages/eslint-config"],
 
     "@zyplux/tests-eslint-config": ["@zyplux/tests-eslint-config@workspace:tests/public-interface"],
 
