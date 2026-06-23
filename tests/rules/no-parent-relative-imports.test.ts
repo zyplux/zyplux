@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'bun:test';
 import { Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
+import { describe, expect, it } from 'vitest';
 
 import { getMergedRule } from './merged-rule';
 
@@ -35,18 +35,18 @@ describe('no parent-relative (../) imports', () => {
   });
 
   it('allows same-directory relative imports', () => {
-    expect(restrictedImportErrors("import { x } from './x';")).toBeEmpty();
+    expect(restrictedImportErrors("import { x } from './x';")).toHaveLength(0);
   });
 
   it('allows path-alias imports', () => {
-    expect(restrictedImportErrors("import { x } from '@/x';")).toBeEmpty();
+    expect(restrictedImportErrors("import { x } from '@/x';")).toHaveLength(0);
   });
 
   it('allows bare package imports', () => {
-    expect(restrictedImportErrors("import { x } from 'node:path';")).toBeEmpty();
+    expect(restrictedImportErrors("import { x } from 'node:path';")).toHaveLength(0);
   });
 
   it('leaves non-import string arguments untouched', () => {
-    expect(restrictedImportErrors("const p = path.resolve(dir, '../..');")).toBeEmpty();
+    expect(restrictedImportErrors("const p = path.resolve(dir, '../..');")).toHaveLength(0);
   });
 });

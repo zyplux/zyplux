@@ -56,6 +56,7 @@
     "@eslint/js": "catalog:",
     "@typescript-eslint/type-utils": "catalog:",
     "@typescript-eslint/utils": "catalog:",
+    "@vitest/eslint-plugin": "catalog:",
     "eslint-config-prettier": "catalog:",
     "eslint-plugin-perfectionist": "catalog:",
     "eslint-plugin-prefer-arrow-functions": "catalog:",

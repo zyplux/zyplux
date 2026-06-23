@@ -12,6 +12,7 @@ from cerberus.checks import (
     ruleset_check,
     rumdl_config_check,
     secrets_check,
+    vitest_runner_check,
     workflow_tooling_check,
 )
 from cerberus.context import Context
@@ -35,6 +36,7 @@ ALL: tuple[Check, ...] = tuple(
         cerberus_step_check,
         workflow_tooling_check,
         rumdl_config_check,
+        vitest_runner_check,
         ruleset_check,
         secrets_check,
         codeowners_check,

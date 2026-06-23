@@ -41,7 +41,7 @@ lint:
 
 # Run tests for both workspaces. Optional arg filters by test name; never fails when nothing matches.
 test name='':
-    bun run test {{ if name == '' { '' } else { '-t "' + name + '" --passWithNoTests --pass-with-no-tests' } }}
+    bun run test {{ if name == '' { '' } else { '-t "' + name + '" --passWithNoTests' } }}
     uv run pytest {{ if name == '' { '' } else { '-k "' + name + '"' } }} || [ "$?" -eq 5 ]
 
 # Full gate across both workspaces: install, knip, typecheck, lint, test — autofix throughout.

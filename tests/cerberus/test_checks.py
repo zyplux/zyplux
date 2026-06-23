@@ -11,6 +11,7 @@ from cerberus.checks import (
     ruleset_check,
     rumdl_config_check,
     secrets_check,
+    vitest_runner_check,
     workflow_tooling_check,
 )
 from cerberus.model import Repo, Status
@@ -441,7 +442,7 @@ _TS_CI = (
 
 
 def _ci_files(*, python=False, ts=False, ci=""):
-    def lookup(r, path):
+    def lookup(_repo, path):
         if path == "pyproject.toml":
             return "x" if python else None
         if path == "package.json":
@@ -510,3 +511,64 @@ def test_ci_sequence_ts_missing_step_fails(monkeypatch, repo, ctx):
 def test_ci_sequence_missing_ci_file_fails(monkeypatch, repo, ctx):
     monkeypatch.setattr(ctx, "file", _ci_files(python=True, ci=""))
     assert ci_sequence_check.run(repo, ctx).status is Status.FAIL
+
+
+_VITEST_PKG = '{"scripts": {"test": "vitest run"}}'
+_BUN_TEST_PKG = '{"scripts": {"test": "bun test"}}'
+_BUN_FILTER_PKG = '{"scripts": {"test": "bun --filter \'*\' test"}}'
+_BUN_RUN_PKG = '{"scripts": {"test": "bun run test"}}'
+_VITEST_IMPORT = "import { describe, expect, it } from 'vitest';\n"
+_BUN_TEST_IMPORT = "import { describe, expect, it } from 'bun:test';\n"
+
+
+def _repo_files(mapping):
+    def lookup(_repo, path):
+        return mapping.get(path)
+
+    return lookup
+
+
+def _wire_files(monkeypatch, ctx, mapping):
+    monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(mapping))
+    monkeypatch.setattr(ctx, "file", _repo_files(mapping))
+
+
+def test_vitest_runner_skips_without_package_json(monkeypatch, repo, ctx):
+    _wire_files(monkeypatch, ctx, {"README.md": "# demo\n"})
+    assert vitest_runner_check.run(repo, ctx).status is Status.SKIP
+
+
+def test_vitest_runner_passes_on_vitest_repo(monkeypatch, repo, ctx):
+    _wire_files(monkeypatch, ctx, {"package.json": _VITEST_PKG, "src/a.test.ts": _VITEST_IMPORT})
+    assert vitest_runner_check.run(repo, ctx).status is Status.PASS
+
+
+def test_vitest_runner_flags_bun_test_import(monkeypatch, repo, ctx):
+    _wire_files(monkeypatch, ctx, {"package.json": _VITEST_PKG, "src/a.test.ts": _BUN_TEST_IMPORT})
+    assert vitest_runner_check.run(repo, ctx).status is Status.FAIL
+
+
+def test_vitest_runner_flags_bun_test_script(monkeypatch, repo, ctx):
+    _wire_files(monkeypatch, ctx, {"package.json": _BUN_TEST_PKG, "src/a.test.ts": _VITEST_IMPORT})
+    assert vitest_runner_check.run(repo, ctx).status is Status.FAIL
+
+
+def test_vitest_runner_allows_bun_filter_script(monkeypatch, repo, ctx):
+    _wire_files(
+        monkeypatch, ctx, {"package.json": _BUN_FILTER_PKG, "src/a.test.ts": _VITEST_IMPORT}
+    )
+    assert vitest_runner_check.run(repo, ctx).status is Status.PASS
+
+
+def test_vitest_runner_allows_bun_run_test_script(monkeypatch, repo, ctx):
+    _wire_files(monkeypatch, ctx, {"package.json": _BUN_RUN_PKG})
+    assert vitest_runner_check.run(repo, ctx).status is Status.PASS
+
+
+def test_vitest_runner_ignores_node_modules(monkeypatch, repo, ctx):
+    _wire_files(
+        monkeypatch,
+        ctx,
+        {"package.json": _VITEST_PKG, "node_modules/dep/x.test.ts": _BUN_TEST_IMPORT},
+    )
+    assert vitest_runner_check.run(repo, ctx).status is Status.PASS

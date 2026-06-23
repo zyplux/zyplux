@@ -18,7 +18,7 @@ import { zyplux } from '@zyplux/eslint-config';
 export default zyplux({ tsconfigRootDir: import.meta.dirname });
 ```
 
-One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), the custom `@zyplux` rules, and prettier last. React is off until you ask for it.
+One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), the custom `@zyplux` rules, vitest (recommended, on `*.{test,spec}.{ts,tsx}`), and prettier last. React is off until you ask for it.
 
 ## React renderers
 

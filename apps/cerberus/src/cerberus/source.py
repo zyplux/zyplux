@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Any, Protocol
 
-from cerberus import gh
+from cerberus import gh, proc
 from cerberus.config import Config
 from cerberus.model import Repo
 
@@ -36,6 +36,7 @@ class RepoSource(Protocol):
 
     def repos(self) -> list[Repo]: ...
     def file(self, repo: Repo, path: str) -> str | None: ...
+    def list_paths(self, repo: Repo) -> list[str]: ...
     def write_file(self, repo: Repo, path: str, content: str) -> None: ...
     def workflows(self, repo: Repo) -> dict[str, str]: ...
     def branch_rules(self, repo: Repo) -> list[dict[str, Any]]: ...
@@ -73,6 +74,19 @@ class GitHubSource:
 
     def file(self, repo: Repo, path: str) -> str | None:
         return gh.raw_file(repo.owner, repo.name, path)
+
+    def list_paths(self, repo: Repo) -> list[str]:
+        ref = f"repos/{repo.full_name}/git/trees/{repo.default_branch}?recursive=1"
+        try:
+            tree = gh.api(ref) or {}
+        except gh.GhError:
+            return []
+        entries = tree.get("tree", []) if isinstance(tree, dict) else []
+        return [
+            entry["path"]
+            for entry in entries
+            if entry.get("type") == "blob" and isinstance(entry.get("path"), str)
+        ]
 
     def write_file(self, repo: Repo, path: str, content: str) -> None:
         raise NotImplementedError("the org scan is read-only; --fix runs only on a local checkout")
@@ -162,6 +176,29 @@ class LocalSource:
             return (self.root / path).read_text()
         except OSError:
             return None
+
+    def list_paths(self, repo: Repo) -> list[str]:
+        tracked = self._git_tracked()
+        return tracked if tracked is not None else self._walk_files()
+
+    def _git_tracked(self) -> list[str] | None:
+        """Tracked file paths via git — mirrors the GitHub tree (honours .gitignore)."""
+        try:
+            result = proc.run(["git", "-C", str(self.root), "ls-files", "-z"])
+        except proc.ToolNotFoundError:
+            return None
+        if result.returncode != 0:
+            return None
+        return sorted(path for path in result.stdout.split("\0") if path)
+
+    def _walk_files(self) -> list[str]:
+        skip = {"node_modules", ".git", ".venv", "dist", ".output", "__pycache__"}
+        out: list[str] = []
+        for dirpath, dirnames, filenames in os.walk(self.root):
+            dirnames[:] = [name for name in dirnames if name not in skip]
+            base = Path(dirpath)
+            out.extend((base / name).relative_to(self.root).as_posix() for name in filenames)
+        return sorted(out)
 
     def write_file(self, repo: Repo, path: str, content: str) -> None:
         (self.root / path).write_text(content)

@@ -8,6 +8,7 @@ import { reactPresets, type RendererGlobs } from './configs/react';
 import { tanstackRoutes } from './configs/tanstack';
 import { typescript } from './configs/typescript';
 import { unicornConfig } from './configs/unicorn';
+import { vitestConfig } from './configs/vitest';
 import { zypluxRules } from './configs/zyplux';
 
 export type { ReactRenderer, RendererGlobs } from './configs/react';
@@ -71,6 +72,7 @@ const create = (options: ZypluxOptions = {}) => {
     unicornConfig,
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
+    vitestConfig,
     prettier,
   );
 };

@@ -32,6 +32,9 @@ class Context:
     def file(self, repo: Repo, path: str) -> str | None:
         return self._cached(("file", repo.name, path), lambda: self.source.file(repo, path))
 
+    def paths(self, repo: Repo) -> list[str]:
+        return self._cached(("paths", repo.name), lambda: self.source.list_paths(repo))
+
     def write_file(self, repo: Repo, path: str, content: str) -> None:
         self.source.write_file(repo, path, content)
         self._cache[("file", repo.name, path)] = content

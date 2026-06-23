@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'bun:test';
 import { Linter } from 'eslint';
+import { describe, expect, it } from 'vitest';
 
 import { getMergedRule } from './merged-rule';
 
@@ -21,10 +21,10 @@ describe('arrow-only no-restricted-syntax', () => {
   });
 
   it('exempts generator declarations — they have no arrow form', () => {
-    expect(arrowOnlyErrors('function* gen() { yield 1; }')).toBeEmpty();
+    expect(arrowOnlyErrors('function* gen() { yield 1; }')).toHaveLength(0);
   });
 
   it('exempts async generator expressions', () => {
-    expect(arrowOnlyErrors('const stream = async function* () { yield 1; };')).toBeEmpty();
+    expect(arrowOnlyErrors('const stream = async function* () { yield 1; };')).toHaveLength(0);
   });
 });

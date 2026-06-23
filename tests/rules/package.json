@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
@@ -12,6 +12,7 @@
     "bun-types": "catalog:",
     "eslint": "catalog:",
     "typescript-eslint": "catalog:",
+    "vitest": "catalog:",
     "zod": "catalog:"
   }
 }

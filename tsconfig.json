@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["bun-types"]
   },
-  "include": ["eslint.config.ts", "prettier.config.ts", "scripts/**/*.ts"]
+  "include": ["eslint.config.ts", "prettier.config.ts", "vitest.config.ts", "scripts/**/*.ts"]
 }

@@ -17,6 +17,7 @@
       "@typescript-eslint/rule-tester": "^8.61.1",
       "@typescript-eslint/type-utils": "^8.61.1",
       "@typescript-eslint/utils": "^8.61.1",
+      "@vitest/eslint-plugin": "^1.6.20",
       "bun-types": "^1.3.14",
       "eslint": "^10.5.0",
       "eslint-config-prettier": "^10.1.8",
@@ -40,7 +41,7 @@
     "typecheck": "tsc -p . && bun --elide-lines=0 --filter '*' typecheck",
     "lint": "eslint . --cache",
     "lint:fix": "bun run lint --fix",
-    "test": "bun --elide-lines=0 --filter '*' test",
+    "test": "vitest run",
     "upgrade": "npm-check-updates --root --workspaces --format group",
     "release": "bun scripts/release.ts",
     "push": "bun scripts/pusher.ts",
@@ -53,6 +54,7 @@
     "knip": "catalog:",
     "npm-check-updates": "catalog:",
     "prettier": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

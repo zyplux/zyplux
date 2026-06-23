@@ -1,5 +1,5 @@
 import { plugin, zyplux } from '@zyplux/eslint-config';
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 
 type Config = ReturnType<typeof zyplux>;
 
@@ -42,6 +42,15 @@ describe('zyplux', () => {
       .toSorted((a, b) => a.localeCompare(b));
     expect(exported.length).toBeGreaterThan(0);
     expect(enabled).toEqual(exported);
+  });
+
+  test('vitest rules are enabled and scoped to test files', () => {
+    const config = zyplux();
+    const entry = config.find(item => item.plugins !== undefined && 'vitest' in item.plugins);
+    expect(entry).toBeDefined();
+    expect(entry?.files).toEqual(['**/*.{test,spec}.{ts,tsx}']);
+    const vitestRules = Object.keys(entry?.rules ?? {}).filter(name => name.startsWith('vitest/'));
+    expect(vitestRules.length).toBeGreaterThan(0);
   });
 
   test('React config is opt-in', () => {

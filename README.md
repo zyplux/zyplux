@@ -1,13 +1,15 @@
 # zyp-cerberus
 
-Monorepo for the zyplux organization. Two workspaces:
+The zyplux organization's platform monorepo: it publishes shared tooling to npm and PyPI, and the product monorepos consume it. One source of truth for the org's standards, so they stay in lockstep instead of drifting per repo.
+
+It also hosts the org's publishable quality checks. Today:
 
 | Package                                         | What it is                                                                                                |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | [cerberus](apps/cerberus)                       | CLI that verifies org-wide repository invariants — CI workflows, rulesets, CODEOWNERS, secrets, justfiles |
 | [@zyplux/eslint-config](packages/eslint-config) | Shared ESLint flat config and custom rules                                                                |
 
-See each package's README for usage. cerberus is a Python (uv) workspace; eslint-config is a TypeScript (bun) workspace.
+More shared packages will land here over time — additional configs, scaffolding tools, and UI. See each package's README for usage. cerberus is a Python (uv) workspace; eslint-config is a TypeScript (bun) workspace.
 
 ## Develop
 

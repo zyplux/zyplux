@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@zyplux/eslint-config": "workspace:*",
-    "bun-types": "catalog:"
+    "bun-types": "catalog:",
+    "vitest": "catalog:"
   }
 }
