@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -31,12 +32,18 @@ class ControlPlaneUnavailable(RuntimeError):
     """A checkout-only source was asked for GitHub org/admin state it cannot reach."""
 
 
+class GitHistoryUnavailable(RuntimeError):
+    """Git history (tags, ref diffs) could not be read — git failed, or the source is API-only."""
+
+
 class RepoSource(Protocol):
     """Where a check reads a repo's facts from: the GitHub API, or a local checkout."""
 
     def repos(self) -> list[Repo]: ...
     def file(self, repo: Repo, path: str) -> str | None: ...
     def list_paths(self, repo: Repo) -> list[str]: ...
+    def tags(self, repo: Repo, prefix: str) -> list[str]: ...
+    def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]: ...
     def write_file(self, repo: Repo, path: str, content: str) -> None: ...
     def workflows(self, repo: Repo) -> dict[str, str]: ...
     def branch_rules(self, repo: Repo) -> list[dict[str, Any]]: ...
@@ -87,6 +94,16 @@ class GitHubSource:
             for entry in entries
             if entry.get("type") == "blob" and isinstance(entry.get("path"), str)
         ]
+
+    def tags(self, repo: Repo, prefix: str) -> list[str]:
+        raise GitHistoryUnavailable(
+            "git tags are not read from the GitHub API; run `cerberus lint`"
+        )
+
+    def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]:
+        raise GitHistoryUnavailable(
+            "ref diffs are not read from the GitHub API; run `cerberus lint`"
+        )
 
     def write_file(self, repo: Repo, path: str, content: str) -> None:
         raise NotImplementedError("the org scan is read-only; --fix runs only on a local checkout")
@@ -190,6 +207,22 @@ class LocalSource:
         if result.returncode != 0:
             return None
         return sorted(path for path in result.stdout.split("\0") if path)
+
+    def _git(self, args: list[str]) -> str:
+        try:
+            result = proc.run(["git", "-C", str(self.root), *args])
+        except proc.ToolNotFoundError as exc:
+            raise GitHistoryUnavailable(str(exc)) from exc
+        if result.returncode != 0:
+            raise GitHistoryUnavailable(result.stderr.strip() or f"git {args[0]} failed")
+        return result.stdout
+
+    def tags(self, repo: Repo, prefix: str) -> list[str]:
+        return [tag for tag in self._git(["tag", "--list", f"{prefix}*"]).splitlines() if tag]
+
+    def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]:
+        diff = self._git(["diff", "--name-only", ref, "HEAD", "--", *surface])
+        return [path for path in diff.splitlines() if path]
 
     def _walk_files(self) -> list[str]:
         skip = {"node_modules", ".git", ".venv", "dist", ".output", "__pycache__"}

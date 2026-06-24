@@ -22,6 +22,7 @@ class Scope(Enum):
 
     CONTENT = auto()  # in the checkout — runnable as a per-repo CI linter
     CONTROL_PLANE = auto()  # GitHub org/admin state — only the central org scan
+    GIT_HISTORY = auto()  # the checkout's git history — only the per-repo CI linter
 
 
 @dataclass(frozen=True)

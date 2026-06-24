@@ -1,16 +1,50 @@
-import { http, readJson } from '@zyplux/util';
+import { http, parseJson } from '@zyplux/util';
 import { readFile } from 'node:fs/promises';
 import * as z from 'zod';
 
-const PackageJsonSchema = z.object({ version: z.string() });
 const GhcrTokenSchema = z.object({ token: z.string() });
+const JsonFieldsSchema = z.record(z.string(), z.unknown());
+
+const VersionSourceSchema = z.union([
+  z.object({ file: z.string(), json: z.string() }),
+  z.object({ file: z.string(), regex: z.string() }),
+]);
+
+const TargetSchema = z.object({
+  kind: z.enum(['ghcr', 'npm', 'pypi']),
+  label: z.string(),
+  surface: z.array(z.string()),
+  tag_prefix: z.string(),
+  version: VersionSourceSchema,
+});
+
+const ManifestSchema = z.object({ target: z.array(TargetSchema) });
 
 export type ReleaseTarget = {
   isPublished: (version: string) => Promise<boolean>;
   label: string;
-  readSurface: () => string[];
   readVersion: () => Promise<string>;
   tagPrefix: string;
+};
+
+type TargetSpec = z.infer<typeof TargetSchema>;
+type VersionSource = z.infer<typeof VersionSourceSchema>;
+
+const fromRoot = (path: string) => new URL(`../../../${path}`, import.meta.url);
+
+const parseToml = <T>(text: string, schema: z.ZodType<T>) => schema.parse(Bun.TOML.parse(text));
+
+const readVersion = async (source: VersionSource) => {
+  const text = await readFile(fromRoot(source.file), 'utf8');
+  if ('json' in source) {
+    const fields = parseJson(text, JsonFieldsSchema);
+    return z.string().parse(fields[source.json]);
+  }
+  const version = new RegExp(source.regex, 'm').exec(text)?.[1];
+  if (version === undefined) {
+    throw new Error(`could not read version from ${source.file}`);
+  }
+  return version;
 };
 
 const httpOk = async (url: string) => {
@@ -46,66 +80,22 @@ const ghcrImagePublished = async (repo: string, tag: string) => {
   return manifest.ok;
 };
 
-const fromRoot = (path: string) => new URL(`../../../${path}`, import.meta.url);
-
-const readJsonVersion = async (dir: string) => {
-  const { version } = await readJson(fromRoot(`${dir}/package.json`), PackageJsonSchema);
-  return version;
-};
-
-const matchVersion = async (url: URL, pattern: RegExp, label: string) => {
-  const text = await readFile(url, 'utf8');
-  const version = pattern.exec(text)?.[1];
-  if (version === undefined) {
-    throw new Error(`could not read ${label}`);
+const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
+  if (kind === 'npm') {
+    return httpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
   }
-  return version;
+  if (kind === 'pypi') {
+    return httpOk(`https://pypi.org/pypi/${label}/${version}/json`);
+  }
+  return ghcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
 };
 
-export const releaseTargets: ReleaseTarget[] = [
-  {
-    isPublished: async version => httpOk(`https://registry.npmjs.org/@zyplux%2feslint-config/${version}`),
-    label: '@zyplux/eslint-config',
-    readSurface: () => [
-      'packages/eslint-config/package.json',
-      'packages/eslint-config/README.md',
-      'packages/eslint-config/src',
-    ],
-    readVersion: async () => readJsonVersion('packages/eslint-config'),
-    tagPrefix: 'eslint-config-v',
-  },
-  {
-    isPublished: async version => httpOk(`https://registry.npmjs.org/@zyplux%2ftsconfig/${version}`),
-    label: '@zyplux/tsconfig',
-    readSurface: () => ['packages/tsconfig'],
-    readVersion: async () => readJsonVersion('packages/tsconfig'),
-    tagPrefix: 'tsconfig-v',
-  },
-  {
-    isPublished: async version => httpOk(`https://registry.npmjs.org/@zyplux%2futil/${version}`),
-    label: '@zyplux/util',
-    readSurface: () => ['packages/util/package.json', 'packages/util/README.md', 'packages/util/src'],
-    readVersion: async () => readJsonVersion('packages/util'),
-    tagPrefix: 'util-v',
-  },
-  {
-    isPublished: async version => httpOk(`https://pypi.org/pypi/zyplux-cerberus/${version}/json`),
-    label: 'zyplux-cerberus',
-    readSurface: () => ['apps/cerberus/src', 'apps/cerberus/pyproject.toml', 'apps/cerberus/README.md'],
-    readVersion: async () =>
-      matchVersion(fromRoot('apps/cerberus/pyproject.toml'), /^version = "([^"]+)"/m, 'cerberus version'),
-    tagPrefix: 'cerberus-v',
-  },
-  {
-    isPublished: async version => ghcrImagePublished('zyplux/ci', version),
-    label: 'ghcr.io/zyplux/ci',
-    readSurface: () => ['containers/ci'],
-    readVersion: async () =>
-      matchVersion(
-        fromRoot('containers/ci/Containerfile'),
-        /^LABEL org\.opencontainers\.image\.version="([^"]+)"/m,
-        'image version',
-      ),
-    tagPrefix: 'ci-image-v',
-  },
-];
+export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
+  const manifest = parseToml(await readFile(fromRoot('release-targets.toml'), 'utf8'), ManifestSchema);
+  return manifest.target.map(spec => ({
+    isPublished: async (version: string) => isPublished(spec, version),
+    label: spec.label,
+    readVersion: async () => readVersion(spec.version),
+    tagPrefix: spec.tag_prefix,
+  }));
+};

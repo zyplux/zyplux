@@ -38,6 +38,49 @@ def test_local_list_paths_returns_tracked_and_skips_gitignored(tmp_path, repo):
     assert not any("node_modules" in path for path in paths)
 
 
+@requires_git
+def test_local_tags_lists_matching_prefix(tmp_path, repo):
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "ci@zyplux.test")
+    _git(tmp_path, "config", "user.name", "ci")
+    (tmp_path / "a.txt").write_text("one")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-m", "first")
+    _git(tmp_path, "tag", "widget-v0.1.0")
+    _git(tmp_path, "tag", "other-v9.9.9")
+
+    src = source.LocalSource(tmp_path)
+
+    assert src.tags(repo, "widget-v") == ["widget-v0.1.0"]
+    assert src.tags(repo, "absent-v") == []
+
+
+@requires_git
+def test_local_changed_paths_diffs_surface_against_ref(tmp_path, repo):
+    _git(tmp_path, "init")
+    _git(tmp_path, "config", "user.email", "ci@zyplux.test")
+    _git(tmp_path, "config", "user.name", "ci")
+    (tmp_path / "tracked.txt").write_text("one")
+    (tmp_path / "untouched.txt").write_text("stable")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-m", "first")
+    _git(tmp_path, "tag", "widget-v0.1.0")
+    (tmp_path / "tracked.txt").write_text("two")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-m", "second")
+
+    src = source.LocalSource(tmp_path)
+
+    assert src.changed_paths(repo, "widget-v0.1.0", ["tracked.txt"]) == ["tracked.txt"]
+    assert src.changed_paths(repo, "widget-v0.1.0", ["untouched.txt"]) == []
+
+
+@requires_git
+def test_local_tags_raises_outside_a_repo(tmp_path, repo):
+    with pytest.raises(source.GitHistoryUnavailable):
+        source.LocalSource(tmp_path).tags(repo, "widget-v")
+
+
 def test_github_list_paths_keeps_blobs_drops_trees(monkeypatch, repo):
     tree = {
         "tree": [

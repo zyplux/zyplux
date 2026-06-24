@@ -4,6 +4,7 @@ import { message } from '@optique/core/message';
 import { defineProgram } from '@optique/core/program';
 import { run } from '@optique/run';
 
+import { assertTagCommand, runAssertTag } from '#commands/assert-tag';
 import { cloneCommand, runClone } from '#commands/clone';
 import { pushCommand, runPush } from '#commands/push';
 import { releaseCommand, runRelease } from '#commands/release';
@@ -16,7 +17,7 @@ const program = defineProgram({
     name: 'cz',
     version: VERSION,
   },
-  parser: or(pushCommand, cloneCommand, releaseCommand),
+  parser: or(pushCommand, cloneCommand, releaseCommand, assertTagCommand),
 });
 
 const assertNever = (value: never) => {
@@ -33,6 +34,9 @@ const main = async () => {
   });
 
   switch (result.command) {
+    case 'assert-tag': {
+      return runAssertTag(result);
+    }
     case 'clone': {
       return runClone(result);
     }

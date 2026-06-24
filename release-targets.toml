@@ -1,0 +1,42 @@
+# Published release targets for this repo. Read by both `cz release` (to publish)
+# and cerberus's release-bumps check (to enforce a version bump when the surface
+# changes). A repo with no release-targets.toml publishes nothing and is skipped.
+
+[[target]]
+kind = "npm"
+label = "@zyplux/eslint-config"
+tag_prefix = "eslint-config-v"
+version = { file = "packages/eslint-config/package.json", json = "version" }
+surface = [
+    "packages/eslint-config/package.json",
+    "packages/eslint-config/README.md",
+    "packages/eslint-config/src",
+]
+
+[[target]]
+kind = "npm"
+label = "@zyplux/tsconfig"
+tag_prefix = "tsconfig-v"
+version = { file = "packages/tsconfig/package.json", json = "version" }
+surface = ["packages/tsconfig"]
+
+[[target]]
+kind = "npm"
+label = "@zyplux/util"
+tag_prefix = "util-v"
+version = { file = "packages/util/package.json", json = "version" }
+surface = ["packages/util/package.json", "packages/util/README.md", "packages/util/src"]
+
+[[target]]
+kind = "pypi"
+label = "zyplux-cerberus"
+tag_prefix = "cerberus-v"
+version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["apps/cerberus/src", "apps/cerberus/pyproject.toml", "apps/cerberus/README.md"]
+
+[[target]]
+kind = "ghcr"
+label = "ghcr.io/zyplux/ci"
+tag_prefix = "ci-image-v"
+version = { file = "containers/ci/Containerfile", regex = '^LABEL org\.opencontainers\.image\.version="([^"]+)"' }
+surface = ["containers/ci"]

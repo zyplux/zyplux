@@ -89,11 +89,27 @@ def _run_check(check: checks.Check, repo: Repo, ctx: Context) -> CheckResult:
         return crashed
 
 
+_LOCAL_SKIP = {Scope.CONTROL_PLANE: "evaluated by `cerberus org` (needs admin API)"}
+_ORG_SKIP = {Scope.GIT_HISTORY: "evaluated by `cerberus lint` (needs the checkout's git history)"}
+
+
+def _run_in_mode(
+    check: checks.Check, repo: Repo, ctx: Context, skip_reasons: dict[Scope, str]
+) -> CheckResult:
+    reason = skip_reasons.get(check.scope)
+    if reason is not None:
+        skipped = CheckResult(check.id, repo.name)
+        skipped.skip(reason)
+        return skipped
+    return _run_check(check, repo, ctx)
+
+
 def _evaluate(
     ctx: Context, repos: list[Repo], selected: list[checks.Check]
 ) -> dict[str, dict[str, CheckResult]]:
     return {
-        repo.name: {check.id: _run_check(check, repo, ctx) for check in selected} for repo in repos
+        repo.name: {check.id: _run_in_mode(check, repo, ctx, _ORG_SKIP) for check in selected}
+        for repo in repos
     }
 
 
@@ -118,9 +134,13 @@ def list_checks() -> None:
     table.add_column("id", no_wrap=True)
     table.add_column("scope")
     table.add_column("verifies")
+    scope_label = {
+        Scope.CONTENT: "content",
+        Scope.CONTROL_PLANE: "control-plane",
+        Scope.GIT_HISTORY: "git-history",
+    }
     for chk in checks.ALL:
-        scope = "content" if chk.scope is Scope.CONTENT else "control-plane"
-        table.add_row(chk.id, scope, chk.summary)
+        table.add_row(chk.id, scope_label[chk.scope], chk.summary)
     console.print(table)
 
 
@@ -145,14 +165,7 @@ def lint(
     repo = ctx.repos()[0]
     selected = _select_checks(check)
 
-    results: list[CheckResult] = []
-    for chk in selected:
-        if chk.scope is Scope.CONTROL_PLANE:
-            skipped = CheckResult(chk.id, repo.name)
-            skipped.skip("evaluated by `cerberus org` (needs admin API)")
-            results.append(skipped)
-        else:
-            results.append(_run_check(chk, repo, ctx))
+    results = [_run_in_mode(chk, repo, ctx, _LOCAL_SKIP) for chk in selected]
 
     _render_lint(repo, results)
     if _failed(results):

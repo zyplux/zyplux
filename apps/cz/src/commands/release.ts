@@ -4,7 +4,7 @@ import { command, constant } from '@optique/core/primitives';
 import { ensure, poll } from '@zyplux/util';
 import { $, readTrimmed } from '@zyplux/util/shell';
 
-import { releaseTargets } from '#release-targets';
+import { loadReleaseTargets } from '#release-targets';
 
 export const releaseCommand = command(
   'release',
@@ -28,9 +28,10 @@ const splitLines = (text: string) => (text ? text.split('\n') : []);
 const releaseExists = async (tag: string) =>
   (await readTrimmed($.gh.release.list({ jq: `any(.[]; .tagName == "${tag}")`, json: 'tagName' }))) === 'true';
 
-const buildTargets = async () =>
-  Promise.all(
-    releaseTargets.map(async target => {
+const buildTargets = async () => {
+  const targets = await loadReleaseTargets();
+  return Promise.all(
+    targets.map(async target => {
       const version = await target.readVersion();
       return {
         isPublished: async () => target.isPublished(version),
@@ -40,6 +41,7 @@ const buildTargets = async () =>
       };
     }),
   );
+};
 
 const publish = async (target: Target, remoteHead: string) => {
   console.log(`Cutting release ${target.tag} ...`);

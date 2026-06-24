@@ -21,15 +21,8 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - name: Assert release tag matches package version
-        working-directory: packages/eslint-config
-        run: |
-          version="$(bun --print "require('./package.json').version")"
-          tag="${GITHUB_REF_NAME#eslint-config-v}"
-          if [ "$version" != "$tag" ]; then
-            echo "::error::release tag '$GITHUB_REF_NAME' does not match package version '$version'"
-            exit 1
-          fi
+      - name: Assert release tag matches version
+        run: bun run cz assert-tag "$GITHUB_REF_NAME"
       - name: Authenticate to npm
         run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
         env:
@@ -52,15 +45,8 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - name: Assert release tag matches package version
-        working-directory: packages/tsconfig
-        run: |
-          version="$(bun --print "require('./package.json').version")"
-          tag="${GITHUB_REF_NAME#tsconfig-v}"
-          if [ "$version" != "$tag" ]; then
-            echo "::error::release tag '$GITHUB_REF_NAME' does not match package version '$version'"
-            exit 1
-          fi
+      - name: Assert release tag matches version
+        run: bun run cz assert-tag "$GITHUB_REF_NAME"
       - name: Authenticate to npm
         run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
         env:
@@ -82,15 +68,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.2.0
-      - name: Assert release tag matches package version
-        working-directory: apps/cerberus
-        run: |
-          version="$(uv version --short)"
-          tag="${GITHUB_REF_NAME#cerberus-v}"
-          if [ "$version" != "$tag" ]; then
-            echo "::error::release tag '$GITHUB_REF_NAME' does not match package version '$version'"
-            exit 1
-          fi
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Assert release tag matches version
+        run: bun run cz assert-tag "$GITHUB_REF_NAME"
       - name: Build
         run: uv build --package zyplux-cerberus
       - name: Publish
@@ -105,14 +88,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v6
-      - name: Assert release tag matches image version
-        run: |
-          version="$(grep -oP 'org\.opencontainers\.image\.version="\K[^"]+' containers/ci/Containerfile)"
-          tag="${GITHUB_REF_NAME#ci-image-v}"
-          if [ "$version" != "$tag" ]; then
-            echo "::error::release tag '$GITHUB_REF_NAME' does not match image version '$version'"
-            exit 1
-          fi
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Assert release tag matches version
+        run: bun run cz assert-tag "$GITHUB_REF_NAME"
       - name: Log in to GHCR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
