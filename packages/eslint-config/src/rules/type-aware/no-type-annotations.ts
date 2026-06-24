@@ -279,8 +279,8 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       const calleeSignatures = isConstruct ? calleeType.getConstructSignatures() : calleeType.getCallSignatures();
 
       return calleeSignatures.some(signature => {
-        const { typeParameters } = signature;
-        if (!typeParameters || typeParameters.length === 0) return false;
+        const typeParamsSet = new Set<ts.Type>(signature.typeParameters);
+        if (typeParamsSet.size === 0) return false;
 
         const calleeParam = signature.parameters[argIndex];
         if (!calleeParam?.valueDeclaration) return false;
@@ -290,7 +290,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
         if (!callbackParam?.valueDeclaration) return false;
 
         const callbackParamType = checker.getTypeOfSymbolAtLocation(callbackParam, callbackParam.valueDeclaration);
-        return new Set<ts.Type>(typeParameters).has(callbackParamType);
+        return typeParamsSet.has(callbackParamType);
       });
     };
 
