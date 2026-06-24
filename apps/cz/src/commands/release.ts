@@ -51,12 +51,12 @@ const publish = async (target: Target, remoteHead: string) => {
   await $.gh.release.create(target.tag, { generateNotes: true, target: remoteHead, title: target.tag });
 
   console.log('Watching the publish workflow ...');
-  const newRunQuery = `[.[] | select(.headSha=="${remoteHead}")] | .[].databaseId`;
+  const headRunsQuery = `[.[] | select(.headSha=="${remoteHead}")] | .[].databaseId`;
   const runId = await poll(
     async () => {
       const ids = splitLines(
         await readTrimmed(
-          $.gh.run.list({ event: 'release', jq: newRunQuery, json: 'databaseId,headSha', workflow: 'release.yml' }),
+          $.gh.run.list({ event: 'release', jq: headRunsQuery, json: 'databaseId,headSha', workflow: 'release.yml' }),
         ),
       );
       return ids.find(id => !knownRuns.includes(id));

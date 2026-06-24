@@ -33,7 +33,7 @@ type HttpMethod = 'DELETE' | 'GET' | 'HEAD' | 'PATCH' | 'POST' | 'PUT';
 export class FetchError extends Error {
   public readonly response: Response;
 
-  public constructor(response: Response, options: ErrorOptions) {
+  public constructor(response: Response, options?: ErrorOptions) {
     super(`fetch ${response.url} failed: ${response.status} ${response.statusText}`, options);
     this.name = 'FetchError';
     this.response = response;
