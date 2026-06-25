@@ -35,7 +35,7 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
 
   const versioned = `${label}:${version}`;
   const latest = `${label}:latest`;
-  await $`echo ${token} | podman login ghcr.io -u ${actor} --password-stdin`;
+  await $`podman login ghcr.io -u ${actor} --password-stdin < ${Buffer.from(token)}`;
   await $`podman build -t ${versioned} -t ${latest} ${dir}`;
   await $`podman push ${versioned}`;
   await $`podman push ${latest}`;
