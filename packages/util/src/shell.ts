@@ -1,4 +1,4 @@
-type ApiFlags = { input?: string; jq?: string; method?: string };
+type ApiFlags = { input?: string; jq?: string; method?: string; paginate?: boolean };
 
 type BranchFlags = { delete?: boolean; force?: boolean };
 

@@ -8,6 +8,7 @@ Repo automation for `zyp-cerberus`, exposed as the `cz` CLI.
 cz push [-r|--ready]    Push the current branch and open or advance its draft PR.
 cz clone <repo> [ref]   Shallow-clone a reference repo into reference_clones/.
 cz release              Publish any bumped release target via a GitHub release.
+cz bootstrap <LABEL>    First-publish a new npm target with a token (then enable trusted publishing).
 cz apply-ruleset        Upsert every org ruleset in .github/rulesets/ (needs org-admin gh auth).
 ```
 

@@ -18,7 +18,7 @@ export const applyRulesetCommand = command('apply-ruleset', object({ command: co
 });
 
 const listOrgRulesets = async () =>
-  parseJson(await readTrimmed($.gh.api(`orgs/${ORG}/rulesets`)), RulesetSummariesSchema);
+  parseJson(await readTrimmed($.gh.api(`orgs/${ORG}/rulesets`, { paginate: true })), RulesetSummariesSchema);
 
 export const runApplyRuleset = async () => {
   const entries = await readdir(RULESETS_DIR);
