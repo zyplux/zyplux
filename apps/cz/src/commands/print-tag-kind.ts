@@ -14,7 +14,10 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
 export const printTagKindCommand = command(
   'print-tag-kind',
   object({ command: constant('print-tag-kind' as const), tag: tagArgument }),
-  { brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.` },
+  {
+    aliases: ['pk'],
+    brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.`,
+  },
 );
 
 type PrintTagKindConfig = InferValue<typeof printTagKindCommand>;

@@ -15,6 +15,7 @@ export const pushBranchCommand = command(
     }),
   }),
   {
+    aliases: ['p'],
     brief: message`Push the current branch and open or advance its draft PR.`,
   },
 );

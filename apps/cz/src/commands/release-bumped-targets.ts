@@ -12,6 +12,7 @@ export const releaseBumpedTargetsCommand = command(
     command: constant('release-bumped-targets' as const),
   }),
   {
+    aliases: ['r', 'release'],
     brief: message`Publish any bumped release target (npm, PyPI, GHCR) via a GitHub release.`,
   },
 );

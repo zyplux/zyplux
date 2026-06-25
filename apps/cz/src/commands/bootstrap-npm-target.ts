@@ -17,6 +17,7 @@ export const bootstrapNpmTargetCommand = command(
   'bootstrap-npm-target',
   object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }),
   {
+    aliases: ['bn'],
     brief: message`First-publish a new npm target with a token so trusted publishing can be enabled afterward.`,
   },
 );

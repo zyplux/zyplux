@@ -17,6 +17,7 @@ export const applyOrgRulesetsCommand = command(
   'apply-org-rulesets',
   object({ command: constant('apply-org-rulesets' as const) }),
   {
+    aliases: ['a', 'ar', 'apply-rulesets'],
     brief: message`Upsert every org ruleset under .github/rulesets/ to GitHub as the source of truth.`,
   },
 );

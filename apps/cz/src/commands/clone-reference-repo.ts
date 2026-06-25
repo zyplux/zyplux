@@ -24,6 +24,7 @@ const cloneParser = merge(
 );
 
 export const cloneReferenceRepoCommand = command('clone-reference-repo', cloneParser, {
+  aliases: ['c', 'cr', 'clone'],
   brief: message`Shallow-clone a reference repo into reference_clones/.`,
 });
 

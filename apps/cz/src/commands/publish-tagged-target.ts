@@ -17,6 +17,7 @@ export const publishTaggedTargetCommand = command(
   'publish-tagged-target',
   object({ command: constant('publish-tagged-target' as const), tag: tagArgument }),
   {
+    aliases: ['pt'],
     brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
   },
 );

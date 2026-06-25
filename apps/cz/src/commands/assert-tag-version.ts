@@ -14,7 +14,10 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
 export const assertTagVersionCommand = command(
   'assert-tag-version',
   object({ command: constant('assert-tag-version' as const), tag: tagArgument }),
-  { brief: message`Assert a release tag matches its target's declared version (from release-targets.toml).` },
+  {
+    aliases: ['av'],
+    brief: message`Assert a release tag matches its target's declared version (from release-targets.toml).`,
+  },
 );
 
 type AssertTagVersionConfig = InferValue<typeof assertTagVersionCommand>;
