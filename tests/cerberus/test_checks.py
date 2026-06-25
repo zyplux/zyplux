@@ -9,7 +9,6 @@ from cerberus.checks import (
     ci_workflow_check,
     codeowners_check,
     justfile_check,
-    ruleset_check,
     rumdl_config_check,
     secrets_check,
     ts_project_references_check,
@@ -258,86 +257,6 @@ def test_workflow_tooling_allows_npm_publish(monkeypatch, repo, ctx):
     wf = "jobs:\n  ci:\n    steps:\n      - run: npm publish ./*.tgz --access public\n"
     monkeypatch.setattr(ctx, "workflows", lambda r: {"ci.yml": wf})
     assert workflow_tooling_check.run(repo, ctx).status is Status.PASS
-
-
-def _ruleset(*rules):
-    return list(rules)
-
-
-def _pr_rule(reviews=1, code_owners=True):
-    return {
-        "type": "pull_request",
-        "parameters": {
-            "required_approving_review_count": reviews,
-            "require_code_owner_review": code_owners,
-        },
-    }
-
-
-def _status_checks_rule(*contexts):
-    return {
-        "type": "required_status_checks",
-        "parameters": {"required_status_checks": [{"context": c} for c in contexts]},
-    }
-
-
-_GUARD_RULES = (
-    {"type": "required_linear_history"},
-    {"type": "non_fast_forward"},
-    {"type": "deletion"},
-)
-
-
-def _baseline_rules():
-    return _ruleset(_pr_rule(), _status_checks_rule("ci"), *_GUARD_RULES)
-
-
-def _wire_ruleset(monkeypatch, ctx, *, active=True, rules=None):
-    monkeypatch.setattr(ctx, "ruleset_active", lambda name: active)
-    monkeypatch.setattr(ctx, "branch_rules", lambda r: rules if rules is not None else [])
-
-
-def test_ruleset_baseline_passes(monkeypatch, repo, ctx):
-    _wire_ruleset(monkeypatch, ctx, rules=_baseline_rules())
-    assert ruleset_check.run(repo, ctx).status is Status.PASS
-
-
-def test_ruleset_inactive_fails(monkeypatch, repo, ctx):
-    _wire_ruleset(monkeypatch, ctx, active=False, rules=_baseline_rules())
-    assert ruleset_check.run(repo, ctx).status is Status.FAIL
-
-
-def test_ruleset_missing_pull_request_fails(monkeypatch, repo, ctx):
-    _wire_ruleset(monkeypatch, ctx, rules=_ruleset(_status_checks_rule("ci"), *_GUARD_RULES))
-    assert ruleset_check.run(repo, ctx).status is Status.FAIL
-
-
-def test_ruleset_too_few_reviews_fails(monkeypatch, repo, ctx):
-    rules = _ruleset(_pr_rule(reviews=0), _status_checks_rule("ci"), *_GUARD_RULES)
-    _wire_ruleset(monkeypatch, ctx, rules=rules)
-    assert ruleset_check.run(repo, ctx).status is Status.FAIL
-
-
-def test_ruleset_missing_code_owner_review_warns(monkeypatch, repo, ctx):
-    rules = _ruleset(_pr_rule(code_owners=False), _status_checks_rule("ci"), *_GUARD_RULES)
-    _wire_ruleset(monkeypatch, ctx, rules=rules)
-    assert ruleset_check.run(repo, ctx).status is Status.WARN
-
-
-def test_ruleset_missing_status_checks_fails(monkeypatch, repo, ctx):
-    _wire_ruleset(monkeypatch, ctx, rules=_ruleset(_pr_rule(), *_GUARD_RULES))
-    assert ruleset_check.run(repo, ctx).status is Status.FAIL
-
-
-def test_ruleset_missing_ci_context_fails(monkeypatch, repo, ctx):
-    rules = _ruleset(_pr_rule(), _status_checks_rule("build"), *_GUARD_RULES)
-    _wire_ruleset(monkeypatch, ctx, rules=rules)
-    assert ruleset_check.run(repo, ctx).status is Status.FAIL
-
-
-def test_ruleset_missing_guards_warn(monkeypatch, repo, ctx):
-    _wire_ruleset(monkeypatch, ctx, rules=_ruleset(_pr_rule(), _status_checks_rule("ci")))
-    assert ruleset_check.run(repo, ctx).status is Status.WARN
 
 
 _RUMDL_CANONICAL = (

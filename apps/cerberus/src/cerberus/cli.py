@@ -45,7 +45,6 @@ err = Console(stderr=True)
 _GLYPH = {
     Status.PASS: "[green]✓[/green]",
     Status.SKIP: "[dim]○[/dim]",
-    Status.WARN: "[yellow]●[/yellow]",
     Status.FAIL: "[red]✗[/red]",
     Status.ERROR: "[magenta]‼[/magenta]",
 }
@@ -155,9 +154,9 @@ def lint(
 ) -> None:
     """Lint a repository checkout against org invariants.
 
-    Control-plane checks (rulesets, secret provisioning) are skipped here — they
+    Control-plane checks (secret provisioning) are skipped here — they
     live in `cerberus org` because the checkout cannot see them. Exits non-zero
-    on any FAIL or ERROR (warnings do not fail the run), so it drops straight
+    on any FAIL or ERROR, so it drops straight
     into CI like any linter. `--fix` rewrites what it can (trailing whitespace)
     and leaves the rest to report.
     """
@@ -181,11 +180,7 @@ def _render_lint(repo: Repo, results: list[CheckResult]) -> None:
     if not problems:
         console.print("  [green]✓ all checks pass[/green]")
     else:
-        fails = sum(1 for _, f in problems if f.status.rank >= Status.FAIL.rank)
-        warns = sum(1 for _, f in problems if f.status is Status.WARN)
-        console.print(
-            f"\n[bold]✖ {len(problems)} problems ({fails} failures, {warns} warnings)[/bold]"
-        )
+        console.print(f"\n[bold]✖ {len(problems)} problems[/bold]")
 
 
 @app.command(name="org")
@@ -198,7 +193,7 @@ def org_scan(
     """Scan every repo in ORG and report findings per repo.
 
     Runs all checks, including the control-plane ones the local linter skips.
-    Exits non-zero on any FAIL or ERROR (warnings do not fail the run). Needs
+    Exits non-zero on any FAIL or ERROR. Needs
     `gh` authenticated with admin scope on the org.
     """
     try:

@@ -1,6 +1,5 @@
 org = "zyplux"
 exclude_repos = [".github", "client-roadmap-feedback", "zyplux-ai-pages"]
-ruleset_name = "default-branch-baseline"
 default_recipe_marker = "just --list"
 
 [aliases.required]

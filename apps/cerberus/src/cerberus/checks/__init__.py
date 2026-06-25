@@ -11,7 +11,6 @@ from cerberus.checks import (
     codeowners_check,
     justfile_check,
     release_bumps_check,
-    ruleset_check,
     rumdl_config_check,
     secrets_check,
     ts_project_references_check,
@@ -43,7 +42,6 @@ ALL: tuple[Check, ...] = tuple(
         ts_project_references_check,
         catalog_discipline_check,
         release_bumps_check,
-        ruleset_check,
         secrets_check,
         codeowners_check,
     )

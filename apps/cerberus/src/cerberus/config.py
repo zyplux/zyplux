@@ -10,7 +10,6 @@ from pathlib import Path
 class Config:
     org: str
     exclude_repos: tuple[str, ...]
-    ruleset_name: str
     default_recipe_marker: str
     required_aliases: dict[str, str]
     recommended_aliases: dict[str, str]
@@ -32,7 +31,6 @@ def _from_dict(data: dict) -> Config:
     return Config(
         org=data["org"],
         exclude_repos=tuple(data.get("exclude_repos", [])),
-        ruleset_name=data["ruleset_name"],
         default_recipe_marker=data["default_recipe_marker"],
         required_aliases=dict(aliases.get("required", {})),
         recommended_aliases=dict(aliases.get("recommended", {})),

@@ -1,3 +1,5 @@
+type ApiFlags = { input?: string; jq?: string; method?: string; paginate?: boolean };
+
 type BranchFlags = { delete?: boolean; force?: boolean };
 
 type CloneFlags = { branch?: string; depth?: number; singleBranch?: boolean };
@@ -42,6 +44,7 @@ const toArgs = (flags: Record<string, FlagValue>) =>
   Object.entries(flags).flatMap(([name, value]) => flag(name, value));
 
 const gh = {
+  api: async (endpoint: string, flags: ApiFlags = {}) => Bun.$`gh ${['api', ...toArgs(flags), endpoint]}`.quiet(),
   pr: {
     create: async (flags: PrCreateFlags) => Bun.$`gh ${['pr', 'create', ...toArgs(flags)]}`,
     list: async (flags: PrListFlags = {}) => Bun.$`gh ${['pr', 'list', ...toArgs(flags)]}`,

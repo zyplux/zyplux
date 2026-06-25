@@ -1,5 +1,6 @@
 import { http, parseJson } from '@zyplux/util';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import * as z from 'zod';
 
 const GhcrTokenSchema = z.object({ token: z.string() });
@@ -21,7 +22,9 @@ const TargetSchema = z.object({
 const ManifestSchema = z.object({ target: z.array(TargetSchema) });
 
 export type ReleaseTarget = {
+  dir: string;
   isPublished: (version: string) => Promise<boolean>;
+  kind: TargetSpec['kind'];
   label: string;
   readVersion: () => Promise<string>;
   tagPrefix: string;
@@ -93,7 +96,9 @@ const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const manifest = parseToml(await readFile(fromRoot('release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
+    dir: path.dirname(spec.version.file),
     isPublished: async (version: string) => isPublished(spec, version),
+    kind: spec.kind,
     label: spec.label,
     readVersion: async () => readVersion(spec.version),
     tagPrefix: spec.tag_prefix,

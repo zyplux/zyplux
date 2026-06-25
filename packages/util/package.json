@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/util",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Small Bun utilities: assertions, polling, zod-validated JSON reads, and a git/gh shell harness",
   "keywords": [
     "bun",

@@ -49,9 +49,6 @@ class Context:
     def workflows(self, repo: Repo) -> dict[str, str]:
         return self._cached(("workflows", repo.name), lambda: self.source.workflows(repo))
 
-    def branch_rules(self, repo: Repo) -> list[dict[str, Any]]:
-        return self._cached(("branch_rules", repo.name), lambda: self.source.branch_rules(repo))
-
     def repo_secrets(self, repo: Repo) -> set[str]:
         return self._cached(("repo_secrets", repo.name), lambda: self.source.repo_secrets(repo))
 
@@ -76,9 +73,6 @@ class Context:
         if visibility == "selected":
             return repo.name in self._org_secret_selected_repos(name)
         return False
-
-    def ruleset_active(self, name: str) -> bool:
-        return self._cached(("ruleset_active", name), lambda: self.source.ruleset_active(name))
 
 
 def github_context(config: Config) -> Context:

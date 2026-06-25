@@ -30,3 +30,17 @@ it('forms a release tag from its prefix and version', async () => {
   const version = await cerberus.readVersion();
   expect(`${cerberus.tagPrefix}${version}`).toMatch(/^cerberus-v\d+\.\d+\.\d+/);
 });
+
+it('exposes each target kind and the package directory holding its version source', async () => {
+  const targets = await loadReleaseTargets();
+
+  const util = targets.find(target => target.label === '@zyplux/util');
+  if (util === undefined) throw new Error('util target missing from manifest');
+  expect(util.kind).toBe('npm');
+  expect(util.dir).toBe('packages/util');
+
+  const cerberus = targets.find(target => target.label === 'zyplux-cerberus');
+  if (cerberus === undefined) throw new Error('cerberus target missing from manifest');
+  expect(cerberus.kind).toBe('pypi');
+  expect(cerberus.dir).toBe('apps/cerberus');
+});

@@ -4,7 +4,7 @@ import os
 import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Protocol
 
 from cerberus import gh, proc
 from cerberus.config import Config
@@ -46,11 +46,9 @@ class RepoSource(Protocol):
     def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]: ...
     def write_file(self, repo: Repo, path: str, content: str) -> None: ...
     def workflows(self, repo: Repo) -> dict[str, str]: ...
-    def branch_rules(self, repo: Repo) -> list[dict[str, Any]]: ...
     def repo_secrets(self, repo: Repo) -> set[str]: ...
     def org_secrets(self) -> dict[str, str]: ...
     def org_secret_selected_repos(self, name: str) -> set[str]: ...
-    def ruleset_active(self, name: str) -> bool: ...
 
 
 class GitHubSource:
@@ -122,12 +120,6 @@ class GitHubSource:
                     out[name] = content
         return out
 
-    def branch_rules(self, repo: Repo) -> list[dict[str, Any]]:
-        try:
-            return gh.api(f"repos/{repo.full_name}/rules/branches/{repo.default_branch}") or []
-        except gh.GhError:
-            return []
-
     def repo_secrets(self, repo: Repo) -> set[str]:
         try:
             data = gh.api(f"repos/{repo.full_name}/actions/secrets") or {}
@@ -149,18 +141,11 @@ class GitHubSource:
             return set()
         return {r["name"] for r in data.get("repositories", [])}
 
-    def ruleset_active(self, name: str) -> bool:
-        try:
-            rulesets = gh.api(f"orgs/{self.org}/rulesets") or []
-        except gh.GhError:
-            return False
-        return any(r.get("name") == name and r.get("enforcement") == "active" for r in rulesets)
-
 
 class LocalSource:
     """Reads a single repo from a working-tree checkout on disk.
 
-    Content lives in the checkout; GitHub control-plane state (rulesets, secret
+    Content lives in the checkout; GitHub control-plane state (secret
     provisioning) does not, so those reads raise ControlPlaneUnavailable and the
     runner skips control-plane checks in this mode.
     """
@@ -249,9 +234,6 @@ class LocalSource:
                     continue
         return out
 
-    def branch_rules(self, repo: Repo) -> list[dict[str, Any]]:
-        raise ControlPlaneUnavailable("branch rules are not readable from a checkout")
-
     def repo_secrets(self, repo: Repo) -> set[str]:
         raise ControlPlaneUnavailable("secret provisioning is not readable from a checkout")
 
@@ -260,6 +242,3 @@ class LocalSource:
 
     def org_secret_selected_repos(self, name: str) -> set[str]:
         raise ControlPlaneUnavailable("org secrets are not readable from a checkout")
-
-    def ruleset_active(self, name: str) -> bool:
-        raise ControlPlaneUnavailable("org rulesets are not readable from a checkout")

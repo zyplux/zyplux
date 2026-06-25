@@ -121,7 +121,7 @@ def test_lint_defaults_to_current_directory(
 @requires_just
 def test_lint_skips_control_plane_checks(tmp_path: Path) -> None:
     _make_conforming_repo(tmp_path)
-    result = runner.invoke(app, [str(tmp_path), "--check", "ruleset"])
+    result = runner.invoke(app, [str(tmp_path), "--check", "workflow-secrets"])
     assert result.exit_code == 0, result.output
     assert "all checks pass" in result.output.lower()
 
@@ -178,7 +178,6 @@ def test_list_command_lists_every_check() -> None:
         "workflow-tooling",
         "rumdl-config",
         "codeowners",
-        "ruleset",
         "workflow-secrets",
     ):
         assert check_id in result.output

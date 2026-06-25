@@ -14,7 +14,9 @@
     "./package.json": "./package.json"
   },
   "imports": {
+    "#commands/apply-ruleset": "./src/commands/apply-ruleset.ts",
     "#commands/assert-tag": "./src/commands/assert-tag.ts",
+    "#commands/bootstrap": "./src/commands/bootstrap.ts",
     "#commands/clone": "./src/commands/clone.ts",
     "#commands/push": "./src/commands/push.ts",
     "#commands/release": "./src/commands/release.ts",

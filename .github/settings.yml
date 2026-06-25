@@ -17,7 +17,8 @@ repository:
 
 # Personal repos grant collaborators write access regardless of the requested
 # permission (granular roles are org-only). Branch protection for `main` lives in
-# the org-level `default-branch-baseline` ruleset, not here.
+# the org-level `default-branch-baseline` ruleset, defined in
+# `.github/rulesets/` and applied with `just apply-org-ruleset` — not here.
 collaborators:
   - username: zyplux
     permission: push

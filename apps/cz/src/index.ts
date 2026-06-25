@@ -4,7 +4,9 @@ import { message } from '@optique/core/message';
 import { defineProgram } from '@optique/core/program';
 import { run } from '@optique/run';
 
+import { applyRulesetCommand, runApplyRuleset } from '#commands/apply-ruleset';
 import { assertTagCommand, runAssertTag } from '#commands/assert-tag';
+import { bootstrapCommand, runBootstrap } from '#commands/bootstrap';
 import { cloneCommand, runClone } from '#commands/clone';
 import { pushCommand, runPush } from '#commands/push';
 import { releaseCommand, runRelease } from '#commands/release';
@@ -17,7 +19,7 @@ const program = defineProgram({
     name: 'cz',
     version: VERSION,
   },
-  parser: or(pushCommand, cloneCommand, releaseCommand, assertTagCommand),
+  parser: or(pushCommand, cloneCommand, releaseCommand, assertTagCommand, bootstrapCommand, applyRulesetCommand),
 });
 
 const assertNever = (value: never) => {
@@ -34,8 +36,14 @@ const main = async () => {
   });
 
   switch (result.command) {
+    case 'apply-ruleset': {
+      return runApplyRuleset();
+    }
     case 'assert-tag': {
       return runAssertTag(result);
+    }
+    case 'bootstrap': {
+      return runBootstrap(result);
     }
     case 'clone': {
       return runClone(result);

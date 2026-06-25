@@ -13,7 +13,7 @@
     },
     "repository_name": {
       "include": ["~ALL"],
-      "exclude": [".github", "client-roadmap-feedback", "zyplux-ai-pages"]
+      "exclude": [".github", "zyplux-ai-pages"]
     }
   },
   "rules": [
@@ -25,7 +25,7 @@
       "parameters": {
         "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": true,
-        "require_code_owner_review": true,
+        "require_code_owner_review": false,
         "require_last_push_approval": false,
         "required_review_thread_resolution": true,
         "required_reviewers": [],

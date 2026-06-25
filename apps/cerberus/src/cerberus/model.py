@@ -7,13 +7,12 @@ from enum import Enum, auto
 class Status(Enum):
     PASS = auto()
     SKIP = auto()
-    WARN = auto()
     FAIL = auto()
     ERROR = auto()
 
     @property
     def rank(self) -> int:
-        order = (Status.PASS, Status.SKIP, Status.WARN, Status.FAIL, Status.ERROR)
+        order = (Status.PASS, Status.SKIP, Status.FAIL, Status.ERROR)
         return order.index(self)
 
 
@@ -59,9 +58,6 @@ class CheckResult:
     def ok(self, message: str) -> None:
         self.record(Status.PASS, message)
 
-    def warn(self, message: str) -> None:
-        self.record(Status.WARN, message)
-
     def fail(self, message: str) -> None:
         self.record(Status.FAIL, message)
 
@@ -79,4 +75,4 @@ class CheckResult:
 
     @property
     def problems(self) -> list[Finding]:
-        return [f for f in self.findings if f.status.rank >= Status.WARN.rank]
+        return [f for f in self.findings if f.status.rank >= Status.FAIL.rank]
