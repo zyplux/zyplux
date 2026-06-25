@@ -13,11 +13,15 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to publish (e.g. eslint-config-v1.2.3).`,
 });
 
-export const publishCommand = command('publish', object({ command: constant('publish' as const), tag: tagArgument }), {
-  brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
-});
+export const publishTaggedTargetCommand = command(
+  'publish-tagged-target',
+  object({ command: constant('publish-tagged-target' as const), tag: tagArgument }),
+  {
+    brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
+  },
+);
 
-type PublishConfig = InferValue<typeof publishCommand>;
+type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
 
 const publishNpm = async (dir: string) => {
   await $`cd ${dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`;
@@ -41,7 +45,7 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
   await $`podman push ${latest}`;
 };
 
-export const runPublish = async ({ tag }: PublishConfig) => {
+export const runPublishTaggedTarget = async ({ tag }: PublishTaggedTargetConfig) => {
   const { target, version } = await resolveReleaseTag(tag);
 
   if (await target.isPublished(version)) {

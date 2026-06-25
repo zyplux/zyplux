@@ -11,15 +11,15 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to classify (e.g. eslint-config-v1.2.3).`,
 });
 
-export const tagKindCommand = command(
-  'tag-kind',
-  object({ command: constant('tag-kind' as const), tag: tagArgument }),
+export const printTagKindCommand = command(
+  'print-tag-kind',
+  object({ command: constant('print-tag-kind' as const), tag: tagArgument }),
   { brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.` },
 );
 
-type TagKindConfig = InferValue<typeof tagKindCommand>;
+type PrintTagKindConfig = InferValue<typeof printTagKindCommand>;
 
-export const runTagKind = async ({ tag }: TagKindConfig) => {
+export const runPrintTagKind = async ({ tag }: PrintTagKindConfig) => {
   const { target } = await resolveReleaseTag(tag);
   console.log(target.kind);
 };

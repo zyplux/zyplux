@@ -6,10 +6,10 @@ import { command, constant, option } from '@optique/core/primitives';
 import { ensure, poll } from '@zyplux/util';
 import { $, readTrimmed } from '@zyplux/util/shell';
 
-export const pushCommand = command(
-  'push',
+export const pushBranchCommand = command(
+  'push-branch',
   object({
-    command: constant('push' as const),
+    command: constant('push-branch' as const),
     ready: option('-r', '--ready', {
       description: message`Mark the PR ready for review and enable auto-merge once checks are clean.`,
     }),
@@ -19,11 +19,11 @@ export const pushCommand = command(
   },
 );
 
-type PushConfig = InferValue<typeof pushCommand>;
+type PushBranchConfig = InferValue<typeof pushBranchCommand>;
 
 const readPrField = async (json: string, jq: string) => readTrimmed($.gh.pr.view({ jq, json }));
 
-export const runPush = async ({ ready }: PushConfig) => {
+export const runPushBranch = async ({ ready }: PushBranchConfig) => {
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');

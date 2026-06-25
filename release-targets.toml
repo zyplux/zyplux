@@ -1,5 +1,5 @@
-# Published release targets for this repo. Read by both `cz release` (to publish)
-# and cerberus's release-bumps check (to enforce a version bump when the surface
+# Published release targets for this repo. Read by both `cz release-bumped-targets`
+# (to publish) and cerberus's release-bumps check (to enforce a version bump when the surface
 # changes). A repo with no release-targets.toml publishes nothing and is skipped.
 
 [[target]]

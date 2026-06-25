@@ -13,14 +13,18 @@ const RULESETS_DIR = '.github/rulesets';
 const RulesetSummariesSchema = z.array(z.object({ id: z.number(), name: z.string() }));
 const RulesetFileSchema = z.object({ name: z.string() });
 
-export const applyRulesetCommand = command('apply-ruleset', object({ command: constant('apply-ruleset' as const) }), {
-  brief: message`Upsert every org ruleset under .github/rulesets/ to GitHub as the source of truth.`,
-});
+export const applyOrgRulesetsCommand = command(
+  'apply-org-rulesets',
+  object({ command: constant('apply-org-rulesets' as const) }),
+  {
+    brief: message`Upsert every org ruleset under .github/rulesets/ to GitHub as the source of truth.`,
+  },
+);
 
 const listOrgRulesets = async () =>
   parseJson(await readTrimmed($.gh.api(`orgs/${ORG}/rulesets`, { paginate: true })), RulesetSummariesSchema);
 
-export const runApplyRuleset = async () => {
+export const runApplyOrgRulesets = async () => {
   const entries = await readdir(RULESETS_DIR);
   const files = entries.filter(name => name.endsWith('.json')).toSorted((a, b) => a.localeCompare(b));
   const live = await listOrgRulesets();

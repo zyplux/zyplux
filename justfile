@@ -60,15 +60,15 @@ upgrade-interactive:
 
 # Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
 release:
-    bun run cz release
+    bun run cz release-bumped-targets
 
 # Upsert every org ruleset in .github/rulesets/ to GitHub (source of truth). Needs gh authenticated with org-admin scope.
 apply-org-ruleset:
-    bun run cz apply-ruleset
+    bun run cz apply-org-rulesets
 
 # Push the current branch and open a draft PR (-r/--ready marks it ready and enables auto-merge).
 push *flags:
-    bun run cz push {{ flags }}
+    bun run cz push-branch {{ flags }}
 
 # Push the current branch and open a PR marked ready, enabling auto-merge.
 push-ready: (push "--ready")
@@ -81,7 +81,7 @@ clean:
 
 # Shallow-clone a reference repo into reference_clones/ (optional branch or tag).
 clone repo ref="":
-    bun run cz clone {{ repo }} {{ ref }}
+    bun run cz clone-reference-repo {{ repo }} {{ ref }}
 
 # Dump the fully-resolved ESLint config (all rules) to packages/eslint-config/rules.json.
 dump-rules:

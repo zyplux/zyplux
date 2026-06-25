@@ -13,17 +13,17 @@ const labelArgument = argument(string({ metavar: 'LABEL' }), {
   description: message`npm target label to first-publish, e.g. @zyplux/util.`,
 });
 
-export const bootstrapCommand = command(
-  'bootstrap',
-  object({ command: constant('bootstrap' as const), label: labelArgument }),
+export const bootstrapNpmTargetCommand = command(
+  'bootstrap-npm-target',
+  object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }),
   {
     brief: message`First-publish a new npm target with a token so trusted publishing can be enabled afterward.`,
   },
 );
 
-type BootstrapConfig = InferValue<typeof bootstrapCommand>;
+type BootstrapNpmTargetConfig = InferValue<typeof bootstrapNpmTargetCommand>;
 
-export const runBootstrap = async ({ label }: BootstrapConfig) => {
+export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig) => {
   const targets = await loadReleaseTargets();
   const target = targets.find(candidate => candidate.label === label);
   ensure(target !== undefined, `no release target labeled '${label}' in release-targets.toml`);

@@ -4,14 +4,14 @@ import { message } from '@optique/core/message';
 import { defineProgram } from '@optique/core/program';
 import { run } from '@optique/run';
 
-import { applyRulesetCommand, runApplyRuleset } from '#commands/apply-ruleset';
-import { assertTagCommand, runAssertTag } from '#commands/assert-tag';
-import { bootstrapCommand, runBootstrap } from '#commands/bootstrap';
-import { cloneCommand, runClone } from '#commands/clone';
-import { publishCommand, runPublish } from '#commands/publish';
-import { pushCommand, runPush } from '#commands/push';
-import { releaseCommand, runRelease } from '#commands/release';
-import { runTagKind, tagKindCommand } from '#commands/tag-kind';
+import { applyOrgRulesetsCommand, runApplyOrgRulesets } from '#commands/apply-org-rulesets';
+import { assertTagVersionCommand, runAssertTagVersion } from '#commands/assert-tag-version';
+import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from '#commands/bootstrap-npm-target';
+import { cloneReferenceRepoCommand, runCloneReferenceRepo } from '#commands/clone-reference-repo';
+import { printTagKindCommand, runPrintTagKind } from '#commands/print-tag-kind';
+import { publishTaggedTargetCommand, runPublishTaggedTarget } from '#commands/publish-tagged-target';
+import { pushBranchCommand, runPushBranch } from '#commands/push-branch';
+import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from '#commands/release-bumped-targets';
 
 const VERSION = '0.0.0';
 
@@ -22,14 +22,14 @@ const program = defineProgram({
     version: VERSION,
   },
   parser: or(
-    pushCommand,
-    cloneCommand,
-    releaseCommand,
-    assertTagCommand,
-    bootstrapCommand,
-    applyRulesetCommand,
-    publishCommand,
-    tagKindCommand,
+    pushBranchCommand,
+    cloneReferenceRepoCommand,
+    releaseBumpedTargetsCommand,
+    assertTagVersionCommand,
+    bootstrapNpmTargetCommand,
+    applyOrgRulesetsCommand,
+    publishTaggedTargetCommand,
+    printTagKindCommand,
   ),
 });
 
@@ -47,29 +47,29 @@ const main = async () => {
   });
 
   switch (result.command) {
-    case 'apply-ruleset': {
-      return runApplyRuleset();
+    case 'apply-org-rulesets': {
+      return runApplyOrgRulesets();
     }
-    case 'assert-tag': {
-      return runAssertTag(result);
+    case 'assert-tag-version': {
+      return runAssertTagVersion(result);
     }
-    case 'bootstrap': {
-      return runBootstrap(result);
+    case 'bootstrap-npm-target': {
+      return runBootstrapNpmTarget(result);
     }
-    case 'clone': {
-      return runClone(result);
+    case 'clone-reference-repo': {
+      return runCloneReferenceRepo(result);
     }
-    case 'publish': {
-      return runPublish(result);
+    case 'print-tag-kind': {
+      return runPrintTagKind(result);
     }
-    case 'push': {
-      return runPush(result);
+    case 'publish-tagged-target': {
+      return runPublishTaggedTarget(result);
     }
-    case 'release': {
-      return runRelease();
+    case 'push-branch': {
+      return runPushBranch(result);
     }
-    case 'tag-kind': {
-      return runTagKind(result);
+    case 'release-bumped-targets': {
+      return runReleaseBumpedTargets();
     }
     default: {
       return assertNever(result);

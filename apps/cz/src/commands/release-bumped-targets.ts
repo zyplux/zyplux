@@ -6,10 +6,10 @@ import { $, readTrimmed } from '@zyplux/util/shell';
 
 import { loadReleaseTargets } from '#release-targets';
 
-export const releaseCommand = command(
-  'release',
+export const releaseBumpedTargetsCommand = command(
+  'release-bumped-targets',
   object({
-    command: constant('release' as const),
+    command: constant('release-bumped-targets' as const),
   }),
   {
     brief: message`Publish any bumped release target (npm, PyPI, GHCR) via a GitHub release.`,
@@ -84,7 +84,7 @@ const publish = async (target: Target, remoteHead: string) => {
   }
 };
 
-export const runRelease = async () => {
+export const runReleaseBumpedTargets = async () => {
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch === 'main', `releases are cut from main, not '${branch}'`);
 

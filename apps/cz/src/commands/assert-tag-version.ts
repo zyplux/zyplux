@@ -11,15 +11,15 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to verify (e.g. eslint-config-v1.2.3).`,
 });
 
-export const assertTagCommand = command(
-  'assert-tag',
-  object({ command: constant('assert-tag' as const), tag: tagArgument }),
+export const assertTagVersionCommand = command(
+  'assert-tag-version',
+  object({ command: constant('assert-tag-version' as const), tag: tagArgument }),
   { brief: message`Assert a release tag matches its target's declared version (from release-targets.toml).` },
 );
 
-type AssertTagConfig = InferValue<typeof assertTagCommand>;
+type AssertTagVersionConfig = InferValue<typeof assertTagVersionCommand>;
 
-export const runAssertTag = async ({ tag }: AssertTagConfig) => {
+export const runAssertTagVersion = async ({ tag }: AssertTagVersionConfig) => {
   const { target, version } = await resolveReleaseTag(tag);
   console.log(`${target.label} ${version} matches ${tag}`);
 };

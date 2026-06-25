@@ -19,17 +19,17 @@ const repoArgument = argument(string({ metavar: 'REPO' }), {
 });
 
 const cloneParser = merge(
-  object({ command: constant('clone' as const), repo: repoArgument }),
+  object({ command: constant('clone-reference-repo' as const), repo: repoArgument }),
   object({ ref: optional(refArgument) }),
 );
 
-export const cloneCommand = command('clone', cloneParser, {
+export const cloneReferenceRepoCommand = command('clone-reference-repo', cloneParser, {
   brief: message`Shallow-clone a reference repo into reference_clones/.`,
 });
 
-type CloneConfig = InferValue<typeof cloneCommand>;
+type CloneReferenceRepoConfig = InferValue<typeof cloneReferenceRepoCommand>;
 
-export const runClone = async ({ ref, repo }: CloneConfig) => {
+export const runCloneReferenceRepo = async ({ ref, repo }: CloneReferenceRepoConfig) => {
   const isUrl = repo.includes('://') || repo.startsWith('git@');
   const url = isUrl ? repo : `https://github.com/${repo}.git`;
   const dest = `reference_clones/${path.basename(repo).replace(/\.git$/, '')}`;
