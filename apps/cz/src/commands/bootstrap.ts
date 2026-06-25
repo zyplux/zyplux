@@ -36,7 +36,7 @@ export const runBootstrap = async ({ label }: BootstrapConfig) => {
   }
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
-  await $`cd ${target.dir} && bun pm pack && npm publish ./*.tgz --access public`;
+  await $`cd ${target.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`;
   console.log(
     `Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
   );

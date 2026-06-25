@@ -58,5 +58,11 @@
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "knip": {
+    "ignoreBinaries": [
+      "podman",
+      "uv"
+    ]
   }
 }

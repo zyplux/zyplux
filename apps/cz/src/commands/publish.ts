@@ -13,16 +13,14 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to publish, e.g. eslint-config-v1.2.3.`,
 });
 
-export const publishCommand = command(
-  'publish',
-  object({ command: constant('publish' as const), tag: tagArgument }),
-  { brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).` },
-);
+export const publishCommand = command('publish', object({ command: constant('publish' as const), tag: tagArgument }), {
+  brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
+});
 
 type PublishConfig = InferValue<typeof publishCommand>;
 
 const publishNpm = async (dir: string) => {
-  await $`cd ${dir} && bun pm pack && npm publish ./*.tgz --access public`;
+  await $`cd ${dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`;
 };
 
 const publishPypi = async (label: string) => {
@@ -30,8 +28,8 @@ const publishPypi = async (label: string) => {
 };
 
 const publishGhcr = async (label: string, dir: string, version: string) => {
-  const token = process.env.GH_TOKEN;
-  const actor = process.env.GITHUB_ACTOR;
+  const token = process.env['GH_TOKEN'];
+  const actor = process.env['GITHUB_ACTOR'];
   ensure(token !== undefined && token.length > 0, 'GH_TOKEN is required to push to GHCR');
   ensure(actor !== undefined && actor.length > 0, 'GITHUB_ACTOR is required to push to GHCR');
 
