@@ -1,4 +1,5 @@
 import { ensure, fetchJson, httpOk, parseJson, parseToml } from '@zyplux/util';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as z from 'zod';
@@ -33,10 +34,8 @@ export type ReleaseTarget = {
 type TargetSpec = z.infer<typeof TargetSchema>;
 type VersionSource = z.infer<typeof VersionSourceSchema>;
 
-const fromRoot = (path: string) => new URL(`../../../${path}`, import.meta.url);
-
-const readVersion = async (source: VersionSource) => {
-  const text = await readFile(fromRoot(source.file), 'utf8');
+const readVersion = async (repoRoot: string, source: VersionSource) => {
+  const text = await readFile(path.join(repoRoot, source.file), 'utf8');
   if ('json' in source) {
     const fields = parseJson(text, JsonFieldsSchema);
     return z.string().parse(fields[source.json]);
@@ -81,13 +80,14 @@ const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
 };
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
-  const manifest = parseToml(await readFile(fromRoot('release-targets.toml'), 'utf8'), ManifestSchema);
+  const repoRoot = await readTrimmed($.git.showToplevel());
+  const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
-    dir: path.dirname(spec.version.file),
+    dir: path.join(repoRoot, path.dirname(spec.version.file)),
     isPublished: async (version: string) => isPublished(spec, version),
     kind: spec.kind,
     label: spec.label,
-    readVersion: async () => readVersion(spec.version),
+    readVersion: async () => readVersion(repoRoot, spec.version),
     tagPrefix: spec.tag_prefix,
   }));
 };

@@ -1,4 +1,5 @@
 import { loadReleaseTargets, resolveReleaseTag } from '@zyplux/cz/release-targets';
+import path from 'node:path';
 import { expect, it } from 'vitest';
 
 it('loads every target declared in release-targets.toml', async () => {
@@ -38,12 +39,14 @@ it('exposes each target kind and the package directory holding its version sourc
   const util = targets.find(target => target.label === '@zyplux/util');
   if (util === undefined) throw new Error('util target missing from manifest');
   expect(util.kind).toBe('npm');
-  expect(util.dir).toBe('packages/util');
+  expect(path.isAbsolute(util.dir)).toBe(true);
+  expect(util.dir.endsWith(path.join('packages', 'util'))).toBe(true);
 
   const cerberus = targets.find(target => target.label === 'zyplux-cerberus');
   if (cerberus === undefined) throw new Error('cerberus target missing from manifest');
   expect(cerberus.kind).toBe('pypi');
-  expect(cerberus.dir).toBe('apps/cerberus');
+  expect(path.isAbsolute(cerberus.dir)).toBe(true);
+  expect(cerberus.dir.endsWith(path.join('apps', 'cerberus'))).toBe(true);
 });
 
 it('resolves a release tag to the target that owns it and its declared version', async () => {
