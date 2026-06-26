@@ -77,8 +77,7 @@ const git = {
   push: async (remote: string, branch: string, flags: PushFlags = {}) =>
     Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
   revParse: async (rev: string, flags: RevParseFlags = {}) => Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`,
-  showToplevel: async (cwd: string = process.cwd()) =>
-    Bun.$`git ${['rev-parse', '--show-toplevel']}`.cwd(cwd).quiet(),
+  showToplevel: async (cwd: string = process.cwd()) => Bun.$`git ${['rev-parse', '--show-toplevel']}`.cwd(cwd).quiet(),
   status: async (flags: StatusFlags = {}) => Bun.$`git ${['status', ...toArgs(flags)]}`,
 };
 
