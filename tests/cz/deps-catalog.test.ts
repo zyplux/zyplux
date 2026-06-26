@@ -6,10 +6,13 @@ type FetchRoute = (url: string) => Response;
 
 const test = base.extend<{ routeFetch: (route: FetchRoute) => void }>({
   routeFetch: async ({}, use) => {
-    await use(route => {
-      vi.stubGlobal('fetch', (input: string | URL) => Promise.resolve(route(String(input))));
-    });
-    vi.unstubAllGlobals();
+    try {
+      await use(route => {
+        vi.stubGlobal('fetch', (input: string | URL) => Promise.resolve(route(String(input))));
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   },
 });
 
