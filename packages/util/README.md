@@ -1,6 +1,6 @@
 # @zyplux/util
 
-Small Bun utilities — assertions, polling, bounded-concurrency mapping, zod-validated JSON/TOML parsing (from a string, a file, or a URL), repo-URL normalization, `package.json`/`pyproject.toml` manifest schemas, and a `git`/`gh` shell harness. Ships TypeScript source, consumed directly under Bun.
+Small Bun utilities — assertions, polling, bounded-concurrency mapping, zod-validated JSON parsing (from a string, a file, or a URL) and TOML parsing (from a string), repo-URL normalization, `package.json`/`pyproject.toml` manifest schemas, and a `git`/`gh` shell harness. Ships TypeScript source, consumed directly under Bun.
 
 ## Install
 
