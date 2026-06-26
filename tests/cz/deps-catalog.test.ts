@@ -1,4 +1,4 @@
-import { collectDependencyNames, collectDepRepos, resolveSourceRepo } from '@zyplux/cz/deps-catalog';
+import { collectDepRepos, collectDepsNames, resolveSourceRepo } from '@zyplux/cz/deps-catalog';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -43,21 +43,21 @@ const requestsViaPypi = (input: string | URL) => {
 
 const alwaysMissing = () => Promise.resolve(notFound());
 
-describe('collectDependencyNames', () => {
+describe('collectDepsNames', () => {
   it('collects npm dependency names from bun catalogs', async () => {
-    const { npm } = await collectDependencyNames(workspaceRoot);
+    const { npm } = await collectDepsNames(workspaceRoot);
     expect(npm).toEqual(
       expect.arrayContaining(['@optique/core', '@optique/run', 'eslint', 'typescript', 'vitest', 'zod']),
     );
   });
 
   it('collects python dependency names from project dependencies and dependency groups', async () => {
-    const { pypi } = await collectDependencyNames(workspaceRoot);
+    const { pypi } = await collectDepsNames(workspaceRoot);
     expect(pypi).toEqual(expect.arrayContaining(['pyrefly', 'pytest', 'pyyaml', 'ruff', 'rumdl', 'typer', 'vulture']));
   });
 
   it('excludes internal workspace packages from both ecosystems', async () => {
-    const { npm, pypi } = await collectDependencyNames(workspaceRoot);
+    const { npm, pypi } = await collectDepsNames(workspaceRoot);
     expect(npm).not.toContain('@zyplux/util');
     expect(npm).not.toContain('@zyplux/cz');
     expect(npm).not.toContain('@zyplux/tsconfig');
@@ -66,7 +66,7 @@ describe('collectDependencyNames', () => {
   });
 
   it('returns sorted, de-duplicated names', async () => {
-    const { npm, pypi } = await collectDependencyNames(workspaceRoot);
+    const { npm, pypi } = await collectDepsNames(workspaceRoot);
     expect(npm).toEqual([...new Set(npm)].toSorted(byLocale));
     expect(pypi).toEqual([...new Set(pypi)].toSorted(byLocale));
   });

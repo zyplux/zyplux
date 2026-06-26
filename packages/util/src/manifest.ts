@@ -2,15 +2,16 @@ import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import * as z from 'zod';
 
-const LooseRecordSchema = z.record(z.string(), z.unknown());
-export const StringRecordSchema = z.record(z.string(), z.string());
-const UnknownArraySchema = z.array(z.unknown());
-const StringArraySchema = z.array(z.string());
-const CatalogsSchema = z.record(z.string(), LooseRecordSchema);
-const UnknownArrayRecordSchema = z.record(z.string(), UnknownArraySchema);
+import {
+  LooseRecordSchema,
+  StringArraySchema,
+  StringRecordSchema,
+  UnknownArrayRecordSchema,
+  UnknownArraySchema,
+} from './schema';
+import { $ } from './shell';
 
-export const IdSchema = z.object({ id: z.string() });
-export const VersionKeySchema = z.object({ version: z.string() });
+const CatalogsSchema = z.record(z.string(), LooseRecordSchema);
 
 const RepositoryObjectSchema = z.object({ url: z.string().optional() });
 export const RepositorySchema = z.union([z.string(), RepositoryObjectSchema]);
@@ -113,12 +114,13 @@ export const pythonRequirementNames = (manifest: PyProject) => {
 };
 
 const isInsideRepo = async (dir: string) => {
-  const probe = await Bun.$`git rev-parse --is-inside-work-tree`.cwd(dir).quiet().nothrow();
+  const probe = await $.git.isInsideWorkTree(dir);
   return probe.exitCode === 0;
 };
 
 const trackedManifests = async (dir: string) => {
-  const listing = await Bun.$`git ls-files -z -- .`.cwd(dir).quiet().text();
+  const result = await $.git.lsFiles(dir);
+  const listing = result.text();
   const found: string[] = [];
   for (const relative of listing.split('\0')) {
     if (relative === '') continue;

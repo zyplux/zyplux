@@ -69,6 +69,10 @@ const git = {
   clone: async (url: string, dest: string, flags: CloneFlags = {}) =>
     Bun.$`git ${['clone', ...toArgs(flags), url, dest]}`,
   fetch: async (remote: string, branch: string) => Bun.$`git ${['fetch', remote, branch]}`,
+  isInsideWorkTree: async (cwd: string) =>
+    Bun.$`git ${['rev-parse', '--is-inside-work-tree']}`.cwd(cwd).quiet().nothrow(),
+  lsFiles: async (cwd: string, pathspec: string[] = ['.']) =>
+    Bun.$`git ${['ls-files', '-z', '--', ...pathspec]}`.cwd(cwd).quiet(),
   pull: async (flags: PullFlags = {}) => Bun.$`git ${['pull', ...toArgs(flags)]}`,
   push: async (remote: string, branch: string, flags: PushFlags = {}) =>
     Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,

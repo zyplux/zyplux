@@ -3,7 +3,6 @@ import type { ZodType } from 'zod';
 import { mapWithConcurrency, normalizeRepoUrl } from '@zyplux/util';
 import {
   findManifests,
-  IdSchema,
   normalizePythonName,
   npmDependencyNames,
   PackageJsonSchema,
@@ -11,9 +10,8 @@ import {
   pythonRequirementNames,
   RepositorySchema,
   repositoryUrl,
-  StringRecordSchema,
-  VersionKeySchema,
 } from '@zyplux/util/manifest';
+import { IdSchema, StringRecordSchema, VersionKeySchema } from '@zyplux/util/schema';
 import * as z from 'zod';
 
 export type CollectDepReposOptions = {
@@ -21,8 +19,6 @@ export type CollectDepReposOptions = {
   fetch?: FetchLike;
   localRepos?: Iterable<string>;
 };
-
-export type DependencyNames = { npm: string[]; pypi: string[] };
 
 export type DepReposReport = { repos: string[]; unresolved: PackageRef[] };
 
@@ -47,12 +43,11 @@ const NpmRegistrySchema = z.object({ homepage: z.string().optional(), repository
 const PypiInfoSchema = z.object({ home_page: z.string().nullish(), project_urls: StringRecordSchema.nullish() });
 const PypiProjectSchema = z.object({ info: PypiInfoSchema });
 
-const DEPS_DEV_SYSTEM: Record<PackageSystem, string> = { npm: 'npm', pypi: 'pypi' };
 const RESOLVE_CONCURRENCY = 8;
 
 const byLocale = (left: string, right: string) => left.localeCompare(right);
 
-const scanWorkspace = async (dir: string) => {
+export const collectDepsNames = async (dir: string) => {
   const npm = new Set<string>();
   const pypi = new Set<string>();
   const localNpmNames = new Set<string>();
@@ -92,11 +87,6 @@ const scanWorkspace = async (dir: string) => {
   };
 };
 
-export const collectDependencyNames = async (dir: string): Promise<DependencyNames> => {
-  const { npm, pypi } = await scanWorkspace(dir);
-  return { npm, pypi };
-};
-
 const fetchJson = async <T>(fetchImpl: FetchLike, url: string, schema: ZodType<T>): Promise<T | undefined> => {
   try {
     const response = await fetchImpl(url);
@@ -112,7 +102,7 @@ const defaultVersion = (pkg: undefined | z.infer<typeof DepsDevPackageSchema>) =
   pkg?.versions.find(entry => entry.isDefault === true)?.versionKey.version ?? pkg?.versions.at(-1)?.versionKey.version;
 
 const resolveViaDepsDev = async (system: PackageSystem, name: string, fetchImpl: FetchLike) => {
-  const base = `https://api.deps.dev/v3/systems/${DEPS_DEV_SYSTEM[system]}/packages/${encodeURIComponent(name)}`;
+  const base = `https://api.deps.dev/v3/systems/${system}/packages/${encodeURIComponent(name)}`;
   const version = defaultVersion(await fetchJson(fetchImpl, base, DepsDevPackageSchema));
   if (version === undefined) return;
   const detail = await fetchJson(fetchImpl, `${base}/versions/${encodeURIComponent(version)}`, DepsDevVersionSchema);
@@ -145,7 +135,7 @@ export const resolveSourceRepo = async (
 
 export const collectDepRepos = async (options: CollectDepReposOptions = {}): Promise<DepReposReport> => {
   const { dir = process.cwd(), fetch: fetchImpl = globalThis.fetch, localRepos } = options;
-  const scan = await scanWorkspace(dir);
+  const scan = await collectDepsNames(dir);
   const excluded = new Set(scan.localRepos);
   const extraRepos = localRepos ?? [];
   for (const repo of extraRepos) {
