@@ -24,8 +24,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - id: kind
         run: |
-          kind="$(bun run cz print-tag-kind "$GITHUB_REF_NAME" | tail -n1)"
-          test -n "$kind" || { echo "cz print-tag-kind produced no kind for $GITHUB_REF_NAME" >&2; exit 1; }
+          kind="$(bun run czyp print-tag-kind "$GITHUB_REF_NAME" | tail -n1)"
+          test -n "$kind" || { echo "czyp print-tag-kind produced no kind for $GITHUB_REF_NAME" >&2; exit 1; }
           echo "kind=$kind" >> "$GITHUB_OUTPUT"
 
   npm:
@@ -42,7 +42,7 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run cz publish-tagged-target "$GITHUB_REF_NAME"
+      - run: bun run czyp publish-tagged-target "$GITHUB_REF_NAME"
 
   pypi:
     name: publish to PyPI
@@ -60,7 +60,7 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run cz publish-tagged-target "$GITHUB_REF_NAME"
+      - run: bun run czyp publish-tagged-target "$GITHUB_REF_NAME"
 
   ghcr:
     name: publish CI image to GHCR
@@ -76,6 +76,6 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
-      - run: bun run cz publish-tagged-target "$GITHUB_REF_NAME"
+      - run: bun run czyp publish-tagged-target "$GITHUB_REF_NAME"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

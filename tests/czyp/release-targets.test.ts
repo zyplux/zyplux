@@ -1,4 +1,4 @@
-import { loadReleaseTargets, resolveReleaseTag } from '@zyplux/cz/release-targets';
+import { loadReleaseTargets, resolveReleaseTag } from 'czyp/release-targets';
 import { expect, it } from 'vitest';
 
 it('loads every target declared in release-targets.toml', async () => {
@@ -9,6 +9,7 @@ it('loads every target declared in release-targets.toml', async () => {
       '@zyplux/eslint-config',
       '@zyplux/tsconfig',
       '@zyplux/util',
+      'czyp',
       'zyplux-cerberus',
       'ghcr.io/zyplux/ci',
     ]),
