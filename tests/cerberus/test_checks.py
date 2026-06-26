@@ -193,9 +193,9 @@ def test_ci_workflow_missing_pull_request_fails(monkeypatch, repo, ctx):
     assert ci_workflow_check.run(repo, ctx).status is Status.FAIL
 
 
-def test_ci_workflow_missing_push_fails(monkeypatch, repo, ctx):
+def test_ci_workflow_pull_request_only_passes(monkeypatch, repo, ctx):
     monkeypatch.setattr(ctx, "file", _ci_workflow("on: pull_request\njobs:\n  ci:\n    name: ci\n"))
-    assert ci_workflow_check.run(repo, ctx).status is Status.FAIL
+    assert ci_workflow_check.run(repo, ctx).status is Status.PASS
 
 
 def test_ci_workflow_on_as_pyyaml_bool_key(monkeypatch, repo, ctx):

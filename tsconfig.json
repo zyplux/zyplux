@@ -2,10 +2,10 @@
   "files": [],
   "references": [
     { "path": "./tsconfig.tooling.json" },
-    { "path": "./apps/czyp" },
+    { "path": "./apps/cz" },
     { "path": "./packages/eslint-config" },
     { "path": "./packages/util" },
     { "path": "./tests/eslint-config" },
-    { "path": "./tests/czyp" }
+    { "path": "./tests/cz" }
   ]
 }

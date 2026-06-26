@@ -1,4 +1,4 @@
-import { loadReleaseTargets, resolveReleaseTag } from 'czyp/release-targets';
+import { loadReleaseTargets, resolveReleaseTag } from '@zyplux/cz/release-targets';
 import { expect, it } from 'vitest';
 
 it('loads every target declared in release-targets.toml', async () => {
@@ -6,10 +6,10 @@ it('loads every target declared in release-targets.toml', async () => {
   const labels = targets.map(target => target.label);
   expect(labels).toEqual(
     expect.arrayContaining([
+      '@zyplux/cz',
       '@zyplux/eslint-config',
       '@zyplux/tsconfig',
       '@zyplux/util',
-      'czyp',
       'zyplux-cerberus',
       'ghcr.io/zyplux/ci',
     ]),

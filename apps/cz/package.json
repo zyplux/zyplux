@@ -1,5 +1,5 @@
 {
-  "name": "czyp",
+  "name": "@zyplux/cz",
   "version": "0.1.0",
   "description": "Repo automation CLI: cut releases, push branches and PRs, apply org rulesets, and clone reference repos.",
   "keywords": [
@@ -12,15 +12,15 @@
   ],
   "license": "MIT",
   "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",
-  "homepage": "https://github.com/zyplux/zyp-cerberus/tree/main/apps/czyp",
+  "homepage": "https://github.com/zyplux/zyp-cerberus/tree/main/apps/cz",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zyplux/zyp-cerberus.git",
-    "directory": "apps/czyp"
+    "directory": "apps/cz"
   },
   "type": "module",
   "bin": {
-    "czyp": "./src/index.ts"
+    "cz": "./src/index.ts"
   },
   "exports": {
     "./release-targets": {

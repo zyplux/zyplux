@@ -1,0 +1,25 @@
+name: copilot-review-gate
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  statuses: write
+
+jobs:
+  pass:
+    name: pass
+    if: ${{ github.event.review.user.login == 'copilot-pull-request-reviewer[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: mark copilot-review success
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh api "repos/$REPO/statuses/$SHA" \
+            -f state=success \
+            -f context=copilot-review \
+            -f description='Copilot review completed'

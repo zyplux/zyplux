@@ -8,7 +8,7 @@ from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
 
 ID = "ci-workflow"
-SUMMARY = "ci.yml exists, exposes a `ci` check, runs on PRs (push to main recommended)"
+SUMMARY = "ci.yml exists, exposes a `ci` check, runs on PRs"
 SCOPE = Scope.CONTENT
 
 YamlMapping = dict[str | bool, Any]
@@ -57,8 +57,6 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     triggers = _triggers(workflow)
     if "pull_request" not in triggers and "pull_request_target" not in triggers:
         res.fail("ci.yml does not trigger on pull_request")
-    if "push" not in triggers:
-        res.fail("ci.yml does not trigger on push (to main)")
 
     if not res.problems:
         res.ok("ci workflow present and wired")

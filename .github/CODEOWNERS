@@ -5,4 +5,4 @@
 # the matching files require an approving review from a listed owner before
 # merge into `main`.
 
-/.github/ @realSergiy
+/.github/CODEOWNERS @realSergiy

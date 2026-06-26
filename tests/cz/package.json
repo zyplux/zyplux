@@ -1,5 +1,5 @@
 {
-  "name": "@zyplux/tests-czyp",
+  "name": "@zyplux/tests-cz",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,8 +8,8 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@zyplux/cz": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
-    "czyp": "workspace:*",
     "vitest": "catalog:"
   }
 }

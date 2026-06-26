@@ -1,9 +1,9 @@
 # Publishing
 
-Releases are cut by `just release` (`czyp release-bumped-targets`): it creates a GitHub
+Releases are cut by `just release` (`cz release-bumped-targets`): it creates a GitHub
 release per bumped target in `release-targets.toml`, and `release.yml` publishes it. A
 `resolve` job reads the tag's registry kind from the manifest, then one per-registry job
-runs `czyp publish-tagged-target "$TAG"`. Established packages publish via OIDC **trusted
+runs `cz publish-tagged-target "$TAG"`. Established packages publish via OIDC **trusted
 publishing** (no
 token) on both npm and PyPI. A brand-new package needs a one-time setup first, and
 that setup differs by registry.

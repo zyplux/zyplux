@@ -19,7 +19,7 @@ const VERSION = pkg.version;
 const program = defineProgram({
   metadata: {
     brief: message`Repo automation.`,
-    name: 'czyp',
+    name: 'cz',
     version: VERSION,
   },
   parser: or(
