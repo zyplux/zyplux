@@ -1,0 +1,154 @@
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
+import * as z from 'zod';
+
+const LooseRecordSchema = z.record(z.string(), z.unknown());
+export const StringRecordSchema = z.record(z.string(), z.string());
+const UnknownArraySchema = z.array(z.unknown());
+const StringArraySchema = z.array(z.string());
+const CatalogsSchema = z.record(z.string(), LooseRecordSchema);
+const UnknownArrayRecordSchema = z.record(z.string(), UnknownArraySchema);
+
+export const IdSchema = z.object({ id: z.string() });
+export const VersionKeySchema = z.object({ version: z.string() });
+
+const RepositoryObjectSchema = z.object({ url: z.string().optional() });
+export const RepositorySchema = z.union([z.string(), RepositoryObjectSchema]);
+
+const WorkspacesObjectSchema = z.object({
+  catalog: LooseRecordSchema.optional(),
+  catalogs: CatalogsSchema.optional(),
+});
+const WorkspacesSchema = z.union([StringArraySchema, WorkspacesObjectSchema]);
+
+export const PackageJsonSchema = z.object({
+  catalog: LooseRecordSchema.optional(),
+  catalogs: CatalogsSchema.optional(),
+  dependencies: LooseRecordSchema.optional(),
+  devDependencies: LooseRecordSchema.optional(),
+  name: z.string().optional(),
+  optionalDependencies: LooseRecordSchema.optional(),
+  peerDependencies: LooseRecordSchema.optional(),
+  repository: RepositorySchema.optional(),
+  workspaces: WorkspacesSchema.optional(),
+});
+
+const ProjectSchema = z.object({
+  dependencies: UnknownArraySchema.optional(),
+  name: z.string().optional(),
+  'optional-dependencies': UnknownArrayRecordSchema.optional(),
+  urls: StringRecordSchema.optional(),
+});
+
+const UvSchema = z.object({ 'dev-dependencies': UnknownArraySchema.optional() });
+const ToolSchema = z.object({ uv: UvSchema.optional() });
+
+export const PyProjectSchema = z.object({
+  'dependency-groups': UnknownArrayRecordSchema.optional(),
+  project: ProjectSchema.optional(),
+  tool: ToolSchema.optional(),
+});
+
+export type PackageJson = z.infer<typeof PackageJsonSchema>;
+export type PyProject = z.infer<typeof PyProjectSchema>;
+
+const LOCAL_NPM_PROTOCOL = /^(file|link|portal|workspace):/;
+const PYTHON_REQUIREMENT_NAME = /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)/;
+const NPM_DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const;
+const MANIFEST_BASENAMES = new Set(['package.json', 'pyproject.toml']);
+
+export const repositoryUrl = (repository: PackageJson['repository']) =>
+  typeof repository === 'string' ? repository : repository?.url;
+
+export const normalizePythonName = (requirement: string) => {
+  const name = PYTHON_REQUIREMENT_NAME.exec(requirement)?.[1];
+  if (name === undefined) return;
+  return name.toLowerCase().replaceAll(/[-_.]+/g, '-');
+};
+
+const catalogNames = (manifest: PackageJson) => {
+  const catalogs: Record<string, unknown>[] = [];
+  if (manifest.catalog !== undefined) catalogs.push(manifest.catalog);
+  if (manifest.catalogs !== undefined) catalogs.push(...Object.values(manifest.catalogs));
+  if (manifest.workspaces !== undefined && !Array.isArray(manifest.workspaces)) {
+    if (manifest.workspaces.catalog !== undefined) catalogs.push(manifest.workspaces.catalog);
+    if (manifest.workspaces.catalogs !== undefined) catalogs.push(...Object.values(manifest.workspaces.catalogs));
+  }
+  return catalogs.flatMap(catalog => Object.keys(catalog));
+};
+
+const declaredNpmNames = (manifest: PackageJson) => {
+  const names: string[] = [];
+  for (const field of NPM_DEPENDENCY_FIELDS) {
+    const entries = Object.entries(manifest[field] ?? {});
+    for (const [name, spec] of entries) {
+      if (typeof spec === 'string' && !LOCAL_NPM_PROTOCOL.test(spec)) names.push(name);
+    }
+  }
+  return names;
+};
+
+export const npmDependencyNames = (manifest: PackageJson) => [...catalogNames(manifest), ...declaredNpmNames(manifest)];
+
+export const pythonRequirementNames = (manifest: PyProject) => {
+  const requirements: string[] = [];
+  const collectStrings = (items: readonly unknown[] | undefined) => {
+    const list = items ?? [];
+    for (const item of list) if (typeof item === 'string') requirements.push(item);
+  };
+
+  collectStrings(manifest.project?.dependencies);
+  const optionalGroups = Object.values(manifest.project?.['optional-dependencies'] ?? {});
+  for (const group of optionalGroups) collectStrings(group);
+  const dependencyGroups = Object.values(manifest['dependency-groups'] ?? {});
+  for (const group of dependencyGroups) collectStrings(group);
+  collectStrings(manifest.tool?.uv?.['dev-dependencies']);
+
+  const names: string[] = [];
+  for (const requirement of requirements) {
+    const name = normalizePythonName(requirement);
+    if (name !== undefined && name !== 'python') names.push(name);
+  }
+  return names;
+};
+
+const isInsideRepo = async (dir: string) => {
+  const probe = await Bun.$`git rev-parse --is-inside-work-tree`.cwd(dir).quiet().nothrow();
+  return probe.exitCode === 0;
+};
+
+const trackedManifests = async (dir: string) => {
+  const listing = await Bun.$`git ls-files -z -- .`.cwd(dir).quiet().text();
+  const found: string[] = [];
+  for (const relative of listing.split('\0')) {
+    if (relative === '') continue;
+    const basename = relative.slice(relative.lastIndexOf('/') + 1);
+    if (MANIFEST_BASENAMES.has(basename)) found.push(path.join(dir, relative));
+  }
+  return found;
+};
+
+const findGitRepos = async (dir: string) => {
+  const repos: string[] = [];
+  const visit = async (current: string) => {
+    const entries = await readdir(current, { withFileTypes: true });
+    if (entries.some(entry => entry.name === '.git')) {
+      repos.push(current);
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+        await visit(path.join(current, entry.name));
+      }
+    }
+  };
+  await visit(dir);
+  return repos;
+};
+
+export const findManifests = async (dir: string) => {
+  if (await isInsideRepo(dir)) return trackedManifests(dir);
+  const repos = await findGitRepos(dir);
+  const listings = await Promise.all(repos.map(repo => trackedManifests(repo)));
+  return listings.flat();
+};

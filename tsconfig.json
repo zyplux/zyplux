@@ -6,6 +6,7 @@
     { "path": "./packages/eslint-config" },
     { "path": "./packages/util" },
     { "path": "./tests/eslint-config" },
-    { "path": "./tests/cz" }
+    { "path": "./tests/cz" },
+    { "path": "./tests/util" }
   ]
 }

@@ -23,6 +23,10 @@
     "cz": "./src/index.ts"
   },
   "exports": {
+    "./deps-catalog": {
+      "types": "./src/deps-catalog.ts",
+      "default": "./src/deps-catalog.ts"
+    },
     "./release-targets": {
       "types": "./src/release-targets.ts",
       "default": "./src/release-targets.ts"
@@ -34,10 +38,12 @@
     "#commands/assert-tag-version": "./src/commands/assert-tag-version.ts",
     "#commands/bootstrap-npm-target": "./src/commands/bootstrap-npm-target.ts",
     "#commands/clone-reference-repo": "./src/commands/clone-reference-repo.ts",
+    "#commands/deps-catalog": "./src/commands/deps-catalog.ts",
     "#commands/print-tag-kind": "./src/commands/print-tag-kind.ts",
     "#commands/publish-tagged-target": "./src/commands/publish-tagged-target.ts",
     "#commands/push-branch": "./src/commands/push-branch.ts",
     "#commands/release-bumped-targets": "./src/commands/release-bumped-targets.ts",
+    "#deps-catalog": "./src/deps-catalog.ts",
     "#package.json": "./package.json",
     "#release-targets": "./src/release-targets.ts"
   },

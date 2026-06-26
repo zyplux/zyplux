@@ -1,13 +1,15 @@
 {
   "name": "@zyplux/util",
   "version": "0.1.1",
-  "description": "Small Bun utilities: assertions, polling, zod-validated JSON reads, and a git/gh shell harness",
+  "description": "Small Bun utilities: assertions, polling, bounded-concurrency mapping, zod-validated JSON reads, repo-URL normalization, package.json/pyproject manifest schemas, and a git/gh shell harness",
   "keywords": [
     "bun",
     "utilities",
     "zod",
     "json",
-    "shell"
+    "shell",
+    "concurrency",
+    "manifest"
   ],
   "license": "MIT",
   "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",
@@ -22,6 +24,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./manifest": {
+      "types": "./src/manifest.ts",
+      "default": "./src/manifest.ts"
     },
     "./shell": {
       "types": "./src/shell.ts",

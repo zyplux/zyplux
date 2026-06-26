@@ -25,6 +25,7 @@ cz clone-reference-repo <repo> [ref]    Shallow-clone a reference repo into refe
 cz release-bumped-targets               Publish any bumped release target via a GitHub release.
 cz bootstrap-npm-target <LABEL>         First-publish a new npm target with a token (then enable trusted publishing).
 cz apply-org-rulesets                   Upsert every org ruleset in .github/rulesets/ (needs org-admin gh auth).
+cz deps-catalog [--dir DIR] [--out FILE] Resolve every dependency across the repos to its source repo; write catalog.json.
 ```
 
 ## License
