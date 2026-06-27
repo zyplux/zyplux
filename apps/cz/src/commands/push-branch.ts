@@ -46,6 +46,13 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   }
 
   if (ready && existing === 'OPEN' && (await readPrField('isDraft', '.isDraft')) === 'false') {
+    const localHead = await readTrimmed($.git.revParse('HEAD'));
+    const remoteRefLine = await readTrimmed($.git.lsRemote('origin', branch));
+    const remoteHead = remoteRefLine.split(/\s+/, 1)[0] ?? '';
+    ensure(
+      remoteHead !== localHead,
+      'nothing to push: HEAD is already on origin, so the draft→ready flip would not re-trigger Copilot review. Commit your change first and let this command push it during the cycle — do not pre-push the branch.',
+    );
     await $.gh.pr.ready({ undo: true });
   }
 

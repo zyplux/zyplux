@@ -76,6 +76,7 @@ const git = {
     Bun.$`git ${['rev-parse', '--is-inside-work-tree']}`.cwd(cwd).quiet().nothrow(),
   lsFiles: async (cwd: string, pathspec: string[] = ['.']) =>
     Bun.$`git ${['ls-files', '-z', '--', ...pathspec]}`.cwd(cwd).quiet(),
+  lsRemote: async (remote: string, ref: string) => Bun.$`git ${['ls-remote', remote, ref]}`.quiet(),
   pull: async (flags: PullFlags = {}) => Bun.$`git ${['pull', ...toArgs(flags)]}`,
   push: async (remote: string, branch: string, flags: PushFlags = {}) =>
     Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
