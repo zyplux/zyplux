@@ -32,14 +32,18 @@ jobs:
             gh api --method POST "repos/$REPO/statuses/$SHA" "${args[@]}"
           }
           ready=""
+          read_ok=""
           for _ in $(seq 1 40); do
-            if [ "$(gh api "repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null)" = "false" ]; then
-              ready=1
-              break
-            fi
+            draft=$(gh api "repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null) || draft=""
+            if [ "$draft" = "false" ]; then ready=1; read_ok=1; break; fi
+            if [ "$draft" = "true" ]; then read_ok=1; fi
             sleep 5
           done
           if [ -z "$ready" ]; then
+            if [ -z "$read_ok" ]; then
+              post error "Could not read PR draft state to gate the Copilot mirror" ""
+              exit 1
+            fi
             echo "::notice::PR is still draft after waiting; Copilot review is not expected, leaving no status"
             exit 0
           fi
