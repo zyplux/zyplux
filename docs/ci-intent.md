@@ -40,13 +40,14 @@ New pushes invalidate both ci and copilot_code_review.
 - copilot_code_review is requested and auto-starts when PR is marked as ready for review after a new push AND branch policy has automatic copilot_code_review setting
 - Copilot reviews are comment-only: they never count as approvals and never block merge natively (per GitHub docs)
 - the native `copilot-pull-request-reviewer` check-run shows up in the REST `commits/{sha}/check-runs` API but is excluded from the PR status rollup, so it can never satisfy a required status check — it stays "Expected" forever and blocks the PR
+- the Copilot check-run and review are produced by the `github-actions` app using `GITHUB_TOKEN`; GitHub never starts a workflow from an event triggered by `GITHUB_TOKEN` (recursion prevention), so the mirror cannot be driven by Copilot's `check_run` (or `pull_request_review`) completion — those events fire no workflow at all
 
 ## Implementation
 
 The invariants map onto enforceable GitHub mechanisms as follows:
 
 - `ci` mandatory — required status check (`ci`), `strict_required_status_checks_policy` ties it to the latest push.
-- `copilot_code_review` mandatory — cannot be required natively (see Observations). The `copilot-review-gate` workflow mirrors the Copilot check-run's completion onto a `copilot-review-complete` commit status (rollup-visible), which the ruleset requires. New pushes get a fresh SHA with no status yet, so the required check is unsatisfied until Copilot re-reviews — this is what invalidates it per push.
+- `copilot_code_review` mandatory — cannot be required natively (see Observations). The `copilot-review-gate` workflow triggers on `pull_request` (a human-initiated event that reliably fires, unlike the `GITHUB_TOKEN`-suppressed Copilot events), waits for the `copilot-pull-request-reviewer` check-run to complete, and mirrors its conclusion onto a `copilot-review-complete` commit status (rollup-visible), which the ruleset requires. Each push is a fresh SHA with no status yet, so the required check is unsatisfied until the mirror posts again — this is what invalidates it per push.
 - no unresolved review comments — `required_review_thread_resolution`.
 - human approvals only for CODEOWNERS files — `require_code_owner_review`, `required_approving_review_count: 0`, `require_last_push_approval: false`.
 
@@ -54,7 +55,7 @@ The invariants map onto enforceable GitHub mechanisms as follows:
 
 Re-triggering Copilot on a new commit requires the push to land _inside_ the draft→ready cycle: `cz push-branch --ready` (`just pr`) flips the PR to draft, pushes, then flips it back to ready, and that ready transition is what requests a fresh Copilot review. Pre-pushing the branch first makes the in-cycle push a no-op — no `synchronize`/`review_requested` event fires and Copilot stays silent. `cz push-branch --ready` guards against this: on an already-ready PR it compares local `HEAD` to the remote tip and errors when there is nothing to push, so the failure is loud instead of a silently un-reviewed PR.
 
-`check_run`-triggered workflows only run from the default branch's copy of the file, so `copilot-review-gate` starts mirroring only after it has merged to `main`; the PR that introduces it must have its `copilot-review-complete` status posted once by hand.
+The mirror is driven by the `pull_request` event rather than Copilot's completion: the Copilot check-run and review are created by the `github-actions` app via `GITHUB_TOKEN`, and `GITHUB_TOKEN`-triggered events never start a workflow, so a `check_run`/`pull_request_review` mirror would never fire. The gate workflow instead triggers on the human-initiated `pull_request` event and polls the check-runs API until Copilot finishes. Because `pull_request` workflows run from the PR branch's own copy, the gate takes effect in the PR that introduces it — no default-branch bootstrap is needed.
 
 ## Notes
 

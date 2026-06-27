@@ -1,32 +1,49 @@
 name: copilot-review-gate
 
 on:
-  check_run:
-    types: [completed]
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
   statuses: write
+  checks: read
+
+concurrency:
+  group: copilot-review-gate-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
-  mirror-completion:
-    name: mirror completion
-    if: github.event.check_run.name == 'copilot-pull-request-reviewer'
+  mirror:
+    name: mirror copilot review
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
-      - name: Mirror Copilot review conclusion to commit status
+      - name: Wait for Copilot review and mirror it to a commit status
         env:
           GH_TOKEN: ${{ github.token }}
-          CONCLUSION: ${{ github.event.check_run.conclusion }}
-          HEAD_SHA: ${{ github.event.check_run.head_sha }}
-          TARGET_URL: ${{ github.event.check_run.details_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          if [ "$CONCLUSION" = "success" ]; then
-            STATE=success
-          else
-            STATE=failure
-          fi
-          gh api --method POST "repos/${{ github.repository }}/statuses/$HEAD_SHA" \
-            -f state="$STATE" \
-            -f context=copilot-review-complete \
-            -f description="Copilot review $CONCLUSION" \
-            -f target_url="$TARGET_URL"
+          set -uo pipefail
+          post() {
+            gh api --method POST "repos/$REPO/statuses/$SHA" \
+              -f state="$1" -f context=copilot-review-complete -f description="$2" >/dev/null 2>&1 || true
+          }
+          post pending "Waiting for Copilot review to complete"
+          for _ in $(seq 1 80); do
+            run=$(gh api "repos/$REPO/commits/$SHA/check-runs" \
+              --jq '[.check_runs[] | select(.name == "copilot-pull-request-reviewer")] | first' 2>/dev/null || echo '')
+            status=$(echo "$run" | jq -r '.status // ""' 2>/dev/null || echo '')
+            conclusion=$(echo "$run" | jq -r '.conclusion // ""' 2>/dev/null || echo '')
+            if [ "$status" = "completed" ]; then
+              if [ "$conclusion" = "success" ]; then
+                post success "Copilot review success"
+              else
+                post failure "Copilot review $conclusion"
+              fi
+              exit 0
+            fi
+            sleep 15
+          done
+          post failure "Copilot review did not complete within the wait window"
+          exit 1
