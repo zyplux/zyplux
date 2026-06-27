@@ -82,6 +82,23 @@ ruleTester.run('prefer-destructured-params', preferDestructuredParams, {
         '};',
       ].join('\n'),
     },
+    {
+      code: ['const collide = (node: Foo) => {', '  const parent = 1;', '  return node.parent + parent;', '};'].join(
+        '\n',
+      ),
+      errors: [{ messageId: 'destructureParameterNoFix' }],
+      name: 'a property-only parameter still reports when destructuring would collide with a function-scoped local, but offers no autofix',
+    },
+    {
+      code: 'const shadow = (node: Foo) => { let parent = node.parent; return parent; };',
+      errors: [{ messageId: 'destructureParameterNoFix' }],
+      name: 'a property-only parameter still reports when a same-named local alias would clash, but offers no autofix',
+    },
+    {
+      code: 'const each = (node: Foo) => node.item.map(item => item);',
+      errors: [{ messageId: 'destructureParameterNoFix' }],
+      name: 'a collision with a nested-scope binding (callback parameter) reports without an autofix',
+    },
   ],
   valid: [
     {
@@ -133,18 +150,8 @@ ruleTester.run('prefer-destructured-params', preferDestructuredParams, {
       name: 'an unused parameter has no properties to pull out',
     },
     {
-      code: ['const collide = (node: Foo) => {', '  const parent = 1;', '  return node.parent + parent;', '};'].join(
-        '\n',
-      ),
-      name: 'destructuring would collide with an existing local of the same name',
-    },
-    {
       code: ['const capture = (node: Foo) => {', '  return node.helper + helper();', '};'].join('\n'),
-      name: 'destructuring would capture a free variable of the same name',
-    },
-    {
-      code: 'const shadow = (node: Foo) => { let parent = node.parent; return parent; };',
-      name: 'a non-const alias that shares the property name would clash with the new binding',
+      name: 'destructuring would capture a free variable of the same name, so the parameter is left alone entirely',
     },
   ],
 });

@@ -8,6 +8,7 @@ import { applyOrgRulesetsCommand, runApplyOrgRulesets } from '#commands/apply-or
 import { assertTagVersionCommand, runAssertTagVersion } from '#commands/assert-tag-version';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from '#commands/bootstrap-npm-target';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from '#commands/clone-reference-repo';
+import { depsCatalogCommand, runDepsCatalog } from '#commands/deps-catalog';
 import { printTagKindCommand, runPrintTagKind } from '#commands/print-tag-kind';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from '#commands/publish-tagged-target';
 import { pushBranchCommand, runPushBranch } from '#commands/push-branch';
@@ -25,6 +26,7 @@ const program = defineProgram({
   parser: or(
     pushBranchCommand,
     cloneReferenceRepoCommand,
+    depsCatalogCommand,
     releaseBumpedTargetsCommand,
     assertTagVersionCommand,
     bootstrapNpmTargetCommand,
@@ -59,6 +61,9 @@ const main = async () => {
     }
     case 'clone-reference-repo': {
       return runCloneReferenceRepo(result);
+    }
+    case 'deps-catalog': {
+      return runDepsCatalog(result);
     }
     case 'print-tag-kind': {
       return runPrintTagKind(result);

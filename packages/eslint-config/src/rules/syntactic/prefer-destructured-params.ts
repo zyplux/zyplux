@@ -14,6 +14,7 @@ type AliasAbsorption = {
 type DestructurePlan = {
   aliasAbsorptions: AliasAbsorption[];
   directReads: PropertyRead[];
+  localCollisions: string[];
   param: TSESTree.Identifier;
   propertyNames: string[];
 };
@@ -193,19 +194,32 @@ export const preferDestructuredParams = createRule({
 
       const absorbedVariables = new Set(aliasAbsorptions.map(absorption => absorption.localVariable));
       const functionScope = paramVariable.scope;
-      const scopedVariables = collectScopeTree(functionScope).flatMap(scope => scope.variables);
-      for (const variable of scopedVariables) {
-        if (variable === paramVariable || absorbedVariables.has(variable)) continue;
-        if (introducedNames.has(variable.name)) return;
-      }
+
       for (const reference of functionScope.through) {
         if (introducedNames.has(reference.identifier.name)) return;
       }
 
-      return { aliasAbsorptions, directReads, param, propertyNames };
+      const collidingLocals = new Set<string>();
+      const scopedVariables = collectScopeTree(functionScope).flatMap(scope => scope.variables);
+      for (const variable of scopedVariables) {
+        if (variable === paramVariable || absorbedVariables.has(variable)) continue;
+        if (introducedNames.has(variable.name)) collidingLocals.add(variable.name);
+      }
+
+      const localCollisions = [...collidingLocals].toSorted((left, right) => left.localeCompare(right));
+      return { aliasAbsorptions, directReads, localCollisions, param, propertyNames };
     };
 
-    const reportPlan = ({ aliasAbsorptions, directReads, param, propertyNames }: DestructurePlan) => {
+    const reportPlan = ({ aliasAbsorptions, directReads, localCollisions, param, propertyNames }: DestructurePlan) => {
+      if (localCollisions.length > 0) {
+        context.report({
+          data: { collisions: localCollisions.join(', '), name: param.name, properties: propertyNames.join(', ') },
+          messageId: 'destructureParameterNoFix',
+          node: param,
+        });
+        return;
+      }
+
       const pattern = `{ ${propertyNames.join(', ')} }`;
       const nameRange: TSESLint.AST.Range = [param.range[0], param.range[0] + param.name.length];
 
@@ -267,12 +281,14 @@ export const preferDestructuredParams = createRule({
   meta: {
     docs: {
       description:
-        'Require destructuring an explicitly-typed function parameter that is never used as a whole — only its properties are read. The accessed properties are pulled into the parameter pattern (`{ a, b }: T`) and the body is rewritten, with an autofix that also absorbs `const` aliases (`const parent = node.parent`). Accesses that call (`p.fn()`), write (`p.x = …`), increment, `delete`, index (`p[k]`), or optionally chain (`p?.x`) keep the whole object, so the parameter is left alone; parameters without a type annotation (e.g. inferred inline callbacks) are also left alone.',
+        'Require destructuring an explicitly-typed function parameter that is never used as a whole — only its properties are read. The accessed properties are pulled into the parameter pattern (`{ a, b }: T`) and the body is rewritten, with an autofix that also absorbs `const` aliases (`const parent = node.parent`). Accesses that call (`p.fn()`), write (`p.x = …`), increment, `delete`, index (`p[k]`), or optionally chain (`p?.x`) keep the whole object, so the parameter is left alone; parameters without a type annotation (e.g. inferred inline callbacks) are also left alone. When a property name would collide with a binding declared inside the function, the parameter is still reported but no autofix is offered (rename the local first); when it would instead capture a free variable the body reads from an outer scope, the parameter is left alone entirely.',
     },
     fixable: 'code',
     messages: {
       destructureParameter:
         'Parameter `{{name}}` is only used to read its properties ({{properties}}); destructure them in the parameter list instead of taking the whole object.',
+      destructureParameterNoFix:
+        'Parameter `{{name}}` is only used to read its properties ({{properties}}); destructure them in the parameter list instead of taking the whole object. No autofix: the binding name(s) {{collisions}} already name a local declaration — rename those first.',
     },
     schema: [],
     type: 'suggestion',

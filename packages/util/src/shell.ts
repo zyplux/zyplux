@@ -14,6 +14,8 @@ type PrListFlags = { head?: string; jq?: string; json?: string; state?: string }
 
 type PrMergeFlags = { auto?: boolean; deleteBranch?: boolean; squash?: boolean };
 
+type PrReadyFlags = { undo?: boolean };
+
 type PrViewFlags = { jq?: string; json?: string };
 
 type PullFlags = { ffOnly?: boolean };
@@ -47,9 +49,10 @@ const gh = {
   api: async (endpoint: string, flags: ApiFlags = {}) => Bun.$`gh ${['api', ...toArgs(flags), endpoint]}`.quiet(),
   pr: {
     create: async (flags: PrCreateFlags) => Bun.$`gh ${['pr', 'create', ...toArgs(flags)]}`,
+    disableAutoMerge: async () => Bun.$`gh ${['pr', 'merge', '--disable-auto']}`.nothrow().quiet(),
     list: async (flags: PrListFlags = {}) => Bun.$`gh ${['pr', 'list', ...toArgs(flags)]}`,
     merge: async (flags: PrMergeFlags = {}) => Bun.$`gh ${['pr', 'merge', ...toArgs(flags)]}`,
-    ready: async () => Bun.$`gh ${['pr', 'ready']}`,
+    ready: async (flags: PrReadyFlags = {}) => Bun.$`gh ${['pr', 'ready', ...toArgs(flags)]}`,
     view: async (flags: PrViewFlags = {}) => Bun.$`gh ${['pr', 'view', ...toArgs(flags)]}`,
   },
   release: {
@@ -69,10 +72,16 @@ const git = {
   clone: async (url: string, dest: string, flags: CloneFlags = {}) =>
     Bun.$`git ${['clone', ...toArgs(flags), url, dest]}`,
   fetch: async (remote: string, branch: string) => Bun.$`git ${['fetch', remote, branch]}`,
+  isInsideWorkTree: async (cwd: string) =>
+    Bun.$`git ${['rev-parse', '--is-inside-work-tree']}`.cwd(cwd).quiet().nothrow(),
+  lsFiles: async (cwd: string, pathspec: string[] = ['.']) =>
+    Bun.$`git ${['ls-files', '-z', '--', ...pathspec]}`.cwd(cwd).quiet(),
+  lsRemote: async (remote: string, ref: string) => Bun.$`git ${['ls-remote', remote, ref]}`.quiet(),
   pull: async (flags: PullFlags = {}) => Bun.$`git ${['pull', ...toArgs(flags)]}`,
   push: async (remote: string, branch: string, flags: PushFlags = {}) =>
     Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
   revParse: async (rev: string, flags: RevParseFlags = {}) => Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`,
+  showToplevel: async (cwd: string = process.cwd()) => Bun.$`git ${['rev-parse', '--show-toplevel']}`.cwd(cwd).quiet(),
   status: async (flags: StatusFlags = {}) => Bun.$`git ${['status', ...toArgs(flags)]}`,
 };
 

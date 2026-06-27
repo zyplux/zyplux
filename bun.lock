@@ -69,7 +69,7 @@
     },
     "packages/util": {
       "name": "@zyplux/util",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@zyplux/tsconfig": "workspace:*",
@@ -99,6 +99,17 @@
         "@zyplux/util": "workspace:*",
         "eslint": "catalog:",
         "typescript-eslint": "catalog:",
+        "vitest": "catalog:",
+        "zod": "catalog:",
+      },
+    },
+    "tests/util": {
+      "name": "@zyplux/tests-util",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@zyplux/tsconfig": "workspace:*",
+        "@zyplux/util": "workspace:*",
         "vitest": "catalog:",
         "zod": "catalog:",
       },
@@ -384,6 +395,8 @@
     "@zyplux/tests-cz": ["@zyplux/tests-cz@workspace:tests/cz"],
 
     "@zyplux/tests-eslint-config": ["@zyplux/tests-eslint-config@workspace:tests/eslint-config"],
+
+    "@zyplux/tests-util": ["@zyplux/tests-util@workspace:tests/util"],
 
     "@zyplux/tsconfig": ["@zyplux/tsconfig@workspace:packages/tsconfig"],
 

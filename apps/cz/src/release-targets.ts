@@ -1,4 +1,5 @@
-import { ensure, http, parseJson } from '@zyplux/util';
+import { ensure, fetchJson, httpOk, parseJson, parseToml } from '@zyplux/util';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as z from 'zod';
@@ -33,12 +34,8 @@ export type ReleaseTarget = {
 type TargetSpec = z.infer<typeof TargetSchema>;
 type VersionSource = z.infer<typeof VersionSourceSchema>;
 
-const fromRoot = (path: string) => new URL(`../../../${path}`, import.meta.url);
-
-const parseToml = <T>(text: string, schema: z.ZodType<T>) => schema.parse(Bun.TOML.parse(text));
-
-const readVersion = async (source: VersionSource) => {
-  const text = await readFile(fromRoot(source.file), 'utf8');
+const readVersion = async (repoRoot: string, source: VersionSource) => {
+  const text = await readFile(path.join(repoRoot, source.file), 'utf8');
   if ('json' in source) {
     const fields = parseJson(text, JsonFieldsSchema);
     return z.string().parse(fields[source.json]);
@@ -50,11 +47,6 @@ const readVersion = async (source: VersionSource) => {
   return version;
 };
 
-const httpOk = async (url: string) => {
-  const response = await fetch(url);
-  return response.ok;
-};
-
 const MANIFEST_MEDIA_TYPES = [
   'application/vnd.oci.image.index.v1+json',
   'application/vnd.oci.image.manifest.v1+json',
@@ -62,25 +54,19 @@ const MANIFEST_MEDIA_TYPES = [
   'application/vnd.docker.distribution.manifest.v2+json',
 ].join(', ');
 
-const fetchGhcrAuth = async (repo: string) => {
-  try {
-    return await http.get(`https://ghcr.io/token?scope=repository:${repo}:pull`).json(GhcrTokenSchema);
-  } catch {
-    return;
-  }
-};
+const fetchGhcrAuth = (repo: string) =>
+  fetchJson(`https://ghcr.io/token?scope=repository:${repo}:pull`, GhcrTokenSchema);
 
 const ghcrImagePublished = async (repo: string, tag: string) => {
   const auth = await fetchGhcrAuth(repo);
   if (!auth) return false;
-  const manifest = await fetch(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
+  return httpOk(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
     headers: {
       Accept: MANIFEST_MEDIA_TYPES,
       Authorization: `Bearer ${auth.token}`,
     },
     method: 'HEAD',
   });
-  return manifest.ok;
 };
 
 const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
@@ -94,13 +80,14 @@ const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
 };
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
-  const manifest = parseToml(await readFile(fromRoot('release-targets.toml'), 'utf8'), ManifestSchema);
+  const repoRoot = await readTrimmed($.git.showToplevel());
+  const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
-    dir: path.dirname(spec.version.file),
+    dir: path.join(repoRoot, path.dirname(spec.version.file)),
     isPublished: async (version: string) => isPublished(spec, version),
     kind: spec.kind,
     label: spec.label,
-    readVersion: async () => readVersion(spec.version),
+    readVersion: async () => readVersion(repoRoot, spec.version),
     tagPrefix: spec.tag_prefix,
   }));
 };

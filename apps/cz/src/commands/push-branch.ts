@@ -10,8 +10,11 @@ export const pushBranchCommand = command(
   'push-branch',
   object({
     command: constant('push-branch' as const),
+    hold: option('--hold', {
+      description: message`With --ready, re-trigger the Copilot review but hold off auto-merge; the caller decides when to merge.`,
+    }),
     ready: option('-r', '--ready', {
-      description: message`Mark the PR ready for review and enable auto-merge once checks are clean.`,
+      description: message`Flip the PR to draft, push, then mark it ready (re-triggering Copilot review) and enable auto-merge.`,
     }),
   }),
   {
@@ -24,7 +27,9 @@ type PushBranchConfig = InferValue<typeof pushBranchCommand>;
 
 const readPrField = async (json: string, jq: string) => readTrimmed($.gh.pr.view({ jq, json }));
 
-export const runPushBranch = async ({ ready }: PushBranchConfig) => {
+export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
+  ensure(!hold || ready, '--hold requires --ready');
+
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');
@@ -40,18 +45,34 @@ export const runPushBranch = async ({ ready }: PushBranchConfig) => {
     return;
   }
 
+  if (ready && existing === 'OPEN' && (await readPrField('isDraft', '.isDraft')) === 'false') {
+    const localHead = await readTrimmed($.git.revParse('HEAD'));
+    const remoteRefLine = await readTrimmed($.git.lsRemote('origin', branch));
+    const remoteHead = remoteRefLine.split(/\s+/, 1)[0] ?? '';
+    ensure(
+      remoteHead !== localHead,
+      'nothing to push: HEAD is already on origin, so the draft→ready flip would not re-trigger Copilot review. Commit your change first and let this command push it during the cycle — do not pre-push the branch.',
+    );
+    await $.gh.pr.ready({ undo: true });
+  }
+
   await $.git.push('origin', branch, { setUpstream: true });
 
   if (existing !== 'OPEN') {
     await $.gh.pr.create({ base: 'main', body: '', draft: true, title: branch });
   }
-  if (ready && (await readPrField('isDraft', '.isDraft')) === 'true') {
-    await $.gh.pr.ready();
-  }
 
   const url = await readPrField('url', '.url');
   if (!ready) {
     console.log(`PR (draft): ${url}`);
+    return;
+  }
+
+  await $.gh.pr.ready();
+
+  if (hold) {
+    await $.gh.pr.disableAutoMerge();
+    console.log(`PR ready, auto-merge held: ${url}`);
     return;
   }
 

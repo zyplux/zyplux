@@ -26,6 +26,9 @@ type Target = {
 
 const splitLines = (text: string) => (text ? text.split('\n') : []);
 
+const listReleaseRunIds = async (jq: string, json = 'databaseId') =>
+  splitLines(await readTrimmed($.gh.run.list({ event: 'release', jq, json, workflow: 'release.yml' })));
+
 const releaseExists = async (tag: string) =>
   (await readTrimmed($.gh.release.list({ jq: `any(.[]; .tagName == "${tag}")`, json: 'tagName' }))) === 'true';
 
@@ -46,22 +49,14 @@ const buildTargets = async () => {
 
 const publish = async (target: Target, remoteHead: string) => {
   console.log(`Cutting release ${target.tag} ...`);
-  const knownRuns = splitLines(
-    await readTrimmed(
-      $.gh.run.list({ event: 'release', jq: '.[].databaseId', json: 'databaseId', workflow: 'release.yml' }),
-    ),
-  );
+  const knownRuns = await listReleaseRunIds('.[].databaseId');
   await $.gh.release.create(target.tag, { generateNotes: true, target: remoteHead, title: target.tag });
 
   console.log('Watching the publish workflow ...');
   const headRunsQuery = `[.[] | select(.headSha=="${remoteHead}")] | .[].databaseId`;
   const runId = await poll(
     async () => {
-      const ids = splitLines(
-        await readTrimmed(
-          $.gh.run.list({ event: 'release', jq: headRunsQuery, json: 'databaseId,headSha', workflow: 'release.yml' }),
-        ),
-      );
+      const ids = await listReleaseRunIds(headRunsQuery, 'databaseId,headSha');
       return ids.find(id => !knownRuns.includes(id));
     },
     { attempts: 30, intervalMs: 2000 },

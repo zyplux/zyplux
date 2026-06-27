@@ -1,25 +1,32 @@
 name: copilot-review-gate
 
 on:
-  pull_request_review:
-    types: [submitted]
+  check_run:
+    types: [completed]
 
 permissions:
   statuses: write
 
 jobs:
-  pass:
-    name: pass
-    if: ${{ github.event.review.user.login == 'copilot-pull-request-reviewer[bot]' }}
+  mirror-completion:
+    name: mirror completion
+    if: github.event.check_run.name == 'copilot-pull-request-reviewer'
     runs-on: ubuntu-latest
     steps:
-      - name: mark copilot-review success
+      - name: Mirror Copilot review conclusion to commit status
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          SHA: ${{ github.event.pull_request.head.sha }}
+          CONCLUSION: ${{ github.event.check_run.conclusion }}
+          HEAD_SHA: ${{ github.event.check_run.head_sha }}
+          TARGET_URL: ${{ github.event.check_run.details_url }}
         run: |
-          gh api "repos/$REPO/statuses/$SHA" \
-            -f state=success \
-            -f context=copilot-review \
-            -f description='Copilot review completed'
+          if [ "$CONCLUSION" = "success" ]; then
+            STATE=success
+          else
+            STATE=failure
+          fi
+          gh api --method POST "repos/${{ github.repository }}/statuses/$HEAD_SHA" \
+            -f state="$STATE" \
+            -f context=copilot-review-complete \
+            -f description="Copilot review $CONCLUSION" \
+            -f target_url="$TARGET_URL"

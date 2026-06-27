@@ -5,8 +5,8 @@ import { message } from '@optique/core/message';
 import { argument, command, constant } from '@optique/core/primitives';
 import { string } from '@optique/core/valueparser';
 import { ensure } from '@zyplux/util';
-import { $ } from '@zyplux/util/shell';
 
+import { publishNpm } from '#commands/publish-tagged-target';
 import { loadReleaseTargets } from '#release-targets';
 
 const labelArgument = argument(string({ metavar: 'LABEL' }), {
@@ -37,7 +37,7 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
   }
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
-  await $`cd ${target.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`;
+  await publishNpm(target.dir);
   console.log(
     `Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
   );
