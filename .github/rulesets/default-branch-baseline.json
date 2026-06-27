@@ -37,7 +37,7 @@
       "parameters": {
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": true,
-        "required_status_checks": [{ "context": "ci" }, { "context": "copilot-pull-request-reviewer" }]
+        "required_status_checks": [{ "context": "ci" }, { "context": "copilot-review-complete" }]
       }
     },
     {
