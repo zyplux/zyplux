@@ -10,6 +10,9 @@ export const pushBranchCommand = command(
   'push-branch',
   object({
     command: constant('push-branch' as const),
+    hold: option('--hold', {
+      description: message`With --ready, re-trigger the Copilot review but hold off auto-merge; the caller decides when to merge.`,
+    }),
     ready: option('-r', '--ready', {
       description: message`Flip the PR to draft, push, then mark it ready (re-triggering Copilot review) and enable auto-merge.`,
     }),
@@ -24,7 +27,7 @@ type PushBranchConfig = InferValue<typeof pushBranchCommand>;
 
 const readPrField = async (json: string, jq: string) => readTrimmed($.gh.pr.view({ jq, json }));
 
-export const runPushBranch = async ({ ready }: PushBranchConfig) => {
+export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');
@@ -57,6 +60,12 @@ export const runPushBranch = async ({ ready }: PushBranchConfig) => {
   }
 
   await $.gh.pr.ready();
+
+  if (hold) {
+    await $.gh.pr.disableAutoMerge();
+    console.log(`PR ready, auto-merge held: ${url}`);
+    return;
+  }
 
   const mergeState =
     (await poll(
