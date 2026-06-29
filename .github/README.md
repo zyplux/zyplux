@@ -62,4 +62,4 @@ The mirror runs from the human-initiated `pull_request` event and polls the chec
 I am flexible in terms of how the above is implemented, as long as it fits the above criteria.
 I think we need to flip PR back to "draft" once copilot_code_review is finished and comments are produced. Then, after a new push and conversion to "ready" copilot_code_review will re-trigger.
 I think `just pr` should do the flip to draft -> push -> flip to ready.
-copilot_code_review is currently enabled via [org wide branch policy](../.github/rulesets/default-branch-baseline.json)
+copilot_code_review is currently enabled via [org wide branch policy](rulesets/default-branch-baseline.json)
