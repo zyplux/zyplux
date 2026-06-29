@@ -9,61 +9,6 @@ permissions:
   checks: read
   pull-requests: read
 
-concurrency:
-  group: copilot-review-gate-pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
   mirror:
-    name: mirror copilot review
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for Copilot review and mirror it to a commit status
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -uo pipefail
-          post() {
-            args=(-f "state=$1" -f context=copilot-review-complete -f "description=$2")
-            [ -n "${3:-}" ] && args+=(-f "target_url=$3")
-            gh api --method POST "repos/$REPO/statuses/$SHA" "${args[@]}"
-          }
-          ready=""
-          read_ok=""
-          for _ in $(seq 1 40); do
-            draft=$(gh api "repos/$REPO/pulls/$PR" --jq '.draft' 2>/dev/null) || draft=""
-            if [ "$draft" = "false" ]; then ready=1; read_ok=1; break; fi
-            if [ "$draft" = "true" ]; then read_ok=1; fi
-            sleep 5
-          done
-          if [ -z "$ready" ]; then
-            if [ -z "$read_ok" ]; then
-              post error "Could not read PR draft state to gate the Copilot mirror" ""
-              exit 1
-            fi
-            echo "::notice::PR is still draft after waiting; Copilot review is not expected, leaving no status"
-            exit 0
-          fi
-          post pending "Waiting for Copilot review to complete" "" \
-            || echo "::warning::could not post pending copilot-review-complete status (continuing)"
-          for _ in $(seq 1 80); do
-            run=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=copilot-pull-request-reviewer&per_page=100" \
-              --jq '[.check_runs[] | select(.name == "copilot-pull-request-reviewer")] | first' 2>/dev/null || echo '')
-            status=$(echo "$run" | jq -r '.status // ""' 2>/dev/null || echo '')
-            conclusion=$(echo "$run" | jq -r '.conclusion // ""' 2>/dev/null || echo '')
-            details=$(echo "$run" | jq -r '.details_url // ""' 2>/dev/null || echo '')
-            if [ "$status" = "completed" ]; then
-              if [ "$conclusion" = "success" ]; then
-                post success "Copilot review success" "$details"
-              else
-                post failure "Copilot review concluded: $conclusion" "$details"
-              fi
-              exit $?
-            fi
-            sleep 15
-          done
-          post error "Timed out waiting for the Copilot review check-run to complete" ""
-          exit 1
+    uses: zyplux/.github/.github/workflows/copilot-review-gate.yml@main
