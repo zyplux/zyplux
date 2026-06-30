@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "ci-workflow"
 SUMMARY = "ci.yml exists, exposes a `ci` check, runs on PRs"
@@ -35,9 +37,7 @@ def _exposes_ci_job(workflow: YamlMapping) -> bool:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    content = ctx.file(repo, ".github/workflows/ci.yml") or ctx.file(
-        repo, ".github/workflows/ci.yaml"
-    )
+    content = ctx.file(repo, ".github/workflows/ci.yml") or ctx.file(repo, ".github/workflows/ci.yaml")
     if content is None:
         res.fail("no .github/workflows/ci.yml")
         return res

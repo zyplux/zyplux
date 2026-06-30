@@ -1,26 +1,28 @@
 import shutil
 import subprocess
+from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import config, gh, source
+from cerberus import source
 from cerberus.model import Repo
 
-requires_git = pytest.mark.skipif(
-    shutil.which("git") is None, reason="requires the `git` binary on PATH"
-)
+if TYPE_CHECKING:
+    from pathlib import Path
+
+requires_git = pytest.mark.skipif(shutil.which("git") is None, reason="requires the `git` binary on PATH")
 
 
 @pytest.fixture
-def repo():
-    return Repo("demo", "zyplux", "main", "public")
+def repo() -> Repo:
+    return Repo("demo")
 
 
-def _git(root, *args):
+def _git(root: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
 
 
 @requires_git
-def test_local_list_paths_returns_tracked_and_skips_gitignored(tmp_path, repo):
+def test_local_list_paths_returns_tracked_and_skips_gitignored(tmp_path: Path, repo: Repo) -> None:
     _git(tmp_path, "init")
     (tmp_path / ".gitignore").write_text("reference_clones/\nnode_modules/\n")
     (tmp_path / "package.json").write_text('{"scripts": {"test": "vitest run"}}')
@@ -39,7 +41,7 @@ def test_local_list_paths_returns_tracked_and_skips_gitignored(tmp_path, repo):
 
 
 @requires_git
-def test_local_tags_lists_matching_prefix(tmp_path, repo):
+def test_local_tags_lists_matching_prefix(tmp_path: Path, repo: Repo) -> None:
     _git(tmp_path, "init")
     _git(tmp_path, "config", "user.email", "ci@zyplux.test")
     _git(tmp_path, "config", "user.name", "ci")
@@ -56,7 +58,7 @@ def test_local_tags_lists_matching_prefix(tmp_path, repo):
 
 
 @requires_git
-def test_local_changed_paths_diffs_surface_against_ref(tmp_path, repo):
+def test_local_changed_paths_diffs_surface_against_ref(tmp_path: Path, repo: Repo) -> None:
     _git(tmp_path, "init")
     _git(tmp_path, "config", "user.email", "ci@zyplux.test")
     _git(tmp_path, "config", "user.name", "ci")
@@ -76,21 +78,6 @@ def test_local_changed_paths_diffs_surface_against_ref(tmp_path, repo):
 
 
 @requires_git
-def test_local_tags_raises_outside_a_repo(tmp_path, repo):
-    with pytest.raises(source.GitHistoryUnavailable):
+def test_local_tags_raises_outside_a_repo(tmp_path: Path, repo: Repo) -> None:
+    with pytest.raises(source.GitHistoryUnavailableError):
         source.LocalSource(tmp_path).tags(repo, "widget-v")
-
-
-def test_github_list_paths_keeps_blobs_drops_trees(monkeypatch, repo):
-    tree = {
-        "tree": [
-            {"path": "package.json", "type": "blob"},
-            {"path": "src", "type": "tree"},
-            {"path": "src/a.test.ts", "type": "blob"},
-        ]
-    }
-    monkeypatch.setattr(gh, "api", lambda *_args, **_kwargs: tree)
-    assert source.GitHubSource(config.load()).list_paths(repo) == [
-        "package.json",
-        "src/a.test.ts",
-    ]

@@ -1,8 +1,7 @@
 """Cross-repo invariant verifier for the zyplux organization."""
 
-from importlib.metadata import PackageNotFoundError, version
+from __future__ import annotations
 
-try:
-    __version__ = version("zyplux-cerberus")
-except PackageNotFoundError:  # running from a source tree that was never installed
-    __version__ = "0+unknown"
+from cerberus._version import __version__
+
+__all__ = ["__version__"]

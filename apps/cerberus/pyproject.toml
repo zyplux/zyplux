@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-cerberus"
-version = "0.4.1"
+version = "0.5.0"
 description = "Cross-repo invariant verifier for the zyplux organization"
 readme = "README.md"
 requires-python = ">=3.14"

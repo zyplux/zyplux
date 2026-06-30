@@ -26,6 +26,8 @@ type ReleaseCreateFlags = { generateNotes?: boolean; target?: string; title?: st
 
 type ReleaseListFlags = { jq?: string; json?: string };
 
+type RepoViewFlags = { jq?: string; json?: string };
+
 type RevParseFlags = { abbrevRef?: boolean };
 
 type RunListFlags = { event?: string; jq?: string; json?: string; workflow?: string };
@@ -50,15 +52,18 @@ const gh = {
   pr: {
     create: async (flags: PrCreateFlags) => Bun.$`gh ${['pr', 'create', ...toArgs(flags)]}`,
     disableAutoMerge: async () => Bun.$`gh ${['pr', 'merge', '--disable-auto']}`.nothrow().quiet(),
-    list: async (flags: PrListFlags = {}) => Bun.$`gh ${['pr', 'list', ...toArgs(flags)]}`,
+    list: async (flags: PrListFlags = {}) => Bun.$`gh ${['pr', 'list', ...toArgs(flags)]}`.quiet(),
     merge: async (flags: PrMergeFlags = {}) => Bun.$`gh ${['pr', 'merge', ...toArgs(flags)]}`,
     ready: async (flags: PrReadyFlags = {}) => Bun.$`gh ${['pr', 'ready', ...toArgs(flags)]}`,
-    view: async (flags: PrViewFlags = {}) => Bun.$`gh ${['pr', 'view', ...toArgs(flags)]}`,
+    view: async (flags: PrViewFlags = {}) => Bun.$`gh ${['pr', 'view', ...toArgs(flags)]}`.quiet(),
   },
   release: {
     create: async (tag: string, flags: ReleaseCreateFlags = {}) =>
       Bun.$`gh ${['release', 'create', tag, ...toArgs(flags)]}`,
     list: async (flags: ReleaseListFlags = {}) => Bun.$`gh ${['release', 'list', ...toArgs(flags)]}`,
+  },
+  repo: {
+    view: async (flags: RepoViewFlags = {}) => Bun.$`gh ${['repo', 'view', ...toArgs(flags)]}`.quiet(),
   },
   run: {
     list: async (flags: RunListFlags = {}) => Bun.$`gh ${['run', 'list', ...toArgs(flags)]}`,
@@ -80,7 +85,8 @@ const git = {
   pull: async (flags: PullFlags = {}) => Bun.$`git ${['pull', ...toArgs(flags)]}`,
   push: async (remote: string, branch: string, flags: PushFlags = {}) =>
     Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
-  revParse: async (rev: string, flags: RevParseFlags = {}) => Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`,
+  revParse: async (rev: string, flags: RevParseFlags = {}) =>
+    Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`.quiet(),
   showToplevel: async (cwd: string = process.cwd()) => Bun.$`git ${['rev-parse', '--show-toplevel']}`.cwd(cwd).quiet(),
   status: async (flags: StatusFlags = {}) => Bun.$`git ${['status', ...toArgs(flags)]}`,
 };

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from cerberus import justfile
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from cerberus.config import Config
+    from cerberus.context import Context
 
 ID = "justfile"
 SUMMARY = "recipe names, aliases, check pipeline, wrapped tool calls, no trailing whitespace"
@@ -56,6 +61,41 @@ def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> li
     return calls
 
 
+def _check_trailing_ws(content: str, repo: Repo, ctx: Context, res: CheckResult) -> None:
+    ws_lines = _trailing_ws_lines(content)
+    if not ws_lines:
+        return
+    if ctx.fix:
+        ctx.write_file(repo, "justfile", _strip_trailing_ws(content))
+    else:
+        res.fail(f"trailing whitespace on line(s) {', '.join(map(str, ws_lines))}")
+
+
+def _check_aliases(actual_aliases: dict[str, str], expected: dict[str, str], kind: str, res: CheckResult) -> None:
+    for alias, target in expected.items():
+        actual = actual_aliases.get(alias)
+        if actual is None:
+            res.fail(f"missing {kind}alias `{alias} := {target}`")
+        elif actual != target:
+            res.fail(f"alias `{alias}` targets `{actual}`, expected `{target}`")
+
+
+def _check_recipes(recipes: Iterable[str], expected: Iterable[str], kind: str, res: CheckResult) -> None:
+    present = set(recipes)
+    for name in expected:
+        if name not in present:
+            res.fail(f"missing {kind}recipe `{name}`")
+
+
+def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
+    if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
+        res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
+    if "check" in jf.recipes:
+        deps = jf.recipes["check"]
+        if not justfile.is_subsequence(list(cfg.check_pipeline), deps):
+            res.fail(f"`check` dependencies {deps} must contain {list(cfg.check_pipeline)} in order")
+
+
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     content = ctx.file(repo, "justfile")
@@ -63,12 +103,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.fail("no justfile at repo root")
         return res
 
-    ws_lines = _trailing_ws_lines(content)
-    if ws_lines:
-        if ctx.fix:
-            ctx.write_file(repo, "justfile", _strip_trailing_ws(content))
-        else:
-            res.fail(f"trailing whitespace on line(s) {', '.join(map(str, ws_lines))}")
+    _check_trailing_ws(content, repo, ctx, res)
 
     try:
         jf = justfile.parse(content)
@@ -77,43 +112,14 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-
-    for alias, target in cfg.required_aliases.items():
-        actual = jf.aliases.get(alias)
-        if actual is None:
-            res.fail(f"missing alias `{alias} := {target}`")
-        elif actual != target:
-            res.fail(f"alias `{alias}` targets `{actual}`, expected `{target}`")
-
-    for alias, target in cfg.recommended_aliases.items():
-        actual = jf.aliases.get(alias)
-        if actual is None:
-            res.fail(f"missing recommended alias `{alias} := {target}`")
-        elif actual != target:
-            res.fail(f"alias `{alias}` targets `{actual}`, expected `{target}`")
-
-    for name in cfg.required_recipes:
-        if name not in jf.recipes:
-            res.fail(f"missing required recipe `{name}`")
-
-    for name in cfg.recommended_recipes:
-        if name not in jf.recipes:
-            res.fail(f"missing recommended recipe `{name}`")
-
-    if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
-        res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
-
-    if "check" in jf.recipes:
-        deps = jf.recipes["check"]
-        if not justfile.is_subsequence(list(cfg.check_pipeline), deps):
-            res.fail(
-                f"`check` dependencies {deps} must contain {list(cfg.check_pipeline)} in order"
-            )
+    _check_aliases(jf.aliases, cfg.required_aliases, "", res)
+    _check_aliases(jf.aliases, cfg.recommended_aliases, "recommended ", res)
+    _check_recipes(jf.recipes, cfg.required_recipes, "required ", res)
+    _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
+    _check_pipeline(jf, cfg, res)
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):
-        res.fail(
-            f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`bunx`"
-        )
+        res.fail(f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`bunx`")
 
     if not res.problems:
         res.ok("justfile conforms")

@@ -1,0 +1,4 @@
+preset = "strict"
+
+project-includes = ["apps/cerberus/src", "tests/cerberus"]
+search-path = ["apps/cerberus/src"]

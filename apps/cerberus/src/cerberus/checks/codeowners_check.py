@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from cerberus.context import Context
+from typing import TYPE_CHECKING
+
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "codeowners"
 SUMMARY = "CODEOWNERS present and covers /.github/"
@@ -26,9 +30,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     owned_lines = [
-        line
-        for line in content.splitlines()
-        if line.strip() and not line.lstrip().startswith("#") and "@" in line
+        line for line in content.splitlines() if line.strip() and not line.lstrip().startswith("#") and "@" in line
     ]
     if not owned_lines:
         res.fail("CODEOWNERS has no ownership rules")

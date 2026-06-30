@@ -4,16 +4,20 @@ import json
 import re
 import tomllib
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.source import GitHistoryUnavailable
+from cerberus.source import GitHistoryUnavailableError
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "release-bumps"
 SUMMARY = "a published target's version is bumped whenever its release surface changes"
 SCOPE = Scope.GIT_HISTORY
 
 _MANIFEST = "release-targets.toml"
+_TARGET_KEY = "target"
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 
 Semver = tuple[int, int, int]
@@ -29,10 +33,15 @@ class _Target:
     surface: tuple[str, ...]
 
 
+class _ManifestError(ValueError):
+    def __init__(self, key: str, found: object) -> None:
+        super().__init__(f"{_MANIFEST} has no [[{key}]] array (found {found!r})")
+
+
 def _parse_targets(manifest: str) -> list[_Target]:
-    raw = tomllib.loads(manifest).get("target")
+    raw = tomllib.loads(manifest).get(_TARGET_KEY)
     if not isinstance(raw, list):
-        raise ValueError(f"{_MANIFEST} has no [[target]] array")
+        raise _ManifestError(_TARGET_KEY, raw)
     targets = []
     for entry in raw:
         version = entry["version"]
@@ -78,27 +87,35 @@ def _latest_release(tags: list[str], prefix: str) -> tuple[Semver, str, str] | N
     return latest
 
 
-def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None:
+def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> tuple[Semver, str] | None:
     content = ctx.file(repo, target.version_file)
     if content is None:
         res.fail(f"{target.label}: version file {target.version_file} is missing")
-        return
+        return None
     try:
         version = _read_version(content, target)
     except json.JSONDecodeError as exc:
         res.fail(f"{target.label}: {target.version_file} is not valid JSON: {exc}")
-        return
+        return None
     if version is None:
         res.fail(f"{target.label}: no version found in {target.version_file}")
-        return
+        return None
     current = _parse_semver(version)
     if current is None:
         res.fail(f"{target.label}: version {version!r} is not semver")
+        return None
+    return current, version
+
+
+def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None:
+    resolved = _current_semver(repo, ctx, target, res)
+    if resolved is None:
         return
+    current, version = resolved
 
     try:
         latest = _latest_release(ctx.tags(repo, target.tag_prefix), target.tag_prefix)
-    except GitHistoryUnavailable as exc:
+    except GitHistoryUnavailableError as exc:
         res.error(f"{target.label}: cannot read git tags: {exc}")
         return
     if latest is None:
@@ -110,14 +127,12 @@ def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None
         res.ok(f"{target.label}: {version} is ahead of published {latest_version}")
         return
     if current < latest_semver:
-        res.fail(
-            f"{target.label}: version {version} is below published {latest_version} ({latest_tag})"
-        )
+        res.fail(f"{target.label}: version {version} is below published {latest_version} ({latest_tag})")
         return
 
     try:
         changed = ctx.changed_paths(repo, latest_tag, target.surface)
-    except GitHistoryUnavailable as exc:
+    except GitHistoryUnavailableError as exc:
         res.error(f"{target.label}: cannot diff against {latest_tag}: {exc}")
         return
     if changed:

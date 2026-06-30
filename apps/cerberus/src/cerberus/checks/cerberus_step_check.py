@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 import yaml
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "cerberus-step"
 SUMMARY = "a CI workflow runs cerberus to self-verify org invariants"

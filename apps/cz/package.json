@@ -1,7 +1,7 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.1.0",
-  "description": "Repo automation CLI: cut releases, push branches and PRs, apply org rulesets, and clone reference repos.",
+  "version": "0.2.0",
+  "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "bun",
     "cli",
@@ -34,7 +34,6 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#commands/apply-org-rulesets": "./src/commands/apply-org-rulesets.ts",
     "#commands/assert-tag-version": "./src/commands/assert-tag-version.ts",
     "#commands/bootstrap-npm-target": "./src/commands/bootstrap-npm-target.ts",
     "#commands/clone-reference-repo": "./src/commands/clone-reference-repo.ts",

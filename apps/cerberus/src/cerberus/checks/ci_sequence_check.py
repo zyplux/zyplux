@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 import yaml
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "ci-sequence"
 SUMMARY = "ci.yml runs the canonical check sequence per stack, in the org container"
@@ -20,7 +24,7 @@ def _ci_content(repo: Repo, ctx: Context) -> str | None:
     return None
 
 
-def _jobs(content: str) -> dict | None:
+def _jobs(content: str) -> dict[str, Any] | None:
     try:
         doc = yaml.safe_load(content)
     except yaml.YAMLError:
@@ -31,7 +35,7 @@ def _jobs(content: str) -> dict | None:
     return jobs if isinstance(jobs, dict) else {}
 
 
-def _run_commands(jobs: dict) -> list[str]:
+def _run_commands(jobs: dict[str, Any]) -> list[str]:
     commands: list[str] = []
     for job in jobs.values():
         steps = job.get("steps") if isinstance(job, dict) else None
@@ -44,7 +48,7 @@ def _run_commands(jobs: dict) -> list[str]:
     return commands
 
 
-def _container_images(jobs: dict) -> list[str]:
+def _container_images(jobs: dict[str, Any]) -> list[str]:
     images: list[str] = []
     for job in jobs.values():
         container = job.get("container") if isinstance(job, dict) else None
@@ -55,9 +59,7 @@ def _container_images(jobs: dict) -> list[str]:
     return images
 
 
-def _verify_sequence(
-    res: CheckResult, label: str, required: tuple[str, ...], commands: list[str]
-) -> None:
+def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[str]) -> None:
     missing = [step for step in required if not any(step in cmd for cmd in commands)]
     for step in missing:
         res.fail(f"{label} ci is missing `{step}`")

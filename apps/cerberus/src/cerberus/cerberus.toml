@@ -1,5 +1,3 @@
-org = "zyplux"
-exclude_repos = [".github", "client-roadmap-feedback", "zyplux-ai-pages"]
 default_recipe_marker = "just --list"
 
 [aliases.required]

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+from typing import TYPE_CHECKING
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "vitest-runner"
 SUMMARY = "TypeScript tests run on vitest, never bun's built-in test runner"

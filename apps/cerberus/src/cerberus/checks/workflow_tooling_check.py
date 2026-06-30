@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "workflow-tooling"
 SUMMARY = "workflows set up only the workspace toolchain (uv, bun), not extra tools"
@@ -28,8 +30,8 @@ _INSTALL_COMMANDS = (
 
 def _action_repo(uses: str) -> str:
     identity = uses.split("@", 1)[0].strip()
-    parts = identity.split("/")
-    return parts[1] if len(parts) >= 2 else identity
+    _owner, slash, rest = identity.partition("/")
+    return rest.split("/", 1)[0] if slash else identity
 
 
 def _is_setup_action(uses: str) -> bool:
@@ -49,6 +51,34 @@ def _steps(workflow: dict[str, Any]) -> list[dict[str, Any]]:
     return steps
 
 
+def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckResult) -> None:
+    uses = step.get("uses")
+    if isinstance(uses, str) and _is_setup_action(uses):
+        identity = uses.split("@", 1)[0].strip()
+        if identity not in allowed:
+            res.fail(f"{name}: installs a tool via `{identity}`; the toolchain is uv + bun")
+
+    script = step.get("run")
+    if isinstance(script, str):
+        for pattern in _INSTALL_COMMANDS:
+            hit = pattern.search(script)
+            if hit is not None:
+                res.fail(f"{name}: installs a tool with `{hit.group(0).strip()}`")
+                break
+
+
+def _scan_workflow(name: str, content: str, allowed: set[str], res: CheckResult) -> None:
+    try:
+        workflow = yaml.safe_load(content)
+    except yaml.YAMLError as err:
+        res.fail(f"{name}: not valid YAML ({err})")
+        return
+    if not isinstance(workflow, dict):
+        return
+    for step in _steps(workflow):
+        _check_step(name, step, allowed, res)
+
+
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     workflows = ctx.workflows(repo)
@@ -58,28 +88,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
 
     allowed = set(ctx.config.allowed_setup_actions)
     for name, content in sorted(workflows.items()):
-        try:
-            workflow = yaml.safe_load(content)
-        except yaml.YAMLError as err:
-            res.fail(f"{name}: not valid YAML ({err})")
-            continue
-        if not isinstance(workflow, dict):
-            continue
-
-        for step in _steps(workflow):
-            uses = step.get("uses")
-            if isinstance(uses, str) and _is_setup_action(uses):
-                identity = uses.split("@", 1)[0].strip()
-                if identity not in allowed:
-                    res.fail(f"{name}: installs a tool via `{identity}`; the toolchain is uv + bun")
-
-            script = step.get("run")
-            if isinstance(script, str):
-                for pattern in _INSTALL_COMMANDS:
-                    hit = pattern.search(script)
-                    if hit is not None:
-                        res.fail(f"{name}: installs a tool with `{hit.group(0).strip()}`")
-                        break
+        _scan_workflow(name, content, allowed, res)
 
     if not res.problems:
         res.ok("workflows install no extra tools")

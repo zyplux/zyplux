@@ -10,27 +10,8 @@ package = false
 [tool.uv.workspace]
 members = ["apps/cerberus"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py314"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "ASYNC", "S", "RUF"]
-ignore = ["S101"]
-
-[tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S"]
-# proc.py is cerberus's sole subprocess boundary: resolved abs path, no shell,
-# program-constructed argv. S603 is an audit-only rule, false-positive prone for
-# non-literal argv (ruff #4045); intent is expressed here rather than inline.
-"apps/cerberus/src/cerberus/proc.py" = ["S603"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests/cerberus"]
-
-[tool.pyrefly]
-project-includes = ["apps/cerberus/src", "tests/cerberus"]
-search-path = ["apps/cerberus/src"]
 
 [tool.vulture]
 paths = ["apps/cerberus/src", "tests/cerberus"]
@@ -47,6 +28,6 @@ test = [
     "pytest>=9.1.0",
 ]
 type = [
-    "pyrefly>=1.0.0",
+    "pyrefly>=1.1",
     "types-pyyaml>=6.0.12.20260518",
 ]

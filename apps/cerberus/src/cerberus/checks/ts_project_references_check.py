@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+from typing import TYPE_CHECKING, Any
 
-from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
 
 ID = "ts-project-references"
 SUMMARY = "TypeScript typecheck runs via project references (tsc -b), not a per-package fan-out"
@@ -22,7 +25,7 @@ def _has_tsconfig(paths: list[str]) -> bool:
     return any(_TSCONFIG.search(path) is not None and not _is_vendored(path) for path in paths)
 
 
-def _manifest(content: str) -> dict:
+def _manifest(content: str) -> dict[str, Any]:
     try:
         data = json.loads(content)
     except json.JSONDecodeError:

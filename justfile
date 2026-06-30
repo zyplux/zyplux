@@ -62,10 +62,6 @@ upgrade-interactive:
 release:
     bun run cz release-bumped-targets
 
-# Upsert every org ruleset in .github/rulesets/ to GitHub (source of truth). Needs gh authenticated with org-admin scope.
-apply-org-ruleset:
-    bun run cz apply-org-rulesets
-
 # Push the current branch and open a draft PR (-r/--ready marks it ready and enables auto-merge).
 push *flags:
     bun run cz push-branch {{ flags }}
@@ -73,11 +69,12 @@ push *flags:
 # Push the current branch and open a PR marked ready, enabling auto-merge.
 push-ready: (push "--ready")
 
-# Remove dependencies and caches from both workspaces.
+# Remove deps and caches from all workspaces.
 clean:
     rm -rf node_modules packages/*/node_modules tests/*/node_modules
-    rm -rf .venv .pytest_cache .ruff_cache .rumdl_cache
-    find . -type d -name __pycache__ -prune -exec rm -rf {} +
+    rm -rf .venv .pytest_cache .ruff_cache .rumdl_cache .eslintcache .tsbuild
+    find . -type d \( -name __pycache__ -o -name .tsbuild -o -name dist -o -name .ruff_cache -o -name .pytest_cache \) -prune -exec rm -rf {} +
+    find . -type f \( -name '*.tsbuildinfo' -o -name '.eslintcache' -o -name '*.py[cod]' \) -delete
 
 # Shallow-clone a reference repo into reference_clones/ (optional branch or tag).
 clone repo ref="":

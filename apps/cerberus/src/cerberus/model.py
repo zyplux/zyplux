@@ -17,27 +17,15 @@ class Status(Enum):
 
 
 class Scope(Enum):
-    """Where a check's facts live, hence where it can run."""
+    """Where a check's facts live."""
 
-    CONTENT = auto()  # in the checkout — runnable as a per-repo CI linter
-    CONTROL_PLANE = auto()  # GitHub org/admin state — only the central org scan
-    GIT_HISTORY = auto()  # the checkout's git history — only the per-repo CI linter
+    CONTENT = auto()
+    GIT_HISTORY = auto()
 
 
 @dataclass(frozen=True)
 class Repo:
     name: str
-    owner: str
-    default_branch: str
-    visibility: str
-
-    @property
-    def full_name(self) -> str:
-        return f"{self.owner}/{self.name}"
-
-    @property
-    def is_private(self) -> bool:
-        return self.visibility == "private"
 
 
 @dataclass(frozen=True)

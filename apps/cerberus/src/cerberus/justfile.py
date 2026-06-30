@@ -4,6 +4,7 @@ import json
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from cerberus import proc
 
@@ -19,7 +20,7 @@ class Justfile:
     bodies: dict[str, str]
 
 
-def _join_body(body: list[list] | None) -> str:
+def _join_body(body: list[list[Any]] | None) -> str:
     """Flatten a `just --dump` body to text.
 
     A body is a list of lines; each line is a list of fragments that are either
@@ -28,10 +29,7 @@ def _join_body(body: list[list] | None) -> str:
     """
     if not body:
         return ""
-    return "\n".join(
-        "".join(fragment if isinstance(fragment, str) else " " for fragment in line)
-        for line in body
-    )
+    return "\n".join("".join(fragment if isinstance(fragment, str) else " " for fragment in line) for line in body)
 
 
 def parse(content: str) -> Justfile:

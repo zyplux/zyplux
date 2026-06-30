@@ -4,7 +4,6 @@ import { message } from '@optique/core/message';
 import { defineProgram } from '@optique/core/program';
 import { run } from '@optique/run';
 
-import { applyOrgRulesetsCommand, runApplyOrgRulesets } from '#commands/apply-org-rulesets';
 import { assertTagVersionCommand, runAssertTagVersion } from '#commands/assert-tag-version';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from '#commands/bootstrap-npm-target';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from '#commands/clone-reference-repo';
@@ -30,7 +29,6 @@ const program = defineProgram({
     releaseBumpedTargetsCommand,
     assertTagVersionCommand,
     bootstrapNpmTargetCommand,
-    applyOrgRulesetsCommand,
     publishTaggedTargetCommand,
     printTagKindCommand,
   ),
@@ -50,9 +48,6 @@ const main = async () => {
   });
 
   switch (result.command) {
-    case 'apply-org-rulesets': {
-      return runApplyOrgRulesets();
-    }
     case 'assert-tag-version': {
       return runAssertTagVersion(result);
     }
