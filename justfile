@@ -11,6 +11,7 @@ alias u := upgrade
 alias ui := upgrade-interactive
 alias p := push
 alias pr := push-ready
+alias dr := draft
 
 # List available recipes.
 default:
@@ -68,6 +69,10 @@ push *flags:
 
 # Push the current branch and open a PR marked ready, enabling auto-merge.
 push-ready: (push "--ready")
+
+# Mark the current branch's PR as draft, so the next push lands while draft and the ready-flip cleanly re-triggers Copilot review.
+draft:
+    gh pr ready --undo
 
 # Remove dependencies and caches from both workspaces.
 clean:

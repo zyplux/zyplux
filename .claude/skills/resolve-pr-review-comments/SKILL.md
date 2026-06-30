@@ -3,7 +3,8 @@ name: resolve-pr-review-comments
 description: >
   Loop through GitHub Copilot review comments on a pull request until the
   `copilot-review-complete` gate reads clean: read each unresolved Copilot thread,
-  decide whether it is right, fix the code where you agree and reply with reasoning
+  decide whether it is right, flip the PR to draft with `just draft` before editing
+  when any comment is valid, fix the code where you agree and reply with reasoning
   where you don't, resolve every thread, run `just pr` to refresh the gate (it
   pushes fixes to re-trigger a fresh review, or refreshes in place when nothing
   changed), wait for its verdict, and repeat. Auto-merge is enabled by the push and
@@ -36,21 +37,27 @@ green, and every thread resolved. The native `copilot-pull-request-reviewer`
 check-run is **not** the gate — it is excluded from the status rollup; key off
 `copilot-review-complete` instead.
 
-*The three outcomes of a Copilot review, and how each reaches (or blocks) auto-merge:*
+*Who does what to clear the gate — automatic steps (rounded, blue), your actions (square, green), gate status (pill, grey), decisions (diamond); edge labels are the condition or effect:*
 
 ```mermaid
 flowchart TD
-    review["Copilot reviews the head (ci runs too)"] --> q{"Comments left?"}
-    q -->|none| clean["copilot-review-complete = success"]
-    q -->|comments| blocked["copilot-review-complete = failure<br/>merge blocked"]
-    blocked --> triage["Triage each thread:<br/>fix the valid ones, reply to the false positives,<br/>resolve all"]
-    triage --> changed{"Any code changed?"}
-    changed -->|"yes — valid comments"| pushfix["just pr pushes a new head"]
-    pushfix --> review
-    changed -->|"no — all false positives"| refresh["just pr: nothing to push,<br/>so it flip-flips to re-run the watcher"]
-    refresh --> recount["watcher re-counts the now-resolved threads = 0"]
-    recount --> clean
-    clean --> merge(["ci green + threads resolved → auto-merge"])
+    review("Copilot reviews the head<br/>ci runs in parallel"):::auto
+    review -->|no comments| ok(["copilot-review-complete = success"]):::state
+    review -->|comments left| fail(["copilot-review-complete = failure"]):::state
+    fail -->|"merge blocked — you must triage"| valid{"Any valid comment<br/>needing a code change?"}:::agent
+    valid -->|yes| draft["Run `just draft` — flip the PR to draft"]:::agent
+    draft --> fix["Fix the code, post replies, resolve all threads"]:::agent
+    fix --> prFix["Run `just pr` — push fixes, then flip to ready"]:::agent
+    prFix -->|"new head re-triggers Copilot"| review
+    valid -->|"no — all false positives"| reply["Reply to each, resolve all threads"]:::agent
+    reply --> prRefresh["Run `just pr` — flip draft→ready, nothing to push"]:::agent
+    prRefresh -->|"re-runs the gate watcher"| recount("Org-gate watcher re-counts<br/>resolved threads → 0"):::auto
+    recount --> ok
+    ok -->|"ci green + threads resolved"| merge("Auto-merge merges the PR"):::auto
+
+    classDef auto fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
+    classDef agent fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef state fill:#eceff1,stroke:#546e7a,color:#263238
 ```
 
 This skill walks that flow: resolve the current Copilot threads, run `just pr` to
@@ -116,6 +123,15 @@ Act on real bugs, correctness or security risks, clearer idiomatic forms, and
 genuine standards violations; disagree with false positives, style contrary to the
 repo's conventions, or out-of-scope suggestions.
 
+**If your triage concludes at least one comment is valid and needs a code change,
+flip the PR to draft with `just draft` *before* you edit any code or resolve any
+thread.** Drafting up front means every fix lands while the PR is already a draft,
+so the later `just pr` only has to push and flip back to ready — and that single
+ready transition is what reliably re-triggers Copilot on the new commits. Flipping
+inside `just pr` (draft→push→ready in one shot) has proven racy; pre-drafting here
+removes the race. Skip `just draft` only when every comment is a false positive and
+no code will change — there `just pr` handles the refresh flip itself.
+
 Reply on each thread (not a new top-level comment). Where you **agree**, edit the
 code in the working tree (the better long-term design, not the smallest diff), then
 reply that it's addressed (e.g. "Done — extracted the guard into `ensure_loaded`.").
@@ -134,15 +150,16 @@ mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ thread
 
 ## Step 4 — refresh the gate and wait for its verdict
 
-Run `just pr`. It flips to draft, pushes, flips back to ready, and enables
+Run `just pr`. It pushes the current head, flips back to ready, and enables
 auto-merge (which the gate holds until the head is clean):
 
-- **Changed code** (you fixed valid comments) → the push advances the head and
-  re-triggers a fresh Copilot review of the new commits.
-- **No code change** (every thread was a disagreement) → nothing to push, so the
-  draft→ready flip simply re-runs the watcher to re-count the now-resolved threads.
-  `just pr` permits this only because Copilot already reviewed HEAD; it still
-  refuses if you pre-pushed unreviewed commits.
+- **Changed code** (you fixed valid comments) → you already drafted the PR in Step 3,
+  so `just pr` simply pushes the fixes onto the draft and flips to ready; that ready
+  transition re-triggers a fresh Copilot review of the new commits.
+- **No code change** (every thread was a disagreement) → you skipped `just draft`, so
+  the PR is still ready; `just pr` does its own draft→ready flip to re-run the watcher
+  and re-count the now-resolved threads. It permits this only because Copilot already
+  reviewed HEAD; it still refuses if you pre-pushed unreviewed commits.
 
 Then wait for `copilot-review-complete` on the current head to settle:
 
