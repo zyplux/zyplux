@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
@@ -17,7 +18,7 @@ def _is_vendored(path: str) -> bool:
     return "node_modules/" in path
 
 
-def _manifest(content: str) -> dict:
+def _manifest(content: str) -> dict[str, Any]:
     try:
         data = json.loads(content)
     except json.JSONDecodeError:
@@ -33,7 +34,7 @@ def _manifest_paths(paths: list[str]) -> list[str]:
     ]
 
 
-def _uncataloged(label: str, manifest: dict) -> list[str]:
+def _uncataloged(label: str, manifest: dict[str, Any]) -> list[str]:
     offenders: list[str] = []
     for key in _DEPENDENCY_KEYS:
         deps = manifest.get(key)

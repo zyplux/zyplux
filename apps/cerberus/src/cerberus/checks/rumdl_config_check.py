@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tomllib
+from typing import Any
 
 from cerberus.context import Context
 from cerberus.model import CheckResult, Repo, Scope
@@ -27,7 +28,7 @@ siblings-only = true
 """
 
 
-def _rules_only(parsed: dict) -> dict:
+def _rules_only(parsed: dict[str, Any]) -> dict[str, Any]:
     """The rule config with `global.exclude` dropped — exclude is a per-repo path list."""
     out = {key: dict(value) if isinstance(value, dict) else value for key, value in parsed.items()}
     global_table = out.get("global")
@@ -36,7 +37,7 @@ def _rules_only(parsed: dict) -> dict:
     return out
 
 
-def _exclude(parsed: dict) -> list[str]:
+def _exclude(parsed: dict[str, Any]) -> list[str]:
     global_table = parsed.get("global")
     if isinstance(global_table, dict) and isinstance(global_table.get("exclude"), list):
         return [str(entry) for entry in global_table["exclude"]]

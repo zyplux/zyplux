@@ -28,10 +28,6 @@ ignore = ["S101"]
 [tool.pytest.ini_options]
 testpaths = ["tests/cerberus"]
 
-[tool.pyrefly]
-project-includes = ["apps/cerberus/src", "tests/cerberus"]
-search-path = ["apps/cerberus/src"]
-
 [tool.vulture]
 paths = ["apps/cerberus/src", "tests/cerberus"]
 ignore_decorators = ["@app.command"]

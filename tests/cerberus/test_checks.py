@@ -10,6 +10,7 @@ from cerberus.checks import (
     ci_workflow_check,
     codeowners_check,
     justfile_check,
+    pyrefly_config_check,
     rumdl_config_check,
     ts_project_references_check,
     vitest_runner_check,
@@ -272,6 +273,113 @@ def test_rumdl_old_config_fails(monkeypatch, repo, ctx):
 def test_rumdl_missing_fails(monkeypatch, repo, ctx):
     monkeypatch.setattr(ctx, "file", lambda *_: None)
     assert rumdl_config_check.run(repo, ctx).status is Status.FAIL
+
+
+_PYREFLY_STRICT = (
+    'preset = "strict"\n\n'
+    'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
+    'search-path = ["apps/cerberus/src"]\n\n'
+    "[[sub-config]]\n"
+    'matches = "tests/cerberus/**"\n\n'
+    "[sub-config.errors]\n"
+    "implicit-any = false\n"
+)
+
+_PY_PATHS = ["apps/cerberus/src/cerberus/cli.py", "tests/cerberus/test_cli.py"]
+
+
+def _pyrefly_ctx(monkeypatch, ctx, *, pyrefly=_PYREFLY_STRICT, pyproject="[project]\n", paths=None):
+    files = {"pyproject.toml": pyproject, "pyrefly.toml": pyrefly}
+    monkeypatch.setattr(ctx, "file", lambda r, p: files.get(p))
+    monkeypatch.setattr(ctx, "paths", lambda r: _PY_PATHS if paths is None else paths)
+
+
+def test_pyrefly_strict_passes(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx)
+    assert pyrefly_config_check.run(repo, ctx).status is Status.PASS
+
+
+def test_pyrefly_skips_non_python(monkeypatch, repo, ctx):
+    monkeypatch.setattr(ctx, "file", lambda r, p: None)
+    assert pyrefly_config_check.run(repo, ctx).status is Status.SKIP
+
+
+def test_pyrefly_skips_repo_without_python_source(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=None, paths=["packages/ui/index.ts"])
+    assert pyrefly_config_check.run(repo, ctx).status is Status.SKIP
+
+
+def test_pyrefly_missing_fails(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=None)
+    assert pyrefly_config_check.run(repo, ctx).status is Status.FAIL
+
+
+def test_pyrefly_wrong_preset_fails(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly='preset = "default"\n')
+    assert pyrefly_config_check.run(repo, ctx).status is Status.FAIL
+
+
+def test_pyrefly_invalid_toml_errors(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly="preset = [unterminated\n")
+    assert pyrefly_config_check.run(repo, ctx).status is Status.ERROR
+
+
+def test_pyrefly_config_in_pyproject_fails(monkeypatch, repo, ctx):
+    _pyrefly_ctx(monkeypatch, ctx, pyproject='[tool.pyrefly]\npreset = "strict"\n')
+    assert pyrefly_config_check.run(repo, ctx).status is Status.FAIL
+
+
+def test_pyrefly_uncovered_production_fails(monkeypatch, repo, ctx):
+    config = _PYREFLY_STRICT.replace('"apps/cerberus/src", ', "")
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    result = pyrefly_config_check.run(repo, ctx)
+    assert result.status is Status.FAIL
+    assert any("apps/cerberus/src" in f.message for f in result.problems)
+
+
+def test_pyrefly_weakened_production_fails(monkeypatch, repo, ctx):
+    config = _PYREFLY_STRICT.replace('"tests/cerberus/**"', '"apps/cerberus/src/**"')
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    result = pyrefly_config_check.run(repo, ctx)
+    assert result.status is Status.FAIL
+    assert any("weakens strict" in f.message for f in result.problems)
+
+
+def test_pyrefly_tests_extra_override_fails(monkeypatch, repo, ctx):
+    config = _PYREFLY_STRICT + "unused-ignore = false\n"
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    result = pyrefly_config_check.run(repo, ctx)
+    assert result.status is Status.FAIL
+    assert any("tests" in f.message for f in result.problems)
+
+
+def test_pyrefly_top_level_errors_weakening_fails(monkeypatch, repo, ctx):
+    config = _PYREFLY_STRICT + "\n[errors]\nimplicit-any = false\n"
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    result = pyrefly_config_check.run(repo, ctx)
+    assert result.status is Status.FAIL
+    assert any("top-level" in f.message for f in result.problems)
+
+
+def test_pyrefly_stray_top_level_error_kind_fails(monkeypatch, repo, ctx):
+    config = _PYREFLY_STRICT.replace(
+        'search-path = ["apps/cerberus/src"]\n',
+        'search-path = ["apps/cerberus/src"]\nimplicit-any = false\n',
+    )
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    result = pyrefly_config_check.run(repo, ctx)
+    assert result.status is Status.FAIL
+    assert any("implicit-any" in f.message for f in result.problems)
+
+
+def test_pyrefly_fully_strict_tests_pass(monkeypatch, repo, ctx):
+    config = (
+        'preset = "strict"\n'
+        'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
+        'search-path = ["apps/cerberus/src"]\n'
+    )
+    _pyrefly_ctx(monkeypatch, ctx, pyrefly=config)
+    assert pyrefly_config_check.run(repo, ctx).status is Status.PASS
 
 
 def test_rumdl_fix_normalizes_and_preserves_exclude(tmp_path):

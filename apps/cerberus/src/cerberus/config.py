@@ -4,6 +4,7 @@ import tomllib
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,7 @@ class Config:
     ci_required_python: tuple[str, ...]
 
 
-def _from_dict(data: dict) -> Config:
+def _from_dict(data: dict[str, Any]) -> Config:
     aliases = data.get("aliases", {})
     recipes = data.get("recipes", {})
     ci = data.get("ci", {})

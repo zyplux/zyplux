@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, override
 
 import typer
 from rich.console import Console
@@ -22,6 +22,7 @@ class LinterGroup(TyperGroup):
 
     default_command = "lint"
 
+    @override
     def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
         if not args:
             args = [self.default_command]
