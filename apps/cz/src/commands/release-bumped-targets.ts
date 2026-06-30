@@ -75,7 +75,10 @@ const publish = async (target: Target, remoteHead: string) => {
     },
     { attempts: 200, intervalMs: 3000 },
   );
-  ensure(conclusion === 'success', `publish workflow ${runId} finished with '${conclusion ?? 'unknown'}'`);
+  if (conclusion === undefined) {
+    throw new Error(`publish workflow ${runId} did not complete within the watch window; check the Actions tab`);
+  }
+  ensure(conclusion === 'success', `publish workflow ${runId} finished with '${conclusion || 'unknown'}'`);
   console.log(`Run ${runId} succeeded`);
 
   console.log(`Verifying ${target.label} ${target.version} ...`);
