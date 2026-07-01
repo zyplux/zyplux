@@ -209,9 +209,9 @@ means the fix is already on the head that the gate will see, so there's no
 window where a stale head looks clean:
 
 ```bash
+just c                    # autofixes throughout — run before staging, not after
 git add <touched files>
 git commit -m '<message>'
-just c
 git status --porcelain   # must be empty
 git log --oneline -1     # must show your fix commit, not the pre-existing head
 ```
