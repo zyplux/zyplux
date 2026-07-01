@@ -2,12 +2,12 @@
 
 ## Improve resolve-pr-review-comments skill
 
-- reduce verbosity and bloat
-- must push back on review comments and verify them, don't just fix blindly, take them with a grain of salt
-- if possible, update copilot-instructions with a short concise instruction to prevent future false positives
-- last step is supposed to verify, but it's destructive. It should verify first (non-destructive), and only then do `just pr` that will delete local branch, switch to main and pull.
-- steps that involve scripting should be codified instead in cs and called via just
-- even the polling script like
+1. Reduce verbosity and bloat, but don't drop anything important - ensure no repetition, rephrase for terse/concise language
+2. Add instruction to push back hard on copilot review comments: fact-check them (online if necessary), verify if they fit the repo goals/spirit. Don't just fix blindly, take them with a grain of salt, historically I can say false positives happen on almost every PR.
+3. If false positive happened and it is possible to add abstract instruction to prevent future false-positives, update copilot-instructions. But make sure it's short, concise and to the point. And it has to be abstract enough - something that can happen in future. If it cannot happen in future - don't add instruction.
+4. Last step is confusing. It is supposed to verify, but it feels destructive. It should just verify without changing anything.
+5. steps that involve scripting should be codified instead in cz and called via just
+6. even the polling waiting script like this one that agent is using to wait for the copilot review
   ```bash
   OWNER=zyplux REPO=.github
   SHA=$(git rev-parse HEAD)
@@ -20,7 +20,7 @@
       sleep 10
   done
   ```
-  could be automated
+  could be automated to either cz (maybe `just pr --watch`?) or Claud Code native /loop (if can be invoked via skill)
 
 ## Fix root README.md
 
