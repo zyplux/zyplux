@@ -1,18 +1,17 @@
 ---
 name: resolve-pr-review-comments
 description: >
-  Loop through GitHub Copilot review comments on a pull request until the
-  `copilot-review-complete` gate reads clean: read each unresolved Copilot thread,
-  decide whether it is right, fix the code where you agree and reply with reasoning
-  where you don't, resolve every thread, run `just pr` to refresh the gate (it
-  pushes fixes to re-trigger a fresh review, or refreshes in place when nothing
-  changed), wait for its verdict, and repeat. Auto-merge is enabled by the push and
-  held by the gate until a head is clean. Use when the user runs
-  /resolve-pr-review-comments or asks to address Copilot review comments on a PR.
-  Drives the GitHub API via `gh`.
+  Loop through a PR's required gates until both read clean: wait for `ci`
+  (fixing failures if any), then wait for the `copilot-review-complete` gate —
+  read each unresolved Copilot thread, decide whether it is right, fix the code
+  where you agree and reply with reasoning where you don't, resolve every
+  thread — commit, run `just pr` to push and refresh, and repeat. Auto-merge is
+  armed by the push and held by the gates until a head is clean. Use when the
+  user runs /resolve-pr-review-comments or asks to address Copilot review
+  comments on a PR. Drives the GitHub API via `gh`.
 metadata:
   kind: prompt
-  version: "0.6.0"
+  version: "0.8.0"
   user-invocable: "true"
   argument-hint: "[<pr-number-or-url>]"
 ---
@@ -29,45 +28,45 @@ not a resolvable thread — read it for context only.
 
 ## How merge is gated
 
-The org gate (a reusable workflow) watches Copilot's review and posts a required
-`copilot-review-complete` commit status on each head: `success` when no unresolved
-Copilot threads remain, else `failure`. Merging needs that status `success`, `ci`
-green, and every thread resolved. The native `copilot-pull-request-reviewer`
-check-run is **not** the gate — it is excluded from the status rollup; key off
-`copilot-review-complete` instead.
+Merging needs three things on the head: the `ci` check passing, a required
+`copilot-review-complete` commit status of `success`, and every Copilot thread
+resolved. The org gate (a reusable workflow) watches Copilot's review and posts
+`copilot-review-complete`: `success` when no unresolved Copilot threads remain,
+else `failure`. The native `copilot-pull-request-reviewer` check-run is **not**
+the gate — it is excluded from the status rollup; key off `copilot-review-complete`
+instead.
 
-*Who does what to clear the gate — automatic steps (rounded, blue), your actions (square, green), gate status (pill, grey), decisions (diamond); edge labels are the condition or effect:*
+*The skill's own loop, step by step — waiting on CI/Copilot (rounded, blue), your
+actions and decisions (green — square for actions, diamond for decisions), done
+(stadium, grey); node numbers match the steps below:*
 
 ```mermaid
 flowchart TD
-    review("Copilot reviews the head<br/>ci runs in parallel"):::auto
-    review -->|no comments| ok(["copilot-review-complete = success"]):::state
-    review -->|comments left| fail(["copilot-review-complete = failure"]):::state
-    fail -->|"merge blocked — you must triage"| valid{"Any valid comment<br/>needing a code change?"}:::agent
-    valid -->|yes| fix["Fix the code, post replies, resolve all threads"]:::agent
-    fix --> commit["git commit the fixes — `just pr` pushes commits, not the working tree"]:::agent
-    commit --> prFix["Run `just pr` — flips to draft, pushes the commits, then flips to ready"]:::agent
-    prFix -->|"new head re-triggers Copilot"| review
-    valid -->|"no — all false positives"| reply["Reply to each, resolve all threads"]:::agent
-    reply --> prRefresh["Run `just pr` — flips draft→ready, nothing to push"]:::agent
-    prRefresh -->|"re-runs the gate watcher"| recount("Org-gate watcher re-counts<br/>resolved threads → 0"):::auto
-    recount --> ok
-    ok -->|"ci green + threads resolved"| merge("Auto-merge merges the PR"):::auto
+    s1["1: find the PR for the current branch"]:::agent --> s2
+    s2("2: wait for ci to settle"):::auto --> s3{"3: ci green?"}:::agent
+    s3 -->|no| s11["11: fix the failing ci check"]:::agent --> s10
+    s3 -->|yes| s4("4: wait for copilot-review-complete to settle"):::auto --> s5{"5: copilot-review-complete = success?"}:::agent
+    s5 ------>|yes| s12(["12: done — auto-merge (already armed) merges the PR"]):::state
+    s5 -->|no| s6["6: read and analyze copilot comments"]:::agent --> s7{"7: any comment real/valid?"}:::agent
+    s7 -->|yes| s8["8: foreach valid comment — fix code, reply, resolve thread"]:::agent --> s9
+    s7 -->|no| s9["9: foreach false positive — reply, resolve thread, add copilot instruction if possible"]:::agent --> s10
+    s10["10: commit → `just c` → `just pr`"]:::agent --> s2
 
     classDef auto stroke:#268bd2,color:#268bd2,stroke-width:2px
     classDef agent stroke:#859900,color:#859900,stroke-width:2px
     classDef state stroke:#657b83,color:#657b83,stroke-width:2px
 ```
 
-This skill walks that flow: resolve the current Copilot threads, run `just pr` to
-refresh the gate, wait for its verdict, repeat until `copilot-review-complete` is
-`success`. Auto-merge is safe to leave on throughout: while any Copilot thread is
-unresolved the status is `failure`, so nothing merges in the gap between resolving
-threads and the `just pr` that refreshes the gate — the merge only ever fires on a
-head the watcher has just certified clean. Let `just pr` and the gate decide when,
-rather than hand-managing auto-merge with `--hold`.
+This skill drives that loop end to end: wait for `ci`, fixing it if it's red;
+wait for the Copilot gate, triaging its comments if it's red; commit, run
+`just pr`, and go around again — until both read green. Auto-merge is safe to
+leave on throughout: nothing merges while either check is red or a Copilot
+thread is unresolved, and every push resets both checks on the new head, so the
+merge only ever fires once the watcher has just certified the current head
+clean. Let `just pr` and the gates decide when, rather than hand-managing
+auto-merge with `--hold`.
 
-## Step 1 — identify the PR
+## Step 1 — find the PR
 
 ```bash
 PR_ARG='__ARGUMENT_OR_EMPTY__'   # the slash-command argument, or empty
@@ -79,19 +78,72 @@ NUMBER=$(gh pr view $PR_ARG --json number -q .number)
 If `gh pr view` reports no PR for the current branch and no argument was given,
 stop and ask the user for the PR number — do not guess.
 
-## Step 2 — check the gate, then read the threads
+## Steps 2–3 — wait for CI, then branch
 
-Read `copilot-review-complete` on the head; if it is already `success`, skip to
-Step 5.
+Confirm CI is green before even looking at Copilot's review — no point triaging
+comments against code that's about to fail its own tests:
 
 ```bash
-SHA=$(git rev-parse HEAD)
-gh api "repos/$OWNER/$REPO/commits/$SHA/statuses" \
-  --jq 'map(select(.context=="copilot-review-complete"))[0].state // "none"'
+for _ in $(seq 1 60); do
+  BUCKET=$(gh pr checks "$NUMBER" --json name,bucket \
+    -q '(.[] | select(.name=="ci") | .bucket) // "none"')
+  case "$BUCKET" in pass|fail|skipping|cancel) break;; esac
+  sleep 10
+done
 ```
 
-Otherwise read the unresolved Copilot threads and the diff for the cited files, so
-your decision is grounded in the real code:
+(`gh pr checks` is safe here — unlike for the Copilot gate below — because `ci`
+always exists once the push triggers it; see Notes. 60×10s gives `ci` up to 10
+minutes, comfortably above its observed ~1–2 minute runtime, so a cold-cache or
+otherwise slow run doesn't get mistaken for stuck.)
+
+- **`pass`** → continue to **Step 4**.
+- **`fail`, `skipping`, or `cancel`** → none of these satisfy the "ci passing"
+  merge requirement, so none can be treated as a pass. Check
+  `gh pr checks "$NUMBER"` for why: a genuine failure goes to **Step 11**; a
+  `skipping`/`cancel` from a superseded or manually-cancelled run means a newer
+  run is (or should be) in flight — re-poll, or re-push to retrigger if none is.
+- Loop exhausted with no terminal bucket → stop and tell the user; `ci` may be
+  stuck queued or the runner may be down.
+
+## Step 11 — fix the failing ci check
+
+`gh pr checks "$NUMBER" --json name,link -q '.[]|select(.name=="ci")|.link'`
+opens the failing run; `just c` runs the same lint/type/test gate `ci` does
+and is usually the fastest way to reproduce and fix the break. Then go to
+**Step 10**.
+
+## Steps 4–5 — wait for the Copilot gate, then branch
+
+Once `ci` is green, wait for the Copilot gate the same way — polling the commit
+status directly rather than `gh pr checks` (see Notes for why). Read the SHA
+from the PR's head on GitHub, not the local checkout — if the skill was invoked
+with an explicit PR number/URL whose head doesn't match the local branch,
+`git rev-parse HEAD` would poll the wrong commit's status and report the wrong
+gate state:
+
+```bash
+SHA=$(gh pr view "$NUMBER" --json headRefOid -q .headRefOid)
+for _ in $(seq 1 120); do
+  STATE=$(gh api "repos/$OWNER/$REPO/commits/$SHA/statuses" \
+    --jq 'map(select(.context=="copilot-review-complete"))[0].state // "none"')
+  case "$STATE" in success|failure|error) break;; esac
+  sleep 10
+done
+```
+
+- `success` → **Step 12**, done.
+- `failure` → **Step 6** to triage this round's comments. After 5 round trips
+  through the loop with threads still remaining, stop, disable auto-merge
+  (`gh pr merge "$NUMBER" --disable-auto`), and report what's left — this guards
+  against endless Copilot ping-pong.
+- `error` or loop exhausted → stop and tell the user (Copilot may be unavailable
+  or out of quota, or the gate hit a machinery fault); don't spin forever.
+
+## Steps 6–9 — triage every unresolved comment
+
+Read the unresolved Copilot threads and the diff for the cited files, so your
+decision is grounded in the real code (**Step 6**):
 
 ```bash
 gh api graphql -F owner="$OWNER" -F name="$REPO" -F number="$NUMBER" -f query='
@@ -113,21 +165,24 @@ gh pr diff "$NUMBER"
 Keep threads where `isResolved` is false and the first comment's author is Copilot;
 record each thread's `id`, `path`, `line`, and comment `body`.
 
-## Step 3 — decide, reply, fix, and resolve every thread
-
-Judge each comment on its merits against the real code — neither reflexively agree
-(Copilot is often right, not always) nor reflexively defend the code. Honor the
-repo's `CLAUDE.md`: idiomatic solutions, self-documenting names, fix-don't-silence.
-Act on real bugs, correctness or security risks, clearer idiomatic forms, and
-genuine standards violations; disagree with false positives, style contrary to the
-repo's conventions, or out-of-scope suggestions.
+Treat every comment with skepticism first — false positives land on almost every
+PR. Judge it against the real code, not its own framing: fact-check factual
+claims (web search if the code alone doesn't settle it) and weigh it against this
+repo's actual goals and conventions (`CLAUDE.md`) before agreeing to change
+anything. Neither reflexively agree (Copilot is often right, not always) nor
+reflexively defend the code. Act on real bugs, correctness or security risks,
+clearer idiomatic forms, and genuine standards violations; disagree with false
+positives, style contrary to the repo's conventions, or out-of-scope suggestions
+(**Step 7**).
 
 Reply on each thread (not a new top-level comment). Where you **agree**, edit the
-code in the working tree (the better long-term design, not the smallest diff), then
-reply that it's addressed (e.g. "Done — extracted the guard into `ensure_loaded`.").
-Where you **disagree**, give the reason in a sentence or two, referencing the code.
-One fix may settle several threads — note it on each. Then resolve every processed
-thread.
+code in the working tree — the better long-term design, not the smallest diff —
+and reply that it's addressed (e.g. "Done — extracted the guard into
+`ensure_loaded`."), but **do not resolve it yet** — leave it for **Step 10**
+(**Step 8**). Where you **disagree**, give the reason in a sentence or two,
+referencing the code, then resolve it immediately — a disagreement has no code
+change riding on it, so there's no race to protect against (**Step 9**). One fix
+may settle several threads — note it on each.
 
 ```bash
 gh api graphql -f threadId='<thread-node-id>' -f body='<reply>' -f query='
@@ -138,78 +193,93 @@ gh api graphql -f threadId='<thread-node-id>' -f query='
 mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ thread{ isResolved } } }'
 ```
 
-**Commit every code fix before leaving this step.** `just pr` (Step 4) only pushes
-*committed* work — a fix left uncommitted in the working tree is silently skipped, so
-the head doesn't change. The moment all threads resolve, the gate flips to `success`
-and the already-armed auto-merge fires on that unchanged head, **merging the PR without
-your fix** while the thread reply claims it landed. After running `just c` to verify,
-`git add` the touched files and `git commit` them. Then confirm the tree is clean and
-HEAD has moved before Step 4:
+If a disagreement is a false positive from a *recurring class* of mistake (not a
+one-off), add a short, abstract instruction to `.github/copilot-instructions.md`
+to head it off in future reviews — abstract enough to cover the class, not just
+this instance. Skip it if the mistake couldn't plausibly recur.
+
+Once every thread has a reply (agreed ones still unresolved), go to **Step 10**.
+
+## Step 10 — commit, push, then resolve
+
+**Commit every code fix before pushing — and push before resolving the
+remaining threads.** The org gate re-evaluates `copilot-review-complete` the
+instant a thread is resolved; resolving an "agree" thread while its fix is only
+local (or committed but unpushed) flips the gate to `success` on the
+**old, already-`ci`-green** head, and the already-armed auto-merge can merge
+that head — **without your fix** — before the push ever lands. Pushing first
+means the fix is already on the head that the gate will see, so there's no
+window where a stale head looks clean:
 
 ```bash
-git status --porcelain   # must be empty
-git log --oneline -1     # must show your fix commit, not the pre-existing head
+git add <touched files>
+git commit -m '<message>'
+just c                    # autofixes throughout — may touch files after the commit above
+git status --porcelain   # if non-empty, `just c` autofixed something —
+                          # git add -u && git commit -m 'chore: apply autofix' to fold it in
+git log --oneline -1     # must show your fix commit(s), not the pre-existing head
 ```
 
-## Step 4 — refresh the gate and wait for its verdict
+Commit before running `just c`, not after: some of its checks read the
+committed tree rather than the working tree — e.g. `cerberus`'s version-bump
+check, which diffs against the last commit — so running it against
+uncommitted changes can pass or fail against stale state. If it autofixes
+anything post-commit, fold that into a follow-up commit rather than leaving it
+uncommitted — an uncommitted autofix is exactly the "unpushed fix" trap Step 10
+exists to avoid.
 
-Run `just pr`. It pushes the current head, flips back to ready, and enables
-auto-merge (which the gate holds until the head is clean). **Precondition: your fixes
-are committed (Step 3) — `just pr` pushes commits, never the working tree.** If `just pr`
-reports `Everything up-to-date` when you expected to push a fix, stop: the fix is
-uncommitted, the head hasn't moved, and the gate is about to merge the old code. Commit,
-then re-run.
+Before running `just pr`, re-run the Step 6 GraphQL query one last time and
+confirm every thread from this round — both "agree" and "disagree" — shows
+`isResolved: true` except the "agree" ones you're deliberately holding open
+until after the push. This catches a thread dropped mid-triage (e.g. a reply
+posted but the resolve call missed or failed) before it becomes a stray
+unresolved thread on the next round.
 
-- **Changed code** (you fixed valid comments) → `just pr` flips the PR to draft, pushes
-  the fixes, and flips back to ready; that ready transition re-triggers a fresh Copilot
-  review of the new commits.
-- **No code change** (every thread was a disagreement) → there's nothing to push, so
-  `just pr` does its draft→ready flip to re-run the watcher and re-count the
-  now-resolved threads. It permits this only because Copilot already reviewed HEAD; it
-  still refuses if you pre-pushed unreviewed commits.
+Then run `just pr`. It pushes the current head, flips back to ready, and enables
+auto-merge (held by the gates until the head is clean). Only once the push has
+gone out, resolve every remaining "agree" thread from Step 8 using the same
+`resolveReviewThread` mutation above.
 
-Then wait for `copilot-review-complete` on the current head to settle:
+- **Changed code** (fixed comments, or fixed a CI failure) → `just pr` flips the
+  PR to draft, pushes the fixes, and flips back to ready; that transition
+  re-triggers fresh `ci` and Copilot runs on the new commits.
+- **No code change** (every thread was a disagreement) → nothing to push, so
+  `just pr` just re-flips draft→ready to re-run the watcher and re-count the
+  now-resolved threads. It permits this only because Copilot already reviewed
+  HEAD; it still refuses if you pre-pushed unreviewed commits.
+
+An unexpected `Everything up-to-date` means an uncommitted fix, not a pushed
+one — commit and re-run. Then go back to **Step 2**.
+
+## Step 12 — confirm and report
+
+Reached when `copilot-review-complete` is `success`, with `ci` already green
+from Step 3. Every `--ready` run of `just pr` already polls the merge state and
+either merges directly or arms auto-merge (`push-branch.ts`) — there's nothing
+left to trigger. Just read the outcome:
 
 ```bash
-SHA=$(git rev-parse HEAD)
-for _ in $(seq 1 120); do
-  STATE=$(gh api "repos/$OWNER/$REPO/commits/$SHA/statuses" \
-    --jq 'map(select(.context=="copilot-review-complete"))[0].state // "none"')
-  case "$STATE" in success|failure|error) break;; esac
-  sleep 10
-done
+gh pr view "$NUMBER" --json state,mergedAt,autoMergeRequest
 ```
 
-- `success` → go to Step 5.
-- `failure` → return to **Step 2** for the next round. After **5 rounds** with
-  threads still remaining, stop, disable auto-merge (`gh pr merge "$NUMBER"
-  --disable-auto`), and report what's left — this guards against endless Copilot
-  ping-pong.
-- `error` or timeout → stop and tell the user (Copilot may be unavailable or out of
-  quota, or the gate hit a machinery fault); don't spin forever.
-
-## Step 5 — confirm the merge and report
-
-Reached when `copilot-review-complete` is `success`. The clean head satisfies every
-required check, so ensure auto-merge is enabled and let it merge — a `just pr` from
-Step 4 may have already enabled it (or the PR may have merged already), so this is
-idempotent:
-
-```bash
-gh pr merge "$NUMBER" --squash --auto --delete-branch 2>/dev/null || true
-```
-
-Read the PR state to see whether it merged or is queued, and report. Summarize per
-round: agreed-and-fixed (with file:line and what changed) vs. disagreed (with the
-reason given), and the final outcome.
+Report whether it merged already or is still queued behind auto-merge. Summarize
+per round: agreed-and-fixed (with file:line and what changed) vs. disagreed (with
+the reason given), and the final outcome.
 
 ## Notes
 
 - The reply, resolve, ready-flip, and merge calls need a token with write access
-  (the user's normal `gh auth`). On a permissions error, surface it and stop — don't
-  retry blindly.
+  (the user's normal `gh auth`). On a permissions error, surface it and stop —
+  don't retry blindly.
 - Past 100 threads or 50 comments in a thread, paginate with the GraphQL
   `pageInfo`/`endCursor` cursors rather than silently truncating.
-- Each push is a fresh head with no `copilot-review-complete` yet, so merge can only
-  happen once the gate re-posts `success` on the latest head with all threads
-  resolved — the loop relies on this, it doesn't race it.
+- Each push is a fresh head with neither check posted yet, so merge can only
+  happen once `ci` and the gate both read clean on the latest head with every
+  thread resolved — the loop relies on this, it doesn't race it.
+- `gh pr checks --watch` looks like a shortcut for the wait loops above — it
+  isn't safe for the Copilot gate: it only reports checks that already exist,
+  so a required status not yet posted (a fresh head's `copilot-review-complete`)
+  is invisible to it and it returns success early. Confirmed live: a PR with
+  `mergeStateStatus: BLOCKED` still showed `--watch --required` reporting all
+  visible required checks passing. Poll the status list yourself instead —
+  that's why Steps 4–5 use the raw API rather than `gh pr checks`.
