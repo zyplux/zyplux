@@ -1,13 +1,12 @@
 import type { PackageSystem } from '@zyplux/cz/deps-catalog';
 
 import { collectDepRepos, collectDepsNames, resolveSourceRepo } from '@zyplux/cz/deps-catalog';
+import { fakeShellOutput, fakeShellPromise, toArgv } from '@zyplux/tests-shell-fixtures';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, test as base, beforeEach, describe, expect, vi } from 'vitest';
-
-import { fakeShellOutput, fakeShellPromise, toArgv } from '#shell-fixtures';
 
 type FetchRoute = (url: string) => Response;
 

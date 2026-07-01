@@ -1,7 +1,6 @@
+import { fakeShellOutput, fakeShellPromise, toArgv } from '@zyplux/tests-shell-fixtures';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { test as base, describe, expect, vi } from 'vitest';
-
-import { fakeShellOutput, fakeShellPromise, toArgv } from '#shell-fixtures';
 
 type CapturedCall = { argv: string[]; program: string };
 

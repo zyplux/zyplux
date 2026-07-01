@@ -36,7 +36,7 @@ Todo:
   ```
 ## cerberus
 
-- config to use `[check_name]` match checks convention (totchef-like), make sure cerberus cli uses default cerberus.tomp config, but each check can be overridden with local config in the same dir where cerberus cli started
+- config to use `[check_name]` match checks convention (totchef-like), make sure cerberus cli uses default cerberus.toml config, but each check can be overridden with local config in the same dir where cerberus cli started
 
 ## cz
 

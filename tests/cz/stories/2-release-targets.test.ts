@@ -1,11 +1,10 @@
 import { loadReleaseTargets, type ReleaseTarget, resolveReleaseTag } from '@zyplux/cz/release-targets';
+import { fakeShellOutput } from '@zyplux/tests-shell-fixtures';
 import { $ } from '@zyplux/util/shell';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { fakeShellOutput } from '#shell-fixtures';
 
 const findTarget = (targets: ReleaseTarget[], label: string) => {
   const target = targets.find(candidate => candidate.label === label);

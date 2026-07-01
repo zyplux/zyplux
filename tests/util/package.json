@@ -6,11 +6,9 @@
   "scripts": {
     "test": "vitest run"
   },
-  "imports": {
-    "#shell-fixtures": "./shell-fixtures.ts"
-  },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@zyplux/tests-shell-fixtures": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
     "@zyplux/util": "workspace:*",
     "vitest": "catalog:",
