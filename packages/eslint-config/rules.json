@@ -1125,7 +1125,7 @@
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.62.1",
     "perfectionist:eslint-plugin-perfectionist@5.9.1",
     "unicorn:eslint-plugin-unicorn@69.0.0",
-    "@zyplux:@zyplux/eslint-config@0.6.2"
+    "@zyplux:@zyplux/eslint-config@0.6.3"
   ],
   "language": "@/js"
 }
