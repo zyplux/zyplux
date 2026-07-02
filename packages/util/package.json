@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/util",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Small Bun utilities: assertions, polling, bounded-concurrency mapping, zod-validated JSON reads, repo-URL normalization, package.json/pyproject manifest schemas, and a git/gh shell harness",
   "keywords": [
     "bun",

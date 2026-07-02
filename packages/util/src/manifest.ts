@@ -112,7 +112,7 @@ export const pythonRequirementNames = (manifest: PyProject) => {
   return names;
 };
 
-const isInsideRepo = async (dir: string) => {
+const checkInsideWorkTree = async (dir: string) => {
   const probe = await $.git.isInsideWorkTree(dir);
   return probe.exitCode === 0 && probe.text().trim() === 'true';
 };
@@ -150,7 +150,7 @@ const findGitRepos = async (dir: string) => {
 };
 
 export const findManifests = async (dir: string) => {
-  if (await isInsideRepo(dir)) return trackedManifests(dir);
+  if (await checkInsideWorkTree(dir)) return trackedManifests(dir);
   const repos = await findGitRepos(dir);
   const listings = await Promise.all(repos.map(repo => trackedManifests(repo)));
   return listings.flat();

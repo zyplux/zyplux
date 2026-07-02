@@ -438,7 +438,12 @@
     "unicorn/import-style": [2, {}],
     "unicorn/isolated-functions": [
       2,
-      { "functions": ["makeSynchronous"], "selectors": [], "comments": ["@isolated"], "overrideGlobals": {} }
+      {
+        "functions": ["makeSynchronous", "workerize"],
+        "selectors": [],
+        "comments": ["@isolated"],
+        "overrideGlobals": {}
+      }
     ],
     "unicorn/logical-assignment-operators": [2, "always"],
     "unicorn/max-nested-calls": [2, { "max": 3 }],
@@ -460,6 +465,7 @@
     "unicorn/no-array-sort-for-min-max": [2],
     "unicorn/no-array-splice": [2],
     "unicorn/no-asterisk-prefix-in-documentation-comments": [0],
+    "unicorn/no-async-promise-finally": [2],
     "unicorn/no-await-expression-member": [2],
     "unicorn/no-await-in-promise-methods": [2],
     "unicorn/no-blob-to-file": [2],
@@ -519,7 +525,7 @@
     "unicorn/no-new-buffer": [2],
     "unicorn/no-non-function-verb-prefix": [
       2,
-      { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"] }
+      { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"], "ignore": [] }
     ],
     "unicorn/no-nonstandard-builtin-properties": [2],
     "unicorn/no-null": [2, { "checkArguments": true, "checkStrictEquality": false }],
@@ -542,9 +548,11 @@
     "unicorn/no-uncalled-method": [2],
     "unicorn/no-undeclared-class-members": [2],
     "unicorn/no-unnecessary-array-flat-depth": [2],
+    "unicorn/no-unnecessary-array-flat-map": [2],
     "unicorn/no-unnecessary-array-splice-count": [2],
     "unicorn/no-unnecessary-await": [2],
     "unicorn/no-unnecessary-boolean-comparison": [2],
+    "unicorn/no-unnecessary-fetch-options": [2],
     "unicorn/no-unnecessary-global-this": [2],
     "unicorn/no-unnecessary-nested-ternary": [2],
     "unicorn/no-unnecessary-polyfills": [2, {}],
@@ -557,6 +565,7 @@
     "unicorn/no-unreadable-object-destructuring": [2],
     "unicorn/no-unsafe-buffer-conversion": [2],
     "unicorn/no-unsafe-dom-html": [0],
+    "unicorn/no-unsafe-promise-all-settled-values": [2],
     "unicorn/no-unsafe-property-key": [2],
     "unicorn/no-unsafe-string-replacement": [2],
     "unicorn/no-unused-array-method-return": [2],
@@ -595,6 +604,7 @@
       }
     ],
     "unicorn/operator-assignment": [2, "always"],
+    "unicorn/prefer-abort-signal-any": [2],
     "unicorn/prefer-abort-signal-timeout": [2],
     "unicorn/prefer-add-event-listener": [2, { "excludedPackages": ["koa", "sax"] }],
     "unicorn/prefer-add-event-listener-options": [2],
@@ -604,6 +614,7 @@
     "unicorn/prefer-array-flat-map": [2],
     "unicorn/prefer-array-from-async": [2],
     "unicorn/prefer-array-from-map": [2],
+    "unicorn/prefer-array-from-range": [2],
     "unicorn/prefer-array-index-of": [2],
     "unicorn/prefer-array-iterable-methods": [2],
     "unicorn/prefer-array-last-methods": [2],
@@ -613,6 +624,7 @@
     "unicorn/prefer-await": [2],
     "unicorn/prefer-bigint-literals": [2],
     "unicorn/prefer-blob-reading-methods": [2],
+    "unicorn/prefer-block-statement-over-iife": [2],
     "unicorn/prefer-boolean-return": [2],
     "unicorn/prefer-class-fields": [2],
     "unicorn/prefer-classlist-toggle": [2],
@@ -636,6 +648,7 @@
     "unicorn/prefer-get-or-insert-computed": [2],
     "unicorn/prefer-global-number-constants": [2],
     "unicorn/prefer-global-this": [2],
+    "unicorn/prefer-group-by": [2],
     "unicorn/prefer-has-check": [2],
     "unicorn/prefer-hoisting-branch-code": [2],
     "unicorn/prefer-https": [2],
@@ -645,6 +658,7 @@
     "unicorn/prefer-includes-over-repeated-comparisons": [2, { "minimumComparisons": 3 }],
     "unicorn/prefer-iterable-in-constructor": [2],
     "unicorn/prefer-iterator-concat": [0],
+    "unicorn/prefer-iterator-helpers": [2],
     "unicorn/prefer-iterator-to-array": [2],
     "unicorn/prefer-iterator-to-array-at-end": [2],
     "unicorn/prefer-keyboard-event-key": [2],
@@ -689,6 +703,7 @@
     "unicorn/prefer-short-arrow-method": [0],
     "unicorn/prefer-simple-condition-first": [2],
     "unicorn/prefer-simple-sort-comparator": [2],
+    "unicorn/prefer-simplified-conditions": [2],
     "unicorn/prefer-single-array-predicate": [2],
     "unicorn/prefer-single-call": [2, { "ignore": [] }],
     "unicorn/prefer-single-object-destructuring": [2],
@@ -1124,8 +1139,8 @@
     "@",
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.62.1",
     "perfectionist:eslint-plugin-perfectionist@5.9.1",
-    "unicorn:eslint-plugin-unicorn@69.0.0",
-    "@zyplux:@zyplux/eslint-config@0.6.4"
+    "unicorn:eslint-plugin-unicorn@70.0.0",
+    "@zyplux:@zyplux/eslint-config@0.6.5"
   ],
   "language": "@/js"
 }

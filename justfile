@@ -1,3 +1,4 @@
+# BASELINE
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 alias i := install
@@ -6,7 +7,6 @@ alias tc := typecheck
 alias l := lint
 alias t := test
 alias c := check
-alias d := dump-rules
 alias u := upgrade
 alias ui := upgrade-interactive
 alias p := push
@@ -64,10 +64,6 @@ upgrade-interactive:
     uvx uv-bump -v
     uv sync --all-packages --all-groups
 
-# Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
-release:
-    bun run --silent cz release-bumped-targets
-
 # Push the current branch and open a draft PR (-r/--ready marks it ready and enables auto-merge).
 push *flags:
     bun run cz push-branch {{ flags }}
@@ -86,6 +82,14 @@ clean:
 clone repo ref="":
     bun run cz clone-reference-repo {{ repo }} {{ ref }}
 
+# CUSTOM
+
+alias d := dump-rules
+
 # Dump the fully-resolved ESLint config (all rules) to packages/eslint-config/rules.json.
 dump-rules:
     bun run --cwd packages/eslint-config dump-rules
+
+# Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
+release:
+    bun run --silent cz release-bumped-targets

@@ -52,11 +52,11 @@ const publish = async (target: Target, remoteHead: string) => {
   const knownRuns = await listReleaseRunIds('.[].databaseId');
   await $.gh.release.create(target.tag, { generateNotes: true, target: remoteHead, title: target.tag });
 
-  console.log('Watching the publish workflow ...');
-  const headRunsQuery = `[.[] | select(.headSha=="${remoteHead}")] | .[].databaseId`;
+  console.log(`Watching the publish workflow for ${target.tag} ...`);
+  const tagRunsQuery = `[.[] | select(.headBranch=="${target.tag}")] | .[].databaseId`;
   const runId = await poll(
     async () => {
-      const ids = await listReleaseRunIds(headRunsQuery, 'databaseId,headSha');
+      const ids = await listReleaseRunIds(tagRunsQuery, 'databaseId,headBranch');
       return ids.find(id => !knownRuns.includes(id));
     },
     { attempts: 30, intervalMs: 2000 },
@@ -120,7 +120,23 @@ export const runReleaseBumpedTargets = async () => {
   }
   ensure(pending.length > 0, 'nothing to release; bump a version first');
 
-  for (const target of pending) {
-    await publish(target, remoteHead);
+  const outcomes = await Promise.all(
+    pending.map(async target => {
+      try {
+        await publish(target, remoteHead);
+        return [];
+      } catch (error) {
+        return [{ reason: error instanceof Error ? error.message : String(error), target }];
+      }
+    }),
+  );
+  const failures = outcomes.flat();
+
+  for (const { reason, target } of failures) {
+    console.error(`${target.label} ${target.version}: ${reason}`);
   }
+  ensure(
+    failures.length === 0,
+    `${failures.length} of ${pending.length} targets failed to publish: ${failures.map(({ target }) => target.label).join(', ')}`,
+  );
 };

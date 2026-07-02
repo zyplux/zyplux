@@ -69,7 +69,7 @@ const ghcrImagePublished = async (repo: string, tag: string) => {
   });
 };
 
-const isPublished = async ({ kind, label }: TargetSpec, version: string) => {
+const checkPackagePublished = async ({ kind, label }: TargetSpec, version: string) => {
   if (kind === 'npm') {
     return httpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
   }
@@ -84,7 +84,7 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
     dir: path.join(repoRoot, path.dirname(spec.version.file)),
-    isPublished: async (version: string) => isPublished(spec, version),
+    isPublished: async (version: string) => checkPackagePublished(spec, version),
     kind: spec.kind,
     label: spec.label,
     readVersion: async () => readVersion(repoRoot, spec.version),

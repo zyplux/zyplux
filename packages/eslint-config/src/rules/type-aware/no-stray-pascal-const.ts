@@ -15,9 +15,9 @@ type NoStrayPascalConstOptions = [{ allowedFactories: string[] }];
 
 type StatementPredicate = (statement: TSESTree.Statement) => boolean;
 
-const startsUppercase = /^[A-Z]/;
-const hasLowercase = /[a-z]/;
-const validSchemaName = /^[A-Z][A-Za-z0-9]*Schema$/;
+const startsUppercaseExp = /^[A-Z]/;
+const lowercaseExp = /[a-z]/;
+const schemaNameExp = /^[A-Z][A-Za-z0-9]*Schema$/;
 const schemaSuffix = 'Schema';
 
 const jsxTypes = new Set<TSESTree.Node['type']>([AST_NODE_TYPES.JSXElement, AST_NODE_TYPES.JSXFragment]);
@@ -104,9 +104,9 @@ const hasZodBrand = (type: ts.Type): boolean => {
   return false;
 };
 
-const isPascalCase = (name: string) => startsUppercase.test(name) && hasLowercase.test(name);
+const isPascalCase = (name: string) => startsUppercaseExp.test(name) && lowercaseExp.test(name);
 
-const isValidSchemaName = (name: string) => name.endsWith(schemaSuffix) && validSchemaName.test(name);
+const isValidSchemaName = (name: string) => name.endsWith(schemaSuffix) && schemaNameExp.test(name);
 
 const isSchemaSuspectName = (name: string) => isPascalCase(name) || name.endsWith(schemaSuffix);
 

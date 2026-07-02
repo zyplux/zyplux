@@ -31,3 +31,11 @@
 ### 10.3.6 treats an empty known-run list as no prior runs
 
 ### 10.3.7 rejects when the workflow completes without reporting a conclusion
+
+## 10.4 publishing multiple pending targets
+
+### 10.4.1 publishes all pending targets concurrently, each watching its own tagged workflow run
+
+### 10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end
+
+### 10.4.3 reports failures in manifest order even when a later target fails first

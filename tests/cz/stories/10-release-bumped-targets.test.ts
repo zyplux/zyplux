@@ -37,19 +37,31 @@ const findTarget = (targets: ReleaseTarget[], label: string) => {
 };
 
 type StubFetchOptions = {
+  ghcrEverVisible?: boolean;
   ghcrPublished: boolean;
   npmPublished: boolean;
   pypiEverVisible?: boolean;
   pypiPublished: boolean;
 };
 
-const stubFetch = ({ ghcrPublished, npmPublished, pypiEverVisible, pypiPublished }: StubFetchOptions) => {
+const stubFetch = ({
+  ghcrEverVisible,
+  ghcrPublished,
+  npmPublished,
+  pypiEverVisible,
+  pypiPublished,
+}: StubFetchOptions) => {
+  let ghcrCalls = 0;
   let pypiCalls = 0;
   vi.stubGlobal('fetch', (input: string | URL) => {
     const url = String(input);
     if (url.includes('/token?')) return Promise.resolve(Response.json({ token: 'gh-token' }));
     if (url.startsWith('https://registry.npmjs.org/')) return Promise.resolve(npmPublished ? ok() : notFound());
-    if (url.startsWith('https://ghcr.io/v2/')) return Promise.resolve(ghcrPublished ? ok() : notFound());
+    if (url.startsWith('https://ghcr.io/v2/')) {
+      ghcrCalls += 1;
+      if (ghcrCalls === 1) return Promise.resolve(ghcrPublished ? ok() : notFound());
+      return Promise.resolve(ghcrEverVisible === false ? notFound() : ok());
+    }
     if (url.startsWith('https://pypi.org/')) {
       pypiCalls += 1;
       if (pypiCalls === 1) return Promise.resolve(pypiPublished ? ok() : notFound());
@@ -71,6 +83,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockReturnValue(undefined);
     vi.spyOn(console, 'warn').mockReturnValue(undefined);
+    vi.spyOn(console, 'error').mockReturnValue(undefined);
     branchName = 'main';
     headSha = 'sha-head';
     remoteMainSha = 'sha-head';
@@ -176,7 +189,10 @@ describe('10. Releasing every target whose version was bumped', () => {
     it('10.3.2 rejects when the publish workflow finishes unsuccessfully', async () => {
       gh.run.view.mockResolvedValueOnce(text('completed\nfailure'));
 
-      await expect(runReleaseBumpedTargets()).rejects.toThrow("publish workflow 999 finished with 'failure'");
+      await expect(runReleaseBumpedTargets()).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("publish workflow 999 finished with 'failure'"),
+      );
       expect(console.warn).not.toHaveBeenCalled();
     });
 
@@ -185,15 +201,19 @@ describe('10. Releasing every target whose version was bumped', () => {
         Promise.resolve(text(jq === '.[].databaseId' ? '100\n101' : '100\n101')),
       );
 
-      await expect(runReleaseBumpedTargets()).rejects.toThrow('publish workflow did not start; check the Actions tab');
+      await expect(runReleaseBumpedTargets()).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('publish workflow did not start; check the Actions tab'),
+      );
       expect(gh.run.view).not.toHaveBeenCalled();
     });
 
     it('10.3.4 rejects when the publish workflow never completes', async () => {
       gh.run.view.mockResolvedValue(text('in_progress'));
 
-      await expect(runReleaseBumpedTargets()).rejects.toThrow(
-        'publish workflow 999 did not complete within the watch window; check the Actions tab',
+      await expect(runReleaseBumpedTargets()).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'),
       );
     });
 
@@ -225,7 +245,78 @@ describe('10. Releasing every target whose version was bumped', () => {
     it('10.3.7 rejects when the workflow completes without reporting a conclusion', async () => {
       gh.run.view.mockResolvedValueOnce(text('completed'));
 
-      await expect(runReleaseBumpedTargets()).rejects.toThrow("publish workflow 999 finished with 'unknown'");
+      await expect(runReleaseBumpedTargets()).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining("publish workflow 999 finished with 'unknown'"),
+      );
+    });
+  });
+
+  describe('10.4 publishing multiple pending targets', () => {
+    const runViewQuery = { jq: '.status, .conclusion', json: 'status,conclusion' };
+
+    beforeEach(() => {
+      stubFetch({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
+      gh.release.list.mockResolvedValue(text('false'));
+      gh.run.list.mockImplementation(({ jq } = {}) => {
+        if (jq?.includes('cerberus-v')) return Promise.resolve(text('100\n111'));
+        if (jq?.includes('ci-image-v')) return Promise.resolve(text('100\n222'));
+        return Promise.resolve(text('100'));
+      });
+    });
+
+    it('10.4.1 publishes all pending targets concurrently, each watching its own tagged workflow run', async () => {
+      let isCiImageRunCompleted = false;
+      gh.run.view.mockImplementation(runId => {
+        if (runId === '222') {
+          isCiImageRunCompleted = true;
+          return Promise.resolve(text('completed\nsuccess'));
+        }
+        return Promise.resolve(text(isCiImageRunCompleted ? 'completed\nsuccess' : 'in_progress'));
+      });
+      const targets = await loadReleaseTargets();
+      const cerberusVersion = await findTarget(targets, 'zyplux-cerberus').readVersion();
+      const ciImageVersion = await findTarget(targets, 'ghcr.io/zyplux/ci').readVersion();
+
+      await runReleaseBumpedTargets();
+
+      expect(gh.release.create).toHaveBeenCalledWith(`cerberus-v${cerberusVersion}`, expect.anything());
+      expect(gh.release.create).toHaveBeenCalledWith(`ci-image-v${ciImageVersion}`, expect.anything());
+      expect(gh.run.view).toHaveBeenCalledWith('111', runViewQuery);
+      expect(gh.run.view).toHaveBeenCalledWith('222', runViewQuery);
+      expect(console.log).toHaveBeenCalledWith(`Published zyplux-cerberus ${cerberusVersion}`);
+      expect(console.log).toHaveBeenCalledWith(`Published ghcr.io/zyplux/ci ${ciImageVersion}`);
+    });
+
+    it('10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end', async () => {
+      gh.run.view.mockImplementation(runId =>
+        Promise.resolve(text(runId === '111' ? 'completed\nfailure' : 'completed\nsuccess')),
+      );
+      const targets = await loadReleaseTargets();
+      const cerberusVersion = await findTarget(targets, 'zyplux-cerberus').readVersion();
+      const ciImageVersion = await findTarget(targets, 'ghcr.io/zyplux/ci').readVersion();
+
+      await expect(runReleaseBumpedTargets()).rejects.toThrow('1 of 2 targets failed to publish: zyplux-cerberus');
+
+      expect(console.log).toHaveBeenCalledWith(`Published ghcr.io/zyplux/ci ${ciImageVersion}`);
+      expect(console.error).toHaveBeenCalledWith(
+        `zyplux-cerberus ${cerberusVersion}: publish workflow 111 finished with 'failure'`,
+      );
+    });
+
+    it('10.4.3 reports failures in manifest order even when a later target fails first', async () => {
+      let isCiImageRunCompleted = false;
+      gh.run.view.mockImplementation(runId => {
+        if (runId === '222') {
+          isCiImageRunCompleted = true;
+          return Promise.resolve(text('completed\nfailure'));
+        }
+        return Promise.resolve(text(isCiImageRunCompleted ? 'completed\nfailure' : 'in_progress'));
+      });
+
+      await expect(runReleaseBumpedTargets()).rejects.toThrow(
+        '2 of 2 targets failed to publish: zyplux-cerberus, ghcr.io/zyplux/ci',
+      );
     });
   });
 });
