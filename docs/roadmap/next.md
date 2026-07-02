@@ -44,7 +44,7 @@ Todo:
 
 - should not export anything from deps-catalog.ts or release-targets.ts, use public cli interface in tests instead, cerberus should enforce that cli tool is built with optique and is only exporting commands. In fact any type of app or package should not export anything other than public interface only to be used in tests. Python doesn't export, but we still should enforce tests to not import anything from under the hood. Should be cerberus checks per app or package type.
 
-- please review tests in the old repository </home/srg/Documents/proj/templates/m-react-chatbot>
+- please review tests in the old repository <https://github.com/realSergiy/m-react-chatbot>
 
 - all tests should use fixture pattern like m-react-chatbot: arrang, act, assert, fixtures - so that tests could read like stories, and that should be enforced by cerberus per app/package type
 
