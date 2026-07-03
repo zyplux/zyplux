@@ -61,6 +61,9 @@ NO_MARKERS = CONFORMING.replace("# BASELINE\n", "").replace("# CUSTOM\n", "")
 DRIFTED_INSTALL = CONFORMING.replace("    bun install\n", "    bun install --frozen-lockfile\n")
 DRIFTED_INSTALL_LINE = DRIFTED_INSTALL.splitlines().index("    bun install --frozen-lockfile") + 1
 DRIFTED_WITH_TAIL = DRIFTED_INSTALL + "\nsmoke:\n    echo ok\n"
+MARKERS_WITH_TRAILING_WS = CONFORMING.replace("# BASELINE\n", "# BASELINE  \n").replace(
+    "\n# CUSTOM\n", "\n# CUSTOM \n"
+) + ("\nsmoke:\n    echo ok\n")
 UNFIXABLE_DUPLICATE_RECIPE = CONFORMING.replace(INSTALL_RECIPE, "") + "\ninstall:\n    bun install\n"
 FREE_FORM_CUSTOM_TAIL = CONFORMING + (
     "\nset dotenv-load := true\n\ngreeting := 'hello'\n\nalias s := smoke\n\n"
@@ -296,8 +299,11 @@ def test_1_10_2_fails_naming_the_first_line_that_drifts_from_the_canonical_basel
 
 
 @requires_just
-def test_1_10_3_rewrites_a_drifted_baseline_region_when_run_with_fix(tmp_path: Path) -> None:
-    result = run_fixing_justfile_check(tmp_path, DRIFTED_WITH_TAIL)
+@pytest.mark.parametrize(
+    "drifted_justfile", [DRIFTED_WITH_TAIL, MARKERS_WITH_TRAILING_WS], ids=["body-drift", "marker-trailing-ws"]
+)
+def test_1_10_3_rewrites_a_drifted_baseline_region_when_run_with_fix(tmp_path: Path, drifted_justfile: str) -> None:
+    result = run_fixing_justfile_check(tmp_path, drifted_justfile)
     assert (tmp_path / "justfile").read_text() == CONFORMING + "\nsmoke:\n    echo ok\n"
     assert (result.status, result.problems) == (Status.PASS, [])
 

@@ -212,7 +212,9 @@ rather than a wall of diff.
 
 With both markers present, `--fix` replaces the baseline region with the
 canonical block, preserves the custom tail untouched, and reports no baseline
-finding against the rewritten file.
+finding against the rewritten file. A marker line carrying trailing whitespace
+still counts as a marker — it surfaces as ordinary drift and is repaired in
+the same single fix pass, never misread as a missing marker.
 
 ### 1.10.4 refuses to fix a baseline whose rewrite does not parse
 
