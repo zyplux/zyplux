@@ -123,9 +123,7 @@ def _rewrite_baseline_region(
 
 def _check_baseline(content: str, repo: Repo, ctx: Context, res: CheckResult) -> None:
     lines = content.split("\n")
-    custom_marker_index = next(
-        (index for index, line in enumerate(lines) if line.rstrip(" \t") == CUSTOM_MARKER), None
-    )
+    custom_marker_index = next((index for index, line in enumerate(lines) if line.rstrip(" \t") == CUSTOM_MARKER), None)
     if lines[0].rstrip(" \t") != BASELINE_MARKER or custom_marker_index is None:
         res.fail(_MISSING_MARKERS)
         return
