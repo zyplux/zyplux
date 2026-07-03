@@ -8,11 +8,17 @@
 
 ### 4.1.3 flags a shell command that installs a tool
 
+### 4.1.4 flags apt install with flags before the subcommand
+
+### 4.1.5 flags piping a downloaded script into a shell
+
 ## 4.2 avoiding false positives on legitimate workflow steps
 
 ### 4.2.1 passes when workflows only set up the workspace toolchain
 
 ### 4.2.2 does not flag npm publish as a tool install
+
+### 4.2.3 does not flag a download that never reaches a shell
 
 ## 4.3 scoping the scan to repos with workflows
 

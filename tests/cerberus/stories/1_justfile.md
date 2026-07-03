@@ -121,3 +121,35 @@ interpolation fragments that `just --dump` emits.
 A conforming justfile extended with a variable assignment and a recipe whose
 body interpolates that variable (and the recipe's own arguments) still passes
 with no findings.
+
+## 1.8 parsing justfiles that declare modules
+
+A justfile may split recipes into modules with `mod` statements (e.g. zyp-vps
+declares `mod infra 'infra/justfile'`). Module recipes are namespaced
+(`infra::deploy`) and outside the org rules, but `just --dump` refuses to run
+when a module's source file is missing — so the parser must satisfy every
+`mod` statement instead of erroring out and leaving the whole justfile
+unchecked.
+
+### 1.8.1 passes a conforming justfile that declares modules
+
+A conforming justfile extended with an explicit-path module
+(`mod infra 'infra/justfile'`), a bare module (`mod tools`), and an optional
+module (`mod? extras`) parses and passes with no findings.
+
+## 1.9 requiring the check pipeline to run cerberus locally
+
+CI-only enforcement lets local drift accumulate between pushes, so the local
+gate must self-verify: some recipe reachable from `check` (or `check` itself)
+has to run cerberus.
+
+### 1.9.1 fails when no recipe in the check pipeline runs cerberus
+
+A justfile whose `check` pipeline never invokes cerberus in any reachable
+recipe body fails the check with a finding that names the missing cerberus
+run.
+
+### 1.9.2 counts a cerberus run in the check recipe body itself
+
+A justfile that runs cerberus from the `check` recipe's own body instead of a
+dependency like `lint` still passes.

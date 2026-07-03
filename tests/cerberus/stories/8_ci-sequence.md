@@ -29,3 +29,7 @@
 ### 8.4.4 fails when the ts job does not run in the org container
 
 ### 8.4.5 passes when the container is declared as a mapping with an image key
+
+## 8.5 matching only commands that actually run
+
+### 8.5.1 fails when a required step appears only in a comment

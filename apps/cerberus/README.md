@@ -29,7 +29,7 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 
 | ID                      | Scope       | Verifies                                                                            |
 | ----------------------- | ----------- | ----------------------------------------------------------------------------------- |
-| `justfile`              | content     | Recipe names, aliases, `check` pipeline, wrapped tool calls, no trailing whitespace |
+| `justfile`              | content     | Recipe names, aliases, `check` pipeline, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci-workflow`           | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
 | `ci-sequence`           | content     | `ci.yml` runs the canonical check sequence per stack, in the org container          |
 | `cerberus-step`         | content     | A CI workflow runs cerberus to self-verify org invariants                           |
@@ -38,7 +38,7 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 | `ruff-config`           | content     | ruff runs standalone in preview with `select = ["ALL"]`; relaxations stay sanctioned |
 | `line-length`           | content     | ruff `line-length` and prettier `printWidth` are both 120                            |
 | `rumdl-config`          | content     | `.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)    |
-| `vitest-runner`         | content     | TypeScript tests run on vitest, never bun's built-in test runner                    |
+| `vitest-runner`         | content     | TypeScript tests run on vitest, never bun's built-in test runner (package.json, justfile, CI) |
 | `ts-project-references` | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog-discipline`    | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
 | `story-tests-py`        | content     | `tests/**/stories/*.md` criteria have a matching, title-matched pytest test          |

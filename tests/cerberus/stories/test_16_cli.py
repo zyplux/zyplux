@@ -48,6 +48,7 @@ typecheck:
 
 lint:
     echo lint
+    uv run cerberus --fix
 
 test:
     echo test

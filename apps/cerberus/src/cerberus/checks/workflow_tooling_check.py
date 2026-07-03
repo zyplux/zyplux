@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -17,7 +18,9 @@ SCOPE = Scope.CONTENT
 _SETUP_ACTION = re.compile(r"^(setup-|.*-toolchain$)", re.IGNORECASE)
 
 _INSTALL_COMMANDS = (
-    re.compile(r"\bapt(?:-get)?\s+(?:install|add)\b", re.IGNORECASE),
+    re.compile(r"\bapt(?:-get)?(?:\s+-{1,2}[\w=-]+)*\s+(?:install|add)\b", re.IGNORECASE),
+    re.compile(r"\bapk\s+add\b", re.IGNORECASE),
+    re.compile(r"\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:ba|da|z)?sh\b", re.IGNORECASE),
     re.compile(r"\bpip3?\s+install\b", re.IGNORECASE),
     re.compile(r"\bpipx\s+install\b", re.IGNORECASE),
     re.compile(r"\bcargo\s+install\b", re.IGNORECASE),
@@ -39,18 +42,6 @@ def _is_setup_action(uses: str) -> bool:
     return bool(_SETUP_ACTION.match(repo)) or "install-action" in repo.lower()
 
 
-def _steps(workflow: dict[str, Any]) -> list[dict[str, Any]]:
-    jobs = workflow.get("jobs")
-    if not isinstance(jobs, dict):
-        return []
-    steps: list[dict[str, Any]] = []
-    for job in jobs.values():
-        job_steps = job.get("steps") if isinstance(job, dict) else None
-        if isinstance(job_steps, list):
-            steps.extend(step for step in job_steps if isinstance(step, dict))
-    return steps
-
-
 def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckResult) -> None:
     uses = step.get("uses")
     if isinstance(uses, str) and _is_setup_action(uses):
@@ -61,7 +52,7 @@ def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckRe
     script = step.get("run")
     if isinstance(script, str):
         for pattern in _INSTALL_COMMANDS:
-            hit = pattern.search(script)
+            hit = pattern.search(workflow.strip_comment_lines(script))
             if hit is not None:
                 res.fail(f"{name}: installs a tool with `{hit.group(0).strip()}`")
                 break
@@ -69,13 +60,11 @@ def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckRe
 
 def _scan_workflow(name: str, content: str, allowed: set[str], res: CheckResult) -> None:
     try:
-        workflow = yaml.safe_load(content)
+        doc = yaml.safe_load(content)
     except yaml.YAMLError as err:
         res.error(f"{name}: not valid YAML ({err})")
         return
-    if not isinstance(workflow, dict):
-        return
-    for step in _steps(workflow):
+    for step in workflow.job_steps(doc):
         _check_step(name, step, allowed, res)
 
 

@@ -8,7 +8,7 @@ from cerberus import config, context
 from cerberus.checks import vitest_runner_check
 from cerberus.model import CheckResult, Finding, Repo, Status
 
-RunVitestRunner = Callable[[dict[str, str]], CheckResult]
+RunVitestRunner = Callable[..., CheckResult]
 
 _VITEST_PKG = '{"scripts": {"test": "vitest run"}}'
 _BUN_TEST_PKG = '{"scripts": {"test": "bun test"}}'
@@ -32,9 +32,10 @@ def ctx() -> context.Context:
 
 @pytest.fixture
 def run_vitest_runner(monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: context.Context) -> RunVitestRunner:
-    def _run(files: dict[str, str]) -> CheckResult:
+    def _run(files: dict[str, str], workflows: dict[str, str] | None = None) -> CheckResult:
         monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(files))
         monkeypatch.setattr(ctx, "file", lambda _repo, path: files.get(path))
+        monkeypatch.setattr(ctx, "workflows", lambda _repo: workflows or {})
         return vitest_runner_check.run(repo, ctx)
 
     return _run
@@ -93,4 +94,22 @@ def test_9_4_1_ignores_bun_test_scripts_and_imports_inside_vendored_node_modules
 
 def test_9_5_1_passes_when_the_test_script_and_test_files_both_use_vitest(run_vitest_runner: RunVitestRunner) -> None:
     result = run_vitest_runner({"package.json": _VITEST_PKG, "src/a.test.ts": _VITEST_IMPORT})
+    assert result.findings == [_VITEST_PASS]
+
+
+def test_9_6_1_fails_when_a_justfile_recipe_runs_bun_test(run_vitest_runner: RunVitestRunner) -> None:
+    result = run_vitest_runner({"package.json": _VITEST_PKG, "justfile": "test:\n    bun test\n"})
+    assert result.findings == [Finding(Status.FAIL, "justfile runs bun's test runner; use `vitest run`")]
+
+
+def test_9_6_2_fails_when_a_workflow_run_step_runs_bun_test(run_vitest_runner: RunVitestRunner) -> None:
+    wf = "jobs:\n  ci:\n    steps:\n      - run: bun --bail test\n"
+    result = run_vitest_runner({"package.json": _VITEST_PKG}, workflows={"ci.yml": wf})
+    assert result.findings == [Finding(Status.FAIL, "ci.yml runs bun's test runner; use `vitest run`")]
+
+
+def test_9_6_3_ignores_comment_lines_that_mention_bun_test(run_vitest_runner: RunVitestRunner) -> None:
+    justfile = "# Run all workspace tests with bun test.\ntest:\n    bun run test\n"
+    wf = "jobs:\n  ci:\n    steps:\n      - run: |\n          # not bun test\n          bun run test\n"
+    result = run_vitest_runner({"package.json": _VITEST_PKG, "justfile": justfile}, workflows={"ci.yml": wf})
     assert result.findings == [_VITEST_PASS]

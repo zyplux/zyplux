@@ -73,6 +73,30 @@ def test_4_1_3_flags_a_shell_command_that_installs_a_tool(
     assert result.findings == [Finding(Status.FAIL, "ci.yml: installs a tool with `apt-get install`")]
 
 
+def test_4_1_4_flags_apt_install_with_flags_before_the_subcommand(
+    run_workflow_tooling: RunWorkflowTooling,
+) -> None:
+    wf = "jobs:\n  ci:\n    steps:\n      - run: apt-get -y --no-install-recommends install jq\n"
+
+    result = run_workflow_tooling({"ci.yml": wf})
+
+    assert result.findings == [
+        Finding(Status.FAIL, "ci.yml: installs a tool with `apt-get -y --no-install-recommends install`")
+    ]
+
+
+def test_4_1_5_flags_piping_a_downloaded_script_into_a_shell(
+    run_workflow_tooling: RunWorkflowTooling,
+) -> None:
+    wf = "jobs:\n  ci:\n    steps:\n      - run: curl -fsSL https://example.com/install.sh | sudo bash\n"
+
+    result = run_workflow_tooling({"ci.yml": wf})
+
+    assert result.findings == [
+        Finding(Status.FAIL, "ci.yml: installs a tool with `curl -fsSL https://example.com/install.sh | sudo bash`")
+    ]
+
+
 def test_4_2_1_passes_when_workflows_only_set_up_the_workspace_toolchain(
     run_workflow_tooling: RunWorkflowTooling,
 ) -> None:
@@ -85,6 +109,16 @@ def test_4_2_2_does_not_flag_npm_publish_as_a_tool_install(
     run_workflow_tooling: RunWorkflowTooling,
 ) -> None:
     wf = "jobs:\n  ci:\n    steps:\n      - run: npm publish ./*.tgz --access public\n"
+
+    result = run_workflow_tooling({"ci.yml": wf})
+
+    assert result.findings == [Finding(Status.PASS, "workflows install no extra tools")]
+
+
+def test_4_2_3_does_not_flag_a_download_that_never_reaches_a_shell(
+    run_workflow_tooling: RunWorkflowTooling,
+) -> None:
+    wf = "jobs:\n  ci:\n    steps:\n      - run: curl -fsSL https://example.com/data.json | jq .version\n"
 
     result = run_workflow_tooling({"ci.yml": wf})
 

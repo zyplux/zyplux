@@ -13,12 +13,13 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "justfile"
-SUMMARY = "recipe names, aliases, check pipeline, wrapped tool calls, no trailing whitespace"
+SUMMARY = "recipe names, aliases, check pipeline, local cerberus run, wrapped tool calls, no trailing whitespace"
 SCOPE = Scope.CONTENT
 
 _SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
 _RECIPE_LINE_PREFIXES = "@-"
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
+_CERBERUS_CALL = re.compile(r"\bcerberus\b")
 
 
 def _trailing_ws_lines(content: str) -> list[int]:
@@ -87,6 +88,26 @@ def _check_recipes(recipes: Iterable[str], expected: Iterable[str], kind: str, r
             res.fail(f"missing {kind}recipe `{name}`")
 
 
+def _calc_reachable_recipes(jf: justfile.Justfile, root: str) -> set[str]:
+    reachable: set[str] = set()
+    frontier = [root]
+    while frontier:
+        recipe = frontier.pop()
+        if recipe in reachable:
+            continue
+        reachable.add(recipe)
+        frontier.extend(jf.recipes.get(recipe, []))
+    return reachable
+
+
+def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
+    if "check" not in jf.recipes:
+        return
+    bodies = (jf.bodies.get(recipe, "") for recipe in _calc_reachable_recipes(jf, "check"))
+    if not any(_CERBERUS_CALL.search(body) for body in bodies):
+        res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")
+
+
 def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
     if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
@@ -117,6 +138,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_recipes(jf.recipes, cfg.required_recipes, "required ", res)
     _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
     _check_pipeline(jf, cfg, res)
+    _check_local_cerberus_run(jf, res)
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):
         res.fail(f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`bunx`")
