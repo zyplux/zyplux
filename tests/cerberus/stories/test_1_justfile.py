@@ -59,6 +59,7 @@ INTERLEAVED_CHECK = CONFORMING.replace(
 DEFAULT_NO_LIST = CONFORMING.replace("default:\n    @just --list\n", "default:\n    echo hi\n")
 BARE_TOOL_CALL = CONFORMING.replace("lint:\n    bun run lint\n", "lint:\n    rumdl check\n")
 WITH_MODULES = CONFORMING + "\nmod infra 'infra/justfile'\nmod tools\nmod? extras\n"
+DEGENERATE_MODULE_PATH = CONFORMING + "\nmod infra ''\n"
 NO_CERBERUS_RUN = CONFORMING.replace("    uv run cerberus --fix\n", "")
 CERBERUS_IN_CHECK_BODY = NO_CERBERUS_RUN.replace(
     "check: install knip typecheck lint test",
@@ -217,6 +218,15 @@ def test_1_7_1_passes_a_conforming_justfile_whose_recipes_use_interpolation(
 def test_1_8_1_passes_a_conforming_justfile_that_declares_modules(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(WITH_MODULES)
     assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_8_2_errors_instead_of_crashing_on_a_module_with_a_degenerate_path(
+    run_justfile_check: RunJustfileCheck,
+) -> None:
+    result = run_justfile_check(DEGENERATE_MODULE_PATH)
+    assert result.status is Status.ERROR
+    assert result.problems[0].message.startswith("could not parse justfile: ")
 
 
 @requires_just

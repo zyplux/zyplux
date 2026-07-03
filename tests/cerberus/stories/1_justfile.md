@@ -137,6 +137,13 @@ A conforming justfile extended with an explicit-path module
 (`mod infra 'infra/justfile'`), a bare module (`mod tools`), and an optional
 module (`mod? extras`) parses and passes with no findings.
 
+### 1.8.2 errors instead of crashing on a module with a degenerate path
+
+A module whose declared path is empty (`mod infra ''`) resolves to the
+justfile's own directory — stubbing it out is a harmless no-op, `just` rejects
+the circular import, and the check reports the usual "could not parse
+justfile:" error finding instead of raising.
+
 ## 1.9 requiring the check pipeline to run cerberus locally
 
 CI-only enforcement lets local drift accumulate between pushes, so the local

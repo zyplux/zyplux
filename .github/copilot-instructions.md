@@ -8,4 +8,6 @@ Before claiming that an API of a dependency does not exist or is unsupported, ve
 
 Do not flag code based on hedged claims about external API runtime behavior (e.g., a GitHub API field being "often null" for some event type) unless the behavior is documented and definitive. In this repository, workflow runs triggered by the `release` event report `head_branch` as the release tag name.
 
+Before reporting that a regex matches (or misses) a given input, trace the match mechanically against the pattern's anchoring — do not infer a false positive from surface resemblance (e.g. a pattern requiring `sh` immediately after `\|\s*` cannot match `| ssh`). The same applies to claimed stdlib failure modes: verify the documented behavior first (e.g. `Path.touch()` with the default `exist_ok=True` succeeds on an existing directory via `os.utime`).
+
 The mandatory `ci` check runs the full quality gate on every push: ruff (`select = ["ALL"]`), pyrefly, vulture, knip, tsc, eslint, rumdl, and both test suites. Do not report syntax, typechecking and linting errors - leave these to the deterministic ci gate.
