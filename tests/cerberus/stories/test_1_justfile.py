@@ -65,6 +65,10 @@ CERBERUS_IN_CHECK_BODY = NO_CERBERUS_RUN.replace(
     "check: install knip typecheck lint test",
     "check: install knip typecheck lint test\n    uv run cerberus --fix",
 )
+CERBERUS_ONLY_MENTIONED = NO_CERBERUS_RUN.replace(
+    "lint:\n    bun run lint\n",
+    "lint:\n    # cerberus runs in ci\n    echo cerberus\n    bun run lint\n",
+)
 TRAILING_WHITESPACE = CONFORMING.replace(
     "check: install knip typecheck lint test\n",
     "check: install knip typecheck lint test   \n",
@@ -241,4 +245,29 @@ def test_1_9_1_fails_when_no_recipe_in_the_check_pipeline_runs_cerberus(run_just
 @requires_just
 def test_1_9_2_counts_a_cerberus_run_in_the_check_recipe_body_itself(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(CERBERUS_IN_CHECK_BODY)
+    assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_9_3_does_not_count_a_mere_mention_of_cerberus(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CERBERUS_ONLY_MENTIONED)
+    assert (result.status, [f.message for f in result.problems]) == (
+        Status.FAIL,
+        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`"],
+    )
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "invocation",
+    [
+        "uv run cerberus --fix",
+        "uv run --active cerberus --fix",
+        "uvx --from zyplux-cerberus cerberus --fix",
+    ],
+)
+def test_1_9_4_counts_runner_wrapped_cerberus_invocations(
+    run_justfile_check: RunJustfileCheck, invocation: str
+) -> None:
+    result = run_justfile_check(CONFORMING.replace("uv run cerberus --fix", invocation))
     assert (result.status, result.problems) == (Status.PASS, [])

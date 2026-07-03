@@ -160,3 +160,16 @@ run.
 
 A justfile that runs cerberus from the `check` recipe's own body instead of a
 dependency like `lint` still passes.
+
+### 1.9.3 does not count a mere mention of cerberus
+
+The word `cerberus` in a shell comment or as an argument to an unrelated
+command (`echo cerberus`) is not a cerberus run: only a command segment that
+invokes cerberus — `cerberus` in command position, or a runner (`uv`, `uvx`)
+whose segment carries a `cerberus` token — satisfies the check.
+
+### 1.9.4 counts runner-wrapped cerberus invocations
+
+The invocation styles the org's repos actually use all count:
+`uv run cerberus --fix`, `uv run --active cerberus --fix`, and
+`uvx --from zyplux-cerberus cerberus --fix`.

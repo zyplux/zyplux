@@ -19,7 +19,7 @@ SCOPE = Scope.CONTENT
 _SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
 _RECIPE_LINE_PREFIXES = "@-"
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
-_CERBERUS_CALL = re.compile(r"\bcerberus\b")
+_CERBERUS_RUNNERS = frozenset({"uv", "uvx"})
 
 
 def _trailing_ws_lines(content: str) -> list[int]:
@@ -30,13 +30,32 @@ def _strip_trailing_ws(content: str) -> str:
     return _TRAILING_WS.sub("", content)
 
 
-def _leading_command(segment: str) -> str | None:
+def _command_tokens(segment: str) -> list[str]:
     tokens = segment.split()
     while tokens and "=" in tokens[0] and not tokens[0].startswith("-"):
         tokens = tokens[1:]
+    if tokens:
+        tokens[0] = tokens[0].lstrip(_RECIPE_LINE_PREFIXES)
+    return tokens
+
+
+def _leading_command(segment: str) -> str | None:
+    tokens = _command_tokens(segment)
+    return tokens[0] if tokens else None
+
+
+def _invokes_cerberus(segment: str) -> bool:
+    """Decide whether a command segment actually runs cerberus.
+
+    `cerberus` in command position counts, as does a runner (`uv`, `uvx`)
+    carrying a `cerberus` token (`uv run --active cerberus`,
+    `uvx --from zyplux-cerberus cerberus`). A mention in a shell comment or as
+    an argument to an unrelated command does not.
+    """
+    tokens = _command_tokens(segment)
     if not tokens:
-        return None
-    return tokens[0].lstrip(_RECIPE_LINE_PREFIXES)
+        return False
+    return tokens[0] == "cerberus" or (tokens[0] in _CERBERUS_RUNNERS and "cerberus" in tokens[1:])
 
 
 def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> list[tuple[str, str]]:
@@ -103,8 +122,13 @@ def _calc_reachable_recipes(jf: justfile.Justfile, root: str) -> set[str]:
 def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
     if "check" not in jf.recipes:
         return
-    bodies = (jf.bodies.get(recipe, "") for recipe in _calc_reachable_recipes(jf, "check"))
-    if not any(_CERBERUS_CALL.search(body) for body in bodies):
+    segments = (
+        segment
+        for recipe in _calc_reachable_recipes(jf, "check")
+        for line in jf.bodies.get(recipe, "").split("\n")
+        for segment in _SEGMENT_SPLIT.split(line)
+    )
+    if not any(_invokes_cerberus(segment) for segment in segments):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")
 
 
