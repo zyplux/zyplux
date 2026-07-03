@@ -25,3 +25,11 @@
 ## 9.5 passing repos that use vitest throughout
 
 ### 9.5.1 passes when the test script and test files both use vitest
+
+## 9.6 catching bun test runner invocations outside package json
+
+### 9.6.1 fails when a justfile recipe runs bun test
+
+### 9.6.2 fails when a workflow run step runs bun test
+
+### 9.6.3 ignores comment lines that mention bun test

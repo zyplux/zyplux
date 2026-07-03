@@ -176,3 +176,12 @@ def test_8_4_5_passes_when_the_container_is_declared_as_a_mapping_with_an_image_
     )
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [_SEQUENCE_PASS]
+
+
+def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(run_ci_sequence: RunCiSequence) -> None:
+    ci = _PY_CI.replace(
+        "      - run: uv run --no-sync pytest\n",
+        "      - run: |\n          # uv run --no-sync pytest\n          echo skipped\n",
+    )
+    result = run_ci_sequence(python=True, ci=ci)
+    assert result.findings == [Finding(Status.FAIL, "python ci is missing `pytest`")]

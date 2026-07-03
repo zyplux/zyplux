@@ -31,6 +31,7 @@ typecheck:
     bun run typecheck
 lint:
     bun run lint
+    uv run cerberus --fix
 test:
     bun run test
 check: install knip typecheck lint test
@@ -57,6 +58,17 @@ INTERLEAVED_CHECK = CONFORMING.replace(
 ).replace("clean:\n", "build:\n    bun run build\nclean:\n")
 DEFAULT_NO_LIST = CONFORMING.replace("default:\n    @just --list\n", "default:\n    echo hi\n")
 BARE_TOOL_CALL = CONFORMING.replace("lint:\n    bun run lint\n", "lint:\n    rumdl check\n")
+WITH_MODULES = CONFORMING + "\nmod infra 'infra/justfile'\nmod tools\nmod? extras\n"
+DEGENERATE_MODULE_PATH = CONFORMING + "\nmod infra ''\n"
+NO_CERBERUS_RUN = CONFORMING.replace("    uv run cerberus --fix\n", "")
+CERBERUS_IN_CHECK_BODY = NO_CERBERUS_RUN.replace(
+    "check: install knip typecheck lint test",
+    "check: install knip typecheck lint test\n    uv run cerberus --fix",
+)
+CERBERUS_ONLY_MENTIONED = NO_CERBERUS_RUN.replace(
+    "lint:\n    bun run lint\n",
+    "lint:\n    # cerberus runs in ci\n    echo cerberus\n    bun run lint\n",
+)
 TRAILING_WHITESPACE = CONFORMING.replace(
     "check: install knip typecheck lint test\n",
     "check: install knip typecheck lint test   \n",
@@ -185,7 +197,7 @@ def test_1_6_1_fails_when_a_recipe_line_has_trailing_whitespace(run_justfile_che
     result = run_justfile_check(TRAILING_WHITESPACE)
     assert (result.status, [f.message for f in result.problems]) == (
         Status.FAIL,
-        ["trailing whitespace on line(s) 23"],
+        ["trailing whitespace on line(s) 24"],
     )
 
 
@@ -203,4 +215,59 @@ def test_1_7_1_passes_a_conforming_justfile_whose_recipes_use_interpolation(
     run_justfile_check: RunJustfileCheck,
 ) -> None:
     result = run_justfile_check(WITH_INTERPOLATION)
+    assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_8_1_passes_a_conforming_justfile_that_declares_modules(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(WITH_MODULES)
+    assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_8_2_errors_instead_of_crashing_on_a_module_with_a_degenerate_path(
+    run_justfile_check: RunJustfileCheck,
+) -> None:
+    result = run_justfile_check(DEGENERATE_MODULE_PATH)
+    assert result.status is Status.ERROR
+    assert result.problems[0].message.startswith("could not parse justfile: ")
+
+
+@requires_just
+def test_1_9_1_fails_when_no_recipe_in_the_check_pipeline_runs_cerberus(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(NO_CERBERUS_RUN)
+    assert (result.status, [f.message for f in result.problems]) == (
+        Status.FAIL,
+        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`"],
+    )
+
+
+@requires_just
+def test_1_9_2_counts_a_cerberus_run_in_the_check_recipe_body_itself(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CERBERUS_IN_CHECK_BODY)
+    assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_9_3_does_not_count_a_mere_mention_of_cerberus(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CERBERUS_ONLY_MENTIONED)
+    assert (result.status, [f.message for f in result.problems]) == (
+        Status.FAIL,
+        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`"],
+    )
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "invocation",
+    [
+        "uv run cerberus --fix",
+        "uv run --active cerberus --fix",
+        "uvx --from zyplux-cerberus cerberus --fix",
+    ],
+)
+def test_1_9_4_counts_runner_wrapped_cerberus_invocations(
+    run_justfile_check: RunJustfileCheck, invocation: str
+) -> None:
+    result = run_justfile_check(CONFORMING.replace("uv run cerberus --fix", invocation))
     assert (result.status, result.problems) == (Status.PASS, [])

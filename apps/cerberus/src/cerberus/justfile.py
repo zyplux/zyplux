@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,9 @@ from cerberus import proc
 
 class JustfileError(RuntimeError):
     pass
+
+
+_MOD_STATEMENT = re.compile(r"^mod\??\s+(?P<name>\w+)(?:\s+(?P<quoted_path>'[^']*'|\"[^\"]*\"))?\s*(?:#.*)?$")
 
 
 @dataclass(frozen=True)
@@ -32,10 +36,31 @@ def _join_body(body: list[list[Any]] | None) -> str:
     return "\n".join("".join(fragment if isinstance(fragment, str) else " " for fragment in line) for line in body)
 
 
+def _materialize_module_stubs(content: str, root: Path) -> None:
+    """Satisfy `mod` statements with empty source files so `just --dump` can run.
+
+    Module recipes are namespaced (`name::recipe`) and outside the root-level
+    rules cerberus enforces, so an empty stub at the declared (or implicit
+    `name/justfile`) path preserves every fact the checks read.
+    """
+    for line in content.splitlines():
+        statement = _MOD_STATEMENT.match(line)
+        if statement is None:
+            continue
+        quoted_path = statement.group("quoted_path")
+        stub = Path(quoted_path[1:-1]) if quoted_path else Path(statement.group("name")) / "justfile"
+        resolved = (root / stub).resolve()
+        if not resolved.is_relative_to(root):
+            continue
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        resolved.touch()
+
+
 def parse(content: str) -> Justfile:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "justfile"
         path.write_text(content)
+        _materialize_module_stubs(content, Path(tmp).resolve())
         try:
             completed = proc.run(["just", "-f", str(path), "--dump", "--dump-format", "json"])
         except proc.ToolNotFoundError as err:

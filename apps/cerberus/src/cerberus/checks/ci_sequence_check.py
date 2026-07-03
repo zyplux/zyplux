@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -24,32 +25,19 @@ def _ci_content(repo: Repo, ctx: Context) -> str | None:
     return None
 
 
-def _jobs(content: str) -> dict[str, Any] | None:
+def _parse_workflow(content: str) -> dict[str, Any] | None:
     try:
         doc = yaml.safe_load(content)
     except yaml.YAMLError:
         return None
-    if not isinstance(doc, dict):
-        return None
-    jobs = doc.get("jobs")
-    return jobs if isinstance(jobs, dict) else {}
+    return doc if isinstance(doc, dict) else None
 
 
-def _run_commands(jobs: dict[str, Any]) -> list[str]:
-    commands: list[str] = []
-    for job in jobs.values():
-        steps = job.get("steps") if isinstance(job, dict) else None
-        if not isinstance(steps, list):
-            continue
-        for step in steps:
-            command = step.get("run") if isinstance(step, dict) else None
-            if isinstance(command, str):
-                commands.append(command)
-    return commands
-
-
-def _container_images(jobs: dict[str, Any]) -> list[str]:
+def _container_images(doc: dict[str, Any]) -> list[str]:
     images: list[str] = []
+    jobs = doc.get("jobs")
+    if not isinstance(jobs, dict):
+        return images
     for job in jobs.values():
         container = job.get("container") if isinstance(job, dict) else None
         if isinstance(container, str):
@@ -86,20 +74,20 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.fail("no ci.yml workflow")
         return res
 
-    jobs = _jobs(content)
-    if jobs is None:
+    doc = _parse_workflow(content)
+    if doc is None:
         res.error("ci.yml is not valid YAML")
         return res
 
     cfg = ctx.config
-    commands = _run_commands(jobs)
+    commands = workflow.run_commands(doc)
 
     if has_ts:
         _verify_sequence(res, "ts", cfg.ci_required_ts, commands)
     if has_python:
         _verify_sequence(res, "python", cfg.ci_required_python, commands)
 
-    if has_ts and not any(image.startswith(cfg.ci_image) for image in _container_images(jobs)):
+    if has_ts and not any(image.startswith(cfg.ci_image) for image in _container_images(doc)):
         res.fail(f"bun ci should run in the `{cfg.ci_image}` container (Node-free guarantee)")
 
     if not res.problems:
