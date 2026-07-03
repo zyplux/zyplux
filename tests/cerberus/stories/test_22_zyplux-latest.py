@@ -56,7 +56,7 @@ class FakeRegistry:
         self.payloads["pypi.org", f"/pypi/{distribution}/json"] = {"info": {"version": latest}}
 
     def serve_ghcr(self, image: str, tags: list[str]) -> None:
-        self.payloads["ghcr.io", f"/token?scope=repository:{image}:pull"] = {"token": "anonymous"}
+        self.payloads["ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull"] = {"token": "anonymous"}
         self.payloads["ghcr.io", f"/v2/{image}/tags/list"] = {"tags": tags}
 
     def fetch_json(self, host: str, path: str, headers: dict[str, str] | None = None) -> object:
@@ -109,7 +109,7 @@ def test_22_1_3_queries_each_artifact_once_per_run(tmp_path: Path, registry: Fak
     result = run_check_on(tmp_path, files)
     assert (result.status, result.problems) == (Status.PASS, [])
     assert registry.requests == [
-        ("ghcr.io", "/token?scope=repository:zyplux/ci:pull"),
+        ("ghcr.io", "/token?service=ghcr.io&scope=repository:zyplux/ci:pull"),
         ("ghcr.io", "/v2/zyplux/ci/tags/list"),
     ]
 
@@ -171,11 +171,11 @@ def test_22_4_2_passes_the_floating_latest_tag(tmp_path: Path, registry: FakeReg
 
 
 def break_token_endpoint(_registry: FakeRegistry) -> str:
-    return "https://ghcr.io/token?scope=repository:zyplux/ci:pull: connection refused"
+    return "https://ghcr.io/token?service=ghcr.io&scope=repository:zyplux/ci:pull: connection refused"
 
 
 def break_token_payload(registry: FakeRegistry) -> str:
-    registry.payloads["ghcr.io", "/token?scope=repository:zyplux/ci:pull"] = {"detail": "denied"}
+    registry.payloads["ghcr.io", "/token?service=ghcr.io&scope=repository:zyplux/ci:pull"] = {"detail": "denied"}
     return "zyplux/ci: response carries no `token`"
 
 

@@ -66,7 +66,7 @@ def _version_sort_key(tag: str) -> tuple[int, ...]:
 
 
 def fetch_latest_ghcr(image: str) -> str:
-    token_payload = _fetch_json("ghcr.io", f"/token?scope=repository:{image}:pull")
+    token_payload = _fetch_json("ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull")
     token = str(_extract(token_payload, "token", source=image))
     tags_payload = _fetch_json("ghcr.io", f"/v2/{image}/tags/list", {"Authorization": f"Bearer {token}"})
     tags = _extract(tags_payload, "tags", source=image)
