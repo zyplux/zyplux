@@ -1,11 +1,18 @@
 # 1. [Requiring repos to ship a conformant justfile](test_1_justfile.py)
 
 Every repo in the org must ship a `justfile` that gives contributors the same
-commands everywhere: `install`, `lint`, `test`, `check`, and so on. The
+commands everywhere: `install`, `lint`, `test`, `check`, `push`, and so on. The
 `justfile` check (`apps/cerberus/src/cerberus/checks/justfile_check.py`)
-enforces that shape, and it leans on the `justfile` module
-(`apps/cerberus/src/cerberus/justfile.py`) to parse the file's aliases,
-recipes, dependencies, and bodies via `just --dump`.
+enforces that shape two ways: a byte-exact canonical baseline block (packaged
+with cerberus as `baseline.just`, see 1.10) and structural sub-checks that
+give precise incremental findings while a repo migrates. It leans on the
+`justfile` module (`apps/cerberus/src/cerberus/justfile.py`) to parse the
+file's aliases, recipes, dependencies, and bodies via `just --dump`.
+
+Structural fixtures below mutate the canonical baseline region, so alongside
+the structural finding under test they also earn a baseline-drift finding;
+each criterion asserts on the findings that are not baseline findings unless
+it is explicitly about the baseline.
 
 ## 1.1 requiring a present, fully conforming justfile
 
@@ -14,10 +21,11 @@ reports why it doesn't — starting with whether a justfile exists at all.
 
 ### 1.1.1 passes a fully conforming justfile
 
-A justfile with every required and recommended alias, every required and
-recommended recipe, a correctly ordered `check` pipeline, a `default` recipe
-that lists available commands, and no bare managed tool calls or trailing
-whitespace passes with no findings.
+A justfile made of the `# BASELINE` marker, the canonical baseline block,
+and the `# CUSTOM` marker satisfies every rule — aliases, recipes, pipeline
+order, default listing, wrapped tools, whitespace — and passes with no
+findings. This doubles as the self-test that the packaged canonical baseline
+conforms to everything the check enforces.
 
 ### 1.1.2 fails when the repo has no justfile at its root
 
@@ -33,11 +41,12 @@ rather than a pass or an ordinary failure.
 
 ## 1.2 keeping aliases and recipes conformant
 
-Every recipe needs a short alias (`i`, `k`, `tc`, `l`, `t`, `c`, plus the
-recommended `u`/`ui`), and every pipeline recipe needs to exist under its own
-name (`default`, `install`, `knip`, `typecheck`, `lint`, `test`, `check`, plus
-the recommended `upgrade`, `upgrade-interactive`, `clean`). An alias that
-exists but points at the wrong recipe is treated the same as a missing one.
+Every recipe needs a short alias (`i`, `k`, `tc`, `l`, `t`, `c`, `p`, `pr`,
+plus the recommended `u`/`ui`), and every pipeline recipe needs to exist under
+its own name (`default`, `install`, `knip`, `typecheck`, `lint`, `test`,
+`check`, `push`, `push-ready`, plus the recommended `upgrade`,
+`upgrade-interactive`, `clean`). An alias that exists but points at the wrong
+recipe is treated the same as a missing one.
 
 ### 1.2.1 fails when a required alias is missing or targets the wrong recipe
 
@@ -71,7 +80,8 @@ configured order fails the check.
 
 The pipeline steps only have to appear in order, not contiguously: a `check`
 recipe that interleaves an extra step (e.g. `build`) between the configured
-pipeline steps still passes.
+pipeline steps earns no pipeline finding (the mutation leaves only its
+baseline-drift finding).
 
 ## 1.4 requiring the default recipe to list available commands
 
@@ -102,8 +112,8 @@ Recipe lines must not carry trailing spaces or tabs.
 
 ### 1.6.1 fails when a recipe line has trailing whitespace
 
-A justfile whose otherwise-conforming `check` recipe line ends in trailing
-spaces fails the check.
+A justfile whose custom-section recipe line ends in trailing spaces fails
+the check, naming the offending line number.
 
 ### 1.6.2 strips trailing whitespace when run with fix
 
@@ -159,7 +169,7 @@ run.
 ### 1.9.2 counts a cerberus run in the check recipe body itself
 
 A justfile that runs cerberus from the `check` recipe's own body instead of a
-dependency like `lint` still passes.
+dependency like `lint` earns no cerberus-run finding.
 
 ### 1.9.3 does not count a mere mention of cerberus
 
@@ -172,4 +182,53 @@ whose segment carries a `cerberus` token — satisfies the check.
 
 The invocation styles the org's repos actually use all count:
 `uv run cerberus --fix`, `uv run --active cerberus --fix`, and
-`uvx --from zyplux-cerberus cerberus --fix`.
+`uvx --from zyplux-cerberus cerberus --fix` — none of them earns a
+cerberus-run finding.
+
+## 1.10 enforcing the canonical baseline block
+
+Structural rules alone let recipe bodies drift apart across repos, so the
+check also enforces a byte-exact canonical baseline: every justfile must start
+with the line `# BASELINE`, carry the canonical block — packaged with cerberus
+as `baseline.just` and mirrored by this repo's own justfile — byte-for-byte,
+and terminate it with the line `# CUSTOM`. Everything after `# CUSTOM` is the
+repo's own (aliases, recipes, `set`/`mod` statements, variables), subject only
+to the structural rules above.
+
+### 1.10.1 fails when the baseline markers are missing
+
+A justfile that does not start with `# BASELINE` or has no `# CUSTOM` line
+fails with a finding that explains the required layout and where the canonical
+baseline lives; `--fix` never rewrites such a file.
+
+### 1.10.2 fails naming the first line that drifts from the canonical baseline
+
+When the markers are present but the region between them differs from the
+canonical block, the check fails with a single finding naming the first
+divergent line — its line number, the expected text, and the actual text —
+rather than a wall of diff.
+
+### 1.10.3 rewrites a drifted baseline region when run with fix
+
+With both markers present, `--fix` replaces the baseline region with the
+canonical block, preserves the custom tail untouched, and reports no baseline
+finding against the rewritten file.
+
+### 1.10.4 refuses to fix a baseline whose rewrite does not parse
+
+When restoring the canonical block would produce a justfile that `just` itself
+rejects (e.g. the custom section already defines a recipe the baseline
+carries), `--fix` leaves the file untouched and fails, telling the author to
+resolve the conflict in the custom section.
+
+### 1.10.5 leaves the custom section free form
+
+Repo-specific content after `# CUSTOM` — extra `set` statements, variables,
+aliases, and recipes — is not compared against the baseline; a canonical
+justfile with such a tail passes with no findings.
+
+### 1.10.6 keeps this repo justfile identical to the packaged canonical
+
+This repo's justfile is the human-readable mirror of the packaged canonical;
+running the check against the real checkout passes, proving the two never
+drift apart.

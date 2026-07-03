@@ -29,7 +29,8 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 
 | ID                      | Scope       | Verifies                                                                            |
 | ----------------------- | ----------- | ----------------------------------------------------------------------------------- |
-| `justfile`              | content     | Recipe names, aliases, `check` pipeline, local cerberus run, wrapped tool calls, no trailing whitespace |
+| `justfile`              | content     | Canonical baseline block (byte-exact, `--fix`able), recipe names, aliases, `check` pipeline, local cerberus run, wrapped tool calls, no trailing whitespace |
+| `zyplux-latest`         | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
 | `ci-workflow`           | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
 | `ci-sequence`           | content     | `ci.yml` runs the canonical check sequence per stack, in the org container          |
 | `cerberus-step`         | content     | A CI workflow runs cerberus to self-verify org invariants                           |
@@ -50,6 +51,12 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 | `pytest-coverage`       | content     | `pyproject.toml` `[tool.coverage.report] fail_under` is set to at least 90%          |
 | `vitest-coverage`       | content     | The root `vitest.config.*` `coverage.thresholds` are all set to at least 90%         |
 
+## The justfile baseline
+
+Every repo's `justfile` must start with the line `# BASELINE`, carry the canonical block from [`baseline.just`](src/cerberus/baseline.just) byte-for-byte, and close it with a `# CUSTOM` line. Everything after `# CUSTOM` is the repo's own (extra aliases, recipes, `set`/`mod` statements, variables). With both markers present, `--fix` restores a drifted baseline region and leaves the custom tail untouched; the zyplux repo's own `justfile` mirrors the packaged canonical, and cerberus keeps the two identical.
+
 ## Config
 
 Policy — required recipes and aliases, the canonical CI sequence — lives in [`cerberus.toml`](src/cerberus/cerberus.toml). Override it with `--config PATH`.
+
+`zyplux-latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.

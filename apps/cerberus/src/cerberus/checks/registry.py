@@ -24,6 +24,7 @@ from cerberus.checks import (
     vitest_coverage_check,
     vitest_runner_check,
     workflow_tooling_check,
+    zyplux_latest_check,
 )
 
 if TYPE_CHECKING:
@@ -64,6 +65,7 @@ ALL: tuple[Check, ...] = tuple(
         codeowners_check,
         pytest_coverage_check,
         vitest_coverage_check,
+        zyplux_latest_check,
     )
 )
 

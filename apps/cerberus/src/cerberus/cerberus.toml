@@ -7,13 +7,15 @@ tc = "typecheck"
 l = "lint"
 t = "test"
 c = "check"
+p = "push"
+pr = "push-ready"
 
 [aliases.recommended]
 u = "upgrade"
 ui = "upgrade-interactive"
 
 [recipes]
-required = ["default", "install", "knip", "typecheck", "lint", "test", "check"]
+required = ["default", "install", "knip", "typecheck", "lint", "test", "check", "push", "push-ready"]
 recommended = ["upgrade", "upgrade-interactive", "clean"]
 check_pipeline = ["install", "knip", "typecheck", "lint", "test"]
 wrapped_tools = ["ruff", "pyrefly", "pytest", "rumdl", "vulture", "cerberus", "eslint", "prettier", "knip", "tsc"]
