@@ -1,4 +1,3 @@
-# BASELINE
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 alias i := install
@@ -75,19 +74,3 @@ push-ready: (push "--ready")
 clean:
     find . -type d \( -name node_modules -o -name .venv -o -name __pycache__ -o -name .tsbuild -o -name dist -o -name .ruff_cache -o -name .pytest_cache -o -name .rumdl_cache \) -prune -exec rm -rf {} +
     find . -type f \( -name '*.tsbuildinfo' -o -name '.eslintcache' -o -name '*.py[cod]' \) -delete
-
-# CUSTOM
-
-alias d := dump-rules
-
-# Shallow-clone a reference repo into reference_clones/ (optional branch or tag).
-clone repo ref="":
-    bun run cz clone-reference-repo {{ repo }} {{ ref }}
-
-# Dump the fully-resolved ESLint config (all rules) to packages/eslint-config/rules.json.
-dump-rules:
-    bun run --cwd packages/eslint-config dump-rules
-
-# Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
-release:
-    bun run --silent cz release-bumped-targets

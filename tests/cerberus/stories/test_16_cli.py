@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+from importlib import resources
 from typing import TYPE_CHECKING
 
 import pytest
@@ -24,46 +25,8 @@ USAGE_ERROR_EXIT = 2
 
 requires_just = pytest.mark.skipif(shutil.which("just") is None, reason="requires the `just` binary on PATH")
 
-CONFORMING_JUSTFILE = """\
-alias i := install
-alias k := knip
-alias tc := typecheck
-alias l := lint
-alias t := test
-alias c := check
-alias u := upgrade
-alias ui := upgrade-interactive
-
-default:
-    @just --list
-
-install:
-    echo install
-
-knip:
-    echo knip
-
-typecheck:
-    echo typecheck
-
-lint:
-    echo lint
-    uv run cerberus --fix
-
-test:
-    echo test
-
-check: install knip typecheck lint test
-
-upgrade:
-    echo upgrade
-
-upgrade-interactive:
-    echo upgrade-interactive
-
-clean:
-    echo clean
-"""
+BASELINE_JUST = resources.files("cerberus").joinpath("baseline.just").read_text()
+CONFORMING_JUSTFILE = f"# BASELINE\n{BASELINE_JUST}\n# CUSTOM\n"
 
 JUSTFILE_WITH_TRAILING_WS = CONFORMING_JUSTFILE.replace(
     "check: install knip typecheck lint test\n",

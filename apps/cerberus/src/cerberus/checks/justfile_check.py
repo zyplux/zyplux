@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import functools
 import re
+from importlib import resources
 from typing import TYPE_CHECKING
 
 from cerberus import justfile
@@ -13,8 +15,19 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "justfile"
-SUMMARY = "recipe names, aliases, check pipeline, local cerberus run, wrapped tool calls, no trailing whitespace"
+SUMMARY = (
+    "canonical baseline block, recipe names, aliases, check pipeline, "
+    "local cerberus run, wrapped tool calls, no trailing whitespace"
+)
 SCOPE = Scope.CONTENT
+
+BASELINE_MARKER = "# BASELINE"
+CUSTOM_MARKER = "# CUSTOM"
+_MISSING_MARKERS = (
+    f"baseline markers missing: line 1 must be `{BASELINE_MARKER}`, followed by the canonical baseline block "
+    f"(packaged with cerberus as `baseline.just`; see zyplux/justfile), then a `{CUSTOM_MARKER}` line — "
+    f"everything after `{CUSTOM_MARKER}` stays repo-specific"
+)
 
 _SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
 _RECIPE_LINE_PREFIXES = "@-"
@@ -79,6 +92,50 @@ def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> li
                     seen.add((recipe, command))
                     calls.append((recipe, command))
     return calls
+
+
+@functools.cache
+def _canonical_region_lines() -> tuple[str, ...]:
+    baseline = resources.files("cerberus").joinpath("baseline.just").read_text()
+    return (BASELINE_MARKER, *baseline.splitlines(), "", CUSTOM_MARKER)
+
+
+def _first_drift(expected_region: tuple[str, ...], actual_region: list[str]) -> tuple[int, str, str] | None:
+    lines = enumerate(zip(expected_region, actual_region, strict=False), start=1)
+    return next(((n, expected, actual) for n, (expected, actual) in lines if expected != actual), None)
+
+
+def _rewrite_baseline_region(
+    content: str, custom_marker_index: int, repo: Repo, ctx: Context, res: CheckResult
+) -> None:
+    custom_tail = content.split("\n")[custom_marker_index + 1 :]
+    fixed = "\n".join([*_canonical_region_lines(), *custom_tail])
+    try:
+        justfile.parse(fixed)
+    except justfile.JustfileError as err:
+        res.fail(
+            f"baseline region not rewritten: the fixed justfile does not parse ({err}); "
+            f"resolve the conflict in the `{CUSTOM_MARKER}` section first"
+        )
+        return
+    ctx.write_file(repo, "justfile", fixed)
+
+
+def _check_baseline(content: str, repo: Repo, ctx: Context, res: CheckResult) -> None:
+    lines = content.split("\n")
+    custom_marker_index = next((index for index, line in enumerate(lines) if line.rstrip(" \t") == CUSTOM_MARKER), None)
+    if lines[0].rstrip(" \t") != BASELINE_MARKER or custom_marker_index is None:
+        res.fail(_MISSING_MARKERS)
+        return
+    expected_region = _canonical_region_lines()
+    drift = _first_drift(expected_region, lines[: custom_marker_index + 1])
+    if drift is None:
+        return
+    if ctx.fix:
+        _rewrite_baseline_region(content, custom_marker_index, repo, ctx, res)
+        return
+    line_number, expected, actual = drift
+    res.fail(f"baseline drift at line {line_number}: expected `{expected}`, actual `{actual}`")
 
 
 def _check_trailing_ws(content: str, repo: Repo, ctx: Context, res: CheckResult) -> None:
@@ -148,7 +205,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.fail("no justfile at repo root")
         return res
 
+    _check_baseline(content, repo, ctx, res)
+    content = ctx.file(repo, "justfile") or content
+
     _check_trailing_ws(content, repo, ctx, res)
+    content = ctx.file(repo, "justfile") or content
 
     try:
         jf = justfile.parse(content)
