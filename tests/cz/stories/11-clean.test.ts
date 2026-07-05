@@ -130,6 +130,22 @@ describe('11.3 excluding paths', () => {
     expect(existsSync(path.join(tempDir.path, 'vendor-cache'))).toBe(true);
     expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(false);
   });
+
+  test('11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere', async ({
+    cz,
+    tempDir,
+  }) => {
+    await initRepo(tempDir, 'repo-a', ['repo-b/']);
+    await writeArtifacts(tempDir, 'repo-a');
+    await tempDir.write('repo-a/repo-b/keep.txt', 'keep');
+    await initRepo(tempDir, 'repo-b');
+    await writeArtifacts(tempDir, 'repo-b');
+
+    await cz.run('clean', '--exclude', 'repo-b');
+
+    expect(existsSync(path.join(tempDir.path, 'repo-a/repo-b'))).toBe(false);
+    expect(existsSync(path.join(tempDir.path, 'repo-b/node_modules'))).toBe(true);
+  });
 });
 
 describe('11.4 error handling', () => {

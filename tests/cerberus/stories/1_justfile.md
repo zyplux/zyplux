@@ -256,3 +256,10 @@ the check.
 
 A `clean` recipe that calls the installed `cz clean` binary directly, without
 `bun run`, also satisfies the check.
+
+### 1.11.4 does not count a mere mention of cz clean
+
+The words `cz clean` inside a shell comment or as an argument to an unrelated
+command (`echo "cz clean is nice"`) are not an invocation: only `cz clean` in
+command position, or carried immediately after a runner (`bun`, `bunx`),
+satisfies the check.

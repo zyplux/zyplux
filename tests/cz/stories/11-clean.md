@@ -22,6 +22,8 @@
 
 ### 11.3.2 protects a subfolder named by --exclude within a cleaned repo
 
+### 11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere
+
 ## 11.4 error handling
 
 ### 11.4.1 fails when no git repo is found at or under the current directory

@@ -51,6 +51,7 @@ CERBERUS_ONLY_MENTIONED = NO_CERBERUS_RUN.replace(
 )
 CLEAN_WITHOUT_CZ = CONFORMING.replace(CLEAN_RECIPE, "clean:\n    rm -rf node_modules dist\n")
 CLEAN_RUNS_BARE_CZ = CONFORMING.replace("    bun run cz clean {{ flags }}\n", "    cz clean {{ flags }}\n")
+CLEAN_ONLY_MENTIONED = CONFORMING.replace("    bun run cz clean {{ flags }}\n", '    echo "cz clean is nice"\n')
 
 CUSTOM_TAIL_TRAILING_WS = CONFORMING + "\nsmoke:\n    echo ok   \n"
 CUSTOM_TAIL_TRAILING_WS_LINE = CUSTOM_TAIL_TRAILING_WS.count("\n")
@@ -349,3 +350,12 @@ def test_1_11_2_passes_when_the_clean_recipe_runs_cz_clean_via_bun_run(run_justf
 def test_1_11_3_passes_when_the_clean_recipe_invokes_cz_clean_directly(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(CLEAN_RUNS_BARE_CZ)
     assert structural_messages(result) == []
+
+
+@requires_just
+def test_1_11_4_does_not_count_a_mere_mention_of_cz_clean(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CLEAN_ONLY_MENTIONED)
+    assert (result.status, structural_messages(result)) == (
+        Status.FAIL,
+        ["`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`"],
+    )
