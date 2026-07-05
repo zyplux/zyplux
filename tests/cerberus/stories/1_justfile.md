@@ -234,3 +234,39 @@ justfile with such a tail passes with no findings.
 This repo's justfile is the human-readable mirror of the packaged canonical;
 running the check against the real checkout passes, proving the two never
 drift apart.
+
+## 1.11 requiring the clean recipe to run cz clean
+
+A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the
+directories each language tool actually produces, so the `clean` recipe must
+delegate to `cz clean` (`apps/cz`), which reads the answer from each repo's
+own `.gitignore` instead of a hand-maintained list.
+
+### 1.11.1 fails when the clean recipe does not invoke cz clean
+
+A `clean` recipe whose body runs a hardcoded `rm`/`find` pipeline instead of
+`cz clean` fails the check, even though the recipe itself is present.
+
+### 1.11.2 passes when the clean recipe runs cz clean via bun run
+
+The baseline's own invocation style, `bun run cz clean {{ flags }}`, satisfies
+the check.
+
+### 1.11.3 passes when the clean recipe invokes cz clean directly
+
+A `clean` recipe that calls the installed `cz clean` binary directly, without
+`bun run`, also satisfies the check.
+
+### 1.11.4 does not count a mere mention of cz clean
+
+The words `cz clean` inside a shell comment or as an argument to an unrelated
+command (`echo "cz clean is nice"`) are not an invocation: only `cz clean` in
+command position, or carried immediately after a runner (`bun`, `bunx`),
+satisfies the check.
+
+### 1.11.5 does not count a runner wrapping an unrelated command
+
+A runner segment that happens to be followed by the words `cz clean` later on
+without actually invoking them (`bun run echo cz clean`, which runs `echo`)
+is not a `cz clean` invocation: only the exact shapes the org's repos use —
+`cz clean`, `bun run cz clean`, `bunx cz clean` — satisfy the check.

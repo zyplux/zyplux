@@ -112,7 +112,7 @@ export const pythonRequirementNames = (manifest: PyProject) => {
   return names;
 };
 
-const checkInsideWorkTree = async (dir: string) => {
+export const checkInsideWorkTree = async (dir: string) => {
   const probe = await $.git.isInsideWorkTree(dir);
   return probe.exitCode === 0 && probe.text().trim() === 'true';
 };
@@ -129,7 +129,7 @@ const trackedManifests = async (dir: string) => {
   return found;
 };
 
-const findGitRepos = async (dir: string) => {
+export const findGitRepos = async (dir: string) => {
   const repos: string[] = [];
   const visit = async (current: string) => {
     const listing = await attemptAsync(() => readdir(current, { withFileTypes: true }));
@@ -140,7 +140,7 @@ const findGitRepos = async (dir: string) => {
       return;
     }
     for (const entry of entries) {
-      if (entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules') {
+      if (entry.isDirectory() && entry.name !== 'node_modules') {
         await visit(path.join(current, entry.name));
       }
     }

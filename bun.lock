@@ -19,7 +19,7 @@
     },
     "apps/cz": {
       "name": "@zyplux/cz",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "bin": {
         "cz": "./src/index.ts",
       },
@@ -70,7 +70,7 @@
     },
     "packages/util-ts": {
       "name": "@zyplux/util",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@zyplux/tsconfig": "workspace:*",

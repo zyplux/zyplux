@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "bun",
@@ -33,6 +33,7 @@
     "#cli": "./src/cli.ts",
     "#commands/assert-tag-version": "./src/commands/assert-tag-version.ts",
     "#commands/bootstrap-npm-target": "./src/commands/bootstrap-npm-target.ts",
+    "#commands/clean": "./src/commands/clean.ts",
     "#commands/clone-reference-repo": "./src/commands/clone-reference-repo.ts",
     "#commands/deps-catalog": "./src/commands/deps-catalog.ts",
     "#commands/print-tag-kind": "./src/commands/print-tag-kind.ts",

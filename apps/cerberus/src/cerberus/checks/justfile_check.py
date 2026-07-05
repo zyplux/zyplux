@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 ID = "justfile"
 SUMMARY = (
     "canonical baseline block, recipe names, aliases, check pipeline, "
-    "local cerberus run, wrapped tool calls, no trailing whitespace"
+    "local cerberus run, clean via cz clean, wrapped tool calls, no trailing whitespace"
 )
 SCOPE = Scope.CONTENT
 
@@ -33,6 +33,7 @@ _SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
 _RECIPE_LINE_PREFIXES = "@-"
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
 _CERBERUS_RUNNERS = frozenset({"uv", "uvx"})
+_CZ_CLEAN_INVOCATIONS = (("cz", "clean"), ("bun", "run", "cz", "clean"), ("bunx", "cz", "clean"))
 
 
 def _trailing_ws_lines(content: str) -> list[int]:
@@ -69,6 +70,19 @@ def _invokes_cerberus(segment: str) -> bool:
     if not tokens:
         return False
     return tokens[0] == "cerberus" or (tokens[0] in _CERBERUS_RUNNERS and "cerberus" in tokens[1:])
+
+
+def _invokes_cz_clean(segment: str) -> bool:
+    """Decide whether a command segment actually runs `cz clean`.
+
+    Only the invocation shapes the org's repos actually use count: bare
+    `cz clean`, `bun run cz clean`, and `bunx cz clean`. `cz`/`clean` have to
+    lead the segment in one of those exact shapes — a mention elsewhere, or a
+    runner carrying an unrelated command that merely happens to be followed
+    by the words `cz clean` (`bun run echo cz clean`), does not count.
+    """
+    tokens = tuple(_command_tokens(segment))
+    return any(tokens[: len(invocation)] == invocation for invocation in _CZ_CLEAN_INVOCATIONS)
 
 
 def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> list[tuple[str, str]]:
@@ -189,6 +203,14 @@ def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")
 
 
+def _check_clean_uses_cz(jf: justfile.Justfile, res: CheckResult) -> None:
+    if "clean" not in jf.recipes:
+        return
+    segments = (segment for line in jf.bodies.get("clean", "").split("\n") for segment in _SEGMENT_SPLIT.split(line))
+    if not any(_invokes_cz_clean(segment) for segment in segments):
+        res.fail("`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`")
+
+
 def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
     if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
@@ -224,6 +246,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
     _check_pipeline(jf, cfg, res)
     _check_local_cerberus_run(jf, res)
+    _check_clean_uses_cz(jf, res)
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):
         res.fail(f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`bunx`")

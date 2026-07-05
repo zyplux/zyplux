@@ -2,6 +2,8 @@ type ApiFlags = { input?: string; jq?: string; method?: string; paginate?: boole
 
 type BranchFlags = { delete?: boolean; force?: boolean };
 
+type CleanFlags = { dryRun?: boolean; protect?: string[] };
+
 type CloneFlags = { branch?: string; depth?: number; singleBranch?: boolean };
 
 type CommandOutput = { text: () => string };
@@ -75,6 +77,18 @@ const gh = {
 const git = {
   branch: async (name: string, flags: BranchFlags = {}) => Bun.$`git ${['branch', ...toArgs(flags), name]}`,
   checkout: async (ref: string) => Bun.$`git ${['checkout', ref]}`,
+  clean: async (cwd: string, { dryRun = false, protect = [] }: CleanFlags = {}) =>
+    Bun.$`git ${[
+      'clean',
+      '-d',
+      '-f',
+      '-f',
+      '-X',
+      ...(dryRun ? ['-n'] : []),
+      ...protect.flatMap(pattern => ['-e', `!${pattern}`]),
+    ]}`
+      .cwd(cwd)
+      .quiet(),
   clone: async (url: string, dest: string, flags: CloneFlags = {}) =>
     Bun.$`git ${['clone', ...toArgs(flags), url, dest]}`,
   fetch: async (remote: string, branch: string) => Bun.$`git ${['fetch', remote, branch]}`,

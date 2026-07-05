@@ -5,6 +5,7 @@ import { run } from '@optique/run';
 
 import { assertTagVersionCommand, runAssertTagVersion } from '#commands/assert-tag-version';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from '#commands/bootstrap-npm-target';
+import { cleanCommand, runClean } from '#commands/clean';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from '#commands/clone-reference-repo';
 import { depsCatalogCommand, runDepsCatalog } from '#commands/deps-catalog';
 import { printTagKindCommand, runPrintTagKind } from '#commands/print-tag-kind';
@@ -30,6 +31,7 @@ const program = defineProgram({
     bootstrapNpmTargetCommand,
     publishTaggedTargetCommand,
     printTagKindCommand,
+    cleanCommand,
   ),
 });
 
@@ -60,6 +62,9 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'bootstrap-npm-target': {
       return runBootstrapNpmTarget(result);
+    }
+    case 'clean': {
+      return runClean(result);
     }
     case 'clone-reference-repo': {
       return runCloneReferenceRepo(result);
