@@ -234,3 +234,25 @@ justfile with such a tail passes with no findings.
 This repo's justfile is the human-readable mirror of the packaged canonical;
 running the check against the real checkout passes, proving the two never
 drift apart.
+
+## 1.11 requiring the clean recipe to run cz clean
+
+A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the
+directories each language tool actually produces, so the `clean` recipe must
+delegate to `cz clean` (`apps/cz`), which reads the answer from each repo's
+own `.gitignore` instead of a hand-maintained list.
+
+### 1.11.1 fails when the clean recipe does not invoke cz clean
+
+A `clean` recipe whose body runs a hardcoded `rm`/`find` pipeline instead of
+`cz clean` fails the check, even though the recipe itself is present.
+
+### 1.11.2 passes when the clean recipe runs cz clean via bun run
+
+The baseline's own invocation style, `bun run cz clean {{ flags }}`, satisfies
+the check.
+
+### 1.11.3 passes when the clean recipe invokes cz clean directly
+
+A `clean` recipe that calls the installed `cz clean` binary directly, without
+`bun run`, also satisfies the check.

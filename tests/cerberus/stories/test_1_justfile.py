@@ -20,12 +20,9 @@ INSTALL_RECIPE = (
 )
 DEFAULT_RECIPE = "# List available recipes.\ndefault:\n    @just --list\n\n"
 CLEAN_RECIPE = (
-    "# Remove deps and caches from all workspaces.\n"
-    "clean:\n"
-    "    find . -type d \\( -name node_modules -o -name .venv -o -name __pycache__ -o -name .tsbuild"
-    " -o -name dist -o -name .ruff_cache -o -name .pytest_cache -o -name .rumdl_cache \\)"
-    " -prune -exec rm -rf {} +\n"
-    "    find . -type f \\( -name '*.tsbuildinfo' -o -name '.eslintcache' -o -name '*.py[cod]' \\) -delete\n"
+    "# Remove gitignored build artifacts and caches from all workspaces.\n"
+    "clean *flags:\n"
+    "    bun run cz clean {{ flags }}\n"
 )
 
 UNPARSEABLE = "recipe without colon\n"
@@ -52,6 +49,9 @@ CERBERUS_ONLY_MENTIONED = NO_CERBERUS_RUN.replace(
     "    bun run lint:fix\n",
     "    # cerberus runs in ci\n    echo cerberus\n    bun run lint:fix\n",
 )
+CLEAN_WITHOUT_CZ = CONFORMING.replace(CLEAN_RECIPE, "clean:\n    rm -rf node_modules dist\n")
+CLEAN_RUNS_BARE_CZ = CONFORMING.replace("    bun run cz clean {{ flags }}\n", "    cz clean {{ flags }}\n")
+
 CUSTOM_TAIL_TRAILING_WS = CONFORMING + "\nsmoke:\n    echo ok   \n"
 CUSTOM_TAIL_TRAILING_WS_LINE = CUSTOM_TAIL_TRAILING_WS.count("\n")
 WITH_INTERPOLATION = CONFORMING + (
@@ -328,3 +328,24 @@ def test_1_10_6_keeps_this_repo_justfile_identical_to_the_packaged_canonical() -
     checker = context.local_context(config.load(), repo_root)
     result = justfile_check.run(checker.repos()[0], checker)
     assert (result.status, result.problems) == (Status.PASS, [])
+
+
+@requires_just
+def test_1_11_1_fails_when_the_clean_recipe_does_not_invoke_cz_clean(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CLEAN_WITHOUT_CZ)
+    assert (result.status, structural_messages(result)) == (
+        Status.FAIL,
+        ["`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`"],
+    )
+
+
+@requires_just
+def test_1_11_2_passes_when_the_clean_recipe_runs_cz_clean_via_bun_run(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CONFORMING)
+    assert structural_messages(result) == []
+
+
+@requires_just
+def test_1_11_3_passes_when_the_clean_recipe_invokes_cz_clean_directly(run_justfile_check: RunJustfileCheck) -> None:
+    result = run_justfile_check(CLEAN_RUNS_BARE_CZ)
+    assert structural_messages(result) == []

@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import re
 from importlib import resources
+from itertools import pairwise
 from typing import TYPE_CHECKING
 
 from cerberus import justfile
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 ID = "justfile"
 SUMMARY = (
     "canonical baseline block, recipe names, aliases, check pipeline, "
-    "local cerberus run, wrapped tool calls, no trailing whitespace"
+    "local cerberus run, clean via cz clean, wrapped tool calls, no trailing whitespace"
 )
 SCOPE = Scope.CONTENT
 
@@ -69,6 +70,17 @@ def _invokes_cerberus(segment: str) -> bool:
     if not tokens:
         return False
     return tokens[0] == "cerberus" or (tokens[0] in _CERBERUS_RUNNERS and "cerberus" in tokens[1:])
+
+
+def _invokes_cz_clean(segment: str) -> bool:
+    """Decide whether a command segment runs `cz clean`, however it's invoked.
+
+    `cz clean` in command position counts, as does any runner carrying that
+    same adjacent pair (`bun run cz clean`, `bunx cz clean`) — the two tokens
+    just have to appear back to back somewhere in the segment.
+    """
+    tokens = _command_tokens(segment)
+    return any(left == "cz" and right == "clean" for left, right in pairwise(tokens))
 
 
 def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> list[tuple[str, str]]:
@@ -189,6 +201,14 @@ def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")
 
 
+def _check_clean_uses_cz(jf: justfile.Justfile, res: CheckResult) -> None:
+    if "clean" not in jf.recipes:
+        return
+    segments = (segment for line in jf.bodies.get("clean", "").split("\n") for segment in _SEGMENT_SPLIT.split(line))
+    if not any(_invokes_cz_clean(segment) for segment in segments):
+        res.fail("`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`")
+
+
 def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
     if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
@@ -224,6 +244,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
     _check_pipeline(jf, cfg, res)
     _check_local_cerberus_run(jf, res)
+    _check_clean_uses_cz(jf, res)
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):
         res.fail(f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`bunx`")

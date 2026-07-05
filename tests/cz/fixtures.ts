@@ -225,4 +225,5 @@ export const test = cliTest.extend<CzFixtures>({
 });
 
 export { notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
+export type { TempDir } from '@zyplux/tests-fixtures';
 export { describe, expect, vi } from 'vitest';
