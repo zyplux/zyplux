@@ -46,6 +46,8 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 | `story-tests-ts`        | content     | `tests/**/stories/*.md` criteria have a matching, title-matched vitest test          |
 | `cli-ts-tests`         | content     | CLI apps export only the root seam; story tests reach workspace code via fixture aliases |
 | `lib-ts-tests`         | content     | Libraries export only the root seam; story tests reach workspace code via fixture aliases |
+| `cli-py-tests`          | content     | CLI apps' story tests import only their root module or cli entry module              |
+| `lib-py-tests`          | content     | Libraries' story tests import only their root module                                |
 | `release-bumps`         | git-history | A published target's version is bumped whenever its release surface changes          |
 | `codeowners`            | content     | `CODEOWNERS` present and covers `/.github/`                                          |
 | `pytest-coverage`       | content     | `pyproject.toml` `[tool.coverage.report] fail_under` is set to at least 90%          |
