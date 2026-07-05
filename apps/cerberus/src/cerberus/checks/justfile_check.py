@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import re
 from importlib import resources
-from itertools import pairwise
 from typing import TYPE_CHECKING
 
 from cerberus import justfile
@@ -34,8 +33,7 @@ _SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
 _RECIPE_LINE_PREFIXES = "@-"
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
 _CERBERUS_RUNNERS = frozenset({"uv", "uvx"})
-_CZ_RUNNERS = frozenset({"bun", "bunx"})
-_CZ_CLEAN_MIN_TOKENS = 2  # at least a command and the `clean` argument
+_CZ_CLEAN_INVOCATIONS = (("cz", "clean"), ("bun", "run", "cz", "clean"), ("bunx", "cz", "clean"))
 
 
 def _trailing_ws_lines(content: str) -> list[int]:
@@ -77,19 +75,14 @@ def _invokes_cerberus(segment: str) -> bool:
 def _invokes_cz_clean(segment: str) -> bool:
     """Decide whether a command segment actually runs `cz clean`.
 
-    `cz clean` in command position counts, as does a runner (`bun`, `bunx`)
-    carrying `cz` immediately followed by `clean` (`bun run cz clean`,
-    `bunx cz clean`). A mention elsewhere in the segment — e.g. `echo cz
-    clean` — does not.
+    Only the invocation shapes the org's repos actually use count: bare
+    `cz clean`, `bun run cz clean`, and `bunx cz clean`. `cz`/`clean` have to
+    lead the segment in one of those exact shapes — a mention elsewhere, or a
+    runner carrying an unrelated command that merely happens to be followed
+    by the words `cz clean` (`bun run echo cz clean`), does not count.
     """
-    tokens = _command_tokens(segment)
-    if len(tokens) < _CZ_CLEAN_MIN_TOKENS:
-        return False
-    if tokens[0] == "cz":
-        return tokens[1] == "clean"
-    if tokens[0] not in _CZ_RUNNERS:
-        return False
-    return any(left == "cz" and right == "clean" for left, right in pairwise(tokens[1:]))
+    tokens = tuple(_command_tokens(segment))
+    return any(tokens[: len(invocation)] == invocation for invocation in _CZ_CLEAN_INVOCATIONS)
 
 
 def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> list[tuple[str, str]]:

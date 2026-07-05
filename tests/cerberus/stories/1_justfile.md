@@ -263,3 +263,10 @@ The words `cz clean` inside a shell comment or as an argument to an unrelated
 command (`echo "cz clean is nice"`) are not an invocation: only `cz clean` in
 command position, or carried immediately after a runner (`bun`, `bunx`),
 satisfies the check.
+
+### 1.11.5 does not count a runner wrapping an unrelated command
+
+A runner segment that happens to be followed by the words `cz clean` later on
+without actually invoking them (`bun run echo cz clean`, which runs `echo`)
+is not a `cz clean` invocation: only the exact shapes the org's repos use —
+`cz clean`, `bun run cz clean`, `bunx cz clean` — satisfy the check.
