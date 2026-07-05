@@ -32,7 +32,7 @@ const initRepo = async (tempDir: TempDir, relativeDir: string, extraIgnored: str
   const repoPath = path.join(tempDir.path, relativeDir);
   runGit(repoPath, 'init', '-q');
   runGit(repoPath, 'add', '.gitignore');
-  runGit(repoPath, 'commit', '-qm', 'init');
+  runGit(repoPath, '-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-qm', 'init');
 };
 
 const writeArtifacts = async (tempDir: TempDir, relativeDir: string) => {
