@@ -24,6 +24,12 @@
 
 ### 26.2.3 truncates output to the requested character budget
 
+### 26.2.4 stops expanding through a hub node without excluding the hub itself
+
 ## 26.3 requiring a graph to already exist
 
 ### 26.3.1 fails with a clear error when graph json does not exist
+
+## 26.4 keeping output machine readable regardless of terminal width
+
+### 26.4.1 never wraps a nodes bracketed metadata onto its own line

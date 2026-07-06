@@ -179,7 +179,7 @@ def graph_explain(
     graph_path: GraphOpt = Path("graph.json"),
 ) -> None:
     """Explain a single node from a graph built by `cerberus graph`."""
-    console.print(explain_text(_load_graph_or_exit(graph_path), node), markup=False)
+    console.print(explain_text(_load_graph_or_exit(graph_path), node), markup=False, soft_wrap=True)
 
 
 @app.command(name="graph-query")
@@ -193,7 +193,7 @@ def graph_query(
 ) -> None:
     """Traverse a graph built by `cerberus graph`, seeded by a free-text question."""
     graph = _load_graph_or_exit(graph_path)
-    console.print(query_text(graph, question, depth=depth, dfs=dfs, budget=budget), markup=False)
+    console.print(query_text(graph, question, depth=depth, dfs=dfs, budget=budget), markup=False, soft_wrap=True)
 
 
 def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) -> None:

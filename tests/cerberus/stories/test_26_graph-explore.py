@@ -144,8 +144,52 @@ def test_26_2_3_truncates_output_to_the_requested_character_budget(built_graph_p
     assert len(truncated.output) < len(full.output)
 
 
+@pytest.fixture
+def mega_hub_repo(tmp_path: Path) -> Path:
+    (tmp_path / "hub.py").write_text('def shared() -> str:\n    return "x"\n')
+    (tmp_path / "seed_file.py").write_text("from hub import shared\n\n\ndef seed_use() -> str:\n    return shared()\n")
+    for i in range(60):
+        (tmp_path / f"importer_{i}.py").write_text(
+            f"from hub import shared\n\n\ndef use_{i}() -> str:\n    return shared()\n"
+        )
+    return tmp_path
+
+
+def test_26_2_4_stops_expanding_through_a_hub_node_without_excluding_the_hub_itself(
+    mega_hub_repo: Path,
+) -> None:
+    built = _invoke("graph", str(mega_hub_repo))
+    assert built.exit_code == 0, built.output
+
+    graph_path = mega_hub_repo / "graph.json"
+    result = _invoke("graph-query", "seed_file", "--graph", str(graph_path), "--budget", "100000")
+    assert result.exit_code == 0, result.output
+    assert "NODE hub.py [" in result.output
+    assert "NODE importer_0.py [" not in result.output
+
+
 def test_26_3_1_fails_with_a_clear_error_when_graph_json_does_not_exist(tmp_path: Path) -> None:
     missing = tmp_path / "nope" / "graph.json"
     result = _invoke("graph-explain", "anything", "--graph", str(missing))
     assert result.exit_code != 0
     assert "graph file not found" in result.output
+
+
+@pytest.fixture
+def long_path_repo(tmp_path: Path) -> Path:
+    nested = tmp_path / "a" / "deeply" / "nested" / "package" / "structure"
+    nested.mkdir(parents=True)
+    (nested / "module_with_a_long_name.py").write_text('def shared() -> str:\n    return "x"\n')
+    return tmp_path
+
+
+def test_26_4_1_never_wraps_a_nodes_bracketed_metadata_onto_its_own_line(long_path_repo: Path) -> None:
+    built = _invoke("graph", str(long_path_repo))
+    assert built.exit_code == 0, built.output
+
+    graph_path = long_path_repo / "graph.json"
+    result = _invoke("graph-query", "module_with_a_long_name", "--graph", str(graph_path), "--budget", "10000")
+    assert result.exit_code == 0, result.output
+
+    path = "a/deeply/nested/package/structure/module_with_a_long_name.py"
+    assert f"NODE {path} [src={path} loc=L1 community=" in result.output
