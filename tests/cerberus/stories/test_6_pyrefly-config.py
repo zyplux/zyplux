@@ -122,9 +122,7 @@ def test_6_5_1_fails_when_top_level_errors_weaken_strict_for_all_code(
 
     result = run_pyrefly(pyrefly=pyrefly)
 
-    assert result.findings == [
-        finding(status.FAIL, "top-level errors table weakens strict on all code: implicit-any")
-    ]
+    assert result.findings == [finding(status.FAIL, "top-level errors table weakens strict on all code: implicit-any")]
 
 
 def test_6_5_2_fails_when_an_error_kind_is_set_stray_at_the_top_level(

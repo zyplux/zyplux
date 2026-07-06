@@ -130,9 +130,7 @@ def test_23_3_3_fails_a_story_test_with_a_relative_import(
     run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_cli_py_tests(_with_story("from .util import helper\n"))
-    assert result.findings == [
-        finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — '.util'")
-    ]
+    assert result.findings == [finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — '.util'")]
 
 
 def test_23_3_4_fails_a_story_test_importing_a_deep_submodule(
