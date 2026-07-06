@@ -26,6 +26,10 @@
 
 ### 26.2.4 stops expanding through a hub node without excluding the hub itself
 
+### 26.2.5 guarantees a seed for every distinct query term
+
+### 26.2.6 scores rarer terms higher than common terms
+
 ## 26.3 requiring a graph to already exist
 
 ### 26.3.1 fails with a clear error when graph json does not exist

@@ -168,6 +168,46 @@ def test_26_2_4_stops_expanding_through_a_hub_node_without_excluding_the_hub_its
     assert "NODE importer_0.py [" not in result.output
 
 
+@pytest.fixture
+def term_starved_repo(tmp_path: Path) -> Path:
+    (tmp_path / "widget_service.py").write_text('def widget_only() -> str:\n    return "w"\n')
+    for i in range(3):
+        (tmp_path / f"helper_{i}.py").write_text(f'def helper() -> str:\n    return "h{i}"\n')
+    return tmp_path
+
+
+def test_26_2_5_guarantees_a_seed_for_every_distinct_query_term(term_starved_repo: Path) -> None:
+    built = _invoke("graph", str(term_starved_repo))
+    assert built.exit_code == 0, built.output
+
+    graph_path = term_starved_repo / "graph.json"
+    result = _invoke("graph-query", "widget helper", "--graph", str(graph_path), "--budget", "100000")
+    assert result.exit_code == 0, result.output
+
+    header = result.output.splitlines()[0]
+    assert "widget" in header
+
+
+@pytest.fixture
+def term_rarity_repo(tmp_path: Path) -> Path:
+    for i in range(8):
+        (tmp_path / f"helper_{i}.py").write_text('def helper() -> str:\n    return "h"\n')
+    (tmp_path / "widgetronic_file.py").write_text('def widgetronic() -> str:\n    return "w"\n')
+    return tmp_path
+
+
+def test_26_2_6_scores_rarer_terms_higher_than_common_terms(term_rarity_repo: Path) -> None:
+    built = _invoke("graph", str(term_rarity_repo))
+    assert built.exit_code == 0, built.output
+
+    graph_path = term_rarity_repo / "graph.json"
+    result = _invoke("graph-query", "helper widgetronic", "--graph", str(graph_path), "--budget", "100000")
+    assert result.exit_code == 0, result.output
+
+    header = result.output.splitlines()[0]
+    assert "Start: ['widgetronic'" in header
+
+
 def test_26_3_1_fails_with_a_clear_error_when_graph_json_does_not_exist(tmp_path: Path) -> None:
     missing = tmp_path / "nope" / "graph.json"
     result = _invoke("graph-explain", "anything", "--graph", str(missing))

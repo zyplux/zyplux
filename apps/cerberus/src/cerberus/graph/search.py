@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -28,8 +29,25 @@ def _haystack(data: dict[str, Any]) -> tuple[str, str]:
     return label_tokens, path_tokens
 
 
+def _term_weights(graph: nx.Graph[str], terms: list[str]) -> dict[str, float]:
+    """Inverse document frequency per term: a term matching most nodes counts for
+    little, a term matching almost none counts for a lot — so a rare identifier
+    isn't scored the same as a common word just because both are exact matches.
+    """
+    node_count = graph.number_of_nodes() or 1
+    document_frequency = dict.fromkeys(set(terms), 0)
+    for node_id in graph.nodes:
+        label_tokens, path_tokens = _haystack(graph.nodes[node_id])
+        combined = f"{label_tokens} {path_tokens}"
+        for term in document_frequency:
+            if term in combined:
+                document_frequency[term] += 1
+    return {term: math.log(1 + node_count / (1 + count)) for term, count in document_frequency.items()}
+
+
 def score_nodes(graph: nx.Graph[str], text: str) -> list[tuple[float, str]]:
-    """Score every node against free text: substring/token match, no IDF or trigram indexing.
+    """Score every node against free text: substring/token match weighted by
+    inverse document frequency, no trigram indexing.
 
     Deliberately simpler than graphify's scorer — this runs once per CLI
     invocation rather than behind a query server, so a plain O(n) scan is fine
@@ -39,6 +57,7 @@ def score_nodes(graph: nx.Graph[str], text: str) -> list[tuple[float, str]]:
     if not terms:
         return []
     joined = " ".join(terms)
+    weights = _term_weights(graph, terms)
     scored: list[tuple[float, str]] = []
     for node_id in graph.nodes:
         label_tokens, path_tokens = _haystack(graph.nodes[node_id])
@@ -51,10 +70,11 @@ def score_nodes(graph: nx.Graph[str], text: str) -> list[tuple[float, str]]:
         elif joined in combined:
             score += _SUBSTRING_SCORE
         for term in terms:
+            weight = weights[term]
             if term in {label_tokens, path_tokens}:
-                score += _TERM_EXACT_SCORE
+                score += _TERM_EXACT_SCORE * weight
             elif term in combined:
-                score += _TERM_SUBSTRING_SCORE
+                score += _TERM_SUBSTRING_SCORE * weight
         if score > 0:
             scored.append((score, node_id))
     scored.sort(key=lambda item: (-item[0], len(str(graph.nodes[item[1]].get("label", item[1]))), item[1]))
@@ -69,6 +89,16 @@ def best_match(graph: nx.Graph[str], text: str) -> str | None:
 
 
 def pick_seeds(graph: nx.Graph[str], text: str, limit: int = _DEFAULT_SEED_LIMIT) -> list[str]:
+    """Seed a traversal from the best free-text matches, then guarantee every
+    distinct query term contributes at least one seed of its own — otherwise a
+    term whose best match ties with several others for the top slots can push
+    every other term's candidates out of the seed list entirely.
+    """
     if text in graph:
         return [text]
-    return [node_id for _, node_id in score_nodes(graph, text)[:limit]]
+    seeds = [node_id for _, node_id in score_nodes(graph, text)[:limit]]
+    for term in sorted(set(_tokens(text))):
+        term_scored = score_nodes(graph, term)
+        if term_scored and term_scored[0][1] not in seeds:
+            seeds.append(term_scored[0][1])
+    return seeds
