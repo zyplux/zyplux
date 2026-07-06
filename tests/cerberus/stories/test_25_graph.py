@@ -233,3 +233,20 @@ def test_25_6_2_marks_every_contains_edge_as_confidently_extracted(built_graph: 
     contains_edges = [e for e in built_graph["edges"] if e["relation"] == "contains"]
     assert contains_edges
     assert all(e["confidence"] == "EXTRACTED" for e in contains_edges)
+
+
+def test_25_7_1_resolves_an_absolute_import_tie_to_the_lexicographically_first_candidate(
+    repo_root: Path,
+) -> None:
+    (repo_root / "pkg" / "aaa").mkdir(parents=True)
+    (repo_root / "pkg" / "bbb").mkdir(parents=True)
+    (repo_root / "pkg" / "aaa" / "target.py").write_text("VALUE = 'aaa'\n")
+    (repo_root / "pkg" / "bbb" / "target.py").write_text("VALUE = 'bbb'\n")
+    (repo_root / "importer.py").write_text("import target\n")
+
+    result = _invoke(repo_root)
+    assert result.exit_code == 0, result.output
+    data = _load_graph(repo_root)
+
+    assert _has_edge(data, "importer", "pkg_aaa_target", "imports")
+    assert not _has_edge(data, "importer", "pkg_bbb_target", "imports")
