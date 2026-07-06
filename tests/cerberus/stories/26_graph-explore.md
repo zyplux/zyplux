@@ -1,0 +1,29 @@
+# 26. [Explaining and querying a built dependency graph](test_26_graph-explore.py)
+
+## 26.1 explaining a single node
+
+### 26.1.1 explains a node found by its exact id
+
+### 26.1.2 explains a node found by a path or label match
+
+### 26.1.3 lists a node's neighbors with relation and confidence
+
+### 26.1.4 reports no match for an unknown node
+
+### 26.1.5 prefers the file node over a same-file symbol when the query is an exact path
+
+### 26.1.6 marks each connection's direction with an arrow
+
+### 26.1.7 announces how many connections were truncated
+
+## 26.2 querying a graph with free text
+
+### 26.2.1 seeds a traversal from the best scoring nodes
+
+### 26.2.2 supports a dfs traversal via the dfs option
+
+### 26.2.3 truncates output to the requested character budget
+
+## 26.3 requiring a graph to already exist
+
+### 26.3.1 fails with a clear error when graph.json does not exist

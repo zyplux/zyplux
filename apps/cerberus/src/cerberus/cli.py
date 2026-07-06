@@ -9,9 +9,15 @@ from rich.table import Table
 from typer.core import TyperGroup
 
 from cerberus import __version__, checks, config, context
+from cerberus.graph import build as build_graph
+from cerberus.graph import explain_text, query_text
+from cerberus.graph import load as load_graph
+from cerberus.graph import write as write_graph
 from cerberus.model import CheckResult, Repo, Scope, Status
 
 if TYPE_CHECKING:
+    import networkx as nx
+
     from cerberus.context import Context
 
 
@@ -135,6 +141,59 @@ def lint(
     _render_lint(repo, results, sorted(disabled & set(checks.BY_ID)))
     if _failed(results):
         raise typer.Exit(code=1)
+
+
+@app.command()
+def graph(
+    path: Annotated[Path, typer.Argument(help="Repo checkout to graph (default: current directory).")] = Path(),
+    out: Annotated[
+        Path | None, typer.Option("--out", help="Directory to write graph.json into (default: repo root).")
+    ] = None,
+) -> None:
+    """Build a dependency graph of a repo's own Python and TypeScript source."""
+    ctx = context.local_context(config.load(), path)
+    repo = ctx.repos()[0]
+    result = build_graph(repo, ctx)
+    out_dir = out if out is not None else path
+    write_graph(result, out_dir)
+    console.print(f"wrote {out_dir / 'graph.json'}")
+
+
+GraphOpt = Annotated[Path, typer.Option("--graph", help="Path to a graph.json built by `cerberus graph`.")]
+
+
+class _GraphNotFoundError(typer.BadParameter):
+    def __init__(self, graph_path: Path) -> None:
+        super().__init__(f"graph file not found: {graph_path} (run `cerberus graph` first)")
+
+
+def _load_graph_or_exit(graph_path: Path) -> nx.DiGraph[str]:
+    if not graph_path.is_file():
+        raise _GraphNotFoundError(graph_path)
+    return load_graph(graph_path)
+
+
+@app.command(name="graph-explain")
+def graph_explain(
+    node: Annotated[str, typer.Argument(help="Node id, source path, or label to explain.")],
+    graph_path: GraphOpt = Path("graph.json"),
+) -> None:
+    """Explain a single node from a graph built by `cerberus graph`."""
+    console.print(explain_text(_load_graph_or_exit(graph_path), node), markup=False)
+
+
+@app.command(name="graph-query")
+def graph_query(
+    question: Annotated[str, typer.Argument(help="Free-text question to seed the traversal.")],
+    graph_path: GraphOpt = Path("graph.json"),
+    depth: Annotated[int, typer.Option("--depth", help="Traversal depth.")] = 2,
+    budget: Annotated[int, typer.Option("--budget", help="Approximate character budget for the output.")] = 2000,
+    *,
+    dfs: Annotated[bool, typer.Option("--dfs", help="Traverse depth-first instead of breadth-first.")] = False,
+) -> None:
+    """Traverse a graph built by `cerberus graph`, seeded by a free-text question."""
+    graph = _load_graph_or_exit(graph_path)
+    console.print(query_text(graph, question, depth=depth, dfs=dfs, budget=budget), markup=False)
 
 
 def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) -> None:
