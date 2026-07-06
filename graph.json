@@ -10654,21 +10654,11 @@
       "apps_cerberus_src_cerberus_workflow__run_commands",
       "apps_cerberus_src_cerberus_workflow__strip_comment_lines"
     ],
-    [
-      "apps_cz_src_commands_assert_tag_version"
-    ],
-    [
-      "apps_cz_src_commands_deps_catalog"
-    ],
-    [
-      "apps_cz_src_commands_print_tag_kind"
-    ],
-    [
-      "apps_cz_src_index"
-    ],
-    [
-      "packages_eslint_config_scripts_dump_rules"
-    ],
+    ["apps_cz_src_commands_assert_tag_version"],
+    ["apps_cz_src_commands_deps_catalog"],
+    ["apps_cz_src_commands_print_tag_kind"],
+    ["apps_cz_src_index"],
+    ["packages_eslint_config_scripts_dump_rules"],
     [
       "eslint_config",
       "packages_eslint_config_src_configs_base",
@@ -10694,9 +10684,7 @@
       "packages_eslint_config_src_rules_type_aware_no_unvalidated_json",
       "packages_eslint_config_src_rules_type_aware_no_zod_custom"
     ],
-    [
-      "packages_eslint_config_src_create_rule"
-    ],
+    ["packages_eslint_config_src_create_rule"],
     [
       "packages_eslint_config_test_no_anonymous_param_type_test",
       "packages_eslint_config_test_no_identity_cast_test",
@@ -10710,9 +10698,7 @@
       "packages_eslint_config_test_prefer_destructured_params_test",
       "packages_eslint_config_test_rule_tester"
     ],
-    [
-      "packages_eslint_config_vitest_config"
-    ],
+    ["packages_eslint_config_vitest_config"],
     [
       "apps_cz_src_cli",
       "apps_cz_src_commands_bootstrap_npm_target",
@@ -10749,13 +10735,8 @@
       "tests_fixtures_src_story",
       "tests_util_ts_fixtures"
     ],
-    [
-      "packages_util_py_src_zyplux_util___init",
-      "packages_util_py_src_zyplux_util__version"
-    ],
-    [
-      "prettier_config"
-    ],
+    ["packages_util_py_src_zyplux_util___init", "packages_util_py_src_zyplux_util__version"],
+    ["prettier_config"],
     [
       "tests_cerberus_stories_test_13_ruff_config",
       "tests_cerberus_stories_test_13_ruff_config__test_13_1_1_skips_repos_with_no_pyproject_file",
@@ -10988,72 +10969,28 @@
       "tests_cerberus_stories_test_8_ci_sequence__test_8_4_5_passes_when_the_container_is_declared_as_a_mapping_with_an_image_key",
       "tests_cerberus_stories_test_8_ci_sequence__test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment"
     ],
-    [
-      "tests_cz_stories_1_deps_catalog_test"
-    ],
-    [
-      "tests_cz_stories_10_release_bumped_targets_test"
-    ],
-    [
-      "tests_cz_stories_11_clean_test"
-    ],
-    [
-      "tests_cz_stories_2_release_targets_test"
-    ],
-    [
-      "tests_cz_stories_3_assert_tag_version_test"
-    ],
-    [
-      "tests_cz_stories_4_print_tag_kind_test"
-    ],
-    [
-      "tests_cz_stories_5_bootstrap_npm_target_test"
-    ],
-    [
-      "tests_cz_stories_6_clone_reference_repo_test"
-    ],
-    [
-      "tests_cz_stories_7_deps_catalog_cli_test"
-    ],
-    [
-      "tests_cz_stories_8_publish_tagged_target_test"
-    ],
-    [
-      "tests_cz_stories_9_push_branch_test"
-    ],
-    [
-      "tests_eslint_config_stories_1_arrow_only_test"
-    ],
-    [
-      "tests_eslint_config_stories_2_dump_rules_test"
-    ],
-    [
-      "tests_eslint_config_stories_3_public_interface_test"
-    ],
-    [
-      "tests_eslint_config_stories_4_no_parent_relative_imports_test"
-    ],
-    [
-      "tests_util_ts_stories_1_manifest_test"
-    ],
-    [
-      "tests_util_ts_stories_2_map_with_concurrency_test"
-    ],
-    [
-      "tests_util_ts_stories_3_repo_url_test"
-    ],
-    [
-      "tests_util_ts_stories_4_toml_test"
-    ],
-    [
-      "tests_util_ts_stories_5_poll_test"
-    ],
-    [
-      "tests_util_ts_stories_6_shell_test"
-    ],
-    [
-      "vitest_config"
-    ]
+    ["tests_cz_stories_1_deps_catalog_test"],
+    ["tests_cz_stories_10_release_bumped_targets_test"],
+    ["tests_cz_stories_11_clean_test"],
+    ["tests_cz_stories_2_release_targets_test"],
+    ["tests_cz_stories_3_assert_tag_version_test"],
+    ["tests_cz_stories_4_print_tag_kind_test"],
+    ["tests_cz_stories_5_bootstrap_npm_target_test"],
+    ["tests_cz_stories_6_clone_reference_repo_test"],
+    ["tests_cz_stories_7_deps_catalog_cli_test"],
+    ["tests_cz_stories_8_publish_tagged_target_test"],
+    ["tests_cz_stories_9_push_branch_test"],
+    ["tests_eslint_config_stories_1_arrow_only_test"],
+    ["tests_eslint_config_stories_2_dump_rules_test"],
+    ["tests_eslint_config_stories_3_public_interface_test"],
+    ["tests_eslint_config_stories_4_no_parent_relative_imports_test"],
+    ["tests_util_ts_stories_1_manifest_test"],
+    ["tests_util_ts_stories_2_map_with_concurrency_test"],
+    ["tests_util_ts_stories_3_repo_url_test"],
+    ["tests_util_ts_stories_4_toml_test"],
+    ["tests_util_ts_stories_5_poll_test"],
+    ["tests_util_ts_stories_6_shell_test"],
+    ["vitest_config"]
   ],
   "god_nodes": [
     "apps_cerberus_src_cerberus_model",

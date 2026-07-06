@@ -209,7 +209,9 @@ def test_25_5_1_keeps_every_node_id_free_of_the_absolute_checkout_path(fixture_r
         assert _ABSOLUTE_PATH_MARKER not in node["id"]
 
 
-def test_25_6_1_stamps_each_node_with_graphifys_source_type_and_community_fields(built_graph: GraphData) -> None:
+def test_25_6_1_stamps_each_node_with_graphify_compatible_source_type_and_community_fields(
+    built_graph: GraphData,
+) -> None:
     file_node = next(n for n in built_graph["nodes"] if n["id"] == "pkg_a")
     assert file_node["source_file"] == "pkg/a.py"
     assert file_node["file_type"] == "code"

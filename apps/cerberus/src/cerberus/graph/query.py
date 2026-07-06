@@ -63,9 +63,7 @@ def _render(graph: nx.Graph[str], nodes: set[str], edges: list[tuple[str, str]],
     return "\n".join(lines)
 
 
-def query_text(
-    graph: nx.DiGraph[str], question: str, *, depth: int = 2, dfs: bool = False, budget: int = 2000
-) -> str:
+def query_text(graph: nx.DiGraph[str], question: str, *, depth: int = 2, dfs: bool = False, budget: int = 2000) -> str:
     """Seed a BFS/DFS traversal from the best free-text matches and render it as budget-truncated text.
 
     Seeding is a plain substring/token score (see `search.py`) rather than

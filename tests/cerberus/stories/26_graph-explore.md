@@ -6,13 +6,13 @@
 
 ### 26.1.2 explains a node found by a path or label match
 
-### 26.1.3 lists a node's neighbors with relation and confidence
+### 26.1.3 lists a nodes neighbors with relation and confidence
 
 ### 26.1.4 reports no match for an unknown node
 
 ### 26.1.5 prefers the file node over a same-file symbol when the query is an exact path
 
-### 26.1.6 marks each connection's direction with an arrow
+### 26.1.6 marks each connections direction with an arrow
 
 ### 26.1.7 announces how many connections were truncated
 
@@ -26,4 +26,4 @@
 
 ## 26.3 requiring a graph to already exist
 
-### 26.3.1 fails with a clear error when graph.json does not exist
+### 26.3.1 fails with a clear error when graph json does not exist

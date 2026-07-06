@@ -20,7 +20,7 @@
 
 ## 25.4 writing graph output to disk
 
-### 25.4.1 writes graph.json to the repo root by default
+### 25.4.1 writes graph json to the repo root by default
 
 ### 25.4.2 writes output under the directory given via the out option
 
@@ -30,6 +30,6 @@
 
 ## 25.6 rendering fully in the original graphify CLI
 
-### 25.6.1 stamps each node with graphify's source, type, and community fields
+### 25.6.1 stamps each node with graphify compatible source type and community fields
 
 ### 25.6.2 marks every contains edge as confidently extracted
