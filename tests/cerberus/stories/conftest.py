@@ -26,11 +26,13 @@ from typing import TYPE_CHECKING
 import pytest
 from cerberus import checks, config, context, proc, registries
 from cerberus.checks.rumdl_config_check import CANONICAL as _RUMDL_CANONICAL
+from cerberus.graph import search as _graph_search
 from cerberus.model import Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from types import ModuleType
 
     from cerberus.context import Context
     from cerberus.model import CheckResult
@@ -144,6 +146,11 @@ def git_history_unavailable_error() -> type[GitHistoryUnavailableError]:
 @pytest.fixture
 def local_source() -> type[LocalSource]:
     return LocalSource
+
+
+@pytest.fixture
+def graph_search() -> ModuleType:
+    return _graph_search
 
 
 @pytest.fixture

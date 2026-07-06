@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
     import networkx as nx
@@ -22,11 +22,23 @@ def _tokens(text: str) -> list[str]:
     return _TOKEN.findall(text.lower())
 
 
-def _haystack(data: dict[str, Any]) -> tuple[str, str]:
-    label_tokens = " ".join(_tokens(str(data.get("label", ""))))
+class _Haystack(NamedTuple):
+    label_tokens: str
+    path_tokens: str
+    label_set: frozenset[str]
+    path_set: frozenset[str]
+
+
+def _haystack(data: dict[str, Any]) -> _Haystack:
+    label_token_list = _tokens(str(data.get("label", "")))
     is_file = data.get("kind") == "file"
-    path_tokens = " ".join(_tokens(str(data.get("path", "")))) if is_file else ""
-    return label_tokens, path_tokens
+    path_token_list = _tokens(str(data.get("path", ""))) if is_file else []
+    return _Haystack(
+        label_tokens=" ".join(label_token_list),
+        path_tokens=" ".join(path_token_list),
+        label_set=frozenset(label_token_list),
+        path_set=frozenset(path_token_list),
+    )
 
 
 def _term_weights(graph: nx.Graph[str], terms: list[str]) -> dict[str, float]:
@@ -37,8 +49,8 @@ def _term_weights(graph: nx.Graph[str], terms: list[str]) -> dict[str, float]:
     node_count = graph.number_of_nodes() or 1
     document_frequency = dict.fromkeys(set(terms), 0)
     for node_id in graph.nodes:
-        label_tokens, path_tokens = _haystack(graph.nodes[node_id])
-        combined = f"{label_tokens} {path_tokens}"
+        haystack = _haystack(graph.nodes[node_id])
+        combined = f"{haystack.label_tokens} {haystack.path_tokens}"
         for term in document_frequency:
             if term in combined:
                 document_frequency[term] += 1
@@ -60,7 +72,8 @@ def score_nodes(graph: nx.Graph[str], text: str) -> list[tuple[float, str]]:
     weights = _term_weights(graph, terms)
     scored: list[tuple[float, str]] = []
     for node_id in graph.nodes:
-        label_tokens, path_tokens = _haystack(graph.nodes[node_id])
+        haystack = _haystack(graph.nodes[node_id])
+        label_tokens, path_tokens = haystack.label_tokens, haystack.path_tokens
         combined = f"{label_tokens} {path_tokens}"
         score = 0.0
         if joined in {label_tokens, path_tokens, node_id.lower()}:
@@ -71,7 +84,7 @@ def score_nodes(graph: nx.Graph[str], text: str) -> list[tuple[float, str]]:
             score += _SUBSTRING_SCORE
         for term in terms:
             weight = weights[term]
-            if term in {label_tokens, path_tokens}:
+            if term in haystack.label_set or term in haystack.path_set:
                 score += _TERM_EXACT_SCORE * weight
             elif term in combined:
                 score += _TERM_SUBSTRING_SCORE * weight

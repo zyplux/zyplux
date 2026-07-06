@@ -37,3 +37,7 @@
 ## 26.4 keeping output machine readable regardless of terminal width
 
 ### 26.4.1 never wraps a nodes bracketed metadata onto its own line
+
+## 26.5 scoring a query term against a multi-word label
+
+### 26.5.1 scores a query term as an exact whole-token hit inside a multi-word label
