@@ -58,9 +58,10 @@ cerberus graph-query "<question>" [--depth N] [--dfs] [--budget N] [--graph PATH
 Seeds a BFS (default, `--dfs` for depth-first) traversal from the best
 free-text matches for `<question>`, depth-limited (`--depth`, default 2),
 and renders budget-truncated text (`--budget`, a character count, default
-2000). Seeding is a plain substring/token score — no IDF weighting, no
-trigram index — good enough for a one-shot CLI call, but an ambiguous
-multi-word question may seed more (or fewer) starting nodes than you expect;
+2000). Seeding is a substring/token score with inverse-document-frequency
+term weighting — no trigram index — good enough for a one-shot CLI call, but
+an ambiguous multi-word question may seed more (or fewer) starting nodes than
+you expect;
 narrow the wording or pass an exact node id as `<node>`/seed text if so.
 
 Use this for broader "what's connected around X" questions where you don't

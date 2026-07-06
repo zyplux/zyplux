@@ -127,10 +127,11 @@ def _render(graph: nx.Graph[str], nodes: set[str], edges: list[tuple[str, str]],
 def query_text(graph: nx.DiGraph[str], question: str, *, depth: int = 2, dfs: bool = False, budget: int = 2000) -> str:
     """Seed a BFS/DFS traversal from the best free-text matches and render it as budget-truncated text.
 
-    Seeding is a plain substring/token score (see `search.py`) rather than
-    graphify's IDF-weighted, trigram-indexed ranking — this runs once per CLI
-    invocation, so the scale-oriented optimizations graphify needs for a
-    persistent query server aren't the bottleneck here.
+    Seeding uses a substring/token score with inverse-document-frequency term
+    weighting (see `search.py`) — simpler than graphify's trigram-indexed
+    ranking, since this runs once per CLI invocation, so the scale-oriented
+    optimizations graphify needs for a persistent query server aren't the
+    bottleneck here.
 
     Traversal itself treats the graph as undirected (a view, not a copy) —
     unlike `explain.py`'s single-node connection list, "what's reachable
