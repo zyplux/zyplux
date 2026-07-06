@@ -1,12 +1,20 @@
-from collections.abc import Callable
-from pathlib import Path
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import config, context
-from cerberus.checks import rumdl_config_check
-from cerberus.model import CheckResult, Finding, Repo, Status
 
-FileReader = Callable[[Repo, str], str | None]
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from cerberus.model import CheckResult, Finding, Status
+
+type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
+type RunCheckOnDisk = Callable[..., CheckResult]
+type RunRumdl = Callable[[str | None], CheckResult]
+
+CHECK_ID = "rumdl-config"
 
 NON_CANONICAL = '[global]\ndisable = ["MD033", "MD013"]\n\n[MD024]\nsiblings-only = true\n'
 UNPARSEABLE = "[global\ndisable = [\n"
@@ -29,80 +37,69 @@ FIXED_WITH_EXCLUDE = (
 
 
 @pytest.fixture
-def repo() -> Repo:
-    return Repo("demo")
-
-
-@pytest.fixture
-def ctx() -> context.Context:
-    return context.local_context(config.load(), Path())
-
-
-@pytest.fixture
-def run_rumdl(monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: context.Context) -> Callable[[FileReader], CheckResult]:
-    def run(reader: FileReader) -> CheckResult:
-        monkeypatch.setattr(ctx, "file", reader)
-        return rumdl_config_check.run(repo, ctx)
+def run_rumdl(run_check_with_files: RunCheckWithFiles) -> RunRumdl:
+    def run(content: str | None) -> CheckResult:
+        files = {} if content is None else {".rumdl.toml": content}
+        return run_check_with_files(CHECK_ID, files)
 
     return run
 
 
 def test_5_1_1_passes_when_the_config_matches_canonical(
-    run_rumdl: Callable[[FileReader], CheckResult],
+    run_rumdl: RunRumdl, rumdl_canonical: str, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_rumdl(lambda *_: rumdl_config_check.CANONICAL)
-    assert result.findings == [Finding(Status.PASS, ".rumdl.toml matches the org canonical")]
+    result = run_rumdl(rumdl_canonical)
+    assert result.findings == [finding(status.PASS, ".rumdl.toml matches the org canonical")]
 
 
 def test_5_1_2_passes_when_a_repo_specific_exclude_list_is_set(
-    run_rumdl: Callable[[FileReader], CheckResult],
+    run_rumdl: RunRumdl, rumdl_canonical: str, finding: type[Finding], status: type[Status]
 ) -> None:
-    content = rumdl_config_check.CANONICAL.replace("]\n", ']\nexclude = ["reference_clones"]\n', 1)
-    result = run_rumdl(lambda *_: content)
-    assert result.findings == [Finding(Status.PASS, ".rumdl.toml matches the org canonical")]
+    content = rumdl_canonical.replace("]\n", ']\nexclude = ["reference_clones"]\n', 1)
+    result = run_rumdl(content)
+    assert result.findings == [finding(status.PASS, ".rumdl.toml matches the org canonical")]
 
 
 def test_5_1_3_fails_when_the_rule_config_differs_from_canonical(
-    run_rumdl: Callable[[FileReader], CheckResult],
+    run_rumdl: RunRumdl, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_rumdl(lambda *_: NON_CANONICAL)
-    assert result.findings == [Finding(Status.FAIL, ".rumdl.toml rule config does not match the org canonical")]
+    result = run_rumdl(NON_CANONICAL)
+    assert result.findings == [finding(status.FAIL, ".rumdl.toml rule config does not match the org canonical")]
 
 
 def test_5_1_4_fails_when_no_config_file_exists(
-    run_rumdl: Callable[[FileReader], CheckResult],
+    run_rumdl: RunRumdl, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_rumdl(lambda *_: None)
-    assert result.findings == [Finding(Status.FAIL, "no .rumdl.toml at repo root")]
+    result = run_rumdl(None)
+    assert result.findings == [finding(status.FAIL, "no .rumdl.toml at repo root")]
 
 
 def test_5_1_5_errors_when_the_config_cannot_be_parsed(
-    run_rumdl: Callable[[FileReader], CheckResult],
+    run_rumdl: RunRumdl, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_rumdl(lambda *_: UNPARSEABLE)
+    result = run_rumdl(UNPARSEABLE)
     assert result.findings == [
-        Finding(
-            Status.ERROR,
+        finding(
+            status.ERROR,
             "could not parse .rumdl.toml: Expected ']' at the end of a table declaration (at line 1, column 8)",
         )
     ]
 
 
-def test_5_2_1_creates_a_canonical_config_when_none_exists(tmp_path: Path) -> None:
-    fixer = context.local_context(config.load(), tmp_path, fix=True)
-    rumdl_config_check.run(fixer.repos()[0], fixer)
-    assert (tmp_path / ".rumdl.toml").read_text() == rumdl_config_check.CANONICAL
+def test_5_2_1_creates_a_canonical_config_when_none_exists(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, rumdl_canonical: str
+) -> None:
+    run_check_on_disk(CHECK_ID, {}, fix=True)
+    assert (tmp_path / ".rumdl.toml").read_text() == rumdl_canonical
 
 
 @pytest.fixture
-def fixed_rumdl_toml(tmp_path: Path) -> Path:
-    config_path = tmp_path / ".rumdl.toml"
-    config_path.write_text(
+def fixed_rumdl_toml(run_check_on_disk: RunCheckOnDisk, tmp_path: Path) -> Path:
+    content = (
         '[global]\ndisable = ["MD033", "MD013"]\nexclude = ["reference_clones"]\n\n[MD024]\nsiblings-only = true\n'
     )
-    fixer = context.local_context(config.load(), tmp_path, fix=True)
-    rumdl_config_check.run(fixer.repos()[0], fixer)
-    return config_path
+    run_check_on_disk(CHECK_ID, {".rumdl.toml": content}, fix=True)
+    return tmp_path / ".rumdl.toml"
 
 
 def test_5_2_2_rewrites_a_non_canonical_config_to_canonical_form_preserving_exclude(
@@ -111,15 +108,19 @@ def test_5_2_2_rewrites_a_non_canonical_config_to_canonical_form_preserving_excl
     assert fixed_rumdl_toml.read_text(encoding="utf-8") == FIXED_WITH_EXCLUDE
 
 
-def test_5_2_3_rewrites_a_non_canonical_config_without_an_exclude_to_the_exact_canonical_text(tmp_path: Path) -> None:
-    config_path = tmp_path / ".rumdl.toml"
-    config_path.write_text(NON_CANONICAL)
-    fixer = context.local_context(config.load(), tmp_path, fix=True)
-    rumdl_config_check.run(fixer.repos()[0], fixer)
-    assert config_path.read_text() == rumdl_config_check.CANONICAL
+def test_5_2_3_rewrites_a_non_canonical_config_without_an_exclude_to_the_exact_canonical_text(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, rumdl_canonical: str
+) -> None:
+    run_check_on_disk(CHECK_ID, {".rumdl.toml": NON_CANONICAL}, fix=True)
+    assert (tmp_path / ".rumdl.toml").read_text() == rumdl_canonical
 
 
-def test_5_2_4_passes_when_re_checked_after_being_fixed(fixed_rumdl_toml: Path) -> None:
-    verifier = context.local_context(config.load(), fixed_rumdl_toml.parent)
-    result = rumdl_config_check.run(verifier.repos()[0], verifier)
-    assert result.findings == [Finding(Status.PASS, ".rumdl.toml matches the org canonical")]
+def test_5_2_4_passes_when_re_checked_after_being_fixed(
+    fixed_rumdl_toml: Path,
+    run_check_on_disk: RunCheckOnDisk,
+    finding: type[Finding],
+    status: type[Status],
+) -> None:
+    del fixed_rumdl_toml
+    result = run_check_on_disk(CHECK_ID, {}, fix=False)
+    assert result.findings == [finding(status.PASS, ".rumdl.toml matches the org canonical")]
