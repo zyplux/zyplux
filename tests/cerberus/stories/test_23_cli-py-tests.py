@@ -33,6 +33,14 @@ _ROOT_INIT = (
 )
 _CLI_MODULE = "from __future__ import annotations\n\nimport typer\n\napp = typer.Typer()\n"
 
+_CLI_MANIFEST_NESTED_ENTRY = (
+    '[project]\nname = "demo-cli"\n\n'
+    '[project.scripts]\ncli = "demo.sub.cli:app"\n\n'
+    '[tool.uv.build-backend]\nmodule-name = "demo"\n'
+)
+_NESTED_CLI_MODULE = "from __future__ import annotations\n\nimport typer\n\napp = typer.Typer()\n"
+_DECOY_CLI_MODULE = "from __future__ import annotations\n\n\ndef unrelated() -> None:\n    return None\n"
+
 _STORY_FILE = "apps/cli/tests/stories/test_1_first.py"
 _BASE_FILES = {
     "pyproject.toml": _ROOT_WS,
@@ -203,6 +211,37 @@ def test_23_3_9_restricts_the_public_surface_to_a_declared_all_list(
     assert result.findings == [
         finding(status.FAIL, f"{_STORY_FILE}: story test imports non-public name 'other' from seam module 'demo'")
     ]
+
+
+def test_23_3_10_does_not_exempt_a_guard_on_a_custom_non_typing_type_checking_attribute(
+    run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
+) -> None:
+    guarded = (
+        "from __future__ import annotations\n\n\n"
+        "class Fake:\n"
+        "    TYPE_CHECKING = True\n\n\n"
+        "if Fake.TYPE_CHECKING:\n"
+        "    from demo.internal import Thing\n"
+    )
+    result = run_cli_py_tests(_with_story(guarded))
+    assert result.findings == [
+        finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demo.internal'")
+    ]
+
+
+def test_23_3_11_resolves_a_nested_cli_entry_module_over_a_shallower_decoy_with_the_same_basename(
+    run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
+) -> None:
+    files = {
+        "pyproject.toml": _ROOT_WS,
+        "apps/cli/pyproject.toml": _CLI_MANIFEST_NESTED_ENTRY,
+        "apps/cli/src/demo/__init__.py": _ROOT_INIT,
+        "apps/cli/src/demo/cli.py": _DECOY_CLI_MODULE,
+        "apps/cli/src/demo/sub/cli.py": _NESTED_CLI_MODULE,
+        _STORY_FILE: "from demo.sub.cli import app\n",
+    }
+    result = run_cli_py_tests(files)
+    assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
 
 def test_23_4_1_skips_cleanly_when_a_package_has_no_story_test_files_yet(

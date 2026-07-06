@@ -114,41 +114,53 @@ def _build_backend_module_name(manifest: dict[str, Any]) -> str | None:
     return name if isinstance(name, str) and name else None
 
 
-def _root_module_from_sources(package: str, paths: list[str]) -> str | None:
+def _shallowest_init(package: str, paths: list[str], dir_name: str | None) -> tuple[str, str] | None:
+    """Find the shallowest `__init__.py` under `package`, as `(parent dir name, parent dir path)`.
+
+    When `dir_name` is given, only an `__init__.py` whose immediate parent
+    directory is named `dir_name` is considered.
+    """
     prefix = f"{package}/" if package else ""
-    best: tuple[int, str] | None = None
+    best: tuple[int, str, str] | None = None
     for path in paths:
         if not path.startswith(prefix) or not path.endswith(_INIT_PY_SUFFIX):
             continue
         parts = path[len(prefix) :].split("/")
-        if len(parts) < _MIN_PATH_SEGMENTS:
+        if len(parts) < _MIN_PATH_SEGMENTS or (dir_name is not None and parts[-2] != dir_name):
             continue
         depth = len(parts)
         if best is None or depth < best[0]:
-            best = (depth, parts[-2])
-    return best[1] if best else None
+            best = (depth, parts[-2], path[: -len(_INIT_PY_SUFFIX)])
+    return (best[1], best[2]) if best else None
+
+
+def _root_module_from_sources(package: str, paths: list[str]) -> str | None:
+    found = _shallowest_init(package, paths, dir_name=None)
+    return found[0] if found else None
 
 
 def resolve_root_module(package: str, manifest: dict[str, Any], paths: list[str]) -> str | None:
     return _build_backend_module_name(manifest) or _root_module_from_sources(package, paths)
 
 
-def _module_source_path(package: str, paths: list[str], module: str) -> str | None:
-    trailing = module.rsplit(".", 1)[-1]
-    prefix = f"{package}/" if package else ""
-    best: tuple[int, str] | None = None
-    for path in paths:
-        if not path.startswith(prefix):
-            continue
-        parts = path[len(prefix) :].split("/")
-        is_flat_module = parts[-1] == f"{trailing}.py"
-        is_package_init = len(parts) >= _MIN_PATH_SEGMENTS and parts[-2] == trailing and parts[-1] == "__init__.py"
-        if not (is_flat_module or is_package_init):
-            continue
-        depth = len(parts)
-        if best is None or depth < best[0]:
-            best = (depth, path)
-    return best[1] if best else None
+def _root_module_dir(package: str, paths: list[str], root: str) -> str | None:
+    found = _shallowest_init(package, paths, dir_name=root)
+    return found[1] if found else None
+
+
+def _module_source_path(root: str, root_dir: str, paths: list[str], module: str) -> str | None:
+    if module == root:
+        init_path = f"{root_dir}{_INIT_PY_SUFFIX}"
+        return init_path if init_path in paths else None
+
+    anchor = f"{root_dir}/{module[len(root) + 1 :].replace('.', '/')}"
+    flat_module = f"{anchor}.py"
+    package_init = f"{anchor}{_INIT_PY_SUFFIX}"
+    if flat_module in paths:
+        return flat_module
+    if package_init in paths:
+        return package_init
+    return None
 
 
 def _all_literal_elements(node: ast.Assign) -> set[str] | None:
@@ -196,7 +208,12 @@ def _public_names(source: str) -> set[str] | None:
 def _is_type_checking_test(test: ast.expr) -> bool:
     if isinstance(test, ast.Name):
         return test.id == "TYPE_CHECKING"
-    return isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+    return (
+        isinstance(test, ast.Attribute)
+        and test.attr == "TYPE_CHECKING"
+        and isinstance(test.value, ast.Name)
+        and test.value.id == "typing"
+    )
 
 
 def _type_checking_exempt_ids(tree: ast.AST) -> set[int]:
@@ -227,6 +244,7 @@ def _is_package_relative(module: str, root: str) -> bool:
 class _PackageSeam:
     package: str
     root: str
+    root_dir: str | None
     modules: frozenset[str]
 
 
@@ -257,7 +275,8 @@ class Seam:
             res.error(f"{package or '.'}: could not determine the package's import root")
             return
 
-        pkg_seam = _PackageSeam(package, root, frozenset({root}) | _script_modules(manifest))
+        root_dir = _root_module_dir(package, self.paths, root)
+        pkg_seam = _PackageSeam(package, root, root_dir, frozenset({root}) | _script_modules(manifest))
         for story_file in _story_test_files(package, self.paths):
             self._check_story_file(res, story_file, pkg_seam)
 
@@ -294,12 +313,14 @@ class Seam:
         if module not in pkg_seam.modules:
             res.fail(f"{story_file}: story test imports outside the seam — {module!r}")
             return
-        self._check_names(res, story_file, pkg_seam.package, module, node.names)
+        self._check_names(res, story_file, pkg_seam, module, node.names)
 
     def _check_names(
-        self, res: CheckResult, story_file: str, package: str, module: str, aliases: list[ast.alias]
+        self, res: CheckResult, story_file: str, pkg_seam: _PackageSeam, module: str, aliases: list[ast.alias]
     ) -> None:
-        source_path = _module_source_path(package, self.paths, module)
+        if pkg_seam.root_dir is None:
+            return
+        source_path = _module_source_path(pkg_seam.root, pkg_seam.root_dir, self.paths, module)
         if source_path is None:
             return
         content = self.ctx.file(self.repo, source_path)

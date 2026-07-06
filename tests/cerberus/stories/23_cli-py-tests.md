@@ -34,6 +34,10 @@
 
 ### 23.3.9 restricts the public surface to a declared all list
 
+### 23.3.10 does not exempt a guard on a custom non typing type checking attribute
+
+### 23.3.11 resolves a nested cli entry module over a shallower decoy with the same basename
+
 ## 23.4 scoping to a package's own story tests
 
 ### 23.4.1 skips cleanly when a package has no story test files yet
