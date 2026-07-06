@@ -111,10 +111,10 @@ def test_17_3_1_lists_tracked_files_and_skips_gitignored_paths(
     assert paths == [".gitignore", "package.json"]
 
 
-@pytest.mark.usefixtures("no_git")
 def test_17_3_2_falls_back_to_walking_the_filesystem_when_git_is_unavailable(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
+    tmp_path: Path, repo: Repo, local_source: type[LocalSource], no_git: None
 ) -> None:
+    del no_git
     (tmp_path / "a.txt").write_text("one")
     (tmp_path / "nested").mkdir()
     (tmp_path / "nested" / "b.txt").write_text("two")
@@ -189,13 +189,14 @@ def test_17_7_1_errors_when_git_history_cannot_be_read_outside_a_repo(
         local_source(tmp_path).tags(repo, "widget-v")
 
 
-@pytest.mark.usefixtures("no_git")
 def test_17_7_2_errors_when_the_git_binary_is_missing(
     tmp_path: Path,
     repo: Repo,
     local_source: type[LocalSource],
     git_history_unavailable_error: type[GitHistoryUnavailableError],
+    no_git: None,
 ) -> None:
+    del no_git
     with pytest.raises(git_history_unavailable_error):
         local_source(tmp_path).tags(repo, "widget-v")
 
