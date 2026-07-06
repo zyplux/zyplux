@@ -5,10 +5,8 @@ from importlib import resources
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import __version__, checks
-from cerberus.checks.rumdl_config_check import CANONICAL as RUMDL_CANONICAL
+from cerberus import __version__
 from cerberus.cli import app
-from cerberus.model import Scope
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
@@ -18,6 +16,8 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
     from typer.testing import Result
+
+type RegisterFakeCheck = Callable[[str, Callable[[Repo, Context], CheckResult]], None]
 
 runner = CliRunner()
 
@@ -53,13 +53,13 @@ CONFORMING_CODEOWNERS = """\
 
 
 @pytest.fixture
-def conforming_repo(tmp_path: Path) -> Path:
+def conforming_repo(tmp_path: Path, rumdl_canonical: str) -> Path:
     (tmp_path / "justfile").write_text(CONFORMING_JUSTFILE)
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
     (workflows / "ci.yml").write_text(CONFORMING_CI)
     (tmp_path / ".github" / "CODEOWNERS").write_text(CONFORMING_CODEOWNERS)
-    (tmp_path / ".rumdl.toml").write_text(RUMDL_CANONICAL)
+    (tmp_path / ".rumdl.toml").write_text(rumdl_canonical)
     return tmp_path
 
 
@@ -183,10 +183,10 @@ def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
     assert "list of check id strings" in str(result.exception)
 
 
-def test_16_7_1_lists_every_registered_check_by_id() -> None:
+def test_16_7_1_lists_every_registered_check_by_id(known_check_ids: tuple[str, ...]) -> None:
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0, result.output
-    assert all(check_id in result.output for check_id in checks.BY_ID)
+    assert all(check_id in result.output for check_id in known_check_ids)
 
 
 def test_16_8_1_prints_the_cerberus_version() -> None:
@@ -203,14 +203,13 @@ def test_16_9_1_rejects_an_option_the_lint_command_never_defined(invoke_lint: Ca
 
 
 def test_16_10_1_reports_a_crashing_check_as_an_error_instead_of_aborting_the_run(
-    invoke_lint: Callable[..., Result], monkeypatch: pytest.MonkeyPatch
+    invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck
 ) -> None:
     def explode(_repo: Repo, _ctx: Context) -> CheckResult:
         msg = "boom"
         raise RuntimeError(msg)
 
-    crashing = checks.Check("codeowners", "always crashes", Scope.CONTENT, explode)
-    monkeypatch.setitem(checks.BY_ID, "codeowners", crashing)
+    register_fake_check("codeowners", explode)
 
     result = invoke_lint("--check", "codeowners")
 
