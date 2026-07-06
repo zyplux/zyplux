@@ -33,3 +33,7 @@
 ### 25.6.1 stamps each node with graphify compatible source type and community fields
 
 ### 25.6.2 marks every contains edge as confidently extracted
+
+## 25.7 resolving absolute import ties deterministically
+
+### 25.7.1 resolves an absolute import tie to the lexicographically first candidate

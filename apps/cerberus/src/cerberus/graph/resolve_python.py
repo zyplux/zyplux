@@ -38,7 +38,7 @@ def _matches_absolute(path: str, slash: str) -> bool:
 def _resolve_absolute(dotted: str, known_files: frozenset[str]) -> str | None:
     slash = dotted.replace(".", "/")
     matches = [path for path in known_files if _matches_absolute(path, slash)]
-    return min(matches, key=len) if matches else None
+    return min(matches, key=lambda path: (len(path), path)) if matches else None
 
 
 def _resolve_relative(file_path: str, level: int, dotted: str, known_files: frozenset[str]) -> str | None:
