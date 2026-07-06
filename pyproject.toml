@@ -34,5 +34,6 @@ test = [
 ]
 type = [
     "pyrefly>=1.1.1",
+    "types-networkx>=3.6.1.20260624",
     "types-pyyaml>=6.0.12.20260518",
 ]
