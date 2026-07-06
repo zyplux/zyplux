@@ -24,9 +24,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import checks, config, context, registries
+from cerberus import checks, config, context, proc, registries
 from cerberus.checks.rumdl_config_check import CANONICAL as _RUMDL_CANONICAL
 from cerberus.model import Finding, Repo, Scope, Status
+from cerberus.source import GitHistoryUnavailableError, LocalSource
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -129,6 +130,22 @@ def finding() -> type[Finding]:
 @pytest.fixture
 def scope() -> type[Scope]:
     return Scope
+
+
+@pytest.fixture
+def git_history_unavailable_error() -> type[GitHistoryUnavailableError]:
+    return GitHistoryUnavailableError
+
+
+@pytest.fixture
+def local_source() -> type[LocalSource]:
+    return LocalSource
+
+
+@pytest.fixture
+def no_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch away the `git` binary so a story test can exercise the git-unavailable path."""
+    monkeypatch.setattr(proc.shutil, "which", lambda _tool: None)
 
 
 @pytest.fixture
