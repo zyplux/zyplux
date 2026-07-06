@@ -75,10 +75,14 @@ def run_check_with_files(
     """Run a check by id against virtual file content, keyed by repo-relative path.
 
     A path absent from `files` reads as "file does not exist" (`None`), same as
-    a real repo missing that path.
+    a real repo missing that path. `ctx.paths` is also stubbed to enumerate
+    exactly this `files` mapping's keys, for checks that list a directory
+    (e.g. discovering workspace packages or story-test files) rather than
+    reading one known path.
     """
 
     def _run(check_id: str, files: dict[str, str]) -> CheckResult:
+        monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(files))
         monkeypatch.setattr(ctx, "file", lambda _repo, path: files.get(path))
         return run_check(check_id, repo, ctx)
 
