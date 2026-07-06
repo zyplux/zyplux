@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import networkx as nx
 import pytest
 from cerberus.cli import app
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from types import ModuleType
 
     from typer.testing import Result
 
@@ -233,3 +235,15 @@ def test_26_4_1_never_wraps_a_nodes_bracketed_metadata_onto_its_own_line(long_pa
 
     path = "a/deeply/nested/package/structure/module_with_a_long_name.py"
     assert f"NODE {path} [src={path} loc=L1 community=" in result.output
+
+
+def test_26_5_1_scores_a_query_term_as_an_exact_whole_token_hit_inside_a_multi_word_label(
+    graph_search: ModuleType,
+) -> None:
+    graph: nx.Graph[str] = nx.Graph()
+    graph.add_node("multi_token_hit", label="handle_get_user_request")
+    graph.add_node("single_token_control", label="authusers")
+
+    scores = {node_id: score for score, node_id in graph_search.score_nodes(graph, "user")}
+
+    assert scores["multi_token_hit"] > scores["single_token_control"]
