@@ -4,13 +4,13 @@ import json
 import os
 import subprocess
 import tomllib
-
-import yaml
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import NotRequired, TypedDict, override
+from typing import TypedDict, override
 
+import yaml
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from totchef import shell
 from totchef.cook_base import EntrySpec, SyncOutcome, VersionedCook
@@ -21,14 +21,14 @@ AGENTS = ("claude-code", "universal")
 GITHUB_TREES_URL = "https://api.github.com/repos/{repo}/git/trees/{ref}?recursive=1"
 
 
-class LockfileSkillInfo(TypedDict):
-    """One skill's entry in the `skills` CLI's own `~/.agents/.skill-lock.json`."""
+class LockfileSkillInfo(BaseModel):
+    """One skill's entry in the `skills` CLI's own `~/.agents/.skill-lock.json`; field names translate its camelCase JSON to attributes so real dot-access replaces string-keyed lookups."""
 
     source: str
-    ref: NotRequired[str]
-    skillPath: NotRequired[str]
-    skillFolderHash: NotRequired[str]
-    updatedAt: NotRequired[str]
+    ref: str | None = None
+    skill_path: str | None = Field(default=None, alias="skillPath")
+    skill_folder_hash: str | None = Field(default=None, alias="skillFolderHash")
+    updated_at: str | None = Field(default=None, alias="updatedAt")
 
 
 class GithubTreeEntry(TypedDict):
@@ -77,7 +77,7 @@ def lockfile_skills() -> dict[str, LockfileSkillInfo]:
         payload = json.loads(lockfile_path().read_text())
     except OSError, json.JSONDecodeError:
         return {}
-    return payload.get("skills", {})
+    return {name: LockfileSkillInfo.model_validate(info) for name, info in payload.get("skills", {}).items()}
 
 
 def read_skill_md_version(skill_dir: Path) -> str | None:
@@ -122,24 +122,24 @@ def read_skill_version(name: str) -> str | None:
 
 def skill_state(name: str, info: LockfileSkillInfo) -> str:
     """One skill's report value: its declared version when it states one, plus a short content id from the lockfile's folder hash. The hash — not `updatedAt`, which the CLI rewrites on every `add` — is what actually moves when the skill's content changed."""
-    folder_hash = info.get("skillFolderHash")
-    content_id = f"#{folder_hash[:8]}" if folder_hash else info.get("updatedAt", "?")
+    folder_hash = info.skill_folder_hash
+    content_id = f"#{folder_hash[:8]}" if folder_hash else (info.updated_at or "?")
     version = read_skill_version(name)
     return f"{version} {content_id}" if version else content_id
 
 
 def read_skill_states() -> dict[str, str]:
     """Every installed skill keyed `<repo>/<skill>`, straight from the lockfile the `skills` CLI already maintains."""
-    return {f"{info['source']}/{name}": skill_state(name, info) for name, info in lockfile_skills().items()}
+    return {f"{info.source}/{name}": skill_state(name, info) for name, info in lockfile_skills().items()}
 
 
 def skills_for_source(skills: dict[str, LockfileSkillInfo], source: str) -> dict[str, str]:
-    return {name: skill_state(name, info) for name, info in skills.items() if info.get("source") == source}
+    return {name: skill_state(name, info) for name, info in skills.items() if info.source == source}
 
 
 def repo_ref(skills: dict[str, LockfileSkillInfo], repo: str) -> str:
     """The git ref a repo's skills were installed from (the lockfile records one when the source pinned it), HEAD — the default branch — otherwise."""
-    return next((info["ref"] for info in skills.values() if info.get("source") == repo and info.get("ref")), "HEAD")
+    return next((info.ref for info in skills.values() if info.source == repo and info.ref), "HEAD")
 
 
 def find_folder_sha(tree: GithubTree, skill_path: str) -> str | None:
@@ -170,7 +170,7 @@ def fetch_repo_trees(repos: list[str], skills: dict[str, LockfileSkillInfo]) -> 
 
 def upstream_skill_state(name: str, info: LockfileSkillInfo, tree: GithubTree) -> str | None:
     """What one skill's report value would read after a sync, judged from upstream: the installed state when the upstream folder SHA matches the lockfile (nothing to do), the new short content id when it moved, unknown when the lock entry or tree can't say."""
-    locked_hash, skill_path = info.get("skillFolderHash"), info.get("skillPath")
+    locked_hash, skill_path = info.skill_folder_hash, info.skill_path
     if not locked_hash or not skill_path:
         return None
     upstream_sha = find_folder_sha(tree, skill_path)
@@ -234,7 +234,7 @@ class SkillsCook(VersionedCook):
         skills = lockfile_skills()
         requested: list[str] = []
         for repo in self.repos:
-            skill_keys = sorted(f"{repo}/{name}" for name, info in skills.items() if info.get("source") == repo)
+            skill_keys = sorted(f"{repo}/{name}" for name, info in skills.items() if info.source == repo)
             requested += skill_keys or [repo]
         return requested
 
@@ -260,7 +260,7 @@ class SkillsCook(VersionedCook):
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         """Upstream state per requested key, from one trees call per already-installed repo. A fresh-repo placeholder stays unknown (its skills are unknowable before the first add), as does every key of an unreachable repo and every drifted skill (its agent entry isn't the store symlink) — unknown falls back to refresh-every-run."""
         skills = lockfile_skills()
-        installed_repos = [repo for repo in self.repos if any(info.get("source") == repo for info in skills.values())]
+        installed_repos = [repo for repo in self.repos if any(info.source == repo for info in skills.values())]
         trees = fetch_repo_trees(installed_repos, skills)
         latest: dict[str, str | None] = {}
         for key in names:
@@ -297,7 +297,7 @@ class SkillsCook(VersionedCook):
                         logger.error(f"{repo} failed: {exc}")
 
         for name, info in lockfile_skills().items():
-            if info.get("source") in self.repos:
+            if info.source in self.repos:
                 link_cli_binary(bun, name)
 
         if failures:

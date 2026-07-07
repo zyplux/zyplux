@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import override
 
 from pydantic import Field
-
 from totchef import harness, shell
 from totchef.cook_base import CookBase, EntrySpec, StateChangeOutcome, StateCook
 from totchef.recipe_types import RecipeConfig
@@ -23,8 +22,8 @@ CAPTURE_TIMER = "chezmoi-capture.timer"
 CONFIG_UMASK = "0o022"
 
 SERVICE_UNIT = (
-    "[Unit]\nDescription=Capture $HOME edits into the chezmoi dotfiles source repo\n\n[Service]\nType=oneshot\nExecStart=%h/.local/bin/chezmoi re-add\n"
-).encode()
+    b"[Unit]\nDescription=Capture $HOME edits into the chezmoi dotfiles source repo\n\n[Service]\nType=oneshot\nExecStart=%h/.local/bin/chezmoi re-add\n"
+)
 
 
 class ChezmoiEntry(EntrySpec):

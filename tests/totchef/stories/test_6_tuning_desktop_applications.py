@@ -1,11 +1,14 @@
 """User stories §6 — Tuning desktop apps. One test per §6 criterion; these cooks edit real files under `$HOME` (faked by the `home` fixture)."""
 
-from collections.abc import Callable
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
-from act_fixtures import Totchef
-from arrange_fixtures import FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+    from typing import Any
+
+    from act_fixtures import Totchef
+    from arrange_fixtures import FakeTerminal, RecipeBuilder
 
 
 def _exec_line(desktop_file: Path) -> str:

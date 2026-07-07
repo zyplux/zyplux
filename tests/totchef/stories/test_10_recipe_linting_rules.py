@@ -1,10 +1,13 @@
 """User stories §10 — Recipe linting rules. One test per rule, driving `lint` through the chef or the real CLI; a rejected recipe never touches the system."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeTerminal, RecipeBuilder
 
 # 10.1 Validate a recipe without running it
 

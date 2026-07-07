@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, override
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec
+from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome
 from totchef.harness import write_if_changed
 
 

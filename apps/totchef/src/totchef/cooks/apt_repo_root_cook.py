@@ -41,7 +41,7 @@ class AptRepoEntry(EntrySpec):
     preferences_path: str | None = None
 
     @model_validator(mode="after")
-    def _resolve_urls(self) -> "AptRepoEntry":
+    def _resolve_urls(self) -> AptRepoEntry:
         if self.url is not None:
             self.url = assume_https(self.url)
         self.key_url = resolve_repo_url(self.url, self.key_url)

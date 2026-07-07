@@ -45,7 +45,7 @@ class BinEntry(EntrySpec):
         return entry_input
 
     @model_validator(mode="after")
-    def _command_honors_contract(self) -> "BinEntry":
+    def _command_honors_contract(self) -> BinEntry:
         if problems := find_contract_problems(harness.files_dir() / self.source):
             raise ValueError("; ".join(problems))
         return self

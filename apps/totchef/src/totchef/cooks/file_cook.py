@@ -6,7 +6,7 @@ from typing import override
 from pydantic import ValidationInfo, model_validator
 
 from totchef import harness
-from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, get_entry_name
+from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome, get_entry_name
 
 
 class FileEntry(EntrySpec):
@@ -16,7 +16,7 @@ class FileEntry(EntrySpec):
     mode: str = "0644"
 
     @model_validator(mode="after")
-    def _resolve_body(self, info: ValidationInfo) -> "FileEntry":
+    def _resolve_body(self, info: ValidationInfo) -> FileEntry:
         if self.source is not None and self.content is not None:
             raise ValueError("set `source` or `content`, not both")
         if self.source is None and self.content is None:

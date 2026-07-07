@@ -1,10 +1,13 @@
 """User stories §11 — Managing dotfiles with chezmoi. One test per §11 criterion on the real chef in-process; only system boundaries (bash, network, host, home) are faked."""
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pytest
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeSystem, FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import pytest
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeSystem, FakeTerminal, RecipeBuilder
 
 # 11.1 Provision dotfiles from a git repo
 

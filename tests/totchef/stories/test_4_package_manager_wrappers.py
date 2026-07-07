@@ -1,11 +1,14 @@
 """User stories §4 — Language package-manager wrappers. One test per §4 criterion on the real chef in-process; system boundaries (bash, network, host) are faked, except the §4.3.3 landing-path story which runs in a container."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Totchef
-from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
-from container_fixtures import ContainerRun
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Totchef
+    from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+    from container_fixtures import ContainerRun
 
 # 4.1 Install and update Rust crates
 

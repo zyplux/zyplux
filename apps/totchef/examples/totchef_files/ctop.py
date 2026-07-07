@@ -22,13 +22,13 @@ from typing import Annotated, Any
 
 import psutil
 import typer
-from websockets.exceptions import WebSocketException
-from websockets.sync.client import connect
 from rich.console import Console, Group
 from rich.filesize import decimal as format_filesize
 from rich.live import Live
 from rich.table import Column, Table
 from rich.text import Text
+from websockets.exceptions import WebSocketException
+from websockets.sync.client import connect
 
 __version__ = "0.2.1"
 

@@ -33,7 +33,7 @@ def pick_worst_status(statuses: list[Status]) -> Status:
 
 
 def format_version(version: str | None) -> str:
-    return version if version else "—"
+    return version or "—"
 
 
 CONTENT_DIGEST = re.compile(r"[0-9a-f]{64}")

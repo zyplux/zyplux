@@ -1,10 +1,13 @@
 """User stories §12 — Installing agent skills. One test per §12 criterion on the real chef in-process; system boundaries (bash, home) are faked."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Totchef
-from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Totchef
+    from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
 
 def _write_skills(home: Path, *entries: tuple[str, str, str, str]) -> Callable[[], None]:

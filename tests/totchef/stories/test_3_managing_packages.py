@@ -1,10 +1,13 @@
 """User stories §3 — Managing packages. One test per §3 criterion on the real chef in-process; only system boundaries (bash, network, host) are faked."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
 # A package's `apt-cache policy` output, before and after installation. Priority 500
 # (a real version-table entry) keeps it out of the "not in any repo" fail-fast path.

@@ -1,10 +1,13 @@
 """User stories §9 — Extending totchef. One test per §9 criterion, each driving a real local-cook drop-in through `totchef` and asserting observable output."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeTerminal, RecipeBuilder
 
 VERSIONED_COOK = """
 from totchef import shell

@@ -143,7 +143,7 @@ def start_inline_logging() -> Path:
     """Inline start: no fd redirect, no pump. Open the log file for the structured report block and re-point loguru at the live stderr so logs scroll straight to the terminal (and are captured when a caller runs totchef through its CLI)."""
     global LOG_HANDLE
     log_file = open_log_file()
-    LOG_HANDLE = open(log_file, "a")
+    LOG_HANDLE = Path(log_file).open("a")
     logger.remove()
     logger.configure(extra={"runner": DEFAULT_RUNNER})
     logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
@@ -160,7 +160,7 @@ def start_logging(echo_to_terminal: bool = True) -> Path:
     global TERMINAL_FD, LOG_HANDLE, LOG_PIPE_WRITE
     if TERMINAL_FD is None:
         TERMINAL_FD = os.dup(1)
-    LOG_HANDLE = open(log_file, "a")
+    LOG_HANDLE = Path(log_file).open("a")
 
     read_fd, write_fd = os.pipe()
     LOG_PIPE_WRITE = os.dup(write_fd)

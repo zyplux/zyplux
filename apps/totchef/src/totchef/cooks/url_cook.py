@@ -43,7 +43,7 @@ class UrlEntry(EntrySpec):
     update_guard: str | None = None
 
     @model_validator(mode="after")
-    def _assume_https(self) -> "UrlEntry":
+    def _assume_https(self) -> UrlEntry:
         self.url = assume_https(self.url)
         return self
 

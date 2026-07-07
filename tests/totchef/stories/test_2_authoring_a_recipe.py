@@ -1,9 +1,12 @@
 """User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: fan-out, ordering, and defaults read off the plan and the run."""
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Totchef
-from arrange_fixtures import FakeSystem, FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from act_fixtures import Totchef
+    from arrange_fixtures import FakeSystem, FakeTerminal, RecipeBuilder
 
 APT_CACHE_POLICY = """\
 git:

@@ -19,7 +19,7 @@ SOFT_FAIL_EXIT = 75  # totchef's public soft-failure exit code (stories §1.1.3)
 class TerminalAssertions:
     """Assertion half of the bash double: verify what the system handed to the shell. The arrange half (arrange_fixtures.FakeTerminal) records each command into `commands`."""
 
-    commands: list["RanCommand"]
+    commands: list[RanCommand]
 
     def expect_ran(self, match: str) -> None:
         assert any(match in command.line for command in self.commands), f"expected a command matching {match!r}, but only ran:\n{self._ran_lines()}"

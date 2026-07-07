@@ -15,7 +15,7 @@ class ConfEntry(EntrySpec):
     lines: list[str] | None = Field(None, min_length=1)
 
     @model_validator(mode="after")
-    def _require_exactly_one_form(self) -> "ConfEntry":
+    def _require_exactly_one_form(self) -> ConfEntry:
         if self.line is not None and self.lines is not None:
             raise ValueError("set `line` or `lines`, not both")
         if self.line is None and self.lines is None:

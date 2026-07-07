@@ -1,4 +1,4 @@
-"""Meta-test: story tests assert behavior through fixtures only, zero imports; §8.2/§8.3.2-3 white-box and §7.3.2/§8.3.1 container are pinned exceptions. The act/assert fixtures, in turn, reach totchef only through its public CLI — never its internals."""
+"""Meta-test: story tests assert behavior through fixtures only, zero *runtime* imports; a `TYPE_CHECKING`-guarded import (needed to annotate a fixture parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3 white-box and §7.3.2/§8.3.1 container are pinned exceptions. The act/assert fixtures, in turn, reach totchef only through its public CLI — never its internals."""
 
 import ast
 
@@ -13,11 +13,33 @@ PUBLIC_ONLY_FIXTURES = ("act_fixtures.py", "assert_fixtures.py")
 PUBLIC_CLI_IMPORT = "totchef.cli"  # the one production handle: `from totchef.cli import app`
 
 
+def _is_type_checking_guard(node: ast.AST) -> bool:
+    return isinstance(node, ast.If) and (
+        (isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING")
+        or (isinstance(node.test, ast.Attribute) and node.test.attr == "TYPE_CHECKING")
+    )
+
+
+def _is_type_checking_flag_import(node: ast.AST) -> bool:
+    return isinstance(node, ast.ImportFrom) and node.module == "typing" and any(alias.name == "TYPE_CHECKING" for alias in node.names)
+
+
+def _walk_runtime(tree: ast.AST):
+    """Like `ast.walk`, but doesn't descend into a `TYPE_CHECKING` guard's body — those imports never execute."""
+    for node in ast.iter_child_nodes(tree):
+        if _is_type_checking_guard(node):
+            continue
+        yield node
+        yield from _walk_runtime(node)
+
+
 def _import_bearing_story_tests() -> set[str]:
     bearing = set()
     for path in STORIES_DIR.glob("test_*.py"):
         tree = ast.parse(path.read_text())
-        if any(isinstance(node, (ast.Import, ast.ImportFrom)) for node in ast.walk(tree)):
+        if any(
+            isinstance(node, (ast.Import, ast.ImportFrom)) and not _is_type_checking_flag_import(node) for node in _walk_runtime(tree)
+        ):
             bearing.add(path.name)
     return bearing
 

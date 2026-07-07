@@ -1,10 +1,13 @@
 """User stories §5 — Configuring system state. One test per §5 criterion on the real chef in-process; only system boundaries (bash, network, host) are faked."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
 # 5.1 Add third-party apt repositories securely
 

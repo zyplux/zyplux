@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import tomllib
+from itertools import starmap
 from pathlib import Path
 from typing import Annotated
 
@@ -16,7 +17,15 @@ from totchef.cook_base import CookResult, ReportRow
 from totchef.cook_runner import format_duration, run_recipe
 from totchef.harness import SOFT_FAIL_EXIT
 from totchef.logs import SHARED_LOG_ENV, drain_logs, inline_mode, set_terminal_echo, start_logging, write_log
-from totchef.recipe import RECIPE_ENV, find_cooks_dir, find_files_dir, find_recipe, resolve_explicit, save_recipe, try_find_recipe
+from totchef.recipe import (
+    RECIPE_ENV,
+    find_cooks_dir,
+    find_files_dir,
+    find_recipe,
+    resolve_explicit,
+    save_recipe,
+    try_find_recipe,
+)
 from totchef.recipe_types import RecipeConfig
 from totchef.removal_watch import append_removal_notices
 from totchef.schema_lint import validate
@@ -95,12 +104,12 @@ def print_report(results: dict[str, CookResult], dry_run: bool, title: str = "Re
     rows = [(result.cook, row) for result in results.values() for row in result.rows]
     shown = rows if dry_run else [(node_id, row) for node_id, row in rows if row.changed or row.status != "ok"]
     summary = summary_rows(len(rows) - len(shown), elapsed)
-    shown_rows = [report_row(node_id, row) for node_id, row in shown]
+    shown_rows = list(starmap(report_row, shown))
     suffix = f" ({format_duration(elapsed)})" if elapsed is not None else ""
     nothing_changed = f"=== {title}: nothing changed{suffix} ==="
 
     if inline_mode():
-        log_report_block([report_row(node_id, row) for node_id, row in rows], shown_rows, summary, title, nothing_changed)
+        log_report_block(list(starmap(report_row, rows)), shown_rows, summary, title, nothing_changed)
 
     if shown:
         show_table(shown_rows, title=title, summary=summary)

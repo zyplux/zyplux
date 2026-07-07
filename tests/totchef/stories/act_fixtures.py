@@ -5,11 +5,10 @@ from pathlib import Path
 
 import pytest
 import tomli_w
-from typer.testing import CliRunner
-
 from arrange_fixtures import RecipeBuilder
 from assert_fixtures import CliResult, LintReport, RunReport
 from totchef.cli import app  # the public CLI entrypoint — the one production handle a test is allowed
+from typer.testing import CliRunner
 
 REPORT_MARKER = "##totchef-report##"
 

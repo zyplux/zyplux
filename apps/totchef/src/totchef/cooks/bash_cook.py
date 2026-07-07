@@ -6,7 +6,7 @@ from typing import override
 from loguru import logger
 
 from totchef import shell
-from totchef.cook_base import StateChangeOutcome, StateCook, EntrySpec
+from totchef.cook_base import EntrySpec, StateChangeOutcome, StateCook
 
 
 class BashEntry(EntrySpec):

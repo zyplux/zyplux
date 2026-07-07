@@ -23,7 +23,7 @@ class EntrySpec(BaseModel):
     remove_how: str | None = None
 
     @model_validator(mode="after")
-    def validate_remove_how_has_a_condition(self) -> "EntrySpec":
+    def validate_remove_how_has_a_condition(self) -> EntrySpec:
         """`remove_how` is the instruction `remove_when` unlocks; without the probe it would never surface."""
         if self.remove_how and not self.remove_when:
             raise ValueError("`remove_how` has no `remove_when` — declare the probe that makes this entry removable, or drop `remove_how`")

@@ -6,7 +6,7 @@ from typing import Any, override
 
 from pydantic import model_validator
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
+from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome, chain_hooks
 from totchef.harness import write_if_changed
 
 
@@ -23,7 +23,7 @@ class ChromiumFlagsEntry(EntrySpec):
     process_name: str | None = None
 
     @model_validator(mode="after")
-    def _exactly_one_target(self) -> "ChromiumFlagsEntry":
+    def _exactly_one_target(self) -> ChromiumFlagsEntry:
         if (self.local_state is None) == (self.argv_json is None):
             raise ValueError("set exactly one of `local_state` or `argv_json`")
         return self

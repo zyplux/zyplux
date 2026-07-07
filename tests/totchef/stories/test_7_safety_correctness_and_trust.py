@@ -1,14 +1,16 @@
 """User stories §7 — Safety and trust. One test per §7 criterion; most drive the chef, the escalation story runs `totchef up` via `cli` with exec faked."""
 
-from collections.abc import Callable
-from pathlib import Path
-from typing import Any, NoReturn
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+    from typing import Any, NoReturn
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
-from container_fixtures import ContainerRun
+    import pytest
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+    from container_fixtures import ContainerRun
 
 GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n        500 http://archive noble/main amd64 Packages\n"
 

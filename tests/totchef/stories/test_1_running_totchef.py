@@ -1,12 +1,14 @@
 """User stories §1 — Running totchef. One test per §1 criterion: apply/plan drive the chef, the CLI stories run the real command under `tmp_path`."""
 
-from collections.abc import Callable
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-import pytest
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
 
-from act_fixtures import Cli, Totchef
-from arrange_fixtures import FakeTerminal, RecipeBuilder
+    import pytest
+    from act_fixtures import Cli, Totchef
+    from arrange_fixtures import FakeTerminal, RecipeBuilder
 
 GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n        500 http://archive noble/main amd64 Packages\n"
 

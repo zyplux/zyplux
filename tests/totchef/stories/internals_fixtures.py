@@ -3,7 +3,6 @@
 from types import ModuleType
 
 import pytest
-
 import totchef.cook_runner as cook_runner_module
 import totchef.logs as logs_module
 import totchef.terminal as terminal_module

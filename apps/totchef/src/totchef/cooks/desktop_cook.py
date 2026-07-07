@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import override
 
-from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
+from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome, chain_hooks
 from totchef.harness import write_if_changed
 
 # Refresh KDE's ksycoca so the launcher stops spawning apps with the stale Exec

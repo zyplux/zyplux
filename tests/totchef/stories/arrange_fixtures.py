@@ -11,7 +11,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from assert_fixtures import HttpAssertions, TerminalAssertions
 from totchef import __version__, harness, registry, shell
 from totchef import terminal as terminal_module
@@ -29,7 +28,7 @@ class RecipeBuilder:
     def __init__(self) -> None:
         self.config: RecipeConfig = {}
 
-    def declares(self, section: str, name: str | None = None, **fields: RecipeValue) -> "RecipeBuilder":
+    def declares(self, section: str, name: str | None = None, **fields: RecipeValue) -> RecipeBuilder:
         target = self.config.setdefault(section, {})
         assert isinstance(target, dict)  # declares always seeds a section with a subtable or plain-data dict
         if name is None:
@@ -99,7 +98,7 @@ class FakeTerminal(TerminalAssertions):
         self.concurrency = ConcurrencyProbe()
         self._concurrent_matches: tuple[str, ...] = ()
 
-    def expect_concurrent(self, *matches: str, parties: int, timeout: float = 2.0) -> "FakeTerminal":
+    def expect_concurrent(self, *matches: str, parties: int, timeout: float = 2.0) -> FakeTerminal:
         """Expect every command matching one of `matches` to run concurrently with the others — `parties` of them in flight at once. Use for a cook that fans work across a thread pool (e.g. `uv tool install`/`upgrade`); non-matching commands (a serial probe) run normally."""
         self._concurrent_matches = matches
         self.concurrency.arm(parties, timeout)
@@ -114,7 +113,7 @@ class FakeTerminal(TerminalAssertions):
             return self.concurrency.track()
         return nullcontext()
 
-    def arrange(self, match: str, output: str = "", *, exit_code: int = 0, effect: Callable[[], None] | None = None) -> "FakeTerminal":
+    def arrange(self, match: str, output: str = "", *, exit_code: int = 0, effect: Callable[[], None] | None = None) -> FakeTerminal:
         """Arrange the reply for any command matching `match`: its stdout and exit code (default success). `exit_code != 0` makes a `check=True` call raise, a `pre_hook` guard skip, an install hard-fail, etc. `effect` is a side effect a *successful* command has on the world — an installer dropping a binary, say — run after the command so the next probe sees it."""
         self._responses.append(Response(match, output, exit_code, effect))
         return self
@@ -184,7 +183,7 @@ class _Reply:
     def __init__(self, body: bytes) -> None:
         self._body = body
 
-    def __enter__(self) -> "_Reply":
+    def __enter__(self) -> _Reply:
         return self
 
     def __exit__(self, *exc: object) -> bool:
@@ -203,7 +202,7 @@ class FakeHttp(HttpAssertions):
         self._responses: list[HttpResponse] = []
         self.concurrency = ConcurrencyProbe()
 
-    def expect_concurrent(self, parties: int, timeout: float = 2.0) -> "FakeHttp":
+    def expect_concurrent(self, parties: int, timeout: float = 2.0) -> FakeHttp:
         """Expect `parties` fetches to be in flight at once — for a probe pass that looks up latest versions across a thread pool (crates.io, PyPI)."""
         self.concurrency.arm(parties, timeout)
         return self
@@ -212,7 +211,7 @@ class FakeHttp(HttpAssertions):
     def max_concurrent_requests(self) -> int:
         return self.concurrency.max_inflight
 
-    def arrange(self, match: str, body: bytes | str) -> "FakeHttp":
+    def arrange(self, match: str, body: bytes | str) -> FakeHttp:
         """Arrange the body returned for any URL matching `match`."""
         self._responses.append(HttpResponse(match, body.encode() if isinstance(body, str) else body))
         return self
@@ -235,7 +234,7 @@ class FakeSystem:
         self.bin_dir = bin_dir
         self.release = "noble"
 
-    def has(self, *binaries: str) -> "FakeSystem":
+    def has(self, *binaries: str) -> FakeSystem:
         """Make each binary discoverable on PATH (and as a real installer side effect, e.g. `effect=lambda: system.has("bun")`)."""
         for name in binaries:
             executable = self.bin_dir / name
@@ -243,7 +242,7 @@ class FakeSystem:
             executable.chmod(0o755)
         return self
 
-    def running_release(self, codename: str) -> "FakeSystem":
+    def running_release(self, codename: str) -> FakeSystem:
         self.release = codename
         return self
 
