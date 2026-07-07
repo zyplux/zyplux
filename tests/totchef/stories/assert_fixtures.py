@@ -4,9 +4,14 @@ import json
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    # Deferred to a type-only import: arrange_fixtures imports HttpAssertions/TerminalAssertions
+    # from this module at runtime, so an eager import here would be circular.
+    from arrange_fixtures import RanCommand
 
 SOFT_FAIL_EXIT = 75  # totchef's public soft-failure exit code (stories §1.1.3) — asserted as a contract, not imported
 
@@ -14,7 +19,7 @@ SOFT_FAIL_EXIT = 75  # totchef's public soft-failure exit code (stories §1.1.3)
 class TerminalAssertions:
     """Assertion half of the bash double: verify what the system handed to the shell. The arrange half (arrange_fixtures.FakeTerminal) records each command into `commands`."""
 
-    commands: list
+    commands: list["RanCommand"]
 
     def expect_ran(self, match: str) -> None:
         assert any(match in command.line for command in self.commands), f"expected a command matching {match!r}, but only ran:\n{self._ran_lines()}"
@@ -42,8 +47,8 @@ class TerminalAssertions:
 class HttpAssertions:
     """Assertion half of the network double: verify what was fetched. The arrange half (arrange_fixtures.FakeHttp) records each URL into `requests` and each call's timeout into `timeouts`."""
 
-    requests: list
-    timeouts: list
+    requests: list[str]
+    timeouts: list[object]
 
     def expect_fetched(self, match: str) -> None:
         assert any(match in url for url in self.requests), f"expected a fetch matching {match!r}, but only fetched: {self.requests or '(nothing)'}"

@@ -18,7 +18,7 @@ from collections import Counter
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import psutil
 import typer
@@ -165,12 +165,12 @@ def find_inspector_websocket(pid: int) -> str | None:
     return None
 
 
-def sample_exthost_profile(websocket_url: str, seconds: float) -> dict | None:
+def sample_exthost_profile(websocket_url: str, seconds: float) -> dict[str, Any] | None:
     try:
         with connect(websocket_url, max_size=None, open_timeout=2) as inspector:
             request_id = 0
 
-            def call(method: str, params: dict | None = None) -> dict | None:
+            def call(method: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 nonlocal request_id
                 request_id += 1
                 pending = request_id
@@ -190,7 +190,7 @@ def sample_exthost_profile(websocket_url: str, seconds: float) -> dict | None:
     return result.get("profile") if result else None
 
 
-def attribute_profile(profile: dict) -> list[tuple[str, float]]:
+def attribute_profile(profile: dict[str, Any]) -> list[tuple[str, float]]:
     self_ticks: Counter[str] = Counter()
     for node in profile.get("nodes", []):
         url = node["callFrame"].get("url", "")
@@ -314,7 +314,8 @@ def read_key(timeout: float) -> str | None:
     if not sys.stdin.isatty():
         time.sleep(timeout)
         return None
-    ready, _, _ = select.select([sys.stdin], [], [], timeout)
+    no_fds: list[int] = []
+    ready, _, _ = select.select([sys.stdin], no_fds, no_fds, timeout)
     if not ready:
         return None
     return os.read(sys.stdin.fileno(), 1).decode("utf-8", "ignore")
