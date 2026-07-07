@@ -1,18 +1,24 @@
-"""Cook for [url.<name>] — vendor `curl | bash` bootstrappers as a presence-only VersionedCook (install-if-missing / upgrade-if-present); a `url` without a scheme means https. Install errors hard, update errors soft. Runs as the invoking user."""
+(
+    """Cook for [url.<name>] — vendor `curl | bash` bootstrappers as a presence-only VersionedCook (install-if-missing / upgrade-if-present); a `url` """
+    """without a scheme means https. Install errors hard, update errors soft. Runs as the invoking user."""
+)
 
 import re
 import shlex
 import subprocess
-from pathlib import Path
-from typing import Literal, override
+from typing import TYPE_CHECKING, Literal, override
 
 from loguru import logger
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from totchef import shell
 from totchef.cook_base import EntrySpec, SyncOutcome, VersionedCook
 from totchef.harness import assume_https, fetch_url, find_binary
-from totchef.recipe_types import RecipeConfig
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from totchef.recipe_types import RecipeConfig
 
 RERUN_INSTALLER = "rerun-installer"
 
@@ -20,14 +26,20 @@ VERSION_PATTERN = re.compile(r"\d+\.\d+(?:\.\d+)*")
 
 
 def parse_version(output: str) -> str:
-    """Pull the first dotted version out of a `--version` line; vendors format it freely ('rustup 1.29.0 (…)', '1.3.14', '2.1.150 (Claude Code)'), so fall back to 'present' when nothing matches."""
+    (
+        """Pull the first dotted version out of a `--version` line; vendors format it freely ('rustup 1.29.0 (…)', '1.3.14', '2.1.150 (Claude """
+        """Code)'), so fall back to 'present' when nothing matches."""
+    )
     first_line = next((line for line in output.splitlines() if line.strip()), "")
     match = VERSION_PATTERN.search(first_line)
     return match.group() if match else "present"
 
 
 def probe_version(bin_path: Path) -> str:
-    """Best-effort installed version of a vendor CLI; presence is what the cook actually diffs, so any probe failure degrades to 'present' rather than raising."""
+    (
+        """Best-effort installed version of a vendor CLI; presence is what the cook actually diffs, so any probe failure degrades to 'present' """
+        """rather than raising."""
+    )
     try:
         completed = shell.run(str(bin_path), "--version", timeout=5)
     except OSError, subprocess.SubprocessError:
@@ -38,7 +50,7 @@ def probe_version(bin_path: Path) -> str:
 class UrlEntry(EntrySpec):
     url: str
     bin: str | None = None
-    args: list[str] = []
+    args: list[str] = Field(default_factory=list)
     update_action: list[str] | Literal["rerun-installer"] | None = None
     update_guard: str | None = None
 
@@ -68,7 +80,8 @@ def update_existing(entry: UrlEntry, bin_path: Path) -> None:
             note=f"Updating via `{bin_path.name} {' '.join(action)}`",
         )
     else:
-        raise ValueError(f"unrecognized update_action {action!r} (expected an arg list, {RERUN_INSTALLER!r}, or absent)")
+        msg = f"unrecognized update_action {action!r} (expected an arg list, {RERUN_INSTALLER!r}, or absent)"
+        raise ValueError(msg)
 
 
 class UrlCook(VersionedCook):
@@ -108,7 +121,7 @@ class UrlCook(VersionedCook):
         if (existing := find_binary(bin_name)) is None:
             try:
                 run_installer(entry.url, entry.args, note=f"Installing {entry.url}")
-            except Exception as exc:
+            except (OSError, subprocess.CalledProcessError) as exc:
                 return SyncOutcome("hard_fail", f"{name} install failed: {exc}")
             if found := find_binary(bin_name):
                 logger.info(f"Installed: {found}")

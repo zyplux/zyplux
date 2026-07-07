@@ -1,4 +1,7 @@
-"""StateCook for [bash.<name>] — a generic idempotent shell executor whose current_state/desired_state/apply snippet keys mirror the StateCook lifecycle. Privilege-agnostic; recipe.toml grants root per entry."""
+(
+    """StateCook for [bash.<name>] — a generic idempotent shell executor whose current_state/desired_state/apply snippet keys mirror the StateCook """
+    """lifecycle. Privilege-agnostic; recipe.toml grants root per entry."""
+)
 
 import subprocess
 from typing import override

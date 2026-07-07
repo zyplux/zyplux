@@ -1,16 +1,22 @@
-"""VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate skip-if-current, bootstrapping cargo-binstall once. Runs as the invoking user; depends on [url]."""
+(
+    """VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate skip-if-current, bootstrapping cargo-binstall """
+    """once. Runs as the invoking user; depends on [url]."""
+)
 
 import json
-from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
 from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary
 
 CRATES_API = "https://crates.io/api/v1/crates/{name}"
+MIN_CRATE_LIST_TOKENS = 2
 
 
 def parse_crates_latest(payload: bytes) -> str | None:
@@ -30,7 +36,7 @@ def parse_crate_list(output: str) -> dict[str, str]:
         if not line or line[0].isspace():
             continue
         tokens = line.rstrip(":").split()
-        if len(tokens) >= 2 and tokens[1].startswith("v"):
+        if len(tokens) >= MIN_CRATE_LIST_TOKENS and tokens[1].startswith("v"):
             versions[tokens[0]] = tokens[1].lstrip("v")
     return versions
 
@@ -52,7 +58,8 @@ class CargoCook(PackageListCook):
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return fetch_latest_concurrent(names, fetch_crates_latest)
 
-    def _ensure_binstall(self) -> Path | None:
+    @staticmethod
+    def _ensure_binstall() -> Path | None:
         if binstall := find_binary("cargo-binstall"):
             return binstall
         cargo = find_binary("cargo")

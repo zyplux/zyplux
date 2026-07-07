@@ -1,8 +1,11 @@
-"""VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
+(
+    """VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate """
+    """version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
+)
 
 import os
 from pathlib import Path
-from typing import TypedDict, override
+from typing import TYPE_CHECKING, TypedDict, override
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -10,9 +13,12 @@ from loguru import logger
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
 from totchef.logs import log_toon
-from totchef.recipe_types import RecipeConfig
+
+if TYPE_CHECKING:
+    from totchef.recipe_types import RecipeConfig
 
 TRUSTED_GPGD = Path("/etc/apt/trusted.gpg.d")
+MIN_POLICY_ROW_TOKENS = 2
 
 
 class PolicyRow(TypedDict):
@@ -55,11 +61,11 @@ def parse_policy(package: str, output: str) -> PolicyRow:
             # Skip /var/lib/dpkg/status — apt's "installed on disk" bookkeeping, not a real repo.
             if inside_candidate_section and not source:
                 tokens = line.split()
-                if len(tokens) >= 2 and tokens[1] != "/var/lib/dpkg/status":
+                if len(tokens) >= MIN_POLICY_ROW_TOKENS and tokens[1] != "/var/lib/dpkg/status":
                     source = urlparse(tokens[1]).hostname or tokens[1]
         else:  # version line: " *** VERSION PRIO" or "     VERSION PRIO"
             tokens = line.replace("***", "").split()
-            inside_candidate_section = len(tokens) >= 2 and tokens[0] == candidate
+            inside_candidate_section = len(tokens) >= MIN_POLICY_ROW_TOKENS and tokens[0] == candidate
             if inside_candidate_section:
                 priority = int(tokens[1])
     return {
@@ -77,7 +83,10 @@ def build_policy_row(package: str) -> PolicyRow:
 
 
 def find_reboot_notice() -> str:
-    """The pending-reboot notice update-notifier leaves under /var/run after a kernel/driver transaction — empty when none; the .pkgs companion names the packages that caused it (deduped, it logs one line per dpkg trigger)."""
+    (
+        """The pending-reboot notice update-notifier leaves under /var/run after a kernel/driver transaction — empty when """
+        """none; the .pkgs companion names the packages that caused it (deduped, it logs one line per dpkg trigger)."""
+    )
     notice = shell.run("cat", "/var/run/reboot-required").stdout.strip()
     if not notice:
         return ""

@@ -1,4 +1,7 @@
-"""VersionedCook for [bun] — global npm packages via `bun add -g`, installed versions read from bun's global tree and resolved against the npm registry. Runs as the invoking user; depends on [url] (bun itself)."""
+(
+    """VersionedCook for [bun] — global npm packages via `bun add -g`, installed versions read from bun's global tree and resolved against the npm """
+    """registry. Runs as the invoking user; depends on [url] (bun itself)."""
+)
 
 import json
 import os
@@ -24,7 +27,10 @@ def fetch_npm_latest(name: str) -> str | None:
 
 
 def bun_install_root() -> Path:
-    """Bun's install prefix — `$BUN_INSTALL` when the user set one (binaries land in `$BUN_INSTALL/bin`), else the `~/.bun` default. Resolved at call time so it follows become_user's $HOME drop in a forked child."""
+    (
+        """Bun's install prefix — `$BUN_INSTALL` when the user set one (binaries land in `$BUN_INSTALL/bin`), else the `~/.bun` default. Resolved at call """
+        """time so it follows become_user's $HOME drop in a forked child."""
+    )
     return Path(os.environ["BUN_INSTALL"]) if os.environ.get("BUN_INSTALL") else Path.home() / ".bun"
 
 
@@ -35,22 +41,28 @@ def global_modules_dir() -> Path:
 
 def read_package_version(package_json: Path) -> str | None:
     try:
-        return json.loads(package_json.read_text()).get("version")
+        return json.loads(package_json.read_text(encoding="utf-8")).get("version")
     except OSError, json.JSONDecodeError:
         return None
 
 
 def ensure_node_shim(bun: Path) -> None:
-    """Drop a `node` symlink to bun in bun's install bin dir (on PATH, user-owned), so node-shebang global CLIs (e.g. `pi`) resolve a runtime — bun runs in node-compat mode when invoked as `node`, and `bun add -g` leaves a package's `#!/usr/bin/env node` shebang untouched. The link lives beside the global bins it serves while pointing at the real bun binary wherever it sits. Best-effort: idempotent, refuses to clobber a real `node`, and a failure to link only warns."""
+    (
+        """Drop a `node` symlink to bun in bun's install bin dir (on PATH, user-owned), so node-shebang global CLIs (e.g. `pi`) resolve a runtime — bun """
+        """runs in node-compat mode when invoked as `node`, and `bun add -g` leaves a package's `#!/usr/bin/env node` shebang untouched. The link lives """
+        """beside the global bins it serves while pointing at the real bun binary wherever it sits. Best-effort: idempotent, refuses to clobber a real """
+        """`node`, and a failure to link only warns."""
+    )
     node = bun_install_root() / "bin" / "node"
+    is_link = node.is_symlink()
+    if is_link and node.resolve() == bun.resolve():
+        return
+    if not is_link and node.exists():
+        logger.warning(f"leaving {node} as-is — not a symlink, won't clobber a real node runtime")
+        return
     try:
-        if node.is_symlink():
-            if node.resolve() == bun.resolve():
-                return
+        if is_link:
             node.unlink()
-        elif node.exists():
-            logger.warning(f"leaving {node} as-is — not a symlink, won't clobber a real node runtime")
-            return
         node.parent.mkdir(parents=True, exist_ok=True)
         node.symlink_to(bun)
     except OSError as exc:

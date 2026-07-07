@@ -1,8 +1,13 @@
-"""StateCook for [settings.<app>] — merge a `settings_env` block into the `env` key of a JSON settings file, preserving other keys, diffed by merged-JSON hash. Runs as the invoking user."""
+(
+    """StateCook for [settings.<app>] — merge a `settings_env` block into the `env` key of a JSON settings file, preserving other keys, diffed by """
+    """merged-JSON hash. Runs as the invoking user."""
+)
 
 import json
 from pathlib import Path
 from typing import Any, override
+
+from pydantic import Field
 
 from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome
 from totchef.harness import write_if_changed
@@ -10,7 +15,7 @@ from totchef.harness import write_if_changed
 
 class SettingsEntry(EntrySpec):
     settings_json: str
-    settings_env: dict[str, str] = {}
+    settings_env: dict[str, str] = Field(default_factory=dict)
 
 
 class SettingsCook(FileStateCook[SettingsEntry]):
@@ -26,7 +31,7 @@ class SettingsCook(FileStateCook[SettingsEntry]):
         target = self._target_path(name)
         env_overrides = self.entries[name].settings_env
         try:
-            existing: dict[str, Any] = json.loads(target.read_text()) if target.exists() else {}
+            existing: dict[str, Any] = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
         except json.JSONDecodeError:
             return None
         merged = {**existing, "env": {**existing.get("env", {}), **env_overrides}}

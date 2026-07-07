@@ -1,4 +1,8 @@
-"""Shared base for the PATH-install cooks ([usr_local_bin]/[usr_local_sbin]/[local_bin]) — install a bundled command (any language, even a compiled binary) as a 0755 executable named after its source stem; an omitted `source` defaults to the bundled file named after the entry. An embedded `__version__` marker is the diff key, and the version/help contract is read off the file's bytes (the command is never executed)."""
+(
+    """Shared base for the PATH-install cooks ([usr_local_bin]/[usr_local_sbin]/[local_bin]) — install a bundled command (any language, even a compiled """
+    """binary) as a 0755 executable named after its source stem; an omitted `source` defaults to the bundled file named after the entry. An embedded """
+    """`__version__` marker is the diff key, and the version/help contract is read off the file's bytes (the command is never executed)."""
+)
 
 import re
 from pathlib import Path
@@ -20,10 +24,13 @@ def find_embedded_version(file_text: str) -> str | None:
 
 
 def find_contract_problems(command_path: Path) -> list[str]:
-    """The static checks a PATH-installed command must pass — embed a `__version__` marker, offer `--version` and `--help` — collected as readable problems (empty == compliant), read off the file's bytes without executing it."""
+    (
+        """The static checks a PATH-installed command must pass — embed a `__version__` marker, offer `--version` and `--help` — collected as readable """
+        """problems (empty == compliant), read off the file's bytes without executing it."""
+    )
     if not command_path.is_file():
         return [f"bundled command {command_path.name} not found under {command_path.parent}"]
-    file_text = command_path.read_text(errors="replace")
+    file_text = command_path.read_text(encoding="utf-8", errors="replace")
     problems: list[str] = []
     if find_embedded_version(file_text) is None:
         problems.append('command must embed __version__ = "<version>" (a constant in any language, or a string baked into a binary)')
@@ -52,7 +59,10 @@ class BinEntry(EntrySpec):
 
 
 class BinCommandCook(StateCook[BinEntry]):
-    """StateCook whose diff key is the command's embedded `__version__`: an absent, unversioned, or differently-versioned install is rewritten; equal versions leave the file alone. Subclasses pin `bin_dir`."""
+    (
+        """StateCook whose diff key is the command's embedded `__version__`: an absent, unversioned, or differently-versioned install is rewritten; equal """
+        """versions leave the file alone. Subclasses pin `bin_dir`."""
+    )
 
     entry_model = BinEntry
     bin_dir: ClassVar[str]
@@ -65,14 +75,14 @@ class BinCommandCook(StateCook[BinEntry]):
         states: dict[str, str] = {}
         for name in self.entries:
             target = self._target_path(name)
-            states[name] = (find_embedded_version(target.read_text(errors="replace")) or "unversioned") if target.is_file() else "absent"
+            states[name] = (find_embedded_version(target.read_text(encoding="utf-8", errors="replace")) or "unversioned") if target.is_file() else "absent"
         return states
 
     @override
     def get_desired_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, entry in self.entries.items():
-            states[name] = find_embedded_version((harness.files_dir() / entry.source).read_text(errors="replace")) or "unversioned"
+            states[name] = find_embedded_version((harness.files_dir() / entry.source).read_text(encoding="utf-8", errors="replace")) or "unversioned"
         return states
 
     @override

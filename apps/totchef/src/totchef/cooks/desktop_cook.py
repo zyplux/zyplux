@@ -1,7 +1,12 @@
-"""StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + --enable-features) under ~/.local/share/applications, diffed by content hash. Runs as the invoking user."""
+(
+    """StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + --enable-features) under ~/.local/share/applications, """
+    """diffed by content hash. Runs as the invoking user."""
+)
 
 from pathlib import Path
 from typing import override
+
+from pydantic import Field
 
 from totchef.cook_base import EntrySpec, FileStateCook, StateChangeOutcome, chain_hooks
 from totchef.harness import write_if_changed
@@ -9,6 +14,7 @@ from totchef.harness import write_if_changed
 # Refresh KDE's ksycoca so the launcher stops spawning apps with the stale Exec
 # line; tolerant of non-KDE systems where kbuildsycoca6 is absent.
 KSYCOCA_REFRESH = "command -v kbuildsycoca6 >/dev/null && kbuildsycoca6 --noincremental || true"
+FIELD_CODE_TOKEN_LENGTH = 2
 
 
 def rewrite_exec_line(
@@ -17,7 +23,10 @@ def rewrite_exec_line(
     features: list[str],
     switches: list[str],
 ) -> str:
-    """Idempotent rewrite of a .desktop Exec= value with env prefix, --<switch>es, and --enable-features, inserting new args before trailing field codes (%U/%u/%F/%f)."""
+    (
+        """Idempotent rewrite of a .desktop Exec= value with env prefix, --<switch>es, and --enable-features, inserting new args before trailing field """
+        """codes (%U/%u/%F/%f)."""
+    )
     tokens = exec_value.split()
 
     if tokens and tokens[0] == "env":
@@ -34,7 +43,7 @@ def rewrite_exec_line(
     ]
 
     insert_at = next(
-        (index for index, token in enumerate(tokens) if len(token) == 2 and token.startswith("%")),
+        (index for index, token in enumerate(tokens) if len(token) == FIELD_CODE_TOKEN_LENGTH and token.startswith("%")),
         len(tokens),
     )
     for switch in switches:
@@ -51,9 +60,9 @@ def rewrite_exec_line(
 
 class DesktopEntry(EntrySpec):
     desktop: str
-    features: list[str] = []
-    switches: list[str] = []
-    env: dict[str, str] = {}
+    features: list[str] = Field(default_factory=list)
+    switches: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
 
 
 class DesktopCook(FileStateCook[DesktopEntry]):
@@ -75,7 +84,7 @@ class DesktopCook(FileStateCook[DesktopEntry]):
         features = app.features
         switches = app.switches
         lines = []
-        for line in system_desktop.read_text().splitlines():
+        for line in system_desktop.read_text(encoding="utf-8").splitlines():
             if line.startswith("Exec="):
                 lines.append("Exec=" + rewrite_exec_line(line[5:], env, features, switches))
             else:
