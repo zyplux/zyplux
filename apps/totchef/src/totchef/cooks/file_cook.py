@@ -1,4 +1,8 @@
-"""StateCook for [file.<name>] — install a file with exact content (inline `content`, a bundled `source` from the recipe's sibling totchef_files/, or with neither set the bundled file named after the entry), diffed by content hash so a `post_hook` fires only on change. `path` expands `~` for per-user installs. Privilege-agnostic; recipe.toml grants root per entry."""
+(
+    """StateCook for [file.<name>] — install a file with exact content (inline `content`, a bundled `source` from the recipe's sibling totchef_files/, or """
+    """with neither set the bundled file named after the entry), diffed by content hash so a `post_hook` fires only on change. `path` expands `~` for """
+    """per-user installs. Privilege-agnostic; recipe.toml grants root per entry."""
+)
 
 from pathlib import Path
 from typing import override
@@ -18,7 +22,8 @@ class FileEntry(EntrySpec):
     @model_validator(mode="after")
     def _resolve_body(self, info: ValidationInfo) -> FileEntry:
         if self.source is not None and self.content is not None:
-            raise ValueError("set `source` or `content`, not both")
+            msg = "set `source` or `content`, not both"
+            raise ValueError(msg)
         if self.source is None and self.content is None:
             self.source = harness.resolve_bundled_source(get_entry_name(info))
         return self

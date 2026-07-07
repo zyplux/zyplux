@@ -1,4 +1,8 @@
-"""StateCook for [conf.<name>] — own specific lines of a config file another package ships: each declared line is keyed on the text before `=` (the whole line when there is none), replacing same-key lines in place, appending missing ones, and leaving the rest of the file untouched. Creates `target` when absent; diffed by content hash so a `post_hook` fires only on change. Privilege-agnostic; recipe.toml grants root per entry."""
+(
+    """StateCook for [conf.<name>] — own specific lines of a config file another package ships: each declared line is keyed on the text before `=` (the """
+    """whole line when there is none), replacing same-key lines in place, appending missing ones, and leaving the rest of the file untouched. Creates """
+    """`target` when absent; diffed by content hash so a `post_hook` fires only on change. Privilege-agnostic; recipe.toml grants root per entry."""
+)
 
 from pathlib import Path
 from typing import override
@@ -17,9 +21,11 @@ class ConfEntry(EntrySpec):
     @model_validator(mode="after")
     def _require_exactly_one_form(self) -> ConfEntry:
         if self.line is not None and self.lines is not None:
-            raise ValueError("set `line` or `lines`, not both")
+            msg = "set `line` or `lines`, not both"
+            raise ValueError(msg)
         if self.line is None and self.lines is None:
-            raise ValueError("set `line` or `lines`")
+            msg = "set `line` or `lines`"
+            raise ValueError(msg)
         return self
 
     @property
@@ -52,7 +58,7 @@ class ConfCook(FileStateCook[ConfEntry]):
     @override
     def _render(self, name: str) -> bytes:
         path = self._target_path(name)
-        text = path.read_text() if path.exists() else ""
+        text = path.read_text(encoding="utf-8") if path.exists() else ""
         return ensure_lines(text, self.entries[name].desired_lines).encode()
 
     @override

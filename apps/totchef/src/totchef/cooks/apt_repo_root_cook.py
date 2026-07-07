@@ -1,4 +1,10 @@
-"""StateCook for [apt_repo.<name>] — third-party apt repos, each configured with a keyring under /usr/share/keyrings and a `Signed-By:` `.sources` file, both named after the entry. `url` is the repo's base (scheme optional, https assumed): `key_url`/`uris` may be paths relative to it, `uris` defaulting to the base itself; absolute URLs work as before. An optional `pin_priority` writes a `/etc/apt/preferences.d/<name>.pref` pinning the repo's origin to that priority — punch a declared hole through the Ubuntu-archive pin so this repo wins for the packages it ships. Runs as root; depends on bash.apt_prereqs."""
+(
+    """StateCook for [apt_repo.<name>] — third-party apt repos, each configured with a keyring under /usr/share/keyrings and a `Signed-By:` `.sources` file, """
+    """both named after the entry. `url` is the repo's base (scheme optional, https assumed): `key_url`/`uris` may be paths relative to it, `uris` """
+    """defaulting to the base itself; absolute URLs work as before. An optional `pin_priority` writes a `/etc/apt/preferences.d/<name>.pref` pinning the """
+    """repo's origin to that priority — punch a declared hole through the Ubuntu-archive pin so this repo wins for the packages it ships. Runs as root; """
+    """depends on bash.apt_prereqs."""
+)
 
 import platform
 import sys
@@ -24,7 +30,8 @@ def resolve_repo_url(base_url: str | None, url: str | None) -> str:
         return url
     if base_url is None:
         unresolved = f"relative '{url}'" if url else "an omitted `uris`"
-        raise ValueError(f"{unresolved} needs a base to resolve against — set `url` or absolute URLs")
+        msg = f"{unresolved} needs a base to resolve against — set `url` or absolute URLs"
+        raise ValueError(msg)
     return f"{base_url}/{url}" if url else base_url
 
 
@@ -73,7 +80,8 @@ def build_pin_origin(repo: AptRepoEntry) -> str:
     """The site host apt records for this repo — what `Pin: origin <host>` matches — taken from the resolved `uris` (e.g. cli.github.com from https://cli.github.com/packages)."""
     host = urlparse(repo.uris or "").hostname
     if not host:
-        raise ValueError(f"cannot derive a pin origin host from uris {repo.uris!r}")
+        msg = f"cannot derive a pin origin host from uris {repo.uris!r}"
+        raise ValueError(msg)
     return host
 
 

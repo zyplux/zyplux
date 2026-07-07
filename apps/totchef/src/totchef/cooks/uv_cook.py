@@ -1,15 +1,21 @@
-"""VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run concurrently behind uv's own locks. Runs as the invoking user; depends on [url]."""
+(
+    """VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run concurrently behind uv's own locks. Runs as """
+    """the invoking user; depends on [url]."""
+)
 
 import json
+import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
 from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 PYPI_JSON = "https://pypi.org/pypi/{name}/json"
 
@@ -71,7 +77,7 @@ class UvCook(PackageListCook):
                 name = pending[future]
                 try:
                     future.result()
-                except Exception as exc:
+                except (subprocess.CalledProcessError, OSError) as exc:
                     failures.append(name)
                     logger.error(f"{name} failed: {exc}")
 

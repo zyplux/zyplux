@@ -1,4 +1,7 @@
-"""VersionedCook for [snap] — snap install/refresh via snapd, run sequentially behind snapd's global lock; install failure is hard, refresh soft. Runs as root."""
+(
+    """VersionedCook for [snap] — snap install/refresh via snapd, run sequentially behind snapd's global lock; install failure is hard, refresh soft. """
+    """Runs as root."""
+)
 
 import shutil
 import subprocess
@@ -6,6 +9,8 @@ from typing import override
 
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
+
+MIN_REFRESH_LIST_TOKENS = 2
 
 
 def parse_snap_list(output: str) -> dict[str, str]:
@@ -20,7 +25,10 @@ def parse_snap_list(output: str) -> dict[str, str]:
 
 
 def parse_refresh_list(output: str) -> dict[str, str]:
-    """Map snap name -> available version from `snap refresh --list`: same table as `snap list` once past the `Name` header, but skip the 'All snaps up to date.' line (no header) so it isn't read as a row."""
+    (
+        """Map snap name -> available version from `snap refresh --list`: same table as `snap list` once past the `Name` header, but skip the 'All """
+        """snaps up to date.' line (no header) so it isn't read as a row."""
+    )
     versions: dict[str, str] = {}
     seen_header = False
     for line in output.splitlines():
@@ -30,7 +38,7 @@ def parse_refresh_list(output: str) -> dict[str, str]:
         if not seen_header or not line.strip():
             continue
         tokens = line.split()
-        if len(tokens) >= 2:
+        if len(tokens) >= MIN_REFRESH_LIST_TOKENS:
             versions[tokens[0]] = tokens[1]
     return versions
 
