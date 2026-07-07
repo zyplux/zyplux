@@ -1,5 +1,10 @@
 """User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: fan-out, ordering, and defaults read off the plan and the run."""
 
+from pathlib import Path
+
+from act_fixtures import Totchef
+from arrange_fixtures import FakeSystem, FakeTerminal, RecipeBuilder
+
 APT_CACHE_POLICY = """\
 git:
   Installed: (none)
@@ -10,14 +15,14 @@ git:
 """
 
 
-def _exec_line(desktop_file) -> str:
+def _exec_line(desktop_file: Path) -> str:
     return next(line for line in desktop_file.read_text().splitlines() if line.startswith("Exec="))
 
 
 # 2.1 Declare the machine I want in one TOML file
 
 
-def test_2_1_1_each_section_maps_to_a_cook_plain_vs_subtable(recipe, terminal, totchef):
+def test_2_1_1_each_section_maps_to_a_cook_plain_vs_subtable(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """A plain-data section is one unit of work; a subtable section fans out to one addressable unit per entry."""
     terminal.arrange("apt-cache policy", APT_CACHE_POLICY)
     recipe.declares("apt_pkg", packages=["git"])  # plain-data section: one domain unit
@@ -31,7 +36,7 @@ def test_2_1_1_each_section_maps_to_a_cook_plain_vs_subtable(recipe, terminal, t
     plan.assert_shows("url.uv", "would install")  # … into two independently addressable units
 
 
-def test_2_1_2_operator_declares_desired_state_not_steps(recipe, totchef, tmp_path):
+def test_2_1_2_operator_declares_desired_state_not_steps(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """The operator writes only the desired end state; the tool computes diff and order."""
     target = tmp_path / "drop.conf"
     recipe.declares("file", "drop", path=str(target), content="GRUB_TIMEOUT=2\n")
@@ -40,7 +45,7 @@ def test_2_1_2_operator_declares_desired_state_not_steps(recipe, totchef, tmp_pa
     totchef.up().assert_shows("file.drop", "unchanged")  # and: present == desired → no-op
 
 
-def test_2_1_3_package_sections_split_into_named_entries(recipe, terminal, totchef):
+def test_2_1_3_package_sections_split_into_named_entries(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """A `packages = [...]` section can fan out like any subtable: each entry is its own node with its own packages and dependencies."""
     terminal.arrange("apt-cache policy", APT_CACHE_POLICY)
     recipe.declares("bash", "prereqs", apply="bootstrap-apt")
@@ -59,7 +64,7 @@ def test_2_1_3_package_sections_split_into_named_entries(recipe, terminal, totch
 # 2.2 Express ordering between resources
 
 
-def test_2_2_1_depends_on_names_entry_node_or_section(recipe, terminal, totchef):
+def test_2_2_1_depends_on_names_entry_node_or_section(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """`depends_on` can name an entry, a single-node section, or a whole section — which fans out so the dependant waits for every one of its entries."""
     terminal.arrange("apt-cache policy", APT_CACHE_POLICY)
     recipe.declares("apt_pkg", packages=["git"])
@@ -76,7 +81,7 @@ def test_2_2_1_depends_on_names_entry_node_or_section(recipe, terminal, totchef)
     plan.assert_ran_before("apt_repo.other", "bash.main")  # … the dependant waits for every entry
 
 
-def test_2_2_2_resources_run_in_topological_order(recipe, terminal, totchef):
+def test_2_2_2_resources_run_in_topological_order(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """totchef builds a DAG; a node only starts once all dependencies have succeeded."""
     recipe.declares("bash", "first", apply="step-one")
     recipe.declares("bash", "second", apply="step-two", depends_on=["bash.first"])
@@ -92,7 +97,9 @@ def test_2_2_2_resources_run_in_topological_order(recipe, terminal, totchef):
 # 2.3 Set shared defaults across a section's entries
 
 
-def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(recipe, totchef, home, tmp_path):
+def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
+) -> None:
     """Section-level scalar/list keys become defaults; a list entry **extends** the shared list, while a scalar entry **overrides** the default."""
     shared = tmp_path / "shared.desktop"
     shared.write_text("[Desktop Entry]\nExec=/usr/bin/shared %U\n")
@@ -108,7 +115,7 @@ def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(r
     assert "--enable-features=Shared,Extra" in line  # a list: the entry extended the default
 
 
-def test_2_3_2_shared_desktop_features_yield_union_per_entry(recipe, totchef, home, tmp_path):
+def test_2_3_2_shared_desktop_features_yield_union_per_entry(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
     """`[desktop]` shared `features` plus `[desktop.brave]` additions yield the union."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
@@ -123,7 +130,7 @@ def test_2_3_2_shared_desktop_features_yield_union_per_entry(recipe, totchef, ho
 # 2.4 Grant root only where it's needed
 
 
-def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe, totchef):
+def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe: RecipeBuilder, totchef: Totchef) -> None:
     """A cook's `needs_root` sets privilege, but an entry may set `needs_root = true` to escalate a privilege-agnostic cook (`bash`, `file`) per entry."""
     recipe.declares("bash", "root_step", apply="x", needs_root=True)
     recipe.declares("bash", "user_step", apply="y")  # sibling entry, no grant
@@ -143,7 +150,9 @@ def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe, 
 # 2.5 Declare when a temporary entry expires
 
 
-def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(recipe, terminal, totchef):
+def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) the run is silent about it; once it exits 0 the `remove_how` instruction lands in the Action required block labeled with the node, on every run until the entry is deleted."""
     recipe.declares(
         "bash",
@@ -177,7 +186,7 @@ def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(reci
     assert "PR #430 merged" in nag.terminal_report  # keeps firing until the entry is removed
 
 
-def test_2_5_2_plan_also_evaluates_remove_when(recipe, terminal, totchef):
+def test_2_5_2_plan_also_evaluates_remove_when(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """A dry run evaluates the probes too — `plan` doubles as "check everything I'm waiting on" — and a watch without `remove_how` carries the generic removal notice."""
     recipe.declares("bash", "workaround", apply="install-it", remove_when="upstream-shipped-the-fix")
 
@@ -190,7 +199,9 @@ def test_2_5_2_plan_also_evaluates_remove_when(recipe, terminal, totchef):
     terminal.expect_not_ran("install-it")  # still a dry run: probed, never applied
 
 
-def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(recipe, terminal, system, totchef, tmp_path):
+def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(
+    recipe: RecipeBuilder, terminal: FakeTerminal, system: FakeSystem, totchef: Totchef, tmp_path: Path
+) -> None:
     """`remove_when`/`remove_how` sit on the base entry contract: a subtable entry and a plain-data section alike declare their expiry."""
     recipe.declares("file", "pin", path=str(tmp_path / "pin.conf"), content="pinned\n", remove_when="true", remove_how="pin obsolete")
     recipe.declares("uv", packages=[], remove_when="true", remove_how="section obsolete")
