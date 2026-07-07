@@ -82,14 +82,10 @@ def test_10_2_4_remove_how_requires_remove_when(recipe: RecipeBuilder, totchef: 
 
 
 def test_10_3_1_bin_commands_embed_a_version_or_offer_help(
-    recipe: RecipeBuilder,
-    scenario: Callable[[], RecipeBuilder],
-    chef: Callable[[RecipeBuilder], Totchef],
-    totchef: Totchef,
-    bundled_files: Path,
-    tmp_path: Path,
+    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], totchef: Totchef, bundled_files: Path, tmp_path: Path
 ) -> None:
     """A command that doesn't embed `__version__` or offer `--version`/`--help` can't enter a bin cook — lint rejects it statically, never executing it."""
+    recipe = totchef.recipe
     sentinel = tmp_path / "executed"
     (bundled_files / "naked.py").write_text(f'from pathlib import Path\n\nPath("{sentinel}").write_text("ran")\n')
     recipe.declares("usr_local_bin", "naked", source="naked.py")
@@ -101,7 +97,11 @@ def test_10_3_1_bin_commands_embed_a_version_or_offer_help(
     lint.assert_rejected("--help")
     assert not sentinel.exists()  # the contract check reads the command, never runs it
 
-    vetted = 'import argparse\n\n__version__ = "1.0.0"\n\nparser = argparse.ArgumentParser()\nparser.add_argument("--version", action="version", version=__version__)\n'
+    vetted = (
+        'import argparse\n\n__version__ = "1.0.0"\n\n'
+        "parser = argparse.ArgumentParser()\n"
+        'parser.add_argument("--version", action="version", version=__version__)\n'
+    )
     (bundled_files / "vetted.py").write_text(vetted)
     good = scenario().declares("local_bin", "vetted", source="vetted.py")
     chef(good).lint().assert_valid()
