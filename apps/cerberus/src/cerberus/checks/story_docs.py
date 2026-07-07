@@ -36,6 +36,10 @@ if TYPE_CHECKING:
 PY_TEST_NAME = re.compile(r"^test_(\d+)_[^/]+\.py$")
 TS_TEST_NAME = re.compile(r"^(\d+)-[^/]+\.(?:test|spec)\.tsx?$")
 
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_APOSTROPHE = re.compile(r"'")
+_NON_WORD = re.compile(r"[^\w\s]")
+
 _STORIES_PATH_PARTS = 2  # a stories-dir path is at least "<dir>/stories/<file>"
 _DOC_NAME = re.compile(r"^\d+[_-][^/]+\.md$")  # `_` (Python docs) or `-` (TypeScript docs, kebab-case)
 _LEADING_NUMBER = re.compile(r"^\d+")
@@ -85,8 +89,16 @@ class _Group:
 
 
 def word_sequence(title: str) -> list[str]:
-    """A title's comparable words — a hyphen ("non-interactive") is the same word break as a space."""
-    return title.replace("-", " ").split()
+    """A title's comparable words: case folds, apostrophes drop, and camelCase/punctuation are word breaks.
+
+    A test function name can't carry an apostrophe, a dot, or a capital letter,
+    so a header describing the same criterion in prose ("the repo's package.json",
+    "includeEntryExports") must still compare equal to the derived test title
+    ("the repos package json", "include entry exports").
+    """
+    folded = _APOSTROPHE.sub("", title)
+    spaced = _CAMEL_BOUNDARY.sub(" ", folded)
+    return _NON_WORD.sub(" ", spaced).lower().split()
 
 
 def _strip_link(rest: str) -> str:

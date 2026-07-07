@@ -39,6 +39,7 @@ A repo opts out of specific checks with `[tool.cerberus] disable = ["check-id", 
 | `ruff-config`           | content     | ruff runs standalone in preview with `select = ["ALL"]`; relaxations stay sanctioned |
 | `line-length`           | content     | ruff `line-length` and prettier `printWidth` are both 120                            |
 | `rumdl-config`          | content     | `.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)    |
+| `knip-config`           | content     | knip config is standalone, never inline in `package.json`; `knip.prod.json` runs the entry-exports pass and exempts exactly the repo's published npm targets |
 | `vitest-runner`         | content     | TypeScript tests run on vitest, never bun's built-in test runner (package.json, justfile, CI) |
 | `ts-project-references` | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog-discipline`    | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |

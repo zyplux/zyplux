@@ -139,6 +139,11 @@ def scope() -> type[Scope]:
 
 
 @pytest.fixture
+def repo_class() -> type[Repo]:
+    return Repo
+
+
+@pytest.fixture
 def git_history_unavailable_error() -> type[GitHistoryUnavailableError]:
     return GitHistoryUnavailableError
 

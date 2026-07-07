@@ -12,6 +12,8 @@
 
 ### 21.1.5 leaves a cli app to the cli seam check
 
+### 21.1.6 covers a private package outside tests as a library
+
 ## 21.2 requiring library exports to expose only the root seam
 
 ### 21.2.1 passes a library that exports only the root seam

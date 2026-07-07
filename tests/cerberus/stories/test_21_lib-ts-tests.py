@@ -22,6 +22,9 @@ _SEAM_LIB = (
 )
 _SEAM_LIB_NO_EXPORTS = '{"name": "@demo/lib"}'
 _SEAM_LIB_LEAKY = '{"name": "@demo/lib", "exports": {".": "./src/index.ts", "./helpers": "./src/helpers.ts"}}'
+_SEAM_LIB_PRIVATE_LEAKY = (
+    '{"name": "@demo/lib", "private": true, "exports": {".": "./src/index.ts", "./helpers": "./src/helpers.ts"}}'
+)
 _SEAM_LIB_NO_ROOT = '{"name": "@demo/lib", "exports": {"./package.json": "./package.json"}}'
 _SEAM_LIB_CONDITIONS = '{"name": "@demo/lib", "exports": {"types": "./src/index.ts", "default": "./src/index.ts"}}'
 _SEAM_LIB_STRING_EXPORTS = '{"name": "@demo/lib", "exports": "./src/index.ts"}'
@@ -121,6 +124,22 @@ def test_21_1_5_leaves_a_cli_app_to_the_cli_seam_check(
         "packages/lib/src/index.ts": "",
     })
     assert result.findings == [finding(status.PASS, _SEAM_OK)]
+
+
+def test_21_1_6_covers_a_private_package_outside_tests_as_a_library(
+    run_lib_ts_tests: RunLibTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_lib_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB_PRIVATE_LEAKY,
+        "packages/lib/src/index.ts": "",
+    })
+    assert result.findings == [
+        finding(
+            status.FAIL,
+            "packages/lib/package.json: library exports expose more than the root seam — './helpers'",
+        )
+    ]
 
 
 def test_21_2_1_passes_a_library_that_exports_only_the_root_seam(

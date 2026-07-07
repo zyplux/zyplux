@@ -328,6 +328,18 @@ def test_15_4_4_flags_a_criterion_filed_under_the_wrong_section_doc(
     ]
 
 
+def test_15_4_5_does_not_flag_titles_that_differ_only_by_punctuation_or_case(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
+    files = {
+        "pyproject.toml": _PY_PLAIN_PYPROJECT,
+        DOC_PATH: _linked("test_1_widget.py").replace("shows the widget name", "shows the widget's fileName.txt"),
+        PY_TEST_PATH: PY_TEST.replace("test_1_1_1_shows_the_widget_name", "test_1_1_1_shows_the_widgets_file_name_txt"),
+    }
+    result = run_check_with_files(PY_CHECK_ID, files)
+    assert result.findings == [finding(status.PASS, OK_MESSAGE)]
+
+
 def test_15_5_1_flags_a_stale_header_link(
     run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
 ) -> None:
