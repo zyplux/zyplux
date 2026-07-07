@@ -31,9 +31,7 @@ class _NullContext:
 # 7.1 Trust that re-runs only change what drifted
 
 
-def test_7_1_1_cooks_probe_and_act_only_on_the_difference(
-    terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_7_1_1_cooks_probe_and_act_only_on_the_difference(terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
     """Versioned cooks skip up-to-date packages; state cooks skip resources whose content hash already matches."""
     already = totchef.workdir / "already.conf"
     already.write_text("A\n")

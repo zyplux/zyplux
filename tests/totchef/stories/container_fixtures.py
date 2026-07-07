@@ -70,9 +70,7 @@ def apply_in_container(container_image: str) -> Callable[[str, list[str]], Conta
             f"{probes}\n"
             'for log in ~/.local/state/totchef/logs/*.log; do stat -c "LOG %U" "$log"; done 2>/dev/null || true\n'
         )
-        proc = subprocess.run(
-            [binary, "run", "--rm", container_image, "bash", "-lc", script], capture_output=True, text=True, env=CLEAN_ENV, check=False
-        )
+        proc = subprocess.run([binary, "run", "--rm", container_image, "bash", "-lc", script], capture_output=True, text=True, env=CLEAN_ENV, check=False)
         return _parse(proc.stdout + proc.stderr)
 
     return apply
