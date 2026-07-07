@@ -52,11 +52,11 @@ def is_removable(watch: RemovalWatch) -> bool:
         try:
             completed = shell.run("bash", "-c", watch.condition, timeout=REMOVE_WHEN_TIMEOUT_SECONDS, note=f"remove_when: {watch.condition}")
         except (OSError, subprocess.TimeoutExpired) as exc:
-            logger.debug(f"remove_when probe failed: {exc}")
+            logger.debug("remove_when probe failed: {exc}", exc=exc)
             return False
         if completed.returncode != 0:
             return False
-        logger.info(f"remove_when satisfied: {watch.instruction}")
+        logger.info("remove_when satisfied: {instruction}", instruction=watch.instruction)
         return True
 
 

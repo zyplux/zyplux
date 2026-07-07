@@ -140,6 +140,6 @@ class AptRepoCook(StateCook[AptRepoEntry]):
     @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         release = detect_release()
-        logger.info(f"Configuring repo {name} (release codename: {release})")
+        logger.info("Configuring repo {name} (release codename: {release})", name=name, release=release)
         changed = configure_repo(name, self.entries[name], release)
         return StateChangeOutcome(changed=changed)

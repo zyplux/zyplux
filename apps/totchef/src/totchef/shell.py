@@ -66,7 +66,7 @@ def stream(cmd: list[str], tag: str = "", **options: Unpack[StreamOptions]) -> N
     prefix = f"{tag} " if tag else ""
     note = options.get("note", "")
     if note:
-        logger.info(f"{prefix}{note}")
+        logger.info("{prefix}{note}", prefix=prefix, note=note)
     stdin = options.get("stdin")
     proc_env = {**os.environ, "TERM": "dumb", "NO_COLOR": "1"}
     proc = subprocess.Popen(
@@ -96,7 +96,7 @@ def stream(cmd: list[str], tag: str = "", **options: Unpack[StreamOptions]) -> N
         for raw_segment in decoded.split("\r"):
             segment = raw_segment.rstrip()
             if segment:
-                logger.info(f"{prefix}{segment}")
+                logger.info("{prefix}{segment}", prefix=prefix, segment=segment)
     if writer is not None:
         writer.join()
     exit_code = proc.wait()

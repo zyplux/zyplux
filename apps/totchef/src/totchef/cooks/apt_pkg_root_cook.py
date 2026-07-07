@@ -163,5 +163,5 @@ class AptPkgCook(PackageListCook):
                 note=f"Installing packages: {' '.join(self.packages)}",
             )
         nala("autoremove", "-y", note="Removing unused packages with nala autoremove")
-        logger.info(f"Done. Installed/upgraded {len(self.packages)} package(s).")
+        logger.info("Done. Installed/upgraded {count} package(s).", count=len(self.packages))
         return SyncOutcome("ok", delayed_message=find_reboot_notice())
