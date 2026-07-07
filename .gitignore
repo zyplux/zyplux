@@ -18,7 +18,6 @@ logs/
 coverage.json
 htmlcov/
 .claude/settings.local.json
-reference_clones/
 
 # `just build` artifacts: the PyInstaller workdir and the generated single-file totchef binary.
 /build/

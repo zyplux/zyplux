@@ -1,6 +1,6 @@
 [project]
 name = "totchef"
-version = "0.3.0"
+version = "0.3.1"
 description = "Declarative, idempotent system configuration for Ubuntu/Kubuntu — hand it a recipe, it makes the machine comply."
 readme = "README.md"
 requires-python = ">=3.14"

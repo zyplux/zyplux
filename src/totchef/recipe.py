@@ -49,16 +49,16 @@ def find_cooks_dir(recipe_path: Path) -> Path | None:
     return _sibling_dir(recipe_path, COOKS_DIR_NAMES)
 
 
-def resolve_explicit(explicit: Path) -> Path:
-    """An explicit `--recipe`/`totchef init` argument: a recipe file, or a directory holding a recognized recipe name."""
+def resolve_explicit(explicit: Path, *, follow_symlinks: bool = True) -> Path:
+    """An explicit `--recipe`/`totchef init` argument: a recipe file, or a directory holding a recognized recipe name. `follow_symlinks=False` (used when pinning) keeps a symlink as given rather than dereferencing it, so repointing the symlink later moves the pin without rerunning `init`."""
     if explicit.is_dir():
         found = recipe_in_dir(explicit)
         if found is None:
             sys.exit(f"ERROR: {explicit} is a directory with no {' / '.join(RECIPE_NAMES)}.")
-        return found.resolve()
+        return found.resolve() if follow_symlinks else found.absolute()
     if not explicit.is_file():
         sys.exit(f"ERROR: {explicit} does not exist.")
-    return explicit.resolve()
+    return explicit.resolve() if follow_symlinks else explicit.absolute()
 
 
 def _cwd_chain() -> list[Path]:
@@ -67,7 +67,7 @@ def _cwd_chain() -> list[Path]:
 
 
 def _saved_recipe() -> Path | None:
-    """The recipe a `totchef init` pinned (a file, or a dir holding one); None if unset, malformed, or gone."""
+    """The recipe a `totchef init` pinned (a file, or a dir holding one), resolved past any symlink so a repointed pin always finds the current target; None if unset, malformed, or gone."""
     config = config_path()
     if not config.is_file():
         return None
@@ -79,8 +79,9 @@ def _saved_recipe() -> Path | None:
         return None
     pinned = Path(saved).expanduser()
     if pinned.is_dir():
-        return recipe_in_dir(pinned)
-    return pinned if pinned.is_file() else None
+        found = recipe_in_dir(pinned)
+        return found.resolve() if found else None
+    return pinned.resolve() if pinned.is_file() else None
 
 
 def try_find_recipe() -> Path | None:
@@ -114,7 +115,7 @@ def find_recipe(explicit: Path | None = None) -> Path:
         if found := recipe_in_dir(directory):
             return found.resolve()
     if saved := _saved_recipe():
-        return saved.resolve()
+        return saved
     sys.exit(_not_found_message())
 
 

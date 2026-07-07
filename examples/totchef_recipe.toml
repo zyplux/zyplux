@@ -196,7 +196,10 @@ timer_min = 60
 path = "~/.local/bin/totchef"
 mode = "0755"
 source = "totchef"
-post_hook = 'totchef init "$HOME/Documents/proj/ProjHome/totchef/examples/totchef_recipe.toml"'
+# $TOTCHEF_RECIPE is this run's own resolved recipe path (see recipe.py) — repointing the
+# symlink at it (rather than hardcoding a repo location) keeps the pin correct after the repo
+# moves, as long as `totchef up` runs once from the new location to refresh it.
+post_hook = 'cfg="${XDG_CONFIG_HOME:-$HOME/.config}/totchef"; mkdir -p "$cfg" && ln -sfn "$TOTCHEF_RECIPE" "$cfg/recipe.toml" && totchef init "$cfg/recipe.toml"'
 
 [local_bin.ctop]
 

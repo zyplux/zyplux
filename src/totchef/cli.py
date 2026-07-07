@@ -194,9 +194,9 @@ def where(recipe: RecipeOption = None) -> None:
 def init(
     recipe: Annotated[Path | None, typer.Argument(help="Recipe file or repo directory to pin; omit to use the one discovered here.")] = None,
 ) -> None:
-    """Pin a recipe so `totchef up` finds it from anywhere — saves its path to ~/.config/totchef/config.toml."""
+    """Pin a recipe so `totchef up` finds it from anywhere — saves its path to ~/.config/totchef/config.toml. A symlinked path is pinned as given (not dereferenced), so repointing the symlink later moves the pin without rerunning init."""
     if recipe is not None:
-        path = resolve_explicit(recipe)
+        path = resolve_explicit(recipe, follow_symlinks=False)
     else:
         path = try_find_recipe()
         if path is None:

@@ -100,6 +100,12 @@ resolves to it — letting `totchef up` run from anywhere.
 Run with no path, `totchef init` offers the recipe discovered in the current directory and
 pins it once the operator confirms.
 
+### 1.3.7 init pins a symlink as given
+
+`totchef init PATH` pins a symlinked `PATH` as given rather than dereferencing it, so
+repointing the symlink to a moved or renamed repo checkout carries the pin along without
+rerunning `init`.
+
 ## 1.4 Discover available cooks
 
 > As an operator, I want to list every configuration domain totchef can manage on

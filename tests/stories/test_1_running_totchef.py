@@ -232,6 +232,31 @@ def test_1_3_6_init_offers_the_discovered_recipe(cli, home, tmp_path, monkeypatc
     assert str(recipe_path) in (home / ".config/totchef/config.toml").read_text()  # and it was pinned
 
 
+def test_1_3_7_init_pins_a_symlink_as_given(cli, home, tmp_path, monkeypatch):
+    """`totchef init PATH` pins a symlinked PATH as given rather than dereferencing it, so repointing the symlink later moves the pin without rerunning init."""
+    real = tmp_path / "real" / "totchef_recipe.toml"
+    real.parent.mkdir(parents=True)
+    real.write_text("")
+    link = tmp_path / "pinned.toml"
+    link.symlink_to(real)
+
+    cli.run("init", str(link)).assert_succeeded()
+
+    assert str(link) in (home / ".config/totchef/config.toml").read_text()  # the symlink path is pinned, not its target
+
+    moved = tmp_path / "moved" / "totchef_recipe.toml"
+    moved.parent.mkdir(parents=True)
+    moved.write_text("")
+    link.unlink()
+    link.symlink_to(moved)
+
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    monkeypatch.delenv("TOTCHEF_RECIPE", raising=False)
+    cli.run("where").assert_prints(str(moved))  # repointing the symlink moved the pin without touching init
+
+
 # 1.4 Discover available cooks
 
 
