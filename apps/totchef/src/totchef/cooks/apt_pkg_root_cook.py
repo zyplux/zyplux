@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from typing import TypedDict, override
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -9,8 +10,19 @@ from loguru import logger
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
 from totchef.logs import log_toon
+from totchef.recipe_types import RecipeConfig
 
 TRUSTED_GPGD = Path("/etc/apt/trusted.gpg.d")
+
+
+class PolicyRow(TypedDict):
+    """One `apt-cache policy` verification row, flat for the TOON summary."""
+
+    package: str
+    installed: str
+    candidate: str
+    priority: int
+    source: str
 
 
 def nala(*args: str, note: str = "", check: bool = True) -> None:
@@ -18,7 +30,7 @@ def nala(*args: str, note: str = "", check: bool = True) -> None:
     shell.stream(["nala", *args], note=note, check=check)
 
 
-def parse_policy(package: str, output: str) -> dict:
+def parse_policy(package: str, output: str) -> PolicyRow:
     """Parse `apt-cache policy <package>` output into a flat row for the TOON summary."""
     lines = output.splitlines()
 
@@ -59,7 +71,7 @@ def parse_policy(package: str, output: str) -> dict:
     }
 
 
-def build_policy_row(package: str) -> dict:
+def build_policy_row(package: str) -> PolicyRow:
     output = shell.run("apt-cache", "policy", package).stdout
     return parse_policy(package, output)
 
@@ -76,29 +88,32 @@ def find_reboot_notice() -> str:
 class AptPkgCook(PackageListCook):
     needs_root = True
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
-        self._policy_cache: dict[str, dict] = {}
+        self._policy_cache: dict[str, PolicyRow] = {}
 
-    def _get_policy(self, package: str) -> dict:
+    def _get_policy(self, package: str) -> PolicyRow:
         # Cache within one probe pass so list_installed + find_latest share
         # a single apt-cache call per package.
         if package not in self._policy_cache:
             self._policy_cache[package] = build_policy_row(package)
         return self._policy_cache[package]
 
-    def _refresh_policy(self, package: str) -> dict:
+    def _refresh_policy(self, package: str) -> PolicyRow:
         self._policy_cache.pop(package, None)
         return self._get_policy(package)
 
+    @override
     def list_installed(self) -> dict[str, str]:
         # Bust the cache so a probe after sync sees post-transaction versions.
         self._policy_cache.clear()
         return {p: row["installed"] for p in self.packages if (row := self._get_policy(p))["installed"] != "(none)"}
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return {p: (None if (c := self._get_policy(p)["candidate"]) == "(none)" else c) for p in names}
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         nala("update", note="Refreshing apt cache")
         # `nala list --upgradable` exits 1 when nothing matches (grep convention).
@@ -106,7 +121,7 @@ class AptPkgCook(PackageListCook):
 
         rows = [self._refresh_policy(p) for p in self.packages]
         log_toon(
-            rows,
+            [dict(row) for row in rows],
             note="Verification — installed/candidate versions and effective pin priorities:",
         )
         # Fail fast before full-upgrade: priority 0 = not found in any configured repo.

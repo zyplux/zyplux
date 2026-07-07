@@ -3,6 +3,7 @@
 import platform
 import sys
 from pathlib import Path
+from typing import override
 from urllib.parse import urlparse
 
 from loguru import logger
@@ -114,6 +115,7 @@ class AptRepoCook(StateCook[AptRepoEntry]):
     needs_root = True
     entry_model = AptRepoEntry
 
+    @override
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, repo in self.entries.items():
@@ -123,9 +125,11 @@ class AptRepoCook(StateCook[AptRepoEntry]):
             states[name] = "configured" if present else "absent"
         return states
 
+    @override
     def get_desired_state(self) -> dict[str, str]:
         return dict.fromkeys(self.entries, "configured")
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         release = detect_release()
         logger.info(f"Configuring repo {name} (release codename: {release})")

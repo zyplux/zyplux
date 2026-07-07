@@ -8,15 +8,42 @@ import tomllib
 import yaml
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import NotRequired, TypedDict, override
 
 from loguru import logger
 
 from totchef import shell
 from totchef.cook_base import EntrySpec, SyncOutcome, VersionedCook
 from totchef.harness import fetch_latest_concurrent, fetch_url, find_binary
+from totchef.recipe_types import RecipeConfig
 
 AGENTS = ("claude-code", "universal")
 GITHUB_TREES_URL = "https://api.github.com/repos/{repo}/git/trees/{ref}?recursive=1"
+
+
+class LockfileSkillInfo(TypedDict):
+    """One skill's entry in the `skills` CLI's own `~/.agents/.skill-lock.json`."""
+
+    source: str
+    ref: NotRequired[str]
+    skillPath: NotRequired[str]
+    skillFolderHash: NotRequired[str]
+    updatedAt: NotRequired[str]
+
+
+class GithubTreeEntry(TypedDict):
+    """One entry of a GitHub `git/trees` API response's `tree` array."""
+
+    type: str
+    path: str
+    sha: str
+
+
+class GithubTree(TypedDict):
+    """A GitHub `git/trees?recursive=1` API response, as far as `find_folder_sha` reads it."""
+
+    sha: str
+    tree: list[GithubTreeEntry]
 
 
 class SkillsConfig(EntrySpec):
@@ -45,7 +72,7 @@ def is_agent_linked(name: str) -> bool:
     return agent_entry.is_symlink() and agent_entry.exists() and agent_entry.resolve() == (canonical_skills_dir() / name).resolve()
 
 
-def lockfile_skills() -> dict[str, dict]:
+def lockfile_skills() -> dict[str, LockfileSkillInfo]:
     try:
         payload = json.loads(lockfile_path().read_text())
     except OSError, json.JSONDecodeError:
@@ -93,7 +120,7 @@ def read_skill_version(name: str) -> str | None:
     return read_skill_md_version(skill_dir) or read_package_json_version(skill_dir) or read_pyproject_version(skill_dir)
 
 
-def skill_state(name: str, info: dict) -> str:
+def skill_state(name: str, info: LockfileSkillInfo) -> str:
     """One skill's report value: its declared version when it states one, plus a short content id from the lockfile's folder hash. The hash — not `updatedAt`, which the CLI rewrites on every `add` — is what actually moves when the skill's content changed."""
     folder_hash = info.get("skillFolderHash")
     content_id = f"#{folder_hash[:8]}" if folder_hash else info.get("updatedAt", "?")
@@ -106,16 +133,16 @@ def read_skill_states() -> dict[str, str]:
     return {f"{info['source']}/{name}": skill_state(name, info) for name, info in lockfile_skills().items()}
 
 
-def skills_for_source(skills: dict[str, dict], source: str) -> dict[str, str]:
+def skills_for_source(skills: dict[str, LockfileSkillInfo], source: str) -> dict[str, str]:
     return {name: skill_state(name, info) for name, info in skills.items() if info.get("source") == source}
 
 
-def repo_ref(skills: dict[str, dict], repo: str) -> str:
+def repo_ref(skills: dict[str, LockfileSkillInfo], repo: str) -> str:
     """The git ref a repo's skills were installed from (the lockfile records one when the source pinned it), HEAD — the default branch — otherwise."""
     return next((info["ref"] for info in skills.values() if info.get("source") == repo and info.get("ref")), "HEAD")
 
 
-def find_folder_sha(tree: dict, skill_path: str) -> str | None:
+def find_folder_sha(tree: GithubTree, skill_path: str) -> str | None:
     """The tree SHA of one skill's folder inside a fetched repo tree — mirrors the skills CLI's getSkillFolderHashFromTree, including the root-level-skill case where the repo's own SHA is the folder hash."""
     folder = skill_path.replace("\\", "/")
     if folder.lower().endswith("skill.md"):
@@ -126,13 +153,13 @@ def find_folder_sha(tree: dict, skill_path: str) -> str | None:
     return next((entry.get("sha") for entry in tree.get("tree", []) if entry.get("type") == "tree" and entry.get("path") == folder), None)
 
 
-def fetch_repo_trees(repos: list[str], skills: dict[str, dict]) -> dict[str, dict | None]:
+def fetch_repo_trees(repos: list[str], skills: dict[str, LockfileSkillInfo]) -> dict[str, GithubTree | None]:
     """One unauthenticated GitHub trees call per repo, concurrently — the same endpoint the skills CLI's own `update` uses. Deliberately no token fallback: a rate-limited or unreachable check degrades to 'latest unknown' (refresh-every-run), it never spawns a credential prompt."""
 
     def fetch_one(repo: str) -> str:
         return fetch_url(GITHUB_TREES_URL.format(repo=repo, ref=repo_ref(skills, repo))).decode()
 
-    trees: dict[str, dict | None] = {}
+    trees: dict[str, GithubTree | None] = {}
     for repo, payload in fetch_latest_concurrent(repos, fetch_one).items():
         try:
             trees[repo] = json.loads(payload) if payload else None
@@ -141,7 +168,7 @@ def fetch_repo_trees(repos: list[str], skills: dict[str, dict]) -> dict[str, dic
     return trees
 
 
-def upstream_skill_state(name: str, info: dict, tree: dict) -> str | None:
+def upstream_skill_state(name: str, info: LockfileSkillInfo, tree: GithubTree) -> str | None:
     """What one skill's report value would read after a sync, judged from upstream: the installed state when the upstream folder SHA matches the lockfile (nothing to do), the new short content id when it moved, unknown when the lock entry or tree can't say."""
     locked_hash, skill_path = info.get("skillFolderHash"), info.get("skillPath")
     if not locked_hash or not skill_path:
@@ -195,12 +222,13 @@ def link_cli_binary(bun: Path, name: str) -> None:
 class SkillsCook(VersionedCook):
     entry_model = SkillsConfig
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
         config = SkillsConfig.model_validate(section)
         self.repos = config.repos
         self.hooks = (config.pre_hook, config.post_hook)
 
+    @override
     def list_requested(self) -> list[str]:
         """Per-skill keys for every repo the lockfile already knows, the bare repo as a placeholder otherwise — its skills are unknowable before the first `skills add`."""
         skills = lockfile_skills()
@@ -210,12 +238,15 @@ class SkillsCook(VersionedCook):
             requested += skill_keys or [repo]
         return requested
 
+    @override
     def get_hooks(self) -> tuple[str | None, str | None]:
         return self.hooks
 
+    @override
     def list_installed(self) -> dict[str, str]:
         return read_skill_states()
 
+    @override
     def list_reportable(self, requested: list[str], installed_after: dict[str, str]) -> list[str]:
         """Row keys per declared repo: every skill installed after the sync — including one a re-add newly landed, which no requested key could name up front — plus any requested key nothing landed for (a fresh-repo placeholder whose add failed, a skill that vanished), so failures keep their rows."""
         reportable: list[str] = []
@@ -225,6 +256,7 @@ class SkillsCook(VersionedCook):
             reportable += (landed + lost) or [repo]
         return reportable
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         """Upstream state per requested key, from one trees call per already-installed repo. A fresh-repo placeholder stays unknown (its skills are unknowable before the first add), as does every key of an unreachable repo and every drifted skill (its agent entry isn't the store symlink) — unknown falls back to refresh-every-run."""
         skills = lockfile_skills()
@@ -241,6 +273,7 @@ class SkillsCook(VersionedCook):
             latest[key] = upstream_skill_state(name, skills[name], tree) if is_agent_linked(name) else None
         return latest
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         bunx = find_binary("bunx")
         bun = find_binary("bun")
