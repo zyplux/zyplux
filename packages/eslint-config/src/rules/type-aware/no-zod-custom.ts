@@ -10,11 +10,7 @@ const zodCustomSpecifiers: TypeOrValueSpecifier[] = [{ from: 'package', name: 'c
 
 const getCalleeNameNode = (callee: TSESTree.Node) => {
   if (callee.type === AST_NODE_TYPES.Identifier) return callee;
-  if (
-    callee.type === AST_NODE_TYPES.MemberExpression &&
-    !callee.computed &&
-    callee.property.type === AST_NODE_TYPES.Identifier
-  ) {
+  if (callee.type === AST_NODE_TYPES.MemberExpression && !callee.computed && callee.property.type === AST_NODE_TYPES.Identifier) {
     return callee.property;
   }
   return;

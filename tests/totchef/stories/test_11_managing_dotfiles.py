@@ -152,9 +152,7 @@ def test_11_3_3_capture_is_idempotent_once_enabled(
     terminal.expect_not_ran("systemctl --user start")
 
 
-def test_11_3_4_timer_cadence_comes_from_timer_min(
-    recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path
-) -> None:
+def test_11_3_4_timer_cadence_comes_from_timer_min(recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path) -> None:
     """`timer_min` sets the timer's OnUnitActiveSec, so the operator tunes how often $HOME is captured."""
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git", timer_min=60)

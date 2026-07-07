@@ -16,10 +16,7 @@ const isJsonParseCall = ({ callee }: TSESTree.CallExpression) =>
   callee.property.name === 'parse';
 
 const isJsonMethodCall = ({ callee }: TSESTree.CallExpression) =>
-  callee.type === AST_NODE_TYPES.MemberExpression &&
-  !callee.computed &&
-  callee.property.type === AST_NODE_TYPES.Identifier &&
-  callee.property.name === 'json';
+  callee.type === AST_NODE_TYPES.MemberExpression && !callee.computed && callee.property.type === AST_NODE_TYPES.Identifier && callee.property.name === 'json';
 
 const isZodParseConsumer = (source: TSESTree.CallExpression) => {
   const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;

@@ -3,8 +3,7 @@ import { describe, expect, test } from '#fixtures';
 const KNOWN_RUNS_PATTERN = /--json databaseId --workflow/;
 const TAG_RUNS_PATTERN = /--json databaseId,headBranch/;
 
-const renderRunViewCommand = (runId: string) =>
-  `gh run view ${runId} --jq .status, .conclusion --json status,conclusion`;
+const renderRunViewCommand = (runId: string) => `gh run view ${runId} --jq .status, .conclusion --json status,conclusion`;
 
 describe('10. Releasing every target whose version was bumped', () => {
   describe('10.1 validating preconditions', () => {
@@ -32,14 +31,7 @@ describe('10. Releasing every target whose version was bumped', () => {
   });
 
   describe('10.2 selecting which targets to release', () => {
-    test('10.2.1 skips a target whose version is already published', async ({
-      cz,
-      findTarget,
-      logs,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.2.1 skips a target whose version is already published', async ({ cz, findTarget, logs, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
       const util = await findTarget('@zyplux/util');
@@ -50,14 +42,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(shell.commandsMatching('gh release create')).toHaveLength(0);
     });
 
-    test('10.2.2 skips a target that already has a github release', async ({
-      cz,
-      findTarget,
-      logs,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.2.2 skips a target that already has a github release', async ({ cz, findTarget, logs, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: false, npmPublished: false, pypiPublished: false });
       shell.on('gh release list', 'true');
@@ -65,9 +50,7 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-      expect(logs.logLines).toContain(
-        `Skipping zyplux-cerberus ${cerberus.version} (release cerberus-v${cerberus.version} already exists)`,
-      );
+      expect(logs.logLines).toContain(`Skipping zyplux-cerberus ${cerberus.version} (release cerberus-v${cerberus.version} already exists)`);
       expect(shell.commandsMatching('gh release create')).toHaveLength(0);
     });
   });
@@ -98,13 +81,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.2 rejects when the publish workflow finishes unsuccessfully', async ({
-      cz,
-      logs,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.3.2 rejects when the publish workflow finishes unsuccessfully', async ({ cz, logs, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
@@ -112,9 +89,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'completed\nfailure');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '1 of 1 targets failed to publish: zyplux-cerberus',
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
       expect(logs.warnLines).toHaveLength(0);
     });
@@ -126,12 +101,8 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, '100\n101');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '1 of 1 targets failed to publish: zyplux-cerberus',
-      );
-      expect(logs.errorLines).toContainEqual(
-        expect.stringContaining('publish workflow did not start; check the Actions tab'),
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(logs.errorLines).toContainEqual(expect.stringContaining('publish workflow did not start; check the Actions tab'));
       expect(shell.commandsMatching('gh run view')).toHaveLength(0);
     });
 
@@ -143,22 +114,11 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'in_progress');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '1 of 1 targets failed to publish: zyplux-cerberus',
-      );
-      expect(logs.errorLines).toContainEqual(
-        expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'),
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
+      expect(logs.errorLines).toContainEqual(expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'));
     });
 
-    test('10.3.5 warns instead of failing when the registry never shows the new version', async ({
-      cz,
-      findTarget,
-      logs,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.3.5 warns instead of failing when the registry never shows the new version', async ({ cz, findTarget, logs, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({
         ghcrPublished: true,
@@ -202,13 +162,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.7 rejects when the workflow completes without reporting a conclusion', async ({
-      cz,
-      logs,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.3.7 rejects when the workflow completes without reporting a conclusion', async ({ cz, logs, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
@@ -216,9 +170,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'completed');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '1 of 1 targets failed to publish: zyplux-cerberus',
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('1 of 1 targets failed to publish: zyplux-cerberus');
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'unknown'"));
     });
   });
@@ -277,22 +229,13 @@ describe('10. Releasing every target whose version was bumped', () => {
       const cerberus = await findTarget('zyplux-cerberus');
       const ciImage = await findTarget('ghcr.io/zyplux/ci');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '1 of 2 targets failed to publish: zyplux-cerberus',
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('1 of 2 targets failed to publish: zyplux-cerberus');
 
       expect(logs.logLines).toContain(`Published ghcr.io/zyplux/ci ${ciImage.version}`);
-      expect(logs.errorLines).toContain(
-        `zyplux-cerberus ${cerberus.version}: publish workflow 111 finished with 'failure'`,
-      );
+      expect(logs.errorLines).toContain(`zyplux-cerberus ${cerberus.version}: publish workflow 111 finished with 'failure'`);
     });
 
-    test('10.4.3 reports failures in manifest order even when a later target fails first', async ({
-      cz,
-      registries,
-      repo,
-      shell,
-    }) => {
+    test('10.4.3 reports failures in manifest order even when a later target fails first', async ({ cz, registries, repo, shell }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
@@ -306,9 +249,7 @@ describe('10. Releasing every target whose version was bumped', () => {
         return 'completed\nfailure';
       });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-        '2 of 2 targets failed to publish: zyplux-cerberus, ghcr.io/zyplux/ci',
-      );
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow('2 of 2 targets failed to publish: zyplux-cerberus, ghcr.io/zyplux/ci');
     });
   });
 });

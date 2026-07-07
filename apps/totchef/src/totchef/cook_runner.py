@@ -159,9 +159,8 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
         )
 
     status = result.status
-    if status == "ok" and post_hook and any(row.changed for row in rows):
-        if run_post_hook(post_hook) == "soft_fail":
-            status = "soft_fail"
+    if status == "ok" and post_hook and any(row.changed for row in rows) and run_post_hook(post_hook) == "soft_fail":
+        status = "soft_fail"
     return CookResult(section, status, rows, result.message, delayed_messages=[result.delayed_message] if result.delayed_message else [])
 
 

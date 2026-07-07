@@ -95,11 +95,7 @@ class Seam:
     def from_paths(cls, repo: Repo, ctx: Context, subject: str, paths: list[str]) -> Seam:
         story_files = [path for path in paths if _STORY_TEST_PATH.search(path)]
         members = story_docs.ts_member_dirs(repo, ctx, paths)
-        names = frozenset(
-            name
-            for member in members
-            if isinstance(name := _parse_manifest(ctx.file(repo, _manifest_path(member))).get("name"), str)
-        )
+        names = frozenset(name for member in members if isinstance(name := _parse_manifest(ctx.file(repo, _manifest_path(member))).get("name"), str))
         return cls(repo, ctx, subject, story_files, frozenset(paths), names)
 
     def load_manifest(self, package: str) -> dict[str, Any]:

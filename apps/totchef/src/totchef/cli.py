@@ -91,9 +91,7 @@ def report_row(node_id: str, row: ReportRow) -> dict[str, str]:
     return {"cook-node": cook_node(node_id, row.name), "before": row.before, "current": row.current, "latest": row.latest, "action": row.action}
 
 
-def log_report_block(
-    all_rows: list[dict[str, str]], shown_rows: list[dict[str, str]], summary: list[dict[str, str]], title: str, nothing_changed: str
-) -> None:
+def log_report_block(all_rows: list[dict[str, str]], shown_rows: list[dict[str, str]], summary: list[dict[str, str]], title: str, nothing_changed: str) -> None:
     """Inline mode records the report to the log file as a structured block: the full node table (every row, including unchanged) and the terse view an operator sees, between sentinels so it can be read back machine-cleanly."""
     full = encode(all_rows) if all_rows else ""
     terse = encode(shown_rows + summary) if shown_rows else nothing_changed

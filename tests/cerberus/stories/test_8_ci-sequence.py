@@ -58,16 +58,12 @@ def sequence_pass(finding: type[Finding], status: type[Status]) -> Finding:
     return finding(status.PASS, "ci.yml runs the canonical sequence")
 
 
-def test_8_1_1_skips_repos_with_no_package_json_or_pyproject_manifest(
-    run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]
-) -> None:
+def test_8_1_1_skips_repos_with_no_package_json_or_pyproject_manifest(run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]) -> None:
     result = run_ci_sequence(ci=_PY_CI)
     assert result.findings == [finding(status.SKIP, "no package.json or pyproject.toml")]
 
 
-def test_8_2_1_fails_when_no_ci_workflow_file_exists(
-    run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]
-) -> None:
+def test_8_2_1_fails_when_no_ci_workflow_file_exists(run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]) -> None:
     result = run_ci_sequence(python=True, ci="")
     assert result.findings == [finding(status.FAIL, "no ci.yml workflow")]
 
@@ -80,9 +76,7 @@ def test_8_2_2_errors_when_the_ci_workflow_is_not_a_valid_yaml_mapping(
     assert result.findings == [finding(status.ERROR, "ci.yml is not valid YAML")]
 
 
-def test_8_3_1_passes_a_python_ci_workflow_that_runs_every_required_step_in_order(
-    run_ci_sequence: RunCiSequence, sequence_pass: Finding
-) -> None:
+def test_8_3_1_passes_a_python_ci_workflow_that_runs_every_required_step_in_order(run_ci_sequence: RunCiSequence, sequence_pass: Finding) -> None:
     result = run_ci_sequence(python=True, ci=_PY_CI)
     assert result.findings == [sequence_pass]
 
@@ -162,19 +156,13 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
     ]
 
 
-def test_8_4_4_fails_when_the_ts_job_does_not_run_in_the_org_container(
-    run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]
-) -> None:
+def test_8_4_4_fails_when_the_ts_job_does_not_run_in_the_org_container(run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]) -> None:
     ci = _TS_CI.replace("    container: ghcr.io/zyplux/ci:1.3.14\n", "")
     result = run_ci_sequence(ts=True, ci=ci)
-    assert result.findings == [
-        finding(status.FAIL, "bun ci should run in the `ghcr.io/zyplux/ci` container (Node-free guarantee)")
-    ]
+    assert result.findings == [finding(status.FAIL, "bun ci should run in the `ghcr.io/zyplux/ci` container (Node-free guarantee)")]
 
 
-def test_8_4_5_passes_when_the_container_is_declared_as_a_mapping_with_an_image_key(
-    run_ci_sequence: RunCiSequence, sequence_pass: Finding
-) -> None:
+def test_8_4_5_passes_when_the_container_is_declared_as_a_mapping_with_an_image_key(run_ci_sequence: RunCiSequence, sequence_pass: Finding) -> None:
     ci = _TS_CI.replace(
         "    container: ghcr.io/zyplux/ci:1.3.14\n",
         "    container:\n      image: ghcr.io/zyplux/ci:1.3.14\n",
@@ -183,9 +171,7 @@ def test_8_4_5_passes_when_the_container_is_declared_as_a_mapping_with_an_image_
     assert result.findings == [sequence_pass]
 
 
-def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(
-    run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]
-) -> None:
+def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(run_ci_sequence: RunCiSequence, finding: type[Finding], status: type[Status]) -> None:
     ci = _PY_CI.replace(
         "      - run: uv run --no-sync pytest\n",
         "      - run: |\n          # uv run --no-sync pytest\n          echo skipped\n",

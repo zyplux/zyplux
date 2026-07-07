@@ -7,7 +7,7 @@ const config: Config = {
   htmlWhitespaceSensitivity: 'css',
   insertPragma: false,
   jsxSingleQuote: false,
-  printWidth: 120,
+  printWidth: 160,
   quoteProps: 'as-needed',
   requirePragma: false,
   semi: true,

@@ -69,23 +69,17 @@ def test_17_1_2_falls_back_to_the_checkout_directory_name_when_the_env_var_is_un
     assert local_source(tmp_path).repos() == [replace(repo, name=tmp_path.resolve().name)]
 
 
-def test_17_2_1_reads_the_content_of_a_file_at_a_given_path(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_2_1_reads_the_content_of_a_file_at_a_given_path(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     (tmp_path / "notes.txt").write_text("hello there")
 
     assert local_source(tmp_path).file(repo, "notes.txt") == "hello there"
 
 
-def test_17_2_2_returns_nothing_for_a_path_that_does_not_exist(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_2_2_returns_nothing_for_a_path_that_does_not_exist(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     assert local_source(tmp_path).file(repo, "missing.txt") is None
 
 
-def test_17_2_3_writes_content_to_a_file_at_a_given_path(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_2_3_writes_content_to_a_file_at_a_given_path(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     src = local_source(tmp_path)
 
     src.write_file(repo, "notes.txt", "written content")
@@ -94,9 +88,7 @@ def test_17_2_3_writes_content_to_a_file_at_a_given_path(
 
 
 @requires_git
-def test_17_3_1_lists_tracked_files_and_skips_gitignored_paths(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_3_1_lists_tracked_files_and_skips_gitignored_paths(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     _git(tmp_path, "init")
     (tmp_path / ".gitignore").write_text("reference_clones/\nnode_modules/\n")
     (tmp_path / "package.json").write_text('{"scripts": {"test": "vitest run"}}')
@@ -111,9 +103,7 @@ def test_17_3_1_lists_tracked_files_and_skips_gitignored_paths(
     assert paths == [".gitignore", "package.json"]
 
 
-def test_17_3_2_falls_back_to_walking_the_filesystem_when_git_is_unavailable(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource], no_git: None
-) -> None:
+def test_17_3_2_falls_back_to_walking_the_filesystem_when_git_is_unavailable(tmp_path: Path, repo: Repo, local_source: type[LocalSource], no_git: None) -> None:
     del no_git
     (tmp_path / "a.txt").write_text("one")
     (tmp_path / "nested").mkdir()
@@ -126,9 +116,7 @@ def test_17_3_2_falls_back_to_walking_the_filesystem_when_git_is_unavailable(
     assert paths == ["a.txt", "nested/b.txt"]
 
 
-def test_17_4_1_lists_yaml_workflow_files_under_github_workflows_by_name(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_4_1_lists_yaml_workflow_files_under_github_workflows_by_name(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     workflows_dir = tmp_path / ".github" / "workflows"
     workflows_dir.mkdir(parents=True)
     (workflows_dir / "ci.yml").write_text("name: ci\n")
@@ -140,39 +128,29 @@ def test_17_4_1_lists_yaml_workflow_files_under_github_workflows_by_name(
     assert workflows == {"ci.yml": "name: ci\n", "release.yaml": "name: release\n"}
 
 
-def test_17_4_2_returns_no_workflows_when_there_is_no_workflows_directory(
-    tmp_path: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_4_2_returns_no_workflows_when_there_is_no_workflows_directory(tmp_path: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     assert local_source(tmp_path).workflows(repo) == {}
 
 
 @requires_git
-def test_17_5_1_lists_tags_matching_a_given_prefix(
-    tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_5_1_lists_tags_matching_a_given_prefix(tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     assert local_source(tagged_checkout).tags(repo, "widget-v") == ["widget-v0.1.0"]
 
 
 @requires_git
-def test_17_5_2_returns_no_tags_when_none_match_the_prefix(
-    tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_5_2_returns_no_tags_when_none_match_the_prefix(tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     assert local_source(tagged_checkout).tags(repo, "absent-v") == []
 
 
 @requires_git
-def test_17_6_1_lists_surface_paths_changed_since_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_6_1_lists_surface_paths_changed_since_the_ref(diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["tracked.txt"])
 
     assert changed == ["tracked.txt"]
 
 
 @requires_git
-def test_17_6_2_excludes_surface_paths_unchanged_since_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
+def test_17_6_2_excludes_surface_paths_unchanged_since_the_ref(diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]) -> None:
     changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["untouched.txt"])
 
     assert changed == []
@@ -201,9 +179,7 @@ def test_17_7_2_errors_when_the_git_binary_is_missing(
         local_source(tmp_path).tags(repo, "widget-v")
 
 
-def test_17_8_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
-    tmp_path: Path, repo: Repo, make_context: Callable[..., Context]
-) -> None:
+def test_17_8_1_serves_freshly_written_content_to_later_reads_in_the_same_run(tmp_path: Path, repo: Repo, make_context: Callable[..., Context]) -> None:
     (tmp_path / "doc.md").write_text("before")
     disk_ctx = make_context(tmp_path)
     assert disk_ctx.file(repo, "doc.md") == "before"
@@ -215,9 +191,7 @@ def test_17_8_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
 
 
 @requires_git
-def test_17_8_2_keys_cached_history_reads_by_their_arguments(
-    diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]
-) -> None:
+def test_17_8_2_keys_cached_history_reads_by_their_arguments(diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]) -> None:
     disk_ctx = make_context(diffable_checkout)
 
     assert disk_ctx.tags(repo, "widget-v") == ["widget-v0.1.0"]

@@ -220,9 +220,7 @@ def test_12_1_6_the_run_log_breaks_down_which_skills_were_new_updated_or_unchang
     report.assert_logged("unchanged: peek")
 
 
-def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
     """If `skills add` fails for a repo, the run reports a hard failure naming it."""
     recipe.declares("skills", repos=["realSergiy/does-not-exist"])
     system.has("bunx", "bun")
@@ -234,9 +232,7 @@ def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(
     report.assert_logged("realSergiy/does-not-exist")
 
 
-def test_12_1_8_multiple_repos_install_concurrently(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_12_1_8_multiple_repos_install_concurrently(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
     """Multiple declared repos install concurrently, each via its own `skills add` invocation."""
     recipe.declares("skills", repos=["zyplux/zyp-skills", "vercel-labs/agent-skills"])
     system.has("bunx", "bun")

@@ -28,8 +28,7 @@ const splitLines = (text: string) => (text ? text.split('\n') : []);
 const listReleaseRunIds = async (jq: string, json = 'databaseId') =>
   splitLines(await readTrimmed($.gh.run.list({ event: 'release', jq, json, workflow: 'release.yml' })));
 
-const releaseExists = async (tag: string) =>
-  (await readTrimmed($.gh.release.list({ jq: `any(.[]; .tagName == "${tag}")`, json: 'tagName' }))) === 'true';
+const releaseExists = async (tag: string) => (await readTrimmed($.gh.release.list({ jq: `any(.[]; .tagName == "${tag}")`, json: 'tagName' }))) === 'true';
 
 const buildTargets = async () => {
   const targets = await loadReleaseTargets();
@@ -67,9 +66,7 @@ const publish = async (target: Target, remoteHead: string) => {
   console.log(`Watching run ${runId} ...`);
   const conclusion = await poll(
     async () => {
-      const [status, result] = splitLines(
-        await readTrimmed($.gh.run.view(runId, { jq: '.status, .conclusion', json: 'status,conclusion' })),
-      );
+      const [status, result] = splitLines(await readTrimmed($.gh.run.view(runId, { jq: '.status, .conclusion', json: 'status,conclusion' })));
       return status === 'completed' ? (result ?? '') : undefined;
     },
     { attempts: 200, intervalMs: 3000 },
@@ -134,8 +131,5 @@ export const runReleaseBumpedTargets = async () => {
   for (const { reason, target } of failures) {
     console.error(`${target.label} ${target.version}: ${reason}`);
   }
-  ensure(
-    failures.length === 0,
-    `${failures.length} of ${pending.length} targets failed to publish: ${failures.map(({ target }) => target.label).join(', ')}`,
-  );
+  ensure(failures.length === 0, `${failures.length} of ${pending.length} targets failed to publish: ${failures.map(({ target }) => target.label).join(', ')}`);
 };

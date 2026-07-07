@@ -14,10 +14,7 @@ type RunCheckOnDisk = Callable[..., CheckResult]
 CHECK_ID = "zyplux-latest"
 
 NPM_UTIL_LOCK = '{"packages": {"@zyplux/util": ["@zyplux/util@0.2.0", {}, "sha512-x"]}}'
-NPM_WORKSPACE_LOCK = (
-    '{"workspaces": {"packages/util-ts":'
-    ' {"name": "@zyplux/util", "dependencies": {"@zyplux/tsconfig": "workspace:*"}}}}'
-)
+NPM_WORKSPACE_LOCK = '{"workspaces": {"packages/util-ts": {"name": "@zyplux/util", "dependencies": {"@zyplux/tsconfig": "workspace:*"}}}}'
 UV_CERBERUS_LOCK = """
 version = 1
 
@@ -73,16 +70,12 @@ def test_22_1_1_passes_a_repo_that_uses_no_zyplux_published_artifacts(
     assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])
 
 
-def test_22_1_2_ignores_workspace_local_zyplux_packages(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]
-) -> None:
+def test_22_1_2_ignores_workspace_local_zyplux_packages(run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]) -> None:
     result = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_WORKSPACE_LOCK, "uv.lock": UV_WORKSPACE_LOCK})
     assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])
 
 
-def test_22_1_3_queries_each_artifact_once_per_run(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]
-) -> None:
+def test_22_1_3_queries_each_artifact_once_per_run(run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]) -> None:
     fake_registry.serve_ghcr("zyplux/ci", ["0.1.0", "latest"])
     files = {
         ".github/workflows/ci.yml": CI_IMAGE_WORKFLOW,
@@ -151,9 +144,7 @@ def test_22_4_1_fails_when_a_workflow_pins_an_outdated_ghcr_image_tag(
     )
 
 
-def test_22_4_2_passes_the_floating_latest_tag(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]
-) -> None:
+def test_22_4_2_passes_the_floating_latest_tag(run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]) -> None:
     workflow = "jobs:\n  ci:\n    container: ghcr.io/zyplux/ci:latest\n"
     result = run_check_on_disk(CHECK_ID, {".github/workflows/ci.yml": workflow})
     assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])

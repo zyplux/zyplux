@@ -29,9 +29,7 @@ def run_catalog_discipline(run_check_with_files: RunCheckWithFiles) -> RunCatalo
     return _run
 
 
-def test_11_1_1_skips_repos_with_no_package_json(
-    run_catalog_discipline: RunCatalogDiscipline, finding: type[Finding], status: type[Status]
-) -> None:
+def test_11_1_1_skips_repos_with_no_package_json(run_catalog_discipline: RunCatalogDiscipline, finding: type[Finding], status: type[Status]) -> None:
     result = run_catalog_discipline({})
     assert result.findings == [finding(status.SKIP, "no package.json")]
 

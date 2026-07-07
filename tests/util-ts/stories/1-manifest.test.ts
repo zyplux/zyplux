@@ -131,9 +131,7 @@ describe("1.3 resolving a manifest's repository url", () => {
   });
 
   test('1.3.2 reads the url from an object repository field', () => {
-    expect(repositoryUrl({ url: 'git+https://github.com/owner/repo.git' })).toBe(
-      'git+https://github.com/owner/repo.git',
-    );
+    expect(repositoryUrl({ url: 'git+https://github.com/owner/repo.git' })).toBe('git+https://github.com/owner/repo.git');
   });
 
   test('1.3.3 returns undefined when no repository is declared', () => {
@@ -152,9 +150,7 @@ describe('1.4 discovering manifests tracked by git', () => {
     }).toEqual({ allAreManifestFiles: true, excludesNodeModules: true, includesUtilPackageJson: true });
   });
 
-  test('1.4.2 discovers manifests across nested repositories when the directory itself is outside any repository', async ({
-    tempDir,
-  }) => {
+  test('1.4.2 discovers manifests across nested repositories when the directory itself is outside any repository', async ({ tempDir }) => {
     const expectedManifests = await createNestedGitRepos(tempDir.path);
 
     const manifests = await findManifests(tempDir.path);

@@ -3,13 +3,7 @@ import path from 'node:path';
 import * as z from 'zod';
 
 import { attemptAsync } from './result';
-import {
-  LooseRecordSchema,
-  StringArraySchema,
-  StringRecordSchema,
-  UnknownArrayRecordSchema,
-  UnknownArraySchema,
-} from './schema';
+import { LooseRecordSchema, StringArraySchema, StringRecordSchema, UnknownArrayRecordSchema, UnknownArraySchema } from './schema';
 import { $ } from './shell';
 
 const CatalogsSchema = z.record(z.string(), LooseRecordSchema);
@@ -59,8 +53,7 @@ const PYTHON_REQUIREMENT_NAME = /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)/;
 const NPM_DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] as const;
 const MANIFEST_BASENAMES = new Set(['package.json', 'pyproject.toml']);
 
-export const repositoryUrl = (repository: PackageJson['repository']) =>
-  typeof repository === 'string' ? repository : repository?.url;
+export const repositoryUrl = (repository: PackageJson['repository']) => (typeof repository === 'string' ? repository : repository?.url);
 
 export const normalizePythonName = (requirement: string) => {
   const name = PYTHON_REQUIREMENT_NAME.exec(requirement)?.[1];

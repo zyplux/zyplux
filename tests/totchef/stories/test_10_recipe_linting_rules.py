@@ -24,9 +24,7 @@ def test_10_1_1_lint_validates_and_prints_path_valid(cli: Cli, tmp_path: Path) -
     cli.run("lint", "--recipe", str(bad)).assert_failed()
 
 
-def test_10_1_2_lint_needs_no_root_and_changes_nothing(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
-) -> None:
+def test_10_1_2_lint_needs_no_root_and_changes_nothing(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
     """Linting needs no root and changes nothing — no file is written and no shell command runs."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
 

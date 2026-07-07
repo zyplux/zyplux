@@ -101,10 +101,7 @@
     "no-global-assign": [2, { "exceptions": [] }],
     "no-import-assign": [0],
     "no-invalid-regexp": [2, {}],
-    "no-irregular-whitespace": [
-      2,
-      { "skipComments": false, "skipJSXText": false, "skipRegExps": false, "skipStrings": true, "skipTemplates": false }
-    ],
+    "no-irregular-whitespace": [2, { "skipComments": false, "skipJSXText": false, "skipRegExps": false, "skipStrings": true, "skipTemplates": false }],
     "no-loss-of-precision": [2],
     "no-misleading-character-class": [2, { "allowEscape": false }],
     "no-new-native-nonconstructor": [0],
@@ -224,10 +221,7 @@
         "ignoreDirectives": false
       }
     ],
-    "@typescript-eslint/no-unused-expressions": [
-      2,
-      { "allowShortCircuit": false, "allowTaggedTemplates": false, "allowTernary": false }
-    ],
+    "@typescript-eslint/no-unused-expressions": [2, { "allowShortCircuit": false, "allowTaggedTemplates": false, "allowTernary": false }],
     "@typescript-eslint/no-unused-vars": [2],
     "no-useless-constructor": [0],
     "@typescript-eslint/no-useless-constructor": [2],
@@ -369,16 +363,7 @@
     "unicorn/consistent-class-member-order": [
       2,
       {
-        "order": [
-          "static-field",
-          "static-block",
-          "static-method",
-          "private-field",
-          "public-field",
-          "constructor",
-          "private-method",
-          "public-method"
-        ]
+        "order": ["static-field", "static-block", "static-method", "private-field", "public-field", "constructor", "private-method", "public-method"]
       }
     ],
     "unicorn/consistent-compound-words": [2, {}],
@@ -496,10 +481,7 @@
     "unicorn/no-impossible-length-comparison": [2],
     "unicorn/no-incorrect-query-selector": [2],
     "unicorn/no-incorrect-template-string-interpolation": [2],
-    "unicorn/no-instanceof-builtins": [
-      2,
-      { "useErrorIsError": false, "strategy": "loose", "include": [], "exclude": [] }
-    ],
+    "unicorn/no-instanceof-builtins": [2, { "useErrorIsError": false, "strategy": "loose", "include": [], "exclude": [] }],
     "unicorn/no-invalid-argument-count": [2, {}],
     "unicorn/no-invalid-character-comparison": [2],
     "unicorn/no-invalid-fetch-options": [2],
@@ -523,10 +505,7 @@
     "unicorn/no-nested-ternary": [0],
     "unicorn/no-new-array": [2],
     "unicorn/no-new-buffer": [2],
-    "unicorn/no-non-function-verb-prefix": [
-      2,
-      { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"], "ignore": [] }
-    ],
+    "unicorn/no-non-function-verb-prefix": [2, { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"], "ignore": [] }],
     "unicorn/no-nonstandard-builtin-properties": [2],
     "unicorn/no-null": [2, { "checkArguments": true, "checkStrictEquality": false }],
     "unicorn/no-object-as-default-parameter": [2],

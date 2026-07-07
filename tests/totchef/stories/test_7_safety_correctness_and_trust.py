@@ -248,9 +248,7 @@ def test_7_5_2_cooks_compose_intrinsic_guards_with_pre_hook(recipe: RecipeBuilde
     terminal.expect_ran("test -e /run/maintenance")  # ...operator guard chained into one
 
 
-def test_7_5_3_hooks_run_on_versioned_sections_too(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_7_5_3_hooks_run_on_versioned_sections_too(recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
     """pre_hook/post_hook are valid on a versioned section too: the pre_hook gates the whole sync, the post_hook fires once after a change."""
     recipe.declares("cargo", packages=["ripgrep"], pre_hook="test -e /run/build-ok", post_hook="rebuild-completions")
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')

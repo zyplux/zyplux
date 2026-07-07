@@ -54,10 +54,7 @@ def _check_config(path: str, content: str, res: CheckResult) -> None:
         return
     thresholds = _extract_block(coverage, "thresholds")
     if thresholds is None:
-        res.fail(
-            f"{path} `coverage` has no `thresholds`; "
-            f"must set branches/functions/lines/statements to at least {MIN_COVERAGE}"
-        )
+        res.fail(f"{path} `coverage` has no `thresholds`; must set branches/functions/lines/statements to at least {MIN_COVERAGE}")
         return
     _check_thresholds(path, thresholds, res)
 

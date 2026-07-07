@@ -51,9 +51,7 @@ def test_3_1_2_priority_zero_package_fails_fast_with_guidance(recipe: RecipeBuil
     terminal.expect_not_ran("nala install")
 
 
-def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli
-) -> None:
+def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli) -> None:
     """Runs as root; depends on apt prereqs and repos being in place first."""
     recipe.declares("apt_pkg", packages=["git"], depends_on=["bash", "apt_repo"])
     recipe.declares("bash", "apt_prereqs", apply="true")
@@ -67,9 +65,7 @@ def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(
     plan.assert_ran_before("apt_repo.vendor", "apt_pkg.git")  # after the repos
 
 
-def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
-) -> None:
+def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the `Action required` block."""
     recipe.declares("apt_pkg", packages=["git"])
     terminal.arrange("apt-cache policy git", POLICY_ABSENT)
@@ -93,9 +89,7 @@ def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(
 # 3.2 Install and refresh snaps
 
 
-def test_3_2_1_snap_installs_missing_and_refreshes_installed(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_3_2_1_snap_installs_missing_and_refreshes_installed(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
     """`[snap]` installs missing snaps and refreshes installed ones."""
     recipe.declares("snap", packages=["code", "firefox"])
     system.has("snap")
@@ -226,9 +220,7 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     terminal.expect_not_ran("bun upgrade")
 
 
-def test_3_3_4_update_guard_runs_before_updating(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_3_3_4_update_guard_runs_before_updating(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
     """An optional update_guard shell snippet runs before updating."""
     recipe.declares("url", "bun", url="https://bun.sh/install", update_action=["upgrade"], update_guard="pkill -f bun-server")
     system.has("bun")
@@ -274,9 +266,7 @@ def test_3_3_5_url_install_failure_hard_update_failure_soft(
     soft.assert_logged("update failed")
 
 
-def test_3_3_6_version_best_effort_parsed_falls_back_to_present(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_3_3_6_version_best_effort_parsed_falls_back_to_present(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
     """Version is best-effort parsed from --version; unparseable reports `present`."""
     recipe.declares("url", "bun", url="https://bun.sh/install")
     system.has("bun")
@@ -290,9 +280,7 @@ def test_3_3_6_version_best_effort_parsed_falls_back_to_present(
     totchef.up().assert_shows("url.bun", "unchanged")  # and an actual run sees it's already present
 
 
-def test_3_3_7_url_scheme_defaults_to_https(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
-) -> None:
+def test_3_3_7_url_scheme_defaults_to_https(recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
     """`url = "bun.sh/install"` fetches https://bun.sh/install; an explicit scheme passes through."""
     recipe.declares("url", "bun", url="bun.sh/install")
     http.arrange("https://bun.sh/install", "#!/bin/bash")

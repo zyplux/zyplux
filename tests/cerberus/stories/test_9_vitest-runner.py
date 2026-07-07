@@ -29,9 +29,7 @@ def _vitest_pass(finding: type[Finding], status: type[Status]) -> Finding:
 
 
 @pytest.fixture
-def run_vitest_runner(
-    monkeypatch: pytest.MonkeyPatch, ctx: Context, run_check_with_files: RunCheckWithFiles
-) -> RunVitestRunner:
+def run_vitest_runner(monkeypatch: pytest.MonkeyPatch, ctx: Context, run_check_with_files: RunCheckWithFiles) -> RunVitestRunner:
     def _run(files: dict[str, str], workflows: dict[str, str] | None = None) -> CheckResult:
         monkeypatch.setattr(ctx, "workflows", lambda _repo: workflows or {})
         return run_check_with_files(CHECK_ID, files)
@@ -39,9 +37,7 @@ def run_vitest_runner(
     return _run
 
 
-def test_9_1_1_skips_repos_with_no_package_json(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_1_1_skips_repos_with_no_package_json(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_runner({"README.md": "# demo\n"})
     assert result.findings == [finding(status.SKIP, "no package.json")]
 
@@ -51,18 +47,12 @@ def test_9_2_1_fails_when_the_test_script_runs_bun_test_directly(
     run_vitest_runner: RunVitestRunner, manifest: str, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_vitest_runner({"package.json": manifest, "src/a.test.ts": _VITEST_IMPORT})
-    assert result.findings == [
-        finding(status.FAIL, "package.json `test` script runs bun's test runner; use `vitest run`")
-    ]
+    assert result.findings == [finding(status.FAIL, "package.json `test` script runs bun's test runner; use `vitest run`")]
 
 
-def test_9_2_2_fails_when_a_nested_package_manifest_runs_bun_test(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_2_2_fails_when_a_nested_package_manifest_runs_bun_test(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_runner({"package.json": _VITEST_PKG, "packages/a/package.json": _BUN_TEST_PKG})
-    assert result.findings == [
-        finding(status.FAIL, "packages/a/package.json `test` script runs bun's test runner; use `vitest run`")
-    ]
+    assert result.findings == [finding(status.FAIL, "packages/a/package.json `test` script runs bun's test runner; use `vitest run`")]
 
 
 @pytest.mark.parametrize("manifest", [_BUN_FILTER_PKG, _BUN_RUN_PKG], ids=["bun_filter", "bun_run"])
@@ -80,9 +70,7 @@ def test_9_2_4_treats_an_unparseable_manifest_as_having_no_test_script(
     assert result.findings == [_vitest_pass(finding, status)]
 
 
-def test_9_3_1_fails_when_a_test_file_imports_from_bun_test(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_3_1_fails_when_a_test_file_imports_from_bun_test(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_runner({"package.json": _VITEST_PKG, "src/a.test.ts": _BUN_TEST_IMPORT})
     assert result.findings == [finding(status.FAIL, "src/a.test.ts imports `bun:test`; import from `vitest` instead")]
 
@@ -105,24 +93,18 @@ def test_9_5_1_passes_when_the_test_script_and_test_files_both_use_vitest(
     assert result.findings == [_vitest_pass(finding, status)]
 
 
-def test_9_6_1_fails_when_a_justfile_recipe_runs_bun_test(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_6_1_fails_when_a_justfile_recipe_runs_bun_test(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_runner({"package.json": _VITEST_PKG, "justfile": "test:\n    bun test\n"})
     assert result.findings == [finding(status.FAIL, "justfile runs bun's test runner; use `vitest run`")]
 
 
-def test_9_6_2_fails_when_a_workflow_run_step_runs_bun_test(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_6_2_fails_when_a_workflow_run_step_runs_bun_test(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     wf = "jobs:\n  ci:\n    steps:\n      - run: bun --bail test\n"
     result = run_vitest_runner({"package.json": _VITEST_PKG}, workflows={"ci.yml": wf})
     assert result.findings == [finding(status.FAIL, "ci.yml runs bun's test runner; use `vitest run`")]
 
 
-def test_9_6_3_ignores_comment_lines_that_mention_bun_test(
-    run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]
-) -> None:
+def test_9_6_3_ignores_comment_lines_that_mention_bun_test(run_vitest_runner: RunVitestRunner, finding: type[Finding], status: type[Status]) -> None:
     justfile = "# Run all workspace tests with bun test.\ntest:\n    bun run test\n"
     wf = "jobs:\n  ci:\n    steps:\n      - run: |\n          # not bun test\n          bun run test\n"
     result = run_vitest_runner({"package.json": _VITEST_PKG, "justfile": justfile}, workflows={"ci.yml": wf})

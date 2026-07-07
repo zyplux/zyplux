@@ -25,14 +25,10 @@ const outOption = withDefault(
   'catalog.json',
 );
 
-export const depsCatalogCommand = command(
-  'deps-catalog',
-  object({ command: constant('deps-catalog' as const), dir: dirOption, out: outOption }),
-  {
-    aliases: ['dc'],
-    brief: message`Resolve every dependency across the repos to its source repository and write the list to JSON.`,
-  },
-);
+export const depsCatalogCommand = command('deps-catalog', object({ command: constant('deps-catalog' as const), dir: dirOption, out: outOption }), {
+  aliases: ['dc'],
+  brief: message`Resolve every dependency across the repos to its source repository and write the list to JSON.`,
+});
 
 type DepsCatalogConfig = InferValue<typeof depsCatalogCommand>;
 

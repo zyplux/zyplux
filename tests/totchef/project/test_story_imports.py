@@ -15,8 +15,7 @@ PUBLIC_CLI_IMPORT = "totchef.cli"  # the one production handle: `from totchef.cl
 
 def _is_type_checking_guard(node: ast.AST) -> bool:
     return isinstance(node, ast.If) and (
-        (isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING")
-        or (isinstance(node.test, ast.Attribute) and node.test.attr == "TYPE_CHECKING")
+        (isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING") or (isinstance(node.test, ast.Attribute) and node.test.attr == "TYPE_CHECKING")
     )
 
 
@@ -37,9 +36,7 @@ def _import_bearing_story_tests() -> set[str]:
     bearing = set()
     for path in STORIES_DIR.glob("test_*.py"):
         tree = ast.parse(path.read_text())
-        if any(
-            isinstance(node, (ast.Import, ast.ImportFrom)) and not _is_type_checking_flag_import(node) for node in _walk_runtime(tree)
-        ):
+        if any(isinstance(node, (ast.Import, ast.ImportFrom)) and not _is_type_checking_flag_import(node) for node in _walk_runtime(tree)):
             bearing.add(path.name)
     return bearing
 

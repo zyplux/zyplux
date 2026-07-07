@@ -12,11 +12,9 @@ const tsconfigRootDirs = (config: Config) =>
     return parsed.success ? [parsed.data.tsconfigRootDir] : [];
   });
 
-const hasReactSettings = (config: Config) =>
-  config.some(entry => entry.settings !== undefined && 'react' in entry.settings);
+const hasReactSettings = (config: Config) => config.some(entry => entry.settings !== undefined && 'react' in entry.settings);
 
-const hasRouteRule = (config: Config) =>
-  config.some(entry => Array.isArray(entry.files) && entry.files.includes('**/routes/**/*.{ts,tsx}'));
+const hasRouteRule = (config: Config) => config.some(entry => Array.isArray(entry.files) && entry.files.includes('**/routes/**/*.{ts,tsx}'));
 
 const reactVersion = (config: Config) => {
   for (const entry of config) {
@@ -30,11 +28,9 @@ const reactVersion = (config: Config) => {
 
 const isRuleDisabled = (config: Config, ruleName: string) => config.some(entry => entry.rules?.[ruleName] === 'off');
 
-const reactSettingsFiles = (config: Config) =>
-  config.flatMap(entry => (entry.settings !== undefined && 'react' in entry.settings ? (entry.files ?? []) : []));
+const reactSettingsFiles = (config: Config) => config.flatMap(entry => (entry.settings !== undefined && 'react' in entry.settings ? (entry.files ?? []) : []));
 
-const offRuleFiles = (config: Config, ruleName: string) =>
-  config.flatMap(entry => (entry.rules?.[ruleName] === 'off' ? (entry.files ?? []) : []));
+const offRuleFiles = (config: Config, ruleName: string) => config.flatMap(entry => (entry.rules?.[ruleName] === 'off' ? (entry.files ?? []) : []));
 
 const rendererMap = { dom: ['apps/web/**/*.tsx'], opentui: ['apps/tui/**/*.tsx'] };
 
@@ -81,9 +77,7 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
     test('3.2.4 turns off the no-unknown-property rule for non-dom files only once react is enabled', () => {
       expect(isRuleDisabled(zyplux(), 'react/no-unknown-property')).toBe(false);
       expect(isRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'] }), 'react/no-unknown-property')).toBe(false);
-      expect(
-        isRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'], react: true }), 'react/no-unknown-property'),
-      ).toBe(true);
+      expect(isRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'], react: true }), 'react/no-unknown-property')).toBe(true);
     });
   });
 

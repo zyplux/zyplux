@@ -18,10 +18,7 @@ const repoArgument = argument(string({ metavar: 'REPO' }), {
   description: message`Repo to clone: owner/name, an https URL, or a git@ SSH URL.`,
 });
 
-const cloneParser = merge(
-  object({ command: constant('clone-reference-repo' as const), repo: repoArgument }),
-  object({ ref: optional(refArgument) }),
-);
+const cloneParser = merge(object({ command: constant('clone-reference-repo' as const), repo: repoArgument }), object({ ref: optional(refArgument) }));
 
 export const cloneReferenceRepoCommand = command('clone-reference-repo', cloneParser, {
   aliases: ['c', 'cr', 'clone'],

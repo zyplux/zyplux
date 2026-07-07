@@ -18,20 +18,11 @@ _ROOT_WS = '[tool.uv.workspace]\nmembers = ["packages/lib"]\n'
 _ROOT_WS_CLI_ONLY = '[tool.uv.workspace]\nmembers = ["apps/cli"]\n'
 
 _LIB_MANIFEST = '[project]\nname = "demo-lib"\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
-_LIB_MANIFEST_EMPTY_SCRIPTS = (
-    '[project]\nname = "demo-lib"\n\n[project.scripts]\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
-)
-_CLI_MANIFEST = (
-    '[project]\nname = "demo-cli"\n\n'
-    '[project.scripts]\ncli = "demo.cli:app"\n\n'
-    '[tool.uv.build-backend]\nmodule-name = "demo"\n'
-)
+_LIB_MANIFEST_EMPTY_SCRIPTS = '[project]\nname = "demo-lib"\n\n[project.scripts]\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
+_CLI_MANIFEST = '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n[tool.uv.build-backend]\nmodule-name = "demo"\n'
 
 _LIB_INIT = (
-    '"""Demo library."""\n\n'
-    "from __future__ import annotations\n\n\n"
-    'def helper() -> str:\n    return "hi"\n\n\n'
-    "def _internal() -> None:\n    return None\n"
+    '"""Demo library."""\n\nfrom __future__ import annotations\n\n\ndef helper() -> str:\n    return "hi"\n\n\ndef _internal() -> None:\n    return None\n'
 )
 
 _STORY_FILE = "packages/lib/tests/stories/test_1_first.py"
@@ -56,16 +47,12 @@ def run_lib_py_tests(run_check_with_files: RunCheckWithFiles) -> RunLibPyTests:
     return _run
 
 
-def test_24_1_1_skips_repos_with_no_python_packages(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
+def test_24_1_1_skips_repos_with_no_python_packages(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
     result = run_lib_py_tests({})
     assert result.findings == [finding(status.SKIP, "no Python packages")]
 
 
-def test_24_1_2_skips_workspaces_with_no_library(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
+def test_24_1_2_skips_workspaces_with_no_library(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
     result = run_lib_py_tests({
         "pyproject.toml": _ROOT_WS_CLI_ONLY,
         "apps/cli/pyproject.toml": _CLI_MANIFEST,
@@ -91,31 +78,21 @@ def test_24_2_1_passes_a_story_test_importing_only_public_names_of_the_root_modu
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
 
-def test_24_2_2_fails_a_story_test_with_a_relative_import(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
+def test_24_2_2_fails_a_story_test_with_a_relative_import(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
     result = run_lib_py_tests(_with_story("from .util import helper\n"))
     assert result.findings == [finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — '.util'")]
 
 
-def test_24_2_3_fails_a_story_test_importing_a_deep_submodule(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
+def test_24_2_3_fails_a_story_test_importing_a_deep_submodule(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
     result = run_lib_py_tests(_with_story("from demolib.internal import Thing\n"))
-    assert result.findings == [
-        finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demolib.internal'")
-    ]
+    assert result.findings == [finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demolib.internal'")]
 
 
 def test_24_2_4_fails_a_story_test_importing_a_non_public_name_from_the_root_module(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_lib_py_tests(_with_story("from demolib import _internal\n"))
-    assert result.findings == [
-        finding(
-            status.FAIL, f"{_STORY_FILE}: story test imports non-public name '_internal' from seam module 'demolib'"
-        )
-    ]
+    assert result.findings == [finding(status.FAIL, f"{_STORY_FILE}: story test imports non-public name '_internal' from seam module 'demolib'")]
 
 
 def test_24_2_5_allows_a_story_test_to_import_a_third_party_module_directly(
@@ -125,15 +102,8 @@ def test_24_2_5_allows_a_story_test_to_import_a_third_party_module_directly(
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
 
-def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
-    guarded = (
-        "from __future__ import annotations\n\n"
-        "from typing import TYPE_CHECKING\n\n"
-        "if TYPE_CHECKING:\n"
-        "    from demolib.internal import Thing\n"
-    )
+def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
+    guarded = "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from demolib.internal import Thing\n"
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
@@ -141,12 +111,7 @@ def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(
 def test_24_2_7_passes_a_disallowed_import_guarded_under_a_dotted_type_checking_attribute(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded = (
-        "from __future__ import annotations\n\n"
-        "import typing\n\n"
-        "if typing.TYPE_CHECKING:\n"
-        "    from demolib.internal import Thing\n"
-    )
+    guarded = "from __future__ import annotations\n\nimport typing\n\nif typing.TYPE_CHECKING:\n    from demolib.internal import Thing\n"
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
@@ -155,9 +120,7 @@ def test_24_2_8_fails_a_story_test_with_a_bare_import_of_a_deep_submodule(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_lib_py_tests(_with_story("import demolib.internal\n"))
-    assert result.findings == [
-        finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demolib.internal'")
-    ]
+    assert result.findings == [finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demolib.internal'")]
 
 
 def test_24_2_9_passes_a_story_test_importing_an_annotated_top_level_constant_from_the_root_module(
@@ -173,8 +136,6 @@ def test_24_2_9_passes_a_story_test_importing_an_annotated_top_level_constant_fr
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
 
-def test_24_3_1_skips_cleanly_when_a_package_has_no_story_test_files_yet(
-    run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
-) -> None:
+def test_24_3_1_skips_cleanly_when_a_package_has_no_story_test_files_yet(run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]) -> None:
     result = run_lib_py_tests(_BASE_FILES)
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]

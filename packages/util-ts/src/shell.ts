@@ -46,8 +46,7 @@ const flag = (name: string, value: FlagValue) => {
   return [`--${toKebab(name)}`, String(value)];
 };
 
-const toArgs = (flags: Record<string, FlagValue>) =>
-  Object.entries(flags).flatMap(([name, value]) => flag(name, value));
+const toArgs = (flags: Record<string, FlagValue>) => Object.entries(flags).flatMap(([name, value]) => flag(name, value));
 
 const gh = {
   api: async (endpoint: string, flags: ApiFlags = {}) => Bun.$`gh ${['api', ...toArgs(flags), endpoint]}`.quiet(),
@@ -60,8 +59,7 @@ const gh = {
     view: async (flags: PrViewFlags = {}) => Bun.$`gh ${['pr', 'view', ...toArgs(flags)]}`.quiet(),
   },
   release: {
-    create: async (tag: string, flags: ReleaseCreateFlags = {}) =>
-      Bun.$`gh ${['release', 'create', tag, ...toArgs(flags)]}`,
+    create: async (tag: string, flags: ReleaseCreateFlags = {}) => Bun.$`gh ${['release', 'create', tag, ...toArgs(flags)]}`,
     list: async (flags: ReleaseListFlags = {}) => Bun.$`gh ${['release', 'list', ...toArgs(flags)]}`.quiet(),
   },
   repo: {
@@ -69,8 +67,7 @@ const gh = {
   },
   run: {
     list: async (flags: RunListFlags = {}) => Bun.$`gh ${['run', 'list', ...toArgs(flags)]}`.quiet(),
-    view: async (runId: string, flags: RunViewFlags = {}) =>
-      Bun.$`gh ${['run', 'view', runId, ...toArgs(flags)]}`.quiet(),
+    view: async (runId: string, flags: RunViewFlags = {}) => Bun.$`gh ${['run', 'view', runId, ...toArgs(flags)]}`.quiet(),
   },
 };
 
@@ -78,30 +75,15 @@ const git = {
   branch: async (name: string, flags: BranchFlags = {}) => Bun.$`git ${['branch', ...toArgs(flags), name]}`,
   checkout: async (ref: string) => Bun.$`git ${['checkout', ref]}`,
   clean: async (cwd: string, { dryRun = false, protect = [] }: CleanFlags = {}) =>
-    Bun.$`git ${[
-      'clean',
-      '-d',
-      '-f',
-      '-f',
-      '-X',
-      ...(dryRun ? ['-n'] : []),
-      ...protect.flatMap(pattern => ['-e', `!${pattern}`]),
-    ]}`
-      .cwd(cwd)
-      .quiet(),
-  clone: async (url: string, dest: string, flags: CloneFlags = {}) =>
-    Bun.$`git ${['clone', ...toArgs(flags), url, dest]}`,
+    Bun.$`git ${['clean', '-d', '-f', '-f', '-X', ...(dryRun ? ['-n'] : []), ...protect.flatMap(pattern => ['-e', `!${pattern}`])]}`.cwd(cwd).quiet(),
+  clone: async (url: string, dest: string, flags: CloneFlags = {}) => Bun.$`git ${['clone', ...toArgs(flags), url, dest]}`,
   fetch: async (remote: string, branch: string) => Bun.$`git ${['fetch', remote, branch]}`,
-  isInsideWorkTree: async (cwd: string) =>
-    Bun.$`git ${['rev-parse', '--is-inside-work-tree']}`.cwd(cwd).quiet().nothrow(),
-  lsFiles: async (cwd: string, pathspec: string[] = ['.']) =>
-    Bun.$`git ${['ls-files', '-z', '--', ...pathspec]}`.cwd(cwd).quiet(),
+  isInsideWorkTree: async (cwd: string) => Bun.$`git ${['rev-parse', '--is-inside-work-tree']}`.cwd(cwd).quiet().nothrow(),
+  lsFiles: async (cwd: string, pathspec: string[] = ['.']) => Bun.$`git ${['ls-files', '-z', '--', ...pathspec]}`.cwd(cwd).quiet(),
   lsRemote: async (remote: string, ref: string) => Bun.$`git ${['ls-remote', remote, ref]}`.quiet(),
   pull: async (flags: PullFlags = {}) => Bun.$`git ${['pull', ...toArgs(flags)]}`,
-  push: async (remote: string, branch: string, flags: PushFlags = {}) =>
-    Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
-  revParse: async (rev: string, flags: RevParseFlags = {}) =>
-    Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`.quiet(),
+  push: async (remote: string, branch: string, flags: PushFlags = {}) => Bun.$`git ${['push', ...toArgs(flags), remote, branch]}`,
+  revParse: async (rev: string, flags: RevParseFlags = {}) => Bun.$`git ${['rev-parse', ...toArgs(flags), rev]}`.quiet(),
   showToplevel: async (cwd: string = process.cwd()) => Bun.$`git ${['rev-parse', '--show-toplevel']}`.cwd(cwd).quiet(),
   status: async (flags: StatusFlags = {}) => Bun.$`git ${['status', ...toArgs(flags)]}`,
 };

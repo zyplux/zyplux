@@ -2,13 +2,5 @@ export { CliExitError, type CliIo, type CliMain, type CliRunner, createCliRunner
 export { type ConsoleCapture, createConsoleCapture } from './console';
 export { createFetchFake, type FetchFake, type FetchReply, notFoundResponse, okResponse } from './fetch';
 export { createTempDir, type TempDir } from './fs';
-export {
-  createShellFake,
-  fakeShellOutput,
-  fakeShellPromise,
-  type ShellCall,
-  type ShellFake,
-  type ShellReply,
-  toArgv,
-} from './shell';
+export { createShellFake, fakeShellOutput, fakeShellPromise, type ShellCall, type ShellFake, type ShellReply, toArgv } from './shell';
 export { type CliFixtures, cliTest, type LibraryFixtures, libraryTest } from './story';

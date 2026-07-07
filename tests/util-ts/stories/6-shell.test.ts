@@ -12,11 +12,7 @@ describe('6.1 translating flag objects into CLI arguments', () => {
 
 describe('6.2 building git subcommands', () => {
   test.for([
-    [
-      'branch',
-      () => $.git.branch('feat-x', { delete: true, force: true }),
-      ['branch', '--delete', '--force', 'feat-x'],
-    ],
+    ['branch', () => $.git.branch('feat-x', { delete: true, force: true }), ['branch', '--delete', '--force', 'feat-x']],
     ['checkout', () => $.git.checkout('main'), ['checkout', 'main']],
     [
       'clone',
@@ -45,11 +41,7 @@ describe('6.2 building git subcommands', () => {
 
 describe('6.3 building gh subcommands', () => {
   test.for([
-    [
-      'api',
-      () => $.gh.api('repos/x/y', { input: '-', method: 'POST' }),
-      ['api', '--input', '-', '--method', 'POST', 'repos/x/y'],
-    ],
+    ['api', () => $.gh.api('repos/x/y', { input: '-', method: 'POST' }), ['api', '--input', '-', '--method', 'POST', 'repos/x/y']],
     [
       'pr create',
       () => $.gh.pr.create({ base: 'main', body: '', draft: true, title: 't' }),
@@ -57,11 +49,7 @@ describe('6.3 building gh subcommands', () => {
     ],
     ['pr disableAutoMerge', () => $.gh.pr.disableAutoMerge(), ['pr', 'merge', '--disable-auto']],
     ['pr list', () => $.gh.pr.list({ head: 'b', json: 'state' }), ['pr', 'list', '--head', 'b', '--json', 'state']],
-    [
-      'pr merge',
-      () => $.gh.pr.merge({ auto: true, deleteBranch: true, squash: true }),
-      ['pr', 'merge', '--auto', '--delete-branch', '--squash'],
-    ],
+    ['pr merge', () => $.gh.pr.merge({ auto: true, deleteBranch: true, squash: true }), ['pr', 'merge', '--auto', '--delete-branch', '--squash']],
     ['pr ready with flags', () => $.gh.pr.ready({ undo: true }), ['pr', 'ready', '--undo']],
     ['pr ready without flags', () => $.gh.pr.ready(), ['pr', 'ready']],
     ['pr view', () => $.gh.pr.view({ json: 'url' }), ['pr', 'view', '--json', 'url']],
@@ -72,16 +60,8 @@ describe('6.3 building gh subcommands', () => {
     ],
     ['release list', () => $.gh.release.list({ json: 'tagName' }), ['release', 'list', '--json', 'tagName']],
     ['repo view', () => $.gh.repo.view({ json: 'nameWithOwner' }), ['repo', 'view', '--json', 'nameWithOwner']],
-    [
-      'run list',
-      () => $.gh.run.list({ event: 'release', workflow: 'release.yml' }),
-      ['run', 'list', '--event', 'release', '--workflow', 'release.yml'],
-    ],
-    [
-      'run view',
-      () => $.gh.run.view('123', { json: 'status,conclusion' }),
-      ['run', 'view', '123', '--json', 'status,conclusion'],
-    ],
+    ['run list', () => $.gh.run.list({ event: 'release', workflow: 'release.yml' }), ['run', 'list', '--event', 'release', '--workflow', 'release.yml']],
+    ['run view', () => $.gh.run.view('123', { json: 'status,conclusion' }), ['run', 'view', '123', '--json', 'status,conclusion']],
   ] as const)('6.3.1 builds gh %s argv from its arguments and flags', async ([, invoke, expectedArgv], { shell }) => {
     shell.otherwise('output');
 
@@ -126,16 +106,13 @@ describe('6.6 omitting optional flags falls back to defaults', () => {
     ['git.push', () => $.git.push('origin', 'main'), ['push', 'origin', 'main'], 'git'],
     ['git.revParse', () => $.git.revParse('HEAD'), ['rev-parse', 'HEAD'], 'git'],
     ['git.status', () => $.git.status(), ['status'], 'git'],
-  ] as const)(
-    '6.6.1 omits any flags when %s is called without them',
-    async ([, invoke, expectedArgv, expectedProgram], { shell }) => {
-      shell.otherwise('output');
+  ] as const)('6.6.1 omits any flags when %s is called without them', async ([, invoke, expectedArgv, expectedProgram], { shell }) => {
+    shell.otherwise('output');
 
-      await invoke();
+    await invoke();
 
-      expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program: expectedProgram });
-    },
-  );
+    expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program: expectedProgram });
+  });
 
   test('6.6.2 builds the same show toplevel argv when git.showToplevel is called without a cwd', async ({ shell }) => {
     shell.otherwise('output');

@@ -131,10 +131,7 @@ describe('11.3 excluding paths', () => {
     expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(false);
   });
 
-  test('11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere', async ({
-    cz,
-    tempDir,
-  }) => {
+  test('11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere', async ({ cz, tempDir }) => {
     await initRepo(tempDir, 'repo-a', ['repo-b/']);
     await writeArtifacts(tempDir, 'repo-a');
     await tempDir.write('repo-a/repo-b/keep.txt', 'keep');

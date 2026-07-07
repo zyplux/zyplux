@@ -50,17 +50,11 @@ typeAwareRuleTester.run('no-unvalidated-json', noUnvalidatedJson, {
       name: 'JSON.parse flows directly into schema.safeParse',
     },
     {
-      code: [
-        'declare const response: { json(): Promise<any> };',
-        'const body = Schema.parse(await response.json());',
-      ].join('\n'),
+      code: ['declare const response: { json(): Promise<any> };', 'const body = Schema.parse(await response.json());'].join('\n'),
       name: 'awaited .json() flows directly into schema.parse',
     },
     {
-      code: [
-        'declare const response: { json(): Promise<any> };',
-        'const body = await Schema.parseAsync(await response.json());',
-      ].join('\n'),
+      code: ['declare const response: { json(): Promise<any> };', 'const body = await Schema.parseAsync(await response.json());'].join('\n'),
       name: 'awaited .json() flows into schema.parseAsync',
     },
     {
@@ -68,18 +62,11 @@ typeAwareRuleTester.run('no-unvalidated-json', noUnvalidatedJson, {
       name: 'JSON.stringify is not a parse boundary',
     },
     {
-      code: [
-        'type Config = { id: string };',
-        'declare const client: { json(): Promise<Config> };',
-        'const cfg = await client.json();',
-      ].join('\n'),
+      code: ['type Config = { id: string };', 'declare const client: { json(): Promise<Config> };', 'const cfg = await client.json();'].join('\n'),
       name: 'a domain .json() returning a typed value is left alone',
     },
     {
-      code: [
-        'declare const builder: { json(body: unknown): { ok: boolean } };',
-        'const sent = builder.json({ ok: true });',
-      ].join('\n'),
+      code: ['declare const builder: { json(body: unknown): { ok: boolean } };', 'const sent = builder.json({ ok: true });'].join('\n'),
       name: 'a .json() returning a concrete type (response builder) is not a read boundary',
     },
   ],

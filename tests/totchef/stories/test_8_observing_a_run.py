@@ -216,9 +216,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
     assert '{"cook-node"' in plan.report  # and the plan table itself is still produced
 
 
-def test_8_3_4_a_failed_run_names_its_log_file(
-    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal
-) -> None:
+def test_8_3_4_a_failed_run_names_its_log_file(scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal) -> None:
     """A failed run's final summary names the run's log file, so an operator who saw only the report knows which file to open for the captured error."""
     boom = scenario().declares("bash", "boom", apply="explode")
     terminal.arrange("explode", exit_code=1)

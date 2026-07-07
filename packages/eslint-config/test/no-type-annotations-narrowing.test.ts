@@ -144,8 +144,7 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
           suggestions: [
             {
               messageId: 'removeAnnotation',
-              output:
-                'declare const wide: { a: number; b: number }; export const outer = () => { const g = () => wide; return g; };',
+              output: 'declare const wide: { a: number; b: number }; export const outer = () => { const g = () => wide; return g; };',
             },
           ],
         },
@@ -172,8 +171,7 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
           suggestions: [
             {
               messageId: 'removeAnnotation',
-              output:
-                'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s = w;',
+              output: 'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s = w;',
             },
           ],
         },
@@ -229,9 +227,7 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
       errors: [
         {
           messageId: 'narrowReturnType',
-          suggestions: [
-            { messageId: 'removeAnnotation', output: 'class A { m(w: { a: number; b: number }) { return w; } }' },
-          ],
+          suggestions: [{ messageId: 'removeAnnotation', output: 'class A { m(w: { a: number; b: number }) { return w; } }' }],
         },
       ],
       name: 'a method return type that hides a member is flagged',
@@ -434,8 +430,7 @@ typeAwareRuleTester.run('no-type-annotations (narrowing)', noTypeAnnotations, {
           suggestions: [
             {
               messageId: 'removeAnnotation',
-              output:
-                'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = () => wide;',
+              output: 'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = () => wide;',
             },
           ],
         },

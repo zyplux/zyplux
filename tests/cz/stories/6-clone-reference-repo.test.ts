@@ -60,16 +60,7 @@ describe('6.1 building the clone url and destination', () => {
     await cz.run('clone-reference-repo', 'zyplux/util', 'v2.0.0');
 
     expect(shell.calls).toContainEqual({
-      argv: [
-        'clone',
-        '--depth',
-        '1',
-        '--single-branch',
-        '--branch',
-        'v2.0.0',
-        'https://github.com/zyplux/util.git',
-        'reference_clones/util',
-      ],
+      argv: ['clone', '--depth', '1', '--single-branch', '--branch', 'v2.0.0', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
       program: 'git',
     });
   });

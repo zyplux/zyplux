@@ -41,9 +41,7 @@ def run_vitest_coverage(run_check_with_files: RunCheckWithFiles) -> RunVitestCov
     return _run
 
 
-def test_19_1_1_skips_repos_with_no_root_vitest_config(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_1_1_skips_repos_with_no_root_vitest_config(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_coverage({"README.md": "# demo\n"})
 
     assert result.findings == [finding(status.SKIP, _SKIP_MESSAGE)]
@@ -59,17 +57,13 @@ def test_19_1_2_ignores_a_nested_vitest_config_that_is_not_at_the_repo_root(
     assert result.findings == [finding(status.SKIP, _SKIP_MESSAGE)]
 
 
-def test_19_2_1_errors_when_the_root_vitest_config_cannot_be_read(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_2_1_errors_when_the_root_vitest_config_cannot_be_read(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     result = run_vitest_coverage({"vitest.config.ts": None})
 
     assert result.findings == [finding(status.ERROR, "could not read vitest.config.ts")]
 
 
-def test_19_2_2_fails_when_the_coverage_block_is_unterminated(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_2_2_fails_when_the_coverage_block_is_unterminated(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     files = {"vitest.config.ts": "export default defineConfig({ test: { coverage: { thresholds: {\n"}
 
     result = run_vitest_coverage(files)
@@ -77,9 +71,7 @@ def test_19_2_2_fails_when_the_coverage_block_is_unterminated(
     assert result.findings == [finding(status.FAIL, _NO_COVERAGE_MESSAGE)]
 
 
-def test_19_3_1_fails_when_the_config_has_no_coverage_block(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_3_1_fails_when_the_config_has_no_coverage_block(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     files = {"vitest.config.ts": "export default defineConfig({ test: {} });\n"}
 
     result = run_vitest_coverage(files)
@@ -87,9 +79,7 @@ def test_19_3_1_fails_when_the_config_has_no_coverage_block(
     assert result.findings == [finding(status.FAIL, _NO_COVERAGE_MESSAGE)]
 
 
-def test_19_3_2_fails_when_the_coverage_block_has_no_thresholds(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_3_2_fails_when_the_coverage_block_has_no_thresholds(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     files = {"vitest.config.ts": "export default defineConfig({ test: { coverage: { provider: 'istanbul' } } });\n"}
 
     result = run_vitest_coverage(files)
@@ -97,8 +87,7 @@ def test_19_3_2_fails_when_the_coverage_block_has_no_thresholds(
     assert result.findings == [
         finding(
             status.FAIL,
-            "vitest.config.ts `coverage` has no `thresholds`; "
-            "must set branches/functions/lines/statements to at least 90",
+            "vitest.config.ts `coverage` has no `thresholds`; must set branches/functions/lines/statements to at least 90",
         )
     ]
 
@@ -110,21 +99,15 @@ def test_19_4_1_fails_and_names_the_metric_when_a_threshold_is_below_the_require
 
     result = run_vitest_coverage(files)
 
-    assert result.findings == [
-        finding(status.FAIL, "vitest.config.ts coverage.thresholds.branches is 80.0, below the required 90")
-    ]
+    assert result.findings == [finding(status.FAIL, "vitest.config.ts coverage.thresholds.branches is 80.0, below the required 90")]
 
 
-def test_19_4_2_fails_when_a_threshold_metric_is_missing(
-    run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]
-) -> None:
+def test_19_4_2_fails_when_a_threshold_metric_is_missing(run_vitest_coverage: RunVitestCoverage, finding: type[Finding], status: type[Status]) -> None:
     files = {"vitest.config.ts": _COMPLIANT_CONFIG.replace("branches: 90,\n", "")}
 
     result = run_vitest_coverage(files)
 
-    assert result.findings == [
-        finding(status.FAIL, "vitest.config.ts coverage.thresholds has no `branches`; must be set to at least 90")
-    ]
+    assert result.findings == [finding(status.FAIL, "vitest.config.ts coverage.thresholds has no `branches`; must be set to at least 90")]
 
 
 def test_19_5_1_passes_when_every_threshold_metric_meets_the_required_floor(

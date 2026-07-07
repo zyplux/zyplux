@@ -6,14 +6,7 @@ const MISSING_GHCR_CREDENTIALS: [missingName: string, ghToken: string, githubAct
 ];
 
 describe('8.1 skipping an already-published target', () => {
-  test("8.1.1 logs and does nothing when the tag's version is already published", async ({
-    cz,
-    findTarget,
-    logs,
-    registries,
-    repo,
-    shell,
-  }) => {
+  test("8.1.1 logs and does nothing when the tag's version is already published", async ({ cz, findTarget, logs, registries, repo, shell }) => {
     repo.setRoot(workspaceRoot);
     registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
     const util = await findTarget('@zyplux/util');
@@ -34,9 +27,7 @@ describe('8.2 publishing to each registry kind', () => {
 
     await cz.run('publish-tagged-target', `util-v${util.version}`);
 
-    expect(shell.commandsMatching(/bun pm pack/)).toEqual([
-      `cd ${util.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`,
-    ]);
+    expect(shell.commandsMatching(/bun pm pack/)).toEqual([`cd ${util.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`]);
   });
 
   test('8.2.2 builds and publishes a pypi target', async ({ cz, findTarget, network, repo, shell }) => {
@@ -59,20 +50,12 @@ describe('8.2 publishing to each registry kind', () => {
       vi.stubEnv('GITHUB_ACTOR', githubActor);
       const ci = await findTarget('ghcr.io/zyplux/ci');
 
-      await expect(cz.run('publish-tagged-target', `ci-image-v${ci.version}`)).rejects.toThrow(
-        `${missingName} is required to push to GHCR`,
-      );
+      await expect(cz.run('publish-tagged-target', `ci-image-v${ci.version}`)).rejects.toThrow(`${missingName} is required to push to GHCR`);
       expect(shell.commandsMatching('podman')).toHaveLength(0);
     },
   );
 
-  test('8.2.4 tags and pushes a versioned and latest ghcr image', async ({
-    cz,
-    findTarget,
-    registries,
-    repo,
-    shell,
-  }) => {
+  test('8.2.4 tags and pushes a versioned and latest ghcr image', async ({ cz, findTarget, registries, repo, shell }) => {
     repo.setRoot(workspaceRoot);
     registries.setPublished({ ghcrPublished: false, npmPublished: false, pypiPublished: false });
     vi.stubEnv('GH_TOKEN', 'gh-token');

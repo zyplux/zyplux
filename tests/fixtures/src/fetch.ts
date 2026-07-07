@@ -17,8 +17,7 @@ const HTTP_OK = 200;
 export const notFoundResponse = () => new Response(undefined, { status: HTTP_NOT_FOUND });
 export const okResponse = () => new Response(undefined, { status: HTTP_OK });
 
-const isUrlMatch = (url: string, match: RegExp | string) =>
-  typeof match === 'string' ? url.startsWith(match) : match.test(url);
+const isUrlMatch = (url: string, match: RegExp | string) => (typeof match === 'string' ? url.startsWith(match) : match.test(url));
 
 const getRequestUrl = (input: Request | string | URL) => {
   if (typeof input === 'string') return input;

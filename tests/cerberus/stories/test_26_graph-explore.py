@@ -108,9 +108,7 @@ def test_26_1_6_marks_each_connections_direction_with_an_arrow(built_graph_path:
 def busy_hub_repo(tmp_path: Path) -> Path:
     (tmp_path / "hub.py").write_text('def shared() -> str:\n    return "x"\n')
     for i in range(25):
-        (tmp_path / f"importer_{i}.py").write_text(
-            f"from hub import shared\n\n\ndef use_{i}() -> str:\n    return shared()\n"
-        )
+        (tmp_path / f"importer_{i}.py").write_text(f"from hub import shared\n\n\ndef use_{i}() -> str:\n    return shared()\n")
     return tmp_path
 
 
@@ -151,9 +149,7 @@ def mega_hub_repo(tmp_path: Path) -> Path:
     (tmp_path / "hub.py").write_text('def shared() -> str:\n    return "x"\n')
     (tmp_path / "seed_file.py").write_text("from hub import shared\n\n\ndef seed_use() -> str:\n    return shared()\n")
     for i in range(60):
-        (tmp_path / f"importer_{i}.py").write_text(
-            f"from hub import shared\n\n\ndef use_{i}() -> str:\n    return shared()\n"
-        )
+        (tmp_path / f"importer_{i}.py").write_text(f"from hub import shared\n\n\ndef use_{i}() -> str:\n    return shared()\n")
     return tmp_path
 
 

@@ -93,9 +93,7 @@ def test_1_1_4_invalid_recipe_rejects_the_run_before_any_apply(recipe: RecipeBui
 # 1.2 Preview changes without touching the system
 
 
-def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
-) -> None:
+def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
     """`totchef plan` probes state and prints the plan table (would install / upgrade / apply, up-to-date, ok) but makes no changes."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
     recipe.declares("bash", "step", current_state="probe", desired_state="ok", apply="make-it-ok")

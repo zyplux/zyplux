@@ -224,8 +224,8 @@ Subclass a cook base in your own package and register the section it serves:
 # my_totchef_plugins/foo_cook.py
 from totchef.cook_base import PackageListCook
 
-class FooCook(PackageListCook):
-    ...
+
+class FooCook(PackageListCook): ...
 ```
 
 ```toml

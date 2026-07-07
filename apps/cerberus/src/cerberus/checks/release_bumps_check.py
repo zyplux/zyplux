@@ -137,10 +137,7 @@ def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None
         return
     if changed:
         major, minor, patch = current
-        res.fail(
-            f"{target.label}: surface changed since {latest_tag} but version is still "
-            f"{version} — bump it (e.g. {major}.{minor}.{patch + 1})"
-        )
+        res.fail(f"{target.label}: surface changed since {latest_tag} but version is still {version} — bump it (e.g. {major}.{minor}.{patch + 1})")
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:

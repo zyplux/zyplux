@@ -13,14 +13,10 @@ const labelArgument = argument(string({ metavar: 'LABEL' }), {
   description: message`npm target label to first-publish, e.g. @zyplux/util.`,
 });
 
-export const bootstrapNpmTargetCommand = command(
-  'bootstrap-npm-target',
-  object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }),
-  {
-    aliases: ['bn'],
-    brief: message`First-publish a new npm target with a token so trusted publishing can be enabled afterward.`,
-  },
-);
+export const bootstrapNpmTargetCommand = command('bootstrap-npm-target', object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }), {
+  aliases: ['bn'],
+  brief: message`First-publish a new npm target with a token so trusted publishing can be enabled afterward.`,
+});
 
 type BootstrapNpmTargetConfig = InferValue<typeof bootstrapNpmTargetCommand>;
 
@@ -38,7 +34,5 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
   await publishNpm(target.dir);
-  console.log(
-    `Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
-  );
+  console.log(`Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`);
 };

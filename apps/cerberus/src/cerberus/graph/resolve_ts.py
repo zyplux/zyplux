@@ -77,9 +77,7 @@ def _resolve_alias(specifier: str, package_index: dict[str, PackageInfo], known_
     return candidate if candidate in known_files else None
 
 
-def resolve(
-    file_path: str, specifier: str, known_files: frozenset[str], package_index: dict[str, PackageInfo]
-) -> str | None:
+def resolve(file_path: str, specifier: str, known_files: frozenset[str], package_index: dict[str, PackageInfo]) -> str | None:
     if specifier.startswith(("./", "../")):
         return _resolve_relative(file_path, specifier, known_files)
     return _resolve_alias(specifier, package_index, known_files)

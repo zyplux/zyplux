@@ -208,12 +208,7 @@ def _public_names(source: str) -> set[str] | None:
 def _is_type_checking_test(test: ast.expr) -> bool:
     if isinstance(test, ast.Name):
         return test.id == "TYPE_CHECKING"
-    return (
-        isinstance(test, ast.Attribute)
-        and test.attr == "TYPE_CHECKING"
-        and isinstance(test.value, ast.Name)
-        and test.value.id == "typing"
-    )
+    return isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING" and isinstance(test.value, ast.Name) and test.value.id == "typing"
 
 
 def _type_checking_exempt_ids(tree: ast.AST) -> set[int]:
@@ -299,9 +294,7 @@ class Seam:
             elif isinstance(node, ast.Import):
                 _check_import(res, story_file, node, pkg_seam)
 
-    def _check_import_from(
-        self, res: CheckResult, story_file: str, node: ast.ImportFrom, pkg_seam: _PackageSeam
-    ) -> None:
+    def _check_import_from(self, res: CheckResult, story_file: str, node: ast.ImportFrom, pkg_seam: _PackageSeam) -> None:
         if node.level > 0:
             spec = f"{'.' * node.level}{node.module or ''}"
             res.fail(f"{story_file}: story test imports outside the seam — {spec!r}")
@@ -315,9 +308,7 @@ class Seam:
             return
         self._check_names(res, story_file, pkg_seam, module, node.names)
 
-    def _check_names(
-        self, res: CheckResult, story_file: str, pkg_seam: _PackageSeam, module: str, aliases: list[ast.alias]
-    ) -> None:
+    def _check_names(self, res: CheckResult, story_file: str, pkg_seam: _PackageSeam, module: str, aliases: list[ast.alias]) -> None:
         if pkg_seam.root_dir is None:
             return
         source_path = _module_source_path(pkg_seam.root, pkg_seam.root_dir, self.paths, module)

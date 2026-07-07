@@ -27,23 +27,16 @@ _ENTRY_EXPORTS_WRONG_IGNORE = '{"includeEntryExports": true, "ignoreWorkspaces":
 _ENTRY_EXPORTS_STRAY_KEY = '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "extra": true}'
 _ENTRY_EXPORTS_MISSING_OVERRIDE = _ENTRY_EXPORTS_OK
 _ENTRY_EXPORTS_EXTRA_OVERRIDE = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/other": {"includeEntryExports": false}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": {"packages/other": {"includeEntryExports": false}}}'
 )
 _ENTRY_EXPORTS_CORRECT_WITH_TARGET = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/lib": {"includeEntryExports": false}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": {"packages/lib": {"includeEntryExports": false}}}'
 )
 _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
 )
-_ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": []}'
-)
-_ENTRY_EXPORTS_ZYPLUX = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["podman", "uv"]}'
-)
+_ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT = '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": []}'
+_ENTRY_EXPORTS_ZYPLUX = '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["podman", "uv"]}'
 
 _RELEASE_TARGETS_ONE_NPM = (
     "[[target]]\n"
@@ -63,16 +56,11 @@ _RELEASE_TARGETS_MIXED_KINDS = (
     'surface = ["tool"]\n'
 )
 
-_OK = (
-    "knip.json (if any) matches the repo's allowlisted config; "
-    "knip.prod.json exactly exempts every published npm target"
-)
+_OK = "knip.json (if any) matches the repo's allowlisted config; knip.prod.json exactly exempts every published npm target"
 
 
 @pytest.fixture
-def run_knip_config(
-    ctx: Context, run_check: RunCheck, repo_class: type[Repo], monkeypatch: pytest.MonkeyPatch
-) -> RunKnipConfig:
+def run_knip_config(ctx: Context, run_check: RunCheck, repo_class: type[Repo], monkeypatch: pytest.MonkeyPatch) -> RunKnipConfig:
     def _run(files: dict[str, str], *, repo_name: str = "demo") -> CheckResult:
         repo = repo_class(repo_name)
         monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(files))
@@ -82,9 +70,7 @@ def run_knip_config(
     return _run
 
 
-def test_27_1_1_skips_repos_with_no_package_json(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_1_1_skips_repos_with_no_package_json(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({})
     assert result.findings == [finding(status.SKIP, "no package.json")]
 
@@ -95,24 +81,17 @@ def test_27_1_2_errors_when_package_json_cannot_be_parsed(run_knip_config: RunKn
     assert result.findings[0].message.startswith("could not parse package.json:")
 
 
-def test_27_1_3_errors_when_package_json_is_not_an_object(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_1_3_errors_when_package_json_is_not_an_object(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({"package.json": "[]"})
     assert result.findings == [finding(status.ERROR, "package.json must be a JSON object")]
 
 
-def test_27_2_1_fails_when_package_json_has_an_inline_knip_key(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_2_1_fails_when_package_json_has_an_inline_knip_key(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_INLINE_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_OK,
     })
-    assert (
-        finding(status.FAIL, 'package.json must not have a "knip" key; move its content to a standalone knip.json')
-        in result.findings
-    )
+    assert finding(status.FAIL, 'package.json must not have a "knip" key; move its content to a standalone knip.json') in result.findings
 
 
 def test_27_3_1_fails_when_knip_json_is_present_but_the_repo_has_no_allowlisted_config(
@@ -123,10 +102,7 @@ def test_27_3_1_fails_when_knip_json_is_present_but_the_repo_has_no_allowlisted_
         "knip.json": _BASE_WRONG,
         "knip.prod.json": _ENTRY_EXPORTS_OK,
     })
-    assert (
-        finding(status.FAIL, "knip.json present but demo has no allowlisted customization; remove it or allowlist it")
-        in result.findings
-    )
+    assert finding(status.FAIL, "knip.json present but demo has no allowlisted customization; remove it or allowlist it") in result.findings
 
 
 def test_27_3_2_fails_when_knip_json_does_not_match_the_repos_allowlisted_config(
@@ -177,9 +153,7 @@ def test_27_3_5_errors_when_knip_json_cannot_be_parsed(run_knip_config: RunKnipC
     assert result.findings[0].message.startswith("could not parse knip.json:")
 
 
-def test_27_3_6_errors_when_knip_json_is_not_an_object(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_3_6_errors_when_knip_json_is_not_an_object(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.json": "[]",
@@ -188,18 +162,12 @@ def test_27_3_6_errors_when_knip_json_is_not_an_object(
     assert finding(status.ERROR, "knip.json must be a JSON object") in result.findings
 
 
-def test_27_4_1_fails_when_knip_prod_json_is_missing(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_1_fails_when_knip_prod_json_is_missing(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({"package.json": _PKG_NO_KNIP})
-    assert result.findings == [
-        finding(status.FAIL, "no knip.prod.json at repo root — needed to catch dead/test-only exports")
-    ]
+    assert result.findings == [finding(status.FAIL, "no knip.prod.json at repo root — needed to catch dead/test-only exports")]
 
 
-def test_27_4_2_fails_when_include_entry_exports_is_not_true(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_2_fails_when_include_entry_exports_is_not_true(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_NOT_TRUE,
@@ -217,9 +185,7 @@ def test_27_4_3_fails_when_ignore_workspaces_does_not_match_the_test_harness_glo
     assert finding(status.FAIL, 'knip.prod.json must set "ignoreWorkspaces": ["tests/*"]') in result.findings
 
 
-def test_27_4_4_fails_and_names_an_unexpected_top_level_key(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_4_fails_and_names_an_unexpected_top_level_key(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_STRAY_KEY,
@@ -227,31 +193,21 @@ def test_27_4_4_fails_and_names_an_unexpected_top_level_key(
     assert finding(status.FAIL, "knip.prod.json has unexpected key(s): extra") in result.findings
 
 
-def test_27_4_5_fails_and_names_a_published_target_missing_its_exemption(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_5_fails_and_names_a_published_target_missing_its_exemption(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_MISSING_OVERRIDE,
         "release-targets.toml": _RELEASE_TARGETS_ONE_NPM,
     })
-    assert (
-        finding(status.FAIL, "knip.prod.json workspaces must exempt published target(s): packages/lib")
-        in result.findings
-    )
+    assert finding(status.FAIL, "knip.prod.json workspaces must exempt published target(s): packages/lib") in result.findings
 
 
-def test_27_4_6_fails_and_names_a_non_published_dir_wrongly_exempted(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_6_fails_and_names_a_non_published_dir_wrongly_exempted(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_EXTRA_OVERRIDE,
     })
-    assert (
-        finding(status.FAIL, "knip.prod.json workspaces exempts non-published dir(s): packages/other")
-        in result.findings
-    )
+    assert finding(status.FAIL, "knip.prod.json workspaces exempts non-published dir(s): packages/other") in result.findings
 
 
 def test_27_4_7_passes_when_every_published_npm_target_is_exempted_and_nothing_else_is(
@@ -275,9 +231,7 @@ def test_27_4_8_passes_with_no_release_targets_toml_and_no_workspace_exemptions(
     assert result.findings == [finding(status.PASS, _OK)]
 
 
-def test_27_4_9_errors_when_knip_prod_json_cannot_be_parsed(
-    run_knip_config: RunKnipConfig, status: type[Status]
-) -> None:
+def test_27_4_9_errors_when_knip_prod_json_cannot_be_parsed(run_knip_config: RunKnipConfig, status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": "{unterminated",
@@ -286,9 +240,7 @@ def test_27_4_9_errors_when_knip_prod_json_cannot_be_parsed(
     assert result.findings[0].message.startswith("could not parse knip.prod.json:")
 
 
-def test_27_4_10_errors_when_knip_prod_json_is_not_an_object(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_10_errors_when_knip_prod_json_is_not_an_object(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": "[]",
@@ -357,9 +309,7 @@ def test_27_4_15_passes_when_the_prod_config_repeats_the_repos_allowlisted_base_
     assert result.findings == [finding(status.PASS, _OK)]
 
 
-def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY,
@@ -374,9 +324,7 @@ def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(
     )
 
 
-def test_27_4_17_fails_when_the_workspaces_key_is_not_an_object(
-    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
-) -> None:
+def test_27_4_17_fails_when_the_workspaces_key_is_not_an_object(run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.prod.json": _ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT,

@@ -100,9 +100,7 @@ def test_2_2_2_resources_run_in_topological_order(recipe: RecipeBuilder, termina
 # 2.3 Set shared defaults across a section's entries
 
 
-def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(
-    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
-) -> None:
+def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
     """Section-level scalar/list keys become defaults; a list entry **extends** the shared list, while a scalar entry **overrides** the default."""
     shared = tmp_path / "shared.desktop"
     shared.write_text("[Desktop Entry]\nExec=/usr/bin/shared %U\n")
@@ -153,9 +151,7 @@ def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe: 
 # 2.5 Declare when a temporary entry expires
 
 
-def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
-) -> None:
+def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) the run is silent about it; once it exits 0 the `remove_how` instruction lands in the Action required block labeled with the node, on every run until the entry is deleted."""
     recipe.declares(
         "bash",

@@ -117,10 +117,7 @@ export const collectDepRepos = async (dir: string): Promise<DepReposReport> => {
   const scan = await collectDepsNames(dir);
   const excluded = scan.localRepos;
 
-  const refs: PackageRef[] = [
-    ...scan.npm.map(name => ({ name, system: 'npm' as const })),
-    ...scan.pypi.map(name => ({ name, system: 'pypi' as const })),
-  ];
+  const refs: PackageRef[] = [...scan.npm.map(name => ({ name, system: 'npm' as const })), ...scan.pypi.map(name => ({ name, system: 'pypi' as const }))];
   const resolved = await mapWithConcurrency(refs, RESOLVE_CONCURRENCY, async ref => ({
     ref,
     repo: await resolveSourceRepo(ref.system, ref.name),

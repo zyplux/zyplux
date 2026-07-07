@@ -30,13 +30,7 @@ describe('2.1 loading release targets from the manifest', () => {
     }
   });
 
-  test('2.1.2 reads each target version from its json and regex sources', async ({
-    cz,
-    findTarget,
-    logs,
-    registries,
-    repo,
-  }) => {
+  test('2.1.2 reads each target version from its json and regex sources', async ({ cz, findTarget, logs, registries, repo }) => {
     repo.syncMain('sha-head');
     registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
     const util = await findTarget('@zyplux/util');
@@ -60,14 +54,7 @@ describe('2.2 reading a version whose regex does not match its source file', () 
 });
 
 describe('2.3 checking whether the ghcr image target is published', () => {
-  test('2.3.1 treats a failed registry auth handshake as not published', async ({
-    cz,
-    findTarget,
-    logs,
-    network,
-    repo,
-    shell,
-  }) => {
+  test('2.3.1 treats a failed registry auth handshake as not published', async ({ cz, findTarget, logs, network, repo, shell }) => {
     repo.syncMain('sha-head');
     network.on('https://ghcr.io/token', () => notFoundResponse());
     network.otherwise(() => okResponse());
@@ -76,9 +63,7 @@ describe('2.3 checking whether the ghcr image target is published', () => {
 
     await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-    expect(logs.logLines).toContain(
-      `Skipping ghcr.io/zyplux/ci ${ci.version} (release ci-image-v${ci.version} already exists)`,
-    );
+    expect(logs.logLines).toContain(`Skipping ghcr.io/zyplux/ci ${ci.version} (release ci-image-v${ci.version} already exists)`);
     expect(logs.logLines).not.toContain(`Skipping ghcr.io/zyplux/ci ${ci.version} (already published)`);
   });
 });

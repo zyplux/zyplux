@@ -28,9 +28,7 @@ def _resolve_targets(
     if path.endswith(".py"):
         targets = (resolve_python.resolve(path, ref, known_files) for ref in extracted.py_imports)
     else:
-        targets = (
-            resolve_ts.resolve(path, specifier, known_files, package_index) for specifier in extracted.ts_specifiers
-        )
+        targets = (resolve_ts.resolve(path, specifier, known_files, package_index) for specifier in extracted.ts_specifiers)
     return [target for target in targets if target is not None]
 
 

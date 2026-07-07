@@ -69,10 +69,7 @@ const BENIGN_WRITE_COMMANDS = [
   'git push',
 ];
 
-const VersionSourceSchema = z.union([
-  z.object({ file: z.string(), json: z.string() }),
-  z.object({ file: z.string(), regex: z.string() }),
-]);
+const VersionSourceSchema = z.union([z.object({ file: z.string(), json: z.string() }), z.object({ file: z.string(), regex: z.string() })]);
 
 const TargetEntrySchema = z.object({ label: z.string(), version: VersionSourceSchema });
 const TargetManifestSchema = z.object({ target: z.array(TargetEntrySchema) });
@@ -164,11 +161,7 @@ const createRepo = (shell: ShellFake) => {
     setRemoteBranchSha: (branch, ...shas) => {
       const [firstSha, ...laterShas] = shas;
       const toRefLine = (sha: string) => `${sha}\trefs/heads/${branch}`;
-      shell.on(
-        `git ls-remote origin refs/heads/${branch}`,
-        toRefLine(firstSha),
-        ...laterShas.map(sha => toRefLine(sha)),
-      );
+      shell.on(`git ls-remote origin refs/heads/${branch}`, toRefLine(firstSha), ...laterShas.map(sha => toRefLine(sha)));
     },
     setRemoteMainSha,
     setRepoSlug: slug => {

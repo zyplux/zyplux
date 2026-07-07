@@ -43,8 +43,7 @@ export const noIdentityCast = createRule({
   defaultOptions: [],
   meta: {
     docs: {
-      description:
-        'Disallow concrete-typed identity functions (`(x: T) => x`) — a type assertion in disguise; make a genuine pass-through generic instead.',
+      description: 'Disallow concrete-typed identity functions (`(x: T) => x`) — a type assertion in disguise; make a genuine pass-through generic instead.',
     },
     messages: {
       noIdentityCast:
