@@ -1,4 +1,7 @@
-"""User stories §11 — Managing dotfiles with chezmoi. One test per §11 criterion on the real chef in-process; only system boundaries (bash, network, host, home) are faked."""
+(
+    """User stories §11 — Managing dotfiles with chezmoi. """
+    """One test per §11 criterion on the real chef in-process; only system boundaries (bash, network, host, home) are faked."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -16,6 +19,7 @@ def test_11_1_1_chezmoi_clones_the_repo_into_the_source_dir(
     recipe: RecipeBuilder, system: FakeSystem, terminal: FakeTerminal, totchef: Totchef, chezmoi_cook: Path
 ) -> None:
     """`[chezmoi]` with a repo clones it into the source dir (`chezmoi init`) and never writes into $HOME — the flow is one-way, $HOME → repo."""
+    del chezmoi_cook
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
 
@@ -26,14 +30,18 @@ def test_11_1_1_chezmoi_clones_the_repo_into_the_source_dir(
 
 
 def test_11_1_2_source_dir_is_configurable_and_written_to_chezmoi_config(
-    recipe: RecipeBuilder,
     system: FakeSystem,
     terminal: FakeTerminal,
     totchef: Totchef,
     home: Path,
     chezmoi_cook: Path,
 ) -> None:
-    """`source_dir` is passed to chezmoi (`--source`) and persisted as `sourceDir` (with a pinned `umask`) in ~/.config/chezmoi/chezmoi.toml so bare chezmoi commands agree and applied modes are deterministic."""
+    (
+        """`source_dir` is passed to chezmoi (`--source`) and persisted as `sourceDir` (with a pinned `umask`) in ~/.config/chezmoi/chezmoi.toml """
+        """so bare chezmoi commands agree and applied modes are deterministic."""
+    )
+    del chezmoi_cook
+    recipe = totchef.recipe
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git", source_dir="~/dotfiles")
 
@@ -46,7 +54,6 @@ def test_11_1_2_source_dir_is_configurable_and_written_to_chezmoi_config(
 
 
 def test_11_1_3_chezmoi_is_idempotent_once_provisioned(
-    recipe: RecipeBuilder,
     system: FakeSystem,
     terminal: FakeTerminal,
     totchef: Totchef,
@@ -54,6 +61,8 @@ def test_11_1_3_chezmoi_is_idempotent_once_provisioned(
     chezmoi_cook: Path,
 ) -> None:
     """A re-run is a no-op once the source is cloned, the config matches, and the capture timer is enabled: unchanged, no init or capture setup."""
+    del chezmoi_cook
+    recipe = totchef.recipe
     system.has("chezmoi")
     (home / ".local/share/chezmoi/.git").mkdir(parents=True)
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
@@ -82,6 +91,7 @@ def test_11_2_1_chezmoi_is_user_scoped_not_root(cli: Cli, chezmoi_repo: Path, mo
 
 def test_11_2_2_chezmoi_without_the_binary_fails_clearly(recipe: RecipeBuilder, totchef: Totchef, chezmoi_cook: Path) -> None:
     """With no chezmoi binary on PATH (the [url.chezmoi] installer hasn't run), the resource hard-fails naming the section that must run first."""
+    del chezmoi_cook
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
 
     report = totchef.up()
@@ -96,7 +106,11 @@ def test_11_2_2_chezmoi_without_the_binary_fails_clearly(recipe: RecipeBuilder, 
 def test_11_3_1_auto_commit_and_push_are_on_and_written_to_chezmoi_git_config(
     recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path
 ) -> None:
-    """The cook persists `autoCommit`/`autoPush` to the [git] section of chezmoi's config so the scheduled `chezmoi re-add` commits the captured changes and pushes them on its own."""
+    (
+        """The cook persists `autoCommit`/`autoPush` to the [git] section of chezmoi's config """
+        """so the scheduled `chezmoi re-add` commits the captured changes and pushes them on its own."""
+    )
+    del chezmoi_cook
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
 
@@ -109,14 +123,18 @@ def test_11_3_1_auto_commit_and_push_are_on_and_written_to_chezmoi_git_config(
 
 
 def test_11_3_2_capture_units_install_and_the_timer_is_enabled(
-    recipe: RecipeBuilder,
     system: FakeSystem,
     terminal: FakeTerminal,
     totchef: Totchef,
     home: Path,
     chezmoi_cook: Path,
 ) -> None:
-    """The cook installs the generated systemd *user* units into ~/.config/systemd/user and enables the timer by writing its timers.target.wants symlink (no session bus needed), then starts it."""
+    (
+        """The cook installs the generated systemd *user* units into ~/.config/systemd/user and enables the timer by writing its timers.target.wants """
+        """symlink (no session bus needed), then starts it."""
+    )
+    del chezmoi_cook
+    recipe = totchef.recipe
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
 
@@ -130,7 +148,6 @@ def test_11_3_2_capture_units_install_and_the_timer_is_enabled(
 
 
 def test_11_3_3_capture_is_idempotent_once_enabled(
-    recipe: RecipeBuilder,
     system: FakeSystem,
     terminal: FakeTerminal,
     totchef: Totchef,
@@ -138,6 +155,8 @@ def test_11_3_3_capture_is_idempotent_once_enabled(
     chezmoi_cook: Path,
 ) -> None:
     """With the units installed and the timer enabled, a re-run shows unchanged: it neither rewrites the units nor re-runs `systemctl start`."""
+    del chezmoi_cook
+    recipe = totchef.recipe
     system.has("chezmoi")
     (home / ".local/share/chezmoi/.git").mkdir(parents=True)
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
@@ -154,6 +173,7 @@ def test_11_3_3_capture_is_idempotent_once_enabled(
 
 def test_11_3_4_timer_cadence_comes_from_timer_min(recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path) -> None:
     """`timer_min` sets the timer's OnUnitActiveSec, so the operator tunes how often $HOME is captured."""
+    del chezmoi_cook
     system.has("chezmoi")
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git", timer_min=60)
 
@@ -165,6 +185,7 @@ def test_11_3_4_timer_cadence_comes_from_timer_min(recipe: RecipeBuilder, system
 
 def test_11_3_5_timer_min_must_be_positive(recipe: RecipeBuilder, totchef: Totchef, chezmoi_cook: Path) -> None:
     """`timer_min` must be a positive number of minutes; 0 (or negative) is rejected at lint, since a zero-interval timer is invalid."""
+    del chezmoi_cook
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git", timer_min=0)
 
     totchef.lint().assert_rejected("timer_min")
