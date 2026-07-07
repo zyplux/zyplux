@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus.model import Repo
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from cerberus.context import Context
-    from cerberus.model import CheckResult, Finding, Status
+    from cerberus.model import CheckResult, Finding, Repo, Status
 
 type RunCheck = Callable[[str, Repo, Context], CheckResult]
 type RunKnipConfig = Callable[..., CheckResult]
@@ -64,9 +63,11 @@ _OK = (
 
 
 @pytest.fixture
-def run_knip_config(ctx: Context, run_check: RunCheck, monkeypatch: pytest.MonkeyPatch) -> RunKnipConfig:
+def run_knip_config(
+    ctx: Context, run_check: RunCheck, repo_class: type[Repo], monkeypatch: pytest.MonkeyPatch
+) -> RunKnipConfig:
     def _run(files: dict[str, str], *, repo_name: str = "demo") -> CheckResult:
-        repo = Repo(repo_name)
+        repo = repo_class(repo_name)
         monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(files))
         monkeypatch.setattr(ctx, "file", lambda _repo, path: files.get(path))
         return run_check(CHECK_ID, repo, ctx)

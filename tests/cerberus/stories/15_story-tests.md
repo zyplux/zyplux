@@ -46,6 +46,8 @@
 
 ### 15.4.4 flags a criterion filed under the wrong section doc
 
+### 15.4.5 does not flag titles that differ only by punctuation or case
+
 ## 15.5 keeping a story doc title linked to its test file
 
 ### 15.5.1 flags a stale header link
