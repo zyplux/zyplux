@@ -9,6 +9,9 @@ if TYPE_CHECKING:
     from act_fixtures import Cli, Totchef
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
+PRIVATE_FILE_MODE = 0o600
+EXECUTABLE_MODE = 0o755
+
 # 5.1 Add third-party apt repositories securely
 
 
@@ -90,16 +93,13 @@ def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(recipe: 
 
 
 def test_5_1_5_relative_urls_resolve_against_the_repo_url(
-    recipe: RecipeBuilder,
-    scenario: Callable[[], RecipeBuilder],
-    chef: Callable[[RecipeBuilder], Totchef],
     apt_keyrings_dir: Path,
     apt_sources_dir: Path,
     http: FakeHttp,
     totchef: Totchef,
 ) -> None:
-    """Relative `key_url`/`uris` — or an omitted `uris` — resolve against `url` (scheme optional, https assumed); the files keep the entry's name; a relative URL without `url` is rejected."""
-    recipe.declares("apt_repo", "vendor", url="vendor.example/apt", key_url="key.gpg")
+    """Relative `key_url`/`uris` resolve against `url` (scheme optional, https assumed) and keep the entry's name; without `url`, a relative URL is rejected."""
+    totchef.recipe.declares("apt_repo", "vendor", url="vendor.example/apt", key_url="key.gpg")
     http.arrange("https://vendor.example/apt/key.gpg", "raw-key")
 
     totchef.up().assert_succeeded()
@@ -110,12 +110,12 @@ def test_5_1_5_relative_urls_resolve_against_the_repo_url(
     assert "URIs: https://vendor.example/apt" in sources_text
     assert f"Signed-By: {keyring}" in sources_text
 
-    baseless = scenario().declares("apt_repo", "vendor", key_url="key.gpg")
-    chef(baseless).lint().assert_rejected("set `url` or absolute URLs")
+    totchef.recipe.declares("apt_repo", "vendor", key_url="key.gpg")  # same entry, now with no `url` to resolve against
+    totchef.lint().assert_rejected("set `url` or absolute URLs")
 
 
 def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef, tmp_path: Path) -> None:
-    """`pin_priority` writes `/etc/apt/preferences.d/<name>.pref` pinning the repo's origin host (derived from `uris`) to that priority, so a package it ships can outrank the Ubuntu-archive pin; the repo counts as configured only once that pref also exists."""
+    """`pin_priority` writes a preferences.d pin for the repo's origin host, outranking the Ubuntu-archive pin; configured only once that pref also exists."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
     prefs = tmp_path / "vendor.pref"
@@ -146,24 +146,22 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe: RecipeBui
 
 
 def test_5_2_1_file_writes_from_content_or_bundled_source_with_mode(
-    recipe: RecipeBuilder,
     scenario: Callable[[], RecipeBuilder],
     chef: Callable[[RecipeBuilder], Totchef],
     bundled_files: Path,
     totchef: Totchef,
-    tmp_path: Path,
 ) -> None:
     """`[file.<name>]` writes from inline content or a bundled source asset beside the recipe with a mode; setting both is rejected."""
     (bundled_files / "asset.txt").write_text("bundled-bytes\n")
-    inline = tmp_path / "drop.conf"
-    copied = tmp_path / "copied.txt"
-    recipe.declares("file", "drop", path=str(inline), content="X=1\n", mode="0600")
-    recipe.declares("file", "script", path=str(copied), source="asset.txt")
+    inline = totchef.workdir / "drop.conf"
+    copied = totchef.workdir / "copied.txt"
+    totchef.recipe.declares("file", "drop", path=str(inline), content="X=1\n", mode="0600")
+    totchef.recipe.declares("file", "script", path=str(copied), source="asset.txt")
 
     totchef.up().assert_succeeded()
 
     assert inline.read_text() == "X=1\n"
-    assert (inline.stat().st_mode & 0o777) == 0o600
+    assert (inline.stat().st_mode & 0o777) == PRIVATE_FILE_MODE
     assert copied.read_text() == "bundled-bytes\n"  # copied verbatim from the bundled asset
 
     both = scenario().declares("file", "x", path=str(inline), content="a", source="asset.txt")
@@ -203,7 +201,7 @@ def test_5_2_4_file_path_expands_tilde_for_per_user_installs(recipe: RecipeBuild
 
     installed = home / ".local/bin/tool"
     assert installed.read_text() == "#!/usr/bin/env python3\n"
-    assert (installed.stat().st_mode & 0o777) == 0o755
+    assert (installed.stat().st_mode & 0o777) == EXECUTABLE_MODE
 
 
 def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe: RecipeBuilder, totchef: Totchef, cli: Cli, tmp_path: Path) -> None:
@@ -223,17 +221,15 @@ def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe: RecipeBuilder, 
 
 
 def test_5_2_6_source_defaults_to_the_bundled_file_named_after_the_entry(
-    recipe: RecipeBuilder,
     scenario: Callable[[], RecipeBuilder],
     chef: Callable[[RecipeBuilder], Totchef],
     bundled_files: Path,
     totchef: Totchef,
-    tmp_path: Path,
 ) -> None:
-    """With neither `content` nor `source`, the entry installs the unique bundled file whose stem matches the entry name; zero or several matches fail lint asking for an explicit `source`."""
+    """With neither `content` nor `source`, the entry installs the bundled file named after it; ambiguous or missing matches fail lint, asking for `source`."""
     (bundled_files / "motd.txt").write_text("welcome\n")
-    target = tmp_path / "motd"
-    recipe.declares("file", "motd", path=str(target))
+    target = totchef.workdir / "motd"
+    totchef.recipe.declares("file", "motd", path=str(target))
 
     totchef.up().assert_shows("file.motd", "applied")
     assert target.read_text() == "welcome\n"
@@ -302,7 +298,7 @@ def test_5_3_4_bash_is_privilege_agnostic_root_per_entry(recipe: RecipeBuilder, 
 def test_5_4_1_usr_local_bin_and_local_bin_install_command_named_after_source_stem(
     recipe: RecipeBuilder, home: Path, usr_local_bin_dir: Path, bundled_files: Path, totchef: Totchef
 ) -> None:
-    """`[usr_local_bin.<name>]` installs a bundled script to /usr/local/bin and `[local_bin.<name>]` to ~/.local/bin — mode 0755, command named after the source stem, only `source` declared."""
+    """`[usr_local_bin.<name>]` installs a bundled script to /usr/local/bin, `[local_bin.<name>]` to ~/.local/bin — mode 0755, named after the source stem."""
     command = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo usage;; esac\n'
     (bundled_files / "write-if-changed.py").write_text(command)
     (bundled_files / "ctop.py").write_text(command)
@@ -315,12 +311,12 @@ def test_5_4_1_usr_local_bin_and_local_bin_install_command_named_after_source_st
     user_command = home / ".local/bin/ctop"
     assert system_command.read_text().startswith("#!")  # the bundled asset, copied verbatim
     assert user_command.read_text().startswith("#!")
-    assert (system_command.stat().st_mode & 0o777) == 0o755
-    assert (user_command.stat().st_mode & 0o777) == 0o755
+    assert (system_command.stat().st_mode & 0o777) == EXECUTABLE_MODE
+    assert (user_command.stat().st_mode & 0o777) == EXECUTABLE_MODE
 
 
 def test_5_4_2_version_decides_the_update_not_content(recipe: RecipeBuilder, home: Path, bundled_files: Path, totchef: Totchef) -> None:
-    """The diff key is the command's embedded `__version__`: an older install is rewritten, equal versions leave differing bytes alone, and the report columns carry the versions."""
+    """The diff key is the embedded `__version__`: an older install is rewritten; equal versions leave differing bytes alone; the report carries them."""
     bash_tool = '#!/bin/bash\n__version__="2.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: tool";; esac\n'
     (bundled_files / "tool.sh").write_text(bash_tool)
     installed = home / ".local/bin/tool"
@@ -375,7 +371,7 @@ def test_5_4_5_source_defaults_to_the_bundled_command_named_after_the_entry(reci
 def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(
     recipe: RecipeBuilder, usr_local_sbin_dir: Path, bundled_files: Path, totchef: Totchef, cli: Cli
 ) -> None:
-    """`[usr_local_sbin.<name>]` installs to /usr/local/sbin — admin and daemon helpers, outside ordinary users' PATH — always as root, under the same version contract."""
+    """`[usr_local_sbin.<name>]` installs to /usr/local/sbin — admin/daemon helpers outside ordinary PATH — always as root, under the same version contract."""
     helper = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: helper";; esac\n'
     (bundled_files / "helper.sh").write_text(helper)
     recipe.declares("usr_local_sbin", "helper")
@@ -384,7 +380,7 @@ def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(
 
     installed = usr_local_sbin_dir / "helper"
     assert installed.read_text() == helper
-    assert (installed.stat().st_mode & 0o777) == 0o755
+    assert (installed.stat().st_mode & 0o777) == EXECUTABLE_MODE
     cli.run("--list-cooks").assert_lists("usr_local_sbin", scope="root")
 
 
@@ -392,7 +388,7 @@ def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(
 
 
 def test_5_5_1_conf_replaces_matching_lines_in_place_and_appends_missing_ones(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
-    """`[conf.<name>]` keys each declared line on the text before `=` (the whole line when there is none): a line with the same key is replaced in place, a missing one is appended, and every other line — comments included — is left untouched."""
+    """`[conf.<name>]` keys each line on the text before `=`: a matching key is replaced in place, a missing one appended, other lines left untouched."""
     target = tmp_path / "nala.conf"
     target.write_text("[Nala]\n# full_upgrade = true is what we want\nfull_upgrade = false\nassume_yes = false\n")
     recipe.declares("conf", "nala", target=str(target), lines=["[Nala]", "full_upgrade = true", "update_show_packages = true"])

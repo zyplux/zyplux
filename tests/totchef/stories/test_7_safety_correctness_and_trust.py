@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
-    from typing import Any, NoReturn
+    from typing import NoReturn
 
     import pytest
     from act_fixtures import Cli, Totchef
@@ -19,13 +19,13 @@ GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version t
 
 
 def test_7_1_1_cooks_probe_and_act_only_on_the_difference(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem, tmp_path: Path
+    terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
     """Versioned cooks skip up-to-date packages; state cooks skip resources whose content hash already matches."""
-    already = tmp_path / "already.conf"
+    already = totchef.workdir / "already.conf"
     already.write_text("A\n")
-    recipe.declares("cargo", packages=["ripgrep"])
-    recipe.declares("file", "f", path=str(already), content="A\n")
+    totchef.recipe.declares("cargo", packages=["ripgrep"])
+    totchef.recipe.declares("file", "f", path=str(already), content="A\n")
     system.has("cargo", "cargo-binstall")
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
     terminal.arrange("cargo install --list", "ripgrep v14.1.1:\n    rg\n")
@@ -88,7 +88,8 @@ def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(cli: Cli, monkeypat
 
     assert escalation["target"] == "sudo"  # re-execs under sudo
     preserve = next(arg for arg in escalation["argv"] if arg.startswith("--preserve-env="))
-    assert "TOTCHEF_RECIPE" in preserve and "LOG" in preserve  # recipe and log file pinned across the boundary
+    assert "TOTCHEF_RECIPE" in preserve  # recipe pinned across the boundary
+    assert "LOG" in preserve  # log file pinned across the boundary
     cli.run("where").assert_prints(str(recipe_path))  # the pinned recipe is what a fresh resolution now finds
 
 
@@ -104,11 +105,9 @@ def test_7_3_2_forked_child_drops_privilege_for_user_nodes(apply_in_container: C
     assert run.owners["/home/tester/by-root.txt"] == "root", run.transcript  # needs_root kept root
 
 
-def test_7_3_3_plan_and_lint_never_escalate(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
     """plan and lint never escalate."""
-    recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook
+    totchef.recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook
     terminal.arrange("apt-cache policy git", GIT_NEEDS_INSTALL)
 
     totchef.plan().assert_shows("apt_pkg.git", "would install")
@@ -121,10 +120,10 @@ def test_7_3_3_plan_and_lint_never_escalate(
     escalations: list[tuple[str, list[str]]] = []
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
-    monkeypatch.setattr("totchef.cli.run_recipe", lambda config, dry_run: {})  # don't fork real cooks in-process
-    monkeypatch.setattr("totchef.cli.start_logging", lambda echo_to_terminal=True: tmp_path / "log")
+    monkeypatch.setattr("totchef.cli.run_recipe", lambda _config, _dry_run: {})  # don't fork real cooks in-process
+    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: totchef.workdir / "log")
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
-    recipe_path = tmp_path / "recipe.toml"
+    recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
 
     cli.run("plan", "--recipe", str(recipe_path))
@@ -134,13 +133,13 @@ def test_7_3_3_plan_and_lint_never_escalate(
 
 
 def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """A frozen single-file binary is invoked by bare name on PATH (argv[0] == "totchef"), but sudo's secure_path can't find a bare name. The re-exec must run the binary by its absolute sys.executable and pass only the user's args (argv[1:]) — never the bare argv[0]."""
+    """A frozen binary's bare argv[0] ("totchef") defeats sudo's secure_path; re-exec must use the absolute sys.executable and only argv[1:]."""
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text('[bash.step]\napply = "true"\n')
     binary = "/home/op/.local/bin/totchef"  # absolute, as PyInstaller resolves sys.executable
     captured: dict[str, list[str]] = {}
 
-    def capture_exec(target: str, argv: list[str]) -> None:
+    def capture_exec(_target: str, argv: list[str]) -> None:
         captured.update(argv=list(argv))
         raise SystemExit(0)  # sudo replaces the process — control never returns
 
@@ -202,11 +201,12 @@ def test_7_4_3_report_names_which_cooks_hard_or_soft_failed(recipe: RecipeBuilde
 
 
 def test_7_4_4_a_crash_outside_any_cook_still_reports_loudly(recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch) -> None:
-    """An unexpected exception after logs are redirected — a totchef bug, not a recipe failure — still exits 1 with the traceback in view, never a silent death."""
+    """An unexpected exception after logs are redirected — a totchef bug, not a recipe failure — still exits 1, traceback in view, never a silent death."""
     recipe.declares("bash", "step", apply="true")
 
-    def explode(config: dict[str, Any], dry_run: bool) -> NoReturn:
-        raise RuntimeError("scheduler bug")
+    def explode(*_args: object, **_kwargs: object) -> NoReturn:
+        msg = "scheduler bug"
+        raise RuntimeError(msg)
 
     monkeypatch.setattr("totchef.cli.run_recipe", explode)
 
