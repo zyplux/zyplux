@@ -87,6 +87,6 @@ class CargoCook(PackageListCook):
                 "cargo-binstall is not on PATH or in ~/.cargo/bin after bootstrap. Check cargo's install root.",
             )
 
-        logger.info(f"Installing/upgrading {len(targets)} crate(s): " + ", ".join(targets))
+        logger.info("Installing/upgrading {count} crate(s): {names}", count=len(targets), names=", ".join(targets))
         shell.stream([str(binstall), "--no-confirm", *targets])
         return SyncOutcome("ok")
