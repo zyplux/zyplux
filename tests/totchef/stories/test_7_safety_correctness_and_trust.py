@@ -24,7 +24,7 @@ class _NullContext:
     def __enter__(self) -> Path:
         return self._value
 
-    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+    def __exit__(self, *exc: object) -> None:
         return None
 
 
