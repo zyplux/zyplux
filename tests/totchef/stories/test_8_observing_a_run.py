@@ -1,11 +1,14 @@
 """User stories §8 — Observing a run. §8.1 report and §8.3.1 log ownership are observed end-to-end; §8.2/§8.3.2-3 scheduler/pump rendering stay white-box."""
 
+import io
 import os
+import re
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from rich.progress import MofNCompleteColumn, TimeElapsedColumn
+from rich.console import Console
+from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -123,10 +126,20 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch: pytest.Monkey
         assert type(bar) is terminal_internals.ProgressHandle  # off-terminal: a no-op handle
         bar.advance()
 
+    live_progresses: list[Progress] = []
+    real_progress = terminal_internals.Progress
+
+    def spy_progress(*args: object, **kwargs: object) -> Progress:
+        """Build the real rich Progress `progress_region` would, keeping a handle on it — rich's Progress is public even where totchef's wrapper isn't."""
+        instance = real_progress(*args, **kwargs)
+        live_progresses.append(instance)
+        return instance
+
+    monkeypatch.setattr(terminal_internals, "Progress", spy_progress)
     monkeypatch.setattr("totchef.terminal.is_interactive", lambda: True)
     with terminal_internals.progress_region("Cooking", total=resource_count) as live:
-        assert isinstance(live, terminal_internals._LiveProgress)  # on a terminal: a live transient bar
-        progress = live._progress
+        assert type(live) is not terminal_internals.ProgressHandle  # on a terminal: a live transient bar, not the no-op handle
+        progress = live_progresses[-1]  # the real rich Progress progress_region built for this run
         column_types = {type(column) for column in progress.columns}
         assert MofNCompleteColumn in column_types  # the bar shows completed/total …
         assert TimeElapsedColumn in column_types  # … and elapsed time
@@ -136,17 +149,24 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch: pytest.Monkey
         assert progress.live.transient is True  # transient ⇒ cleared on exit, leaving the logs above it
 
 
-def test_8_2_2_log_lines_colorized_and_tagged_per_cook(terminal_internals: ModuleType) -> None:
+def test_8_2_2_log_lines_colorized_and_tagged_per_cook(monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType, terminal_internals: ModuleType) -> None:
     """Each cook's log lines are tagged with its name in a stable per-cook color so concurrent output stays readable."""
-    first = terminal_internals._runner_style("url.bun")
-    again = terminal_internals._runner_style("url.bun")
-    other = terminal_internals._runner_style("apt_pkg")
 
-    assert first == again  # stable across one cook's lines
-    assert first != other  # distinct cooks get distinct hues
+    def render(line: str) -> str:
+        """Drive the line through `LINE_SINK`, the pump's real terminal sink, onto a captured console — the same path a pumped line takes."""
+        buffer = io.StringIO()
+        monkeypatch.setattr(terminal_internals, "console", lambda: Console(file=buffer, force_terminal=True, color_system="standard", width=200))
+        log_internals.LINE_SINK(line)
+        return buffer.getvalue()
 
-    colored = terminal_internals._colorize_log_line("[2026-05-27 10:00:00] url.bun                      INFO    Installing")
-    assert "url.bun" in colored.plain  # the runner tag is carried into the rendered line
+    first = render("[2026-05-27 10:00:00] url.bun                      INFO    Installing")
+    again = render("[2026-05-27 10:00:00] url.bun                      INFO    Installing")
+    other = render("[2026-05-27 10:00:00] apt_pkg                      INFO    Installing")
+
+    ansi_codes = re.compile(r"\x1b\[[0-9;]+m")
+    assert ansi_codes.findall(first) == ansi_codes.findall(again)  # stable across one cook's lines
+    assert ansi_codes.findall(first) != ansi_codes.findall(other)  # distinct cooks get distinct hues
+    assert "url.bun" in first  # the runner tag is carried into the rendered line
 
 
 def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks(cook_runner_internals: ModuleType) -> None:
