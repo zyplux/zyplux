@@ -140,42 +140,51 @@ def open_log_file() -> Path:
     return log_file
 
 
-def start_inline_logging() -> Path:
+@contextmanager
+def start_inline_logging() -> Generator[Path]:
     """Inline start: no fd redirect, no pump. Open the log file, re-point loguru at live stderr so logs scroll to the terminal (and get captured by callers)."""
     log_file = open_log_file()
-    log_state.log_handle = Path(log_file).open("a", encoding="utf-8")
-    logger.remove()
-    logger.configure(extra={"runner": DEFAULT_RUNNER})
-    logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
-    return log_file
+    with Path(log_file).open("a", encoding="utf-8") as handle:
+        log_state.log_handle = handle
+        logger.remove()
+        logger.configure(extra={"runner": DEFAULT_RUNNER})
+        logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
+        yield log_file
+    log_state.log_handle = None
 
 
-def start_logging(*, echo_to_terminal: bool = True) -> Path:
+@contextmanager
+def start_logging(*, echo_to_terminal: bool = True) -> Generator[Path]:
     """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe a thread reads); honor SHARED_LOG_ENV or create a file, chowned to SUDO_USER."""
     set_terminal_echo(enabled=echo_to_terminal)
     if inline_mode():
-        return start_inline_logging()
+        with start_inline_logging() as log_file:
+            yield log_file
+        return
     log_file = open_log_file()
 
     if log_state.terminal is None:
         log_state.terminal = os.dup(1)
-    log_state.log_handle = Path(log_file).open("a", encoding="utf-8")
 
-    read_fd, write_fd = os.pipe()
-    log_state.pipe_write = os.dup(write_fd)
-    os.dup2(write_fd, 1)
-    os.dup2(write_fd, 2)
-    os.close(write_fd)
-    threading.Thread(target=_pump, args=(read_fd,), daemon=True).start()
-    # The pump runs alongside cook_runner's forks. Quiesce the file lock across
-    # fork so a child can never inherit it mid-write (cook children never touch
-    # write_log or the rich Console, so those are the only locks at risk).
-    os.register_at_fork(
-        before=LOG_LOCK.acquire,
-        after_in_parent=LOG_LOCK.release,
-        after_in_child=LOG_LOCK.release,
-    )
-    return log_file
+    with Path(log_file).open("a", encoding="utf-8") as handle:
+        log_state.log_handle = handle
+
+        read_fd, write_fd = os.pipe()
+        log_state.pipe_write = os.dup(write_fd)
+        os.dup2(write_fd, 1)
+        os.dup2(write_fd, 2)
+        os.close(write_fd)
+        threading.Thread(target=_pump, args=(read_fd,), daemon=True).start()
+        # The pump runs alongside cook_runner's forks. Quiesce the file lock across
+        # fork so a child can never inherit it mid-write (cook children never touch
+        # write_log or the rich Console, so those are the only locks at risk).
+        os.register_at_fork(
+            before=LOG_LOCK.acquire,
+            after_in_parent=LOG_LOCK.release,
+            after_in_child=LOG_LOCK.release,
+        )
+        yield log_file
+    log_state.log_handle = None
 
 
 def log_toon(rows: Sequence[Mapping[str, object]], note: str = "") -> None:

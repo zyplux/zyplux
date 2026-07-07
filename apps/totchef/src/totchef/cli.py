@@ -142,13 +142,13 @@ def _run_and_report(config: RecipeConfig, log_file: Path, start: float, *, dry_r
     soft = [r.cook for r in results.values() if r.status == "soft_fail"]
     for result in results.values():
         if result.status == "hard_fail" and result.message:
-            logger.error(f"[{result.cook}] {result.message}")
+            logger.error("[{cook}] {message}", cook=result.cook, message=result.message)
     if hard:
-        logger.error(f"=== Hard failures: {', '.join(hard)} — apply aborted; full log: {log_file} ===")
+        logger.error("=== Hard failures: {cooks} — apply aborted; full log: {log_file} ===", cooks=", ".join(hard), log_file=log_file)
         drain_logs()
         return 1
     if soft:
-        logger.warning(f"=== Soft failures: {', '.join(soft)} (scroll back; full log: {log_file}) ===")
+        logger.warning("=== Soft failures: {cooks} (scroll back; full log: {log_file}) ===", cooks=", ".join(soft), log_file=log_file)
         drain_logs()
         return SOFT_FAIL_EXIT
     drain_logs()
@@ -162,21 +162,21 @@ def apply(recipe_path: Path, *, dry_run: bool) -> None:
 
     if not dry_run and not inline_mode():
         ensure_root(recipe_path)
-    log_file = start_logging()
-    logger.info(f"=== totchef {__version__} ===")
-    drain_logs()
-    set_terminal_echo(enabled=not dry_run)
-    start = time.monotonic()
-
-    try:
-        if not dry_run:
-            preview_plan(config)
-        exit_code = _run_and_report(config, log_file, start, dry_run=dry_run)
-    except Exception:
-        set_terminal_echo(enabled=True)
-        logger.exception("=== Crashed outside any cook — a totchef bug, not a recipe failure ===")
+    with start_logging() as log_file:
+        logger.info("=== totchef {version} ===", version=__version__)
         drain_logs()
-        raise typer.Exit(1) from None
+        set_terminal_echo(enabled=not dry_run)
+        start = time.monotonic()
+
+        try:
+            if not dry_run:
+                preview_plan(config)
+            exit_code = _run_and_report(config, log_file, start, dry_run=dry_run)
+        except Exception:
+            set_terminal_echo(enabled=True)
+            logger.exception("=== Crashed outside any cook — a totchef bug, not a recipe failure ===")
+            drain_logs()
+            raise typer.Exit(1) from None
 
     if exit_code is not None:
         raise typer.Exit(exit_code)
