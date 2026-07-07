@@ -1,19 +1,25 @@
-"""Shared contract for totchef cooks: a cook probes and acts but holds no diff logic (chef owns the diff); VersionedCook covers versioned packages, StateCook desired-state resources. See CLAUDE.md."""
+"""Shared contract for totchef cooks: a cook probes and acts (chef owns the diff); VersionedCook covers packages, StateCook desired state."""
 
 import hashlib
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import ClassVar, Literal, cast, override
+from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 
 from pydantic import BaseModel, ConfigDict, ValidationInfo, model_validator
 
-from totchef.recipe_types import RecipeConfig
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from totchef.recipe_types import RecipeConfig
 
 Status = Literal["ok", "soft_fail", "hard_fail"]
 
 
+class RemoveHowWithoutProbeError(ValueError):
+    """`remove_how` was declared without the `remove_when` probe that would ever unlock it."""
+
+
 class EntrySpec(BaseModel):
-    """Base for every cook's recipe-entry schema; `extra='forbid'` fails a typo'd recipe key instead of silently ignoring it. Carries the `pre_hook` guard / `post_hook` pair every cook honors — a versioned cook gates/refreshes the whole section, a state cook gates/refreshes each resource — plus the `remove_when` expiry probe / `remove_how` instruction pair chef surfaces once the probe fires."""
+    """Base for every cook's recipe-entry schema (`extra='forbid'` rejects typos); carries `pre_hook`/`post_hook` and `remove_when`/`remove_how` expiry pair."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -26,17 +32,18 @@ class EntrySpec(BaseModel):
     def validate_remove_how_has_a_condition(self) -> EntrySpec:
         """`remove_how` is the instruction `remove_when` unlocks; without the probe it would never surface."""
         if self.remove_how and not self.remove_when:
-            raise ValueError("`remove_how` has no `remove_when` — declare the probe that makes this entry removable, or drop `remove_how`")
+            failure = "`remove_how` has no `remove_when` — declare the probe that makes this entry removable, or drop `remove_how`"
+            raise RemoveHowWithoutProbeError(failure)
         return self
 
 
 def get_entry_name(info: ValidationInfo) -> str | None:
-    """The recipe entry's name, handed to validation as context by StateCook and schema lint so an entry validator can default fields off it (e.g. an omitted `source`)."""
+    """The recipe entry's name, handed to validation as context by StateCook/schema lint so a validator can default fields off it (e.g. an omitted `source`)."""
     return (info.context or {}).get("entry_name")
 
 
 def chain_hooks(*commands: str | None) -> str | None:
-    """Join present shell commands with `&&` (None if none) so an intrinsic hook composes with a recipe-declared one; a non-zero link short-circuits a pre_hook guard."""
+    """Join present shell commands with `&&` (None if none) so an intrinsic hook composes with a recipe one; a non-zero link short-circuits the guard."""
     present = [command for command in commands if command]
     return " && ".join(present) if present else None
 
@@ -49,7 +56,7 @@ class PackagesConfig(EntrySpec):
 
 @dataclass(frozen=True)
 class SyncOutcome:
-    """Outcome of a VersionedCook.sync (or any cook-level act); expected failures land here as a status, only bugs raise. A `delayed_message` is an operator follow-up (restart the app, reboot) the runner logs live and repeats after the report table."""
+    """Outcome of a VersionedCook.sync; expected failures land as a status, only bugs raise. `delayed_message` is an operator follow-up for after the report."""
 
     status: Status = "ok"
     message: str = ""
@@ -58,7 +65,7 @@ class SyncOutcome:
 
 @dataclass(frozen=True)
 class StateChangeOutcome:
-    """Outcome of a StateCook.apply_resource for one resource. A `delayed_message` is an operator follow-up (restart the app, reboot) the runner logs live and repeats after the report table."""
+    """Outcome of a StateCook.apply_resource; `delayed_message` is an operator follow-up the runner logs live and repeats after the report table."""
 
     changed: bool
     status: Status = "ok"
@@ -68,7 +75,7 @@ class StateChangeOutcome:
 
 @dataclass(frozen=True)
 class ReportRow:
-    """One row of the end-of-run report, assembled by chef. `before`/`current`/`latest` form a past/present/future triple: pre-run state (or `—` in a plan), state right now (post-sync on `up`), upgrade target."""
+    """One end-of-run report row, assembled by chef. `before`/`current`/`latest` are past/present/future: pre-run state, state now, upgrade target."""
 
     name: str
     before: str
@@ -81,7 +88,7 @@ class ReportRow:
 
 @dataclass
 class CookResult:
-    """Everything chef needs from one cook — status, report rows, optional message, the delayed operator follow-ups — pickled back from a forked child, so plain dataclasses only."""
+    """Everything chef needs from one cook — status, rows, message, delayed follow-ups — JSON-encoded back from a forked child, so plain dataclasses only."""
 
     cook: str
     status: Status
@@ -91,7 +98,7 @@ class CookResult:
 
 
 class CookBase:
-    """Base for every cook; an always-root `<section>_root_cook.py` sets `needs_root = True` (else least privilege). `entry_keyed` declares which slice shape the constructor consumes: `{entry_name: fields}` (StateCook, url) or the flat fields dict (package lists)."""
+    """Base for every cook; an always-root `<section>_root_cook.py` sets `needs_root=True`. `entry_keyed` picks the slice shape: by entry, or flat fields."""
 
     needs_root: bool = False
     entry_model: ClassVar[type[EntrySpec] | None] = None
@@ -112,8 +119,9 @@ class VersionedCook(CookBase):
     def unit_count(self) -> int:
         return len(self.list_requested())
 
-    def get_hooks(self) -> tuple[str | None, str | None]:
-        """The section-level (pre_hook, post_hook): the pre_hook gates the whole sync, the post_hook fires once after a change. None unless the cook reads them off its entry_model."""
+    @staticmethod
+    def get_hooks() -> tuple[str | None, str | None]:
+        """The section-level (pre_hook, post_hook); pre_hook gates the sync, post_hook fires after a change. None unless the cook reads them off entry_model."""
         return (None, None)
 
     def list_requested(self) -> list[str]:
@@ -125,8 +133,9 @@ class VersionedCook(CookBase):
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         raise NotImplementedError
 
-    def list_reportable(self, requested: list[str], installed_after: dict[str, str]) -> list[str]:
-        """Row keys for the post-sync report — the requested names by default. A cook whose sync discovers finer-grained items than were requestable up front (skills inside a repo) overrides this to split a requested placeholder into what actually landed."""
+    @staticmethod
+    def list_reportable(requested: list[str], installed_after: dict[str, str]) -> list[str]:
+        """Row keys for the post-sync report — requested names by default. A cook discovering finer items (skills in a repo) overrides this to split them."""
         return requested
 
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
@@ -134,7 +143,7 @@ class VersionedCook(CookBase):
 
 
 class PackageListCook(VersionedCook):
-    """VersionedCook over a plain `packages = [...]` section (cargo, uv, snap, apt_pkg), with a no-op `find_latest` a manager with a cheap candidate (apt) overrides."""
+    """VersionedCook over a plain `packages=[...]` section (cargo, uv, snap, apt_pkg); `find_latest` is a no-op unless a manager (apt) has a cheap candidate."""
 
     entry_model = PackagesConfig
 
@@ -157,15 +166,21 @@ class PackageListCook(VersionedCook):
         return dict.fromkeys(names)
 
 
+class EntryModelNotSetError(TypeError):
+    """A StateCook subclass omitted the `entry_model` class attribute every concrete cook must declare."""
+
+
 class StateCook[EntryModel: EntrySpec](CookBase):
-    """Desired-state cook over a subtable section; the base serves `list_resources` and default `get_hooks`, subclasses implement the get_current_state/get_desired_state/apply_resource diff."""
+    """Desired-state cook over a subtable section; base serves `list_resources`/default `get_hooks`, subclasses implement get/desired_state, apply_resource."""
 
     entry_keyed = True
 
     def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
         model = self.entry_model
-        assert model is not None, f"{type(self).__name__} must set entry_model"
+        if model is None:
+            failure = f"{type(self).__name__} must set entry_model"
+            raise EntryModelNotSetError(failure)
         self.entries: dict[str, EntryModel] = {
             name: cast("EntryModel", model.model_validate(raw, context={"entry_name": name})) for name, raw in section.items()
         }
@@ -188,7 +203,7 @@ class StateCook[EntryModel: EntrySpec](CookBase):
 
 
 class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
-    """A StateCook whose diff is a content hash — sha256 of the on-disk file vs the rendered bytes; subclasses supply `_target_path` and `_render` and keep their own `apply_resource`."""
+    """A StateCook diffing by content hash — sha256 of the file vs rendered bytes; subclasses supply `_target_path`/`_render`, keep their `apply_resource`."""
 
     _unrendered_label = "absent"
 
