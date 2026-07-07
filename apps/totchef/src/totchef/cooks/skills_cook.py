@@ -241,7 +241,7 @@ def bin_paths(package_json: Path) -> list[str]:
     try:
         bin_field = json.loads(package_json.read_text(encoding="utf-8")).get("bin")
     except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(f"could not read {package_json}: {exc}")
+        logger.warning("could not read {package_json}: {exc}", package_json=package_json, exc=exc)
         return []
     if isinstance(bin_field, dict):
         return list(bin_field.values())
@@ -269,7 +269,7 @@ def link_cli_binary(bun: Path, name: str) -> None:
     try:
         shell.stream([str(bun), "link"], note=f"Linking {name} CLI binary", cwd=skill_dir)
     except subprocess.CalledProcessError as exc:
-        logger.warning(f"{name}: could not link CLI binary: {exc}")
+        logger.warning("{name}: could not link CLI binary: {exc}", name=name, exc=exc)
 
 
 class SkillsCook(VersionedCook):
@@ -348,7 +348,7 @@ class SkillsCook(VersionedCook):
         failures: list[str] = []
         changes: dict[str, str] = {}
         if repos:
-            logger.info(f"Installing/refreshing skills from {len(repos)} repo(s): " + ", ".join(repos))
+            logger.info("Installing/refreshing skills from {count} repo(s): {repos}", count=len(repos), repos=", ".join(repos))
             tag_width = max(len(repo) for repo in repos)
             with ThreadPoolExecutor(max_workers=len(repos)) as pool:
                 pending = {pool.submit(self._add_one, bunx, repo, tag_width): repo for repo in repos}
@@ -358,7 +358,7 @@ class SkillsCook(VersionedCook):
                         changes[repo] = future.result()
                     except (subprocess.CalledProcessError, OSError) as exc:
                         failures.append(repo)
-                        logger.error(f"{repo} failed: {exc}")
+                        logger.exception("{repo} failed: {exc}", repo=repo, exc=exc)
 
         for name, info in lockfile_skills().items():
             if info.source in self.repos:
