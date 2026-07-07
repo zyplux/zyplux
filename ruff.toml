@@ -4,6 +4,7 @@ preview = true
 
 [lint]
 select = ["ALL"]
+logger-objects = ["loguru.logger"]
 ignore = [
     "COM812", # the formatter owns trailing commas; the rule fights it
     "ISC001", # the formatter owns implicit string concatenation; the rule fights it
