@@ -4,15 +4,20 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from act_fixtures import Cli, Totchef
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
 # A package's `apt-cache policy` output, before and after installation. Priority 500
 # (a real version-table entry) keeps it out of the "not in any repo" fail-fast path.
-POLICY_ABSENT = "git:\n  Installed: (none)\n  Candidate: 1:2.40-1\n  Version table:\n     1:2.40-1 500\n        500 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages\n"
-POLICY_PRESENT = "git:\n  Installed: 1:2.40-1\n  Candidate: 1:2.40-1\n  Version table:\n *** 1:2.40-1 500\n        500 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages\n"
+POLICY_ABSENT = (
+    "git:\n  Installed: (none)\n  Candidate: 1:2.40-1\n  Version table:\n"
+    "     1:2.40-1 500\n        500 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages\n"
+)
+POLICY_PRESENT = (
+    "git:\n  Installed: 1:2.40-1\n  Candidate: 1:2.40-1\n  Version table:\n"
+    " *** 1:2.40-1 500\n        500 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages\n"
+)
 
 
 # 3.1 Install and upgrade apt packages
@@ -66,7 +71,8 @@ def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(recipe: RecipeBuilde
 
 
 def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
-    """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the `Action required` block."""
+    """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the \
+`Action required` block."""
     recipe.declares("apt_pkg", packages=["git"])
     terminal.arrange("apt-cache policy git", POLICY_ABSENT)
 
@@ -80,10 +86,10 @@ def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe: Rec
     report = totchef.up()
 
     report.assert_logged("System restart required")  # still emitted live during the session
-    block = report.terminal_report.split("Action required", 1)
-    assert len(block) == 2  # the notice survives to the end of the run
-    assert "apt_pkg" in block[1]
-    assert block[1].count("nvidia-driver-580-open") == 1  # the causing packages, deduped
+    assert "Action required" in report.terminal_report  # the notice survives to the end of the run
+    block = report.terminal_report.split("Action required", 1)[1]
+    assert "apt_pkg" in block
+    assert block.count("nvidia-driver-580-open") == 1  # the causing packages, deduped
 
 
 # 3.2 Install and refresh snaps
@@ -297,9 +303,10 @@ def test_3_3_7_url_scheme_defaults_to_https(recipe: RecipeBuilder, terminal: Fak
 
 
 def test_3_3_8_installers_run_from_home_so_relative_bindirs_resolve(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem, home: Path
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """A `curl | bash` installer runs with $HOME as its working directory, so one that defaults to a *relative* bin dir (chezmoi's `.local/bin`) lands under $HOME where `find_binary` looks — not in whatever directory totchef was invoked from."""
+    """A `curl | bash` installer runs with $HOME as its working directory, so one that defaults to a *relative* bin dir (chezmoi's `.local/bin`) lands under \
+$HOME where `find_binary` looks — not in whatever directory totchef was invoked from."""
     recipe.declares("url", "bun", url="https://bun.sh/install")
     http.arrange("bun.sh/install", "#!/bin/bash")
 
@@ -311,4 +318,4 @@ def test_3_3_8_installers_run_from_home_so_relative_bindirs_resolve(
 
     totchef.up().assert_shows("url.bun", "installed")
 
-    assert terminal.cwd_for("bash -s --") == home  # piped to bash from $HOME, not the repo dir
+    assert terminal.cwd_for("bash -s --") == totchef.workdir / "home"  # piped to bash from $HOME, not the repo dir

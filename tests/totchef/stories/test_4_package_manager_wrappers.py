@@ -1,4 +1,5 @@
-"""User stories §4 — Language package-manager wrappers. One test per §4 criterion on the real chef in-process; system boundaries (bash, network, host) are faked, except the §4.3.3 landing-path story which runs in a container."""
+"""User stories §4 — Language package-manager wrappers. One test per §4 criterion on the real chef in-process; system boundaries (bash, network, host) are \
+faked, except the §4.3.3 landing-path story which runs in a container."""
 
 from typing import TYPE_CHECKING
 
@@ -9,6 +10,9 @@ if TYPE_CHECKING:
     from act_fixtures import Totchef
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
     from container_fixtures import ContainerRun
+
+PAIRED_PARTIES = 2
+
 
 # 4.1 Install and update Rust crates
 
@@ -71,7 +75,7 @@ def test_4_1_4_latest_crate_versions_looked_up_concurrently(recipe: RecipeBuilde
     recipe.declares("cargo", packages=["ripgrep", "just"])
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
     http.arrange("crates.io/api/v1/crates/just", '{"crate": {"max_stable_version": "1.40.0"}}')
-    http.expect_concurrent(parties=2)  # both crate lookups must be in flight together, not serialized
+    http.expect_concurrent(parties=PAIRED_PARTIES)  # both crate lookups must be in flight together, not serialized
 
     plan = totchef.plan()
 
@@ -79,11 +83,12 @@ def test_4_1_4_latest_crate_versions_looked_up_concurrently(recipe: RecipeBuilde
     plan.assert_shows("cargo.just", "would install")
     http.expect_fetched("crates.io/api/v1/crates/ripgrep")
     http.expect_fetched("crates.io/api/v1/crates/just")
-    assert http.max_concurrent_requests == 2  # the two crates.io fetches overlapped
+    assert http.max_concurrent_requests == PAIRED_PARTIES  # the two crates.io fetches overlapped
 
 
 def test_4_1_5_latest_version_probes_are_time_bounded(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
-    """Every crates.io probe passes a timeout, so a stalled registry connection fails fast to 'unknown latest' rather than wedging the thread pool and hanging the plan forever."""
+    """Every crates.io probe passes a timeout, so a stalled registry connection fails fast to 'unknown latest' rather than wedging the thread pool and hanging \
+the plan forever."""
     recipe.declares("cargo", packages=["ripgrep"])
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
 
@@ -105,14 +110,14 @@ def test_4_2_1_uv_installs_and_upgrades_each_tool_concurrently(
     http.arrange("pypi.org/pypi/ruff/json", '{"info": {"version": "0.6.0"}}')
     http.arrange("pypi.org/pypi/pyright/json", '{"info": {"version": "1.1.380"}}')
     terminal.arrange("uv tool list", "ruff v0.5.0\n")  # ruff present (upgrade), pyright absent (install)
-    terminal.expect_concurrent("uv tool upgrade", "uv tool install", parties=2)  # both tool actions run at once
+    terminal.expect_concurrent("uv tool upgrade", "uv tool install", parties=PAIRED_PARTIES)  # both tool actions run at once
 
     report = totchef.up()
 
     report.assert_succeeded()
     terminal.expect_ran("uv tool upgrade ruff")
     terminal.expect_ran("uv tool install pyright")
-    assert terminal.max_concurrent_commands == 2  # the upgrade and the install ran concurrently, not one after the other
+    assert terminal.max_concurrent_commands == PAIRED_PARTIES  # the upgrade and the install ran concurrently, not one after the other
 
 
 def test_4_2_2_uv_failure_reports_hard_naming_the_failed_tools(
@@ -137,13 +142,13 @@ def test_4_2_3_uv_requires_uv_and_looks_up_latest_from_pypi(recipe: RecipeBuilde
     recipe.declares("uv", packages=["ruff", "pyright"])
     http.arrange("pypi.org/pypi/ruff/json", '{"info": {"version": "0.6.0"}}')
     http.arrange("pypi.org/pypi/pyright/json", '{"info": {"version": "1.1.380"}}')
-    http.expect_concurrent(parties=2)  # both PyPI lookups must overlap
+    http.expect_concurrent(parties=PAIRED_PARTIES)  # both PyPI lookups must overlap
 
     plan = totchef.plan()
 
     plan.assert_shows("uv.ruff", "would install")
     http.expect_fetched("pypi.org/pypi/ruff/json")
-    assert http.max_concurrent_requests == 2  # the two PyPI fetches ran concurrently for the plan
+    assert http.max_concurrent_requests == PAIRED_PARTIES  # the two PyPI fetches ran concurrently for the plan
 
     report = totchef.up()
 
@@ -169,9 +174,10 @@ def _bun_global(home: Path, name: str, version: str) -> Callable[[], None]:
 
 
 def test_4_3_1_bun_installs_and_upgrades_each_global_package(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem, home: Path
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
     """`[bun]` installs missing globals and upgrades drifted ones via a single batched `bun add -g`; installed versions are read from bun's global tree."""
+    home = totchef.workdir / "home"
     recipe.declares("bun", packages=[PI, "left-pad"])
     system.has("bun")
     http.arrange("registry.npmjs.org/" + PI, '{"dist-tags": {"latest": "0.75.5"}}')
@@ -197,13 +203,13 @@ def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(recipe
     recipe.declares("bun", packages=[PI, "left-pad"])
     http.arrange("registry.npmjs.org/" + PI, '{"dist-tags": {"latest": "0.75.5"}}')
     http.arrange("registry.npmjs.org/left-pad", '{"dist-tags": {"latest": "1.3.0"}}')
-    http.expect_concurrent(parties=2)  # both npm lookups must overlap, not serialize
+    http.expect_concurrent(parties=PAIRED_PARTIES)  # both npm lookups must overlap, not serialize
 
     plan = totchef.plan()
 
     plan.assert_shows("bun." + PI, "would install")
     http.expect_fetched("registry.npmjs.org/left-pad")
-    assert http.max_concurrent_requests == 2  # the two npm fetches ran concurrently for the plan
+    assert http.max_concurrent_requests == PAIRED_PARTIES  # the two npm fetches ran concurrently for the plan
 
     report = totchef.up()  # bun isn't installed → hard fail pointing at [url]
 
@@ -212,7 +218,8 @@ def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(recipe
 
 
 def test_4_3_3_bun_installs_globals_into_bun_home_not_the_cache_dir(apply_in_container: Callable[[str, list[str]], ContainerRun]) -> None:
-    """The cook pins `BUN_INSTALL` to bun's home, so a global lands in `~/.bun` (on PATH) and never the `$XDG_CACHE_HOME/.bun` dir bun would otherwise pick under the privilege drop. In a container."""
+    """The cook pins `BUN_INSTALL` to bun's home, so a global lands in `~/.bun` (on PATH) and never the `$XDG_CACHE_HOME/.bun` dir bun would otherwise pick \
+under the privilege drop. In a container."""
     run = apply_in_container(
         '[bun]\npackages = ["left-pad"]\n',
         ["/home/tester/.bun/install/global/node_modules/left-pad", "/home/tester/.cache/.bun/install/global/node_modules/left-pad"],
@@ -223,20 +230,25 @@ def test_4_3_3_bun_installs_globals_into_bun_home_not_the_cache_dir(apply_in_con
 
 
 def test_4_3_4_bun_links_node_to_its_runtime_so_node_shebang_globals_run(
-    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem, home: Path
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """A node CLI's `#!/usr/bin/env node` shebang (left intact by `bun add -g`) needs a `node` on PATH; the cook drops a `node` symlink to bun in bun's bin dir so it resolves and runs node-compatibly. Best-effort and idempotent — it runs every sync, so a converged re-run with nothing to install still restores the runtime if removed."""
+    """A node CLI's `#!/usr/bin/env node` shebang (left intact by `bun add -g`) needs a `node` on PATH; the cook drops a `node` symlink to bun in bun's bin \
+dir so it resolves and runs node-compatibly. Best-effort and idempotent — it runs every sync, so a converged re-run with nothing to install still restores the \
+runtime if removed."""
+    home = totchef.workdir / "home"
     recipe.declares("bun", packages=[PI])
     system.has("bun")
     http.arrange("registry.npmjs.org/" + PI, '{"dist-tags": {"latest": "0.75.5"}}')
-    terminal.arrange("bun add -g", effect=lambda: _bun_global(home, PI, "0.75.5")())
+    terminal.arrange("bun add -g", effect=_bun_global(home, PI, "0.75.5"))
 
     node = home / ".bun/bin/node"
     bun = system.bin_dir / "bun"
 
     totchef.up().assert_succeeded()  # absent → installed; the node runtime is linked alongside
-    assert node.is_symlink() and node.resolve() == bun.resolve()
+    assert node.is_symlink()
+    assert node.resolve() == bun.resolve()
 
     node.unlink()  # runtime removed out of band
     totchef.up().assert_succeeded()  # converged: nothing to install, yet the runtime is restored
-    assert node.is_symlink() and node.resolve() == bun.resolve()
+    assert node.is_symlink()
+    assert node.resolve() == bun.resolve()
