@@ -23,7 +23,7 @@ from arrange_fixtures import (
 )
 from assert_fixtures import read_json
 from container_fixtures import apply_in_container, container_image
-from internals_fixtures import cook_runner_internals, log_internals, terminal_internals
+from internals_fixtures import cook_runner_internals, log_internals, log_pump, terminal_internals
 
 __all__ = [
     "apply_in_container",
@@ -42,6 +42,7 @@ __all__ = [
     "home",
     "http",
     "log_internals",
+    "log_pump",
     "read_json",
     "recipe",
     "register_plugin",

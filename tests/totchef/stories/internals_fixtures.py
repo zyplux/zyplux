@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 import totchef.cook_runner as cook_runner_module
+import totchef.log_pump as log_pump_module
 import totchef.logs as logs_module
 import totchef.terminal as terminal_module
 
@@ -14,6 +15,11 @@ if TYPE_CHECKING:
 @pytest.fixture
 def log_internals() -> ModuleType:
     return logs_module
+
+
+@pytest.fixture
+def log_pump() -> ModuleType:
+    return log_pump_module
 
 
 @pytest.fixture

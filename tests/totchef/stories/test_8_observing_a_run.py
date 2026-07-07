@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
-from totchef.log_pump import emit_terminal, pump_lines
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -193,7 +192,7 @@ def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(apply_in_contai
     assert run.log_owner == "tester", run.transcript
 
 
-def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path) -> None:
+def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path, log_pump: ModuleType) -> None:
     """Parent and every forked cook's stdout/stderr funnel through one pump: every line reaches the file and the terminal, in order, except a drain marker."""
     log_file = tmp_path / "run.log"
     emitted: list[str] = []
@@ -205,7 +204,7 @@ def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path) -> None:
         def write_log(line: str) -> None:
             handle.write(line)
 
-        pump_lines(
+        log_pump.pump_lines(
             ["url.bun   installing\n", "apt_pkg   updating\n", "marker\n"],
             write_log=write_log,
             emit_terminal=emitted.append,
@@ -225,10 +224,10 @@ def test_8_3_2_2_write_log_is_a_safe_no_op_before_a_run_opens_a_handle(monkeypat
 
 
 def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
-    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType
+    recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType, log_pump: ModuleType
 ) -> None:
     """A dry run shows only the plan table on the terminal while still recording every line to the log file."""
-    log_file = tmp_path / "run.log"
+    log_file = totchef.workdir / "run.log"
     monkeypatch.setattr(log_internals.log_state, "log_handle", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
     monkeypatch.setattr(log_internals.log_state, "echo_to_terminal", True)
     emitted: list[str] = []
@@ -236,7 +235,9 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 
     log_internals.set_terminal_echo(enabled=False)  # dry-run suppresses cook log echo to the terminal …
     assert not log_internals.log_state.echo_to_terminal
-    emit_terminal("cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK)  # what the pump would mirror
+    log_pump.emit_terminal(
+        "cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK
+    )  # what the pump would mirror
     log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …
@@ -245,7 +246,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
     log_internals.set_terminal_echo(enabled=True)
     assert log_internals.log_state.echo_to_terminal
 
-    recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
+    recipe.declares("file", "f", path=str(totchef.workdir / "f"), content="X\n")
     plan = totchef.plan()
     assert '{"cook-node"' in plan.report  # and the plan table itself is still produced
 
