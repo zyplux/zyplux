@@ -121,6 +121,17 @@ def test_6_2_1_2_argv_json_merges_argv_and_enable_features_tolerating_comments(
     assert data["enable-features"] == "UseOzonePlatform,WaylandWindowDecorations"
 
 
+def test_6_2_1_3_chromium_flags_require_exactly_one_target(recipe: RecipeBuilder, totchef: Totchef) -> None:
+    """Declaring neither or both of local_state/argv_json is rejected: exactly one target must be set."""
+    recipe.declares("chromium_flags", "chromium")  # neither target set
+
+    totchef.lint().assert_rejected("set exactly one of")
+
+    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", argv_json=".config/Code/argv.json")  # both targets set
+
+    totchef.lint().assert_rejected("set exactly one of")
+
+
 def test_6_2_2_chromium_flags_diffed_by_rendered_json_hash(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
     """Diffed by rendered-JSON hash, so it only writes when flags actually change."""
     local_state = home / ".config/chromium/Local State"

@@ -52,6 +52,11 @@ into `browser.enabled_labs_experiments`.
 `--enable-features` from a `features` list (tolerating `//` comments in the existing
 file).
 
+### 6.2.1.3 chromium flags require exactly one target
+
+Declaring neither or both of `local_state`/`argv_json` is rejected: exactly one
+target must be set.
+
 ### 6.2.2 chromium flags diffed by rendered json hash
 
 Diffed by rendered-JSON hash, so it only writes when flags actually change.

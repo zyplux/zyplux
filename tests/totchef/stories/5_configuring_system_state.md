@@ -50,7 +50,8 @@ suites = "xenial"
 origin host (derived from `uris`) to that priority, so a package the repo ships
 can outrank the Ubuntu-archive pin (`[bash.ubuntu_pin]`, priority 900) instead
 of apt silently keeping the older universe build. The repo counts as configured
-only once that pref file also exists, alongside the keyring and `.sources`.
+only once that pref file also exists, alongside the keyring and `.sources`. A
+`uris` with no derivable host (e.g. no hostname in the URL) fails the apply.
 
 ```toml
 [apt_repo.github-cli]

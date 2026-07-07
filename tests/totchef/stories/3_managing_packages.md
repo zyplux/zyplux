@@ -77,7 +77,8 @@ The binary name defaults to the entry name but can be overridden with `bin`.
 
 Updating is controlled by `update_action`: a command arg list run against the
 binary (e.g. `["self", "update"]`), the literal `"rerun-installer"` (re-pipe the
-install script), or absent (leave as-is).
+install script), or absent (leave as-is). An empty arg list is none of these
+and fails the update.
 
 ### 3.3.4 update guard runs before updating
 
@@ -106,3 +107,8 @@ scripts assume that — some default to a *relative* bin dir (chezmoi installs t
 `.local/bin`), so running them from anywhere else drops the binary in the wrong
 place. `$HOME` makes a relative bin dir resolve to `~/.local/bin`, exactly where
 the cook's presence check (`find_binary`) looks.
+
+### 3.3.9 url only fetches http or https
+
+Only `http`/`https` URLs are ever fetched — any other scheme (e.g. `ftp://`) is
+refused before the install runs.
