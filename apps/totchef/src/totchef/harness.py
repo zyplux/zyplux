@@ -4,37 +4,48 @@ import os
 import pwd
 import shutil
 import sys
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.request import Request, urlopen
 
 from loguru import logger
 
-_files_dir: Path | None = None
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+class _FilesDir:
+    """The pinned-for-this-run totchef_files/ dir, mutated in place so set_files_dir never needs a module-level rebind."""
+
+    path: Path | None = None
+
+
+_files_dir = _FilesDir()
 
 
 def set_files_dir(path: Path | None) -> None:
     """Pin the recipe's sibling assets dir (totchef_files/) for this run, before any cook reads a bundled `source`. None clears it (between tests)."""
-    global _files_dir
-    _files_dir = path
+    _files_dir.path = path
 
 
 def files_dir() -> Path:
-    """The recipe's sibling assets dir, resolved from the recipe before cooks run; raises if a bundled `source` is referenced before a recipe pinned it (a wiring bug, never a recipe error)."""
-    if _files_dir is None:
-        raise RuntimeError("totchef_files dir not resolved — a bundled `source` was referenced before the recipe was loaded")
-    return _files_dir
+    """The recipe's sibling assets dir, resolved before cooks run; raises if `source` is used before a recipe pinned it (a wiring bug, not a recipe error)."""
+    if _files_dir.path is None:
+        msg = "totchef_files dir not resolved — a bundled `source` was referenced before the recipe was loaded"
+        raise RuntimeError(msg)
+    return _files_dir.path
 
 
 def resolve_bundled_source(entry_name: str | None) -> str:
-    """The bundled file an omitted `source` defaults to: the unique file under the recipe's totchef_files/ whose stem equals the entry name; zero or several matches raise, asking for an explicit `source`."""
+    """The bundled file an omitted `source` defaults to: the totchef_files/ file whose stem is the entry name; 0/2+ matches raise, needs `source` explicit."""
     base = files_dir()
     candidates: list[str] = sorted(path.name for path in base.iterdir() if path.is_file() and path.stem == entry_name) if base.is_dir() else []
     if len(candidates) == 1:
         return candidates[0]
     problem = f"several bundled files match '{entry_name}': {', '.join(candidates)}" if candidates else f"no bundled file named '{entry_name}.*' under {base}"
-    raise ValueError(f"{problem} — set `source` explicitly")
+    msg = f"{problem} — set `source` explicitly"
+    raise ValueError(msg)
 
 
 # sysexits.h EX_TEMPFAIL: cook -> chef signal for recoverable failure.
@@ -42,7 +53,7 @@ SOFT_FAIL_EXIT = 75
 
 
 def become_user() -> None:
-    """The privilege-drop chokepoint per forked user cook: drop gid, rebuild groups, drop uid, repoint HOME/USER/PATH at SUDO_USER; a no-op under an unprivileged dry-run."""
+    """The privilege-drop chokepoint per forked user cook: drop gid, rebuild groups, drop uid, repoint HOME/USER/PATH at SUDO_USER; a no-op unprivileged."""
     if os.geteuid() != 0:
         return
     sudo_user = os.environ.get("SUDO_USER")
@@ -111,14 +122,17 @@ def assume_https(url: str) -> str:
 
 
 def fetch_url(url: str) -> bytes:
-    """Time-bounded HTTP GET (a stall raises, never hangs). Custom UA — Signal/herdr CDNs 403 the urllib default."""
+    """Time-bounded HTTP GET (a stall raises, never hangs); rejects any scheme but http(s). Custom UA — Signal/herdr CDNs 403 the urllib default."""
+    if not url.startswith(("http://", "https://")):
+        msg = f"refusing to fetch {url!r}: only http/https URLs are allowed"
+        raise ValueError(msg)
     request = Request(url, headers={"User-Agent": USER_AGENT})
     with urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
         return response.read()
 
 
 def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | None]) -> dict[str, str | None]:
-    """Map each name to its upstream latest via fetch_one, run concurrently for a probe pass; a fetch that raises yields None so the caller falls back to 'unknown latest' rather than failing the run."""
+    """Map each name to its upstream latest via fetch_one, run concurrently for a probe pass; a fetch that raises yields None, not a failed run."""
     if not names:
         return {}
     latest: dict[str, str | None] = {}

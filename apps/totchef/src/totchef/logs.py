@@ -1,22 +1,24 @@
-"""Logging core: the log pump (one thread owns the file + terminal so a live region never interleaves with log lines), the FIFO drain barrier, loguru config, and TOON logging."""
+"""Logging core: the log pump (one thread owns file + terminal so a live region never interleaves with logs), the FIFO drain barrier, loguru config."""
 
 import os
 import pwd
 import sys
 import threading
 import uuid
-from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import TextIO
+from typing import TYPE_CHECKING, TextIO
 
 from loguru import logger
 from toon_format import encode
 
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator, Mapping, Sequence
+
 
 def log_dir() -> Path:
-    """Per-run logs under the invoking user's XDG state dir (~/.local/state/totchef/logs) — resolved from SUDO_USER so a root re-exec still writes to the user's home, not /root."""
+    """Per-run logs under the user's XDG state dir (~/.local/state/totchef/logs) — resolved from SUDO_USER so root re-exec writes to the user's home."""
     sudo_user = os.environ.get("SUDO_USER")
     home = Path(pwd.getpwnam(sudo_user).pw_dir) if sudo_user else Path.home()
     state = Path(os.environ["XDG_STATE_HOME"]) if os.environ.get("XDG_STATE_HOME") else home / ".local" / "state"
@@ -42,10 +44,14 @@ def inline_mode() -> bool:
     return bool(os.environ.get(INLINE_ENV))
 
 
-# A dup of the real stdout, saved before start_logging redirects fd 1/2 into the
-# log pipe. terminal.py renders rich tables/progress bars here so they reach the
-# human terminal without landing in the TOON log file.
-TERMINAL_FD: int | None = None
+class _PumpFds:
+    """The pump's own fds, mutated in place (never rebound) so start_logging avoids `global`: terminal is stdout's dup, pipe_write feeds drain_logs."""
+
+    terminal: int | None = None
+    pipe_write: int | None = None
+
+
+pump_fds = _PumpFds()
 
 # The log pump: one parent thread reads the merged stdout/stderr of the parent and
 # every forked cook off the pipe, then mirrors each line to the log file (under
@@ -53,7 +59,6 @@ TERMINAL_FD: int | None = None
 # one writer, so a live region (table / progress bar) never interleaves with logs.
 LOG_HANDLE: TextIO | None = None
 LOG_LOCK = threading.Lock()
-LOG_PIPE_WRITE: int | None = None
 DRAIN_EVENTS: dict[str, threading.Event] = {}
 
 # terminal.py registers a sink that routes pumped lines through its rich Console
@@ -73,7 +78,7 @@ logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
 
 @contextmanager
 def cook_context(runner: str) -> Generator[None]:
-    """Label log lines emitted while a cook runs with its node id, then restore "chef"; uses logger.configure (core extra, not contextualize) so the label reaches spawned worker threads too."""
+    """Label log lines while a cook runs with its node id, then restore "chef"; logger.configure (not contextualize) reaches worker threads too."""
     logger.configure(extra={"runner": runner})
     try:
         yield
@@ -113,23 +118,23 @@ def _pump(read_fd: int) -> None:
 
 
 def drain_logs(timeout: float = 5.0) -> None:
-    """FIFO barrier: block until the pump has processed everything written so far; call only once all forked cooks are reaped (nothing writes after the marker)."""
-    if LOG_PIPE_WRITE is None:
+    """FIFO barrier: block until the pump drains everything written so far; call only once all forked cooks are reaped."""
+    if pump_fds.pipe_write is None:
         return
     marker = uuid.uuid4().hex
     DRAIN_EVENTS[marker] = event = threading.Event()
-    os.write(LOG_PIPE_WRITE, f"{marker}\n".encode())
+    os.write(pump_fds.pipe_write, f"{marker}\n".encode())
     event.wait(timeout)
 
 
 def open_log_file() -> Path:
-    """Resolve the run's log file under the user's state dir (honoring SHARED_LOG_ENV), create it, and chown it back to SUDO_USER; shared by the pumped and inline starts."""
+    """Resolve the run's log file under the state dir (honoring SHARED_LOG_ENV), create it, chown it to SUDO_USER; shared by pumped and inline starts."""
     directory = log_dir()
     directory.mkdir(parents=True, exist_ok=True)
     if existing := os.environ.get(SHARED_LOG_ENV):
         log_file = Path(existing)
     else:
-        log_file = directory / f"totchef-{datetime.now():%Y%m%d-%H%M%S}.log"
+        log_file = directory / f"totchef-{datetime.now().astimezone():%Y%m%d-%H%M%S}.log"
         os.environ[SHARED_LOG_ENV] = str(log_file)
     log_file.touch(exist_ok=True)
     if sudo_user := os.environ.get("SUDO_USER"):
@@ -140,30 +145,30 @@ def open_log_file() -> Path:
 
 
 def start_inline_logging() -> Path:
-    """Inline start: no fd redirect, no pump. Open the log file for the structured report block and re-point loguru at the live stderr so logs scroll straight to the terminal (and are captured when a caller runs totchef through its CLI)."""
+    """Inline start: no fd redirect, no pump. Open the log file, re-point loguru at live stderr so logs scroll to the terminal (and get captured by callers)."""
     global LOG_HANDLE
     log_file = open_log_file()
-    LOG_HANDLE = Path(log_file).open("a")
+    LOG_HANDLE = Path(log_file).open("a", encoding="utf-8")
     logger.remove()
     logger.configure(extra={"runner": DEFAULT_RUNNER})
     logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
     return log_file
 
 
-def start_logging(echo_to_terminal: bool = True) -> Path:
-    """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe one thread reads); honor SHARED_LOG_ENV or create a timestamped file, chowned to SUDO_USER."""
+def start_logging(*, echo_to_terminal: bool = True) -> Path:
+    """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe a thread reads); honor SHARED_LOG_ENV or create a file, chowned to SUDO_USER."""
     set_terminal_echo(echo_to_terminal)
     if inline_mode():
         return start_inline_logging()
     log_file = open_log_file()
 
-    global TERMINAL_FD, LOG_HANDLE, LOG_PIPE_WRITE
-    if TERMINAL_FD is None:
-        TERMINAL_FD = os.dup(1)
-    LOG_HANDLE = Path(log_file).open("a")
+    global LOG_HANDLE
+    if pump_fds.terminal is None:
+        pump_fds.terminal = os.dup(1)
+    LOG_HANDLE = Path(log_file).open("a", encoding="utf-8")
 
     read_fd, write_fd = os.pipe()
-    LOG_PIPE_WRITE = os.dup(write_fd)
+    pump_fds.pipe_write = os.dup(write_fd)
     os.dup2(write_fd, 1)
     os.dup2(write_fd, 2)
     os.close(write_fd)

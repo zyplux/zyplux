@@ -1,8 +1,10 @@
-"""Per-entry expiry watches: collect each node's `remove_when`/`remove_how`, probe the conditions as the invoking user, and append a fired watch's instruction to its node's delayed messages (the report's `Action required` block)."""
+"""Per-entry expiry watches: collect `remove_when`/`remove_how`, probe as the invoking user, append a fired instruction to the node's delayed messages."""
 
+import json
 import os
-import pickle
+import subprocess
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -11,7 +13,9 @@ from totchef.cook_base import CookResult
 from totchef.harness import become_user
 from totchef.logs import cook_context, inline_mode
 from totchef.recipe_graph import build_nodes, node_slice
-from totchef.recipe_types import RecipeConfig, RecipeValue
+
+if TYPE_CHECKING:
+    from totchef.recipe_types import RecipeConfig, RecipeValue
 
 REMOVE_WHEN_TIMEOUT_SECONDS = 30
 GENERIC_REMOVAL_NOTICE = "remove_when satisfied — this entry can be removed from the recipe."
@@ -43,11 +47,11 @@ def list_removal_watches(config: RecipeConfig) -> list[RemovalWatch]:
 
 
 def is_removable(watch: RemovalWatch) -> bool:
-    """Probe one watch: exit 0 fires it; non-zero — and any probe failure (no network, missing tool, timeout) — reads as still waiting, so an outage never fabricates a removal notice."""
+    """Probe one watch: exit 0 fires it; non-zero or any probe failure reads as still waiting, so an outage never fabricates a removal notice."""
     with cook_context(watch.node_id):
         try:
             completed = shell.run("bash", "-c", watch.condition, timeout=REMOVE_WHEN_TIMEOUT_SECONDS, note=f"remove_when: {watch.condition}")
-        except Exception as exc:
+        except (OSError, subprocess.TimeoutExpired) as exc:
             logger.debug(f"remove_when probe failed: {exc}")
             return False
         if completed.returncode != 0:
@@ -57,7 +61,7 @@ def is_removable(watch: RemovalWatch) -> bool:
 
 
 def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
-    """The watches whose conditions fired, probed as the invoking user — their `gh` auth, their network identity — even when chef itself runs as root: a forked, privilege-dropped child does the probing (in-process when already unprivileged or inline)."""
+    """The watches whose conditions fired, probed as the invoking user even when chef runs as root: a privilege-dropped forked child does the probing."""
     if not watches:
         return []
     if inline_mode() or os.geteuid() != 0:
@@ -69,21 +73,21 @@ def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
         try:
             become_user()
             fired = [watch.node_id for watch in watches if is_removable(watch)]
-        except Exception:
+        except OSError, KeyError:
             fired: list[str] = []
         with os.fdopen(write_fd, "wb") as out:
-            out.write(pickle.dumps(fired))
+            out.write(json.dumps(fired).encode())
         os._exit(0)
     os.close(write_fd)
     with os.fdopen(read_fd, "rb") as src:
         payload = src.read()
     os.waitpid(pid, 0)
-    fired_ids: list[str] = pickle.loads(payload) if payload else []
+    fired_ids: list[str] = json.loads(payload) if payload else []
     return [watch for watch in watches if watch.node_id in fired_ids]
 
 
 def append_removal_notices(config: RecipeConfig, results: dict[str, CookResult]) -> None:
-    """Probe every declared watch and append each fired instruction to its node's delayed messages so the `Action required` block names it; a node absent from the results (aborted run) still gets its notice."""
+    """Probe every watch and append each fired instruction to its node's delayed messages; a node absent from results still gets its notice."""
     for watch in find_removable(list_removal_watches(config)):
         result = results.setdefault(watch.node_id, CookResult(watch.node_id, "ok"))
         result.delayed_messages.append(watch.instruction)

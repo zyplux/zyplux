@@ -1,4 +1,4 @@
-"""Find the recipe to cook and its sibling assets (`totchef_files/`) and custom-cooks (`totchef_cooks/`) dirs: an explicit `--recipe` (a file or a repo dir) wins, then `$TOTCHEF_RECIPE` (the carrier across the sudo re-exec), then a recognized recipe name walking up from the cwd, then the recipe a `totchef init` pinned in the user config."""
+"""Find the recipe and its totchef_files/totchef_cooks dirs: `--recipe` wins, then `$TOTCHEF_RECIPE`, then a cwd-found name, else the `totchef init` pin."""
 
 import os
 import sys
@@ -40,7 +40,7 @@ def _sibling_dir(recipe_path: Path, names: tuple[str, ...]) -> Path | None:
 
 
 def find_files_dir(recipe_path: Path) -> Path:
-    """The recipe's sibling assets dir: the first existing of `totchef_files`/`totchef-files`, else the primary name as the expected location (so a missing-asset error can name it)."""
+    """The recipe's sibling assets dir: the first existing of `totchef_files`/`totchef-files`, else the primary name (so a missing-asset error can name it)."""
     return _sibling_dir(recipe_path, FILES_DIR_NAMES) or recipe_path.parent / FILES_DIR_NAMES[0]
 
 
@@ -50,7 +50,7 @@ def find_cooks_dir(recipe_path: Path) -> Path | None:
 
 
 def resolve_explicit(explicit: Path, *, follow_symlinks: bool = True) -> Path:
-    """An explicit `--recipe`/`totchef init` argument: a recipe file, or a directory holding a recognized recipe name. `follow_symlinks=False` (used when pinning) keeps a symlink as given rather than dereferencing it, so repointing the symlink later moves the pin without rerunning `init`."""
+    """An explicit `--recipe`/`totchef init` arg: a file, or dir holding one. `follow_symlinks=False` keeps a symlink as given, moving the pin on repoint."""
     if explicit.is_dir():
         found = recipe_in_dir(explicit)
         if found is None:
@@ -67,7 +67,7 @@ def _cwd_chain() -> list[Path]:
 
 
 def _saved_recipe() -> Path | None:
-    """The recipe a `totchef init` pinned (a file, or a dir holding one), resolved past any symlink so a repointed pin always finds the current target; None if unset, malformed, or gone."""
+    """The recipe a `totchef init` pinned (a file, or a dir holding one), resolved past any symlink; None if unset, malformed, or gone."""
     config = config_path()
     if not config.is_file():
         return None
@@ -85,7 +85,7 @@ def _saved_recipe() -> Path | None:
 
 
 def try_find_recipe() -> Path | None:
-    """Resolve the recipe path without an explicit flag, or return None — the non-exiting form used where a recipe is optional (e.g. `--list-cooks`, which lists with or without one)."""
+    """Resolve the recipe path without an explicit flag, or return None — used where a recipe is optional (e.g. `--list-cooks`, with or without one)."""
     if env := os.environ.get(RECIPE_ENV):
         path = Path(env)
         if path.is_file():
@@ -103,7 +103,7 @@ def _not_found_message() -> str:
 
 
 def find_recipe(explicit: Path | None = None) -> Path:
-    """Resolve the recipe path: explicit flag (file or dir), else $TOTCHEF_RECIPE, else a recognized name walking up from the cwd, else a recipe pinned by `totchef init`; exit listing where it looked when none is found."""
+    """Resolve the recipe: explicit flag, else $TOTCHEF_RECIPE, else a recognized name up from cwd, else a `totchef init` pin; exit naming where it looked."""
     if explicit is not None:
         return resolve_explicit(explicit)
     if env := os.environ.get(RECIPE_ENV):
