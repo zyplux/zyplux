@@ -61,3 +61,10 @@ label = "zyplux-util"
 tag_prefix = "util-py-v"
 version = { file = "packages/util_py/pyproject.toml", regex = '^version = "([^"]+)"' }
 surface = ["packages/util_py/src", "packages/util_py/pyproject.toml", "packages/util_py/README.md"]
+
+[[target]]
+kind = "pypi"
+label = "totchef"
+tag_prefix = "totchef-v"
+version = { file = "apps/totchef/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["apps/totchef/src", "apps/totchef/pyproject.toml", "apps/totchef/README.md"]

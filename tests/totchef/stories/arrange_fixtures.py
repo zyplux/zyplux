@@ -73,7 +73,6 @@ class RanCommand:
 
     argv: list[str]
     stdin: bytes | str | None
-    streamed: bool
     cwd: Path | None = None
 
     @property
@@ -136,7 +135,7 @@ class FakeTerminal(TerminalAssertions):
         cwd: Path | None = None,
     ) -> subprocess.CompletedProcess:
         argv = list(cmd)
-        self.commands.append(RanCommand(argv, stdin, streamed=False, cwd=cwd if cwd is not None else Path.home()))
+        self.commands.append(RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home()))
         with self._concurrency_ctx(shlex.join(argv)):
             response = self._respond(argv)
             stdout: str | bytes = response.output if text else response.output.encode()
@@ -157,7 +156,7 @@ class FakeTerminal(TerminalAssertions):
         check: bool = True,
         cwd: Path | None = None,
     ) -> None:
-        self.commands.append(RanCommand(list(cmd), stdin, streamed=True, cwd=cwd if cwd is not None else Path.home()))
+        self.commands.append(RanCommand(list(cmd), stdin, cwd=cwd if cwd is not None else Path.home()))
         with self._concurrency_ctx(shlex.join(cmd)):
             response = self._respond(list(cmd))
             if check and response.exit_code != 0:

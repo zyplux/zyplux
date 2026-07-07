@@ -205,10 +205,9 @@ In precedence order:
 
 ## Run `totchef` from anywhere
 
-`just build` freezes totchef into a single self-contained binary at `totchef_files/totchef`;
-the example recipe's `[file.totchef]` installs it to `~/.local/bin` and its `post_hook` runs
-`totchef init` to pin the recipe. After one `just build && just up`, `totchef up` works from
-any directory.
+The example recipe's `[bash.totchef]` entry installs totchef to `~/.local/bin` via
+`uv tool install`, and its `post_hook` runs `totchef init` to pin the recipe. After one
+`totchef up`, `totchef up` works from any directory.
 
 ---
 
@@ -292,17 +291,14 @@ override. Teardown is deliberate and manual, so a typo can't wipe your system.
 
 ## Development
 
-Tooling is `uv` (Python ≥ 3.14) driven through `just`:
+`totchef` lives in the [zyplux](https://github.com/zyplux/zyplux) monorepo as
+`apps/totchef`, with its tests under `tests/totchef/`. From the zyplux repo root:
 
 | Command | What it does |
 |---|---|
-| `just install` | Install dependencies (`uv sync --all-groups`). |
-| `just plan` | Dry-run the example recipe. |
-| `just up` | Apply the example recipe. |
-| `just knip` | Dead code (`vulture`). |
-| `just tc` | Typecheck (`pyrefly`). |
-| `just lint` | `ruff` + story links + `rumdl` + recipe lint, autofix. |
-| `just test` | `pytest`. |
-| `just check` | Full gate: install, knip, typecheck, lint, test. |
+| `just c` | Full gate across every package: install, knip, typecheck, lint, test. |
+| `just totchef` | Apply the example recipe (`apps/totchef/examples/totchef_recipe.toml`) to this machine. |
+| `uv run totchef plan --recipe apps/totchef/examples/totchef_recipe.toml` | Dry-run the example recipe. |
+| `uv run pytest tests/totchef` | Run just totchef's tests. |
 
 License: MIT.

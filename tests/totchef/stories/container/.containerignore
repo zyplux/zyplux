@@ -1,5 +1,4 @@
 *
 !pyproject.toml
 !uv.lock
-!README.md
-!src
+!apps/totchef

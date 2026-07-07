@@ -5,18 +5,6 @@ import threading
 
 from rich.progress import MofNCompleteColumn, TimeElapsedColumn
 
-import totchef.logs as log_internals
-from totchef.cook_runner import format_queueing, format_unlocked
-from totchef.logs import set_terminal_echo, write_log
-from totchef.terminal import (
-    ProgressHandle,
-    _LiveProgress,
-    _colorize_log_line,
-    _runner_style,
-    is_interactive,
-    progress_region,
-)
-
 
 # 7.1 See a clear, color-coded report of what happened
 
@@ -105,16 +93,16 @@ def test_8_1_5_failed_install_keeps_before_equal_current(recipe, terminal, http,
 # 7.2 Watch progress while a long run executes
 
 
-def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch):
+def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch, terminal_internals):
     """An interactive progress bar shows completed/total and elapsed, cleared on exit, leaving logs above it."""
-    assert is_interactive() is False  # the test console is not a terminal
-    with progress_region("Cooking", total=3) as bar:
-        assert type(bar) is ProgressHandle  # off-terminal: a no-op handle
+    assert terminal_internals.is_interactive() is False  # the test console is not a terminal
+    with terminal_internals.progress_region("Cooking", total=3) as bar:
+        assert type(bar) is terminal_internals.ProgressHandle  # off-terminal: a no-op handle
         bar.advance()
 
     monkeypatch.setattr("totchef.terminal.is_interactive", lambda: True)
-    with progress_region("Cooking", total=3) as live:
-        assert isinstance(live, _LiveProgress)  # on a terminal: a live transient bar
+    with terminal_internals.progress_region("Cooking", total=3) as live:
+        assert isinstance(live, terminal_internals._LiveProgress)  # on a terminal: a live transient bar
         progress = live._progress
         column_types = {type(column) for column in progress.columns}
         assert MofNCompleteColumn in column_types  # the bar shows completed/total …
@@ -125,25 +113,25 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch):
         assert progress.live.transient is True  # transient ⇒ cleared on exit, leaving the logs above it
 
 
-def test_8_2_2_log_lines_colorized_and_tagged_per_cook():
+def test_8_2_2_log_lines_colorized_and_tagged_per_cook(terminal_internals):
     """Each cook's log lines are tagged with its name in a stable per-cook color so concurrent output stays readable."""
-    first = _runner_style("url.bun")
-    again = _runner_style("url.bun")
-    other = _runner_style("apt_pkg")
+    first = terminal_internals._runner_style("url.bun")
+    again = terminal_internals._runner_style("url.bun")
+    other = terminal_internals._runner_style("apt_pkg")
 
     assert first == again  # stable across one cook's lines
     assert first != other  # distinct cooks get distinct hues
 
-    colored = _colorize_log_line("[2026-05-27 10:00:00] url.bun                      INFO    Installing")
+    colored = terminal_internals._colorize_log_line("[2026-05-27 10:00:00] url.bun                      INFO    Installing")
     assert "url.bun" in colored.plain  # the runner tag is carried into the rendered line
 
 
-def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks():
+def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks(cook_runner_internals):
     """Start lines announce who is running and what they wait on/unblock; completion lines report timing and what just unlocked."""
-    queueing = format_queueing(("apt_pkg",), {"apt_pkg": 5}, combined=5)
+    queueing = cook_runner_internals.format_queueing(("apt_pkg",), {"apt_pkg": 5}, combined=5)
     assert "queueing" in queueing and "apt_pkg" in queueing
 
-    unlocked = format_unlocked(("apt_pkg",), {"apt_pkg": 2}, {"apt_pkg": 2})
+    unlocked = cook_runner_internals.format_unlocked(("apt_pkg",), {"apt_pkg": 2}, {"apt_pkg": 2})
     assert "unlocked" in unlocked and "apt_pkg (2/2)" in unlocked
 
 
@@ -157,7 +145,7 @@ def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(apply_in_contai
     assert run.log_owner == "tester", run.transcript
 
 
-def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch, tmp_path):
+def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch, tmp_path, log_internals):
     """Parent and every forked cook's stdout/stderr funnel through one pump so log lines never interleave with the live region."""
     log_file = tmp_path / "run.log"
     monkeypatch.setattr(log_internals, "LOG_HANDLE", open(log_file, "a"))  # noqa: SIM115 — the pump owns the handle for the run
@@ -178,10 +166,10 @@ def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch, tmp_path):
     assert emitted == ["url.bun   installing\n", "apt_pkg   updating\n"]  # one ordered sink to the terminal — never interleaved
 
     monkeypatch.setattr(log_internals, "LOG_HANDLE", None)
-    write_log("dropped")  # no handle yet ⇒ a safe no-op
+    log_internals.write_log("dropped")  # no handle yet ⇒ a safe no-op
 
 
-def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, totchef, tmp_path, monkeypatch):
+def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, totchef, tmp_path, monkeypatch, log_internals):
     """A dry run shows only the plan table on the terminal while still recording every line to the log file."""
     log_file = tmp_path / "run.log"
     monkeypatch.setattr(log_internals, "LOG_HANDLE", open(log_file, "a"))  # noqa: SIM115 — the pump owns the handle for the run
@@ -189,15 +177,15 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(recipe, t
     emitted: list[str] = []
     monkeypatch.setattr(log_internals, "LINE_SINK", emitted.append)
 
-    set_terminal_echo(False)  # dry-run suppresses cook log echo to the terminal …
+    log_internals.set_terminal_echo(False)  # dry-run suppresses cook log echo to the terminal …
     assert not log_internals.ECHO_LOGS_TO_TERMINAL
     log_internals._emit_terminal("cook chatter\n")  # what the pump would mirror for a cook's line
-    write_log("cook chatter\n")
+    log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …
     assert log_file.read_text() == "cook chatter\n"  # … yet the log file still recorded every line
 
-    set_terminal_echo(True)
+    log_internals.set_terminal_echo(True)
     assert log_internals.ECHO_LOGS_TO_TERMINAL
 
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")

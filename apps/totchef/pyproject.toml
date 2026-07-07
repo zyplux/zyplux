@@ -47,56 +47,10 @@ desktop = "totchef.cooks.desktop_cook:DesktopCook"
 chromium_flags = "totchef.cooks.chromium_flags_cook:ChromiumFlagsCook"
 settings = "totchef.cooks.settings_cook:SettingsCook"
 
-[dependency-groups]
-dev = ["pytest>=8", "pytest-cov>=6", "tomli-w>=1.1"]
-lint = ["ruff>=0.11", "rumdl>=0.1.84", "vulture>=2.14"]
-# psutil/websockets are not library deps — they back the standalone examples/totchef_files/ctop.py
-# script, which carries its own inline `# dependencies` and runs via `uv run --script`. They live
-# here only so pyrefly can resolve ctop.py's imports; types-psutil supplies psutil's stubs.
-typecheck = [
-    "pyrefly>=1.0.0",
-    "psutil>=7.2.2",
-    "websockets>=14",
-    "types-psutil>=7.2.2.20260518",
-    "types-pyyaml>=6.0.12.20260518",
-]
-
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/totchef"]
-
-[tool.ruff]
-line-length = 160
-
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-testpaths = ["tests"]
-addopts = "--cov --cov-report=term-missing"
-
-[tool.coverage.run]
-source = ["totchef"]
-branch = true
-omit = ["/tmp/*"]
-
-[tool.coverage.report]
-show_missing = true
-
-[tool.pyrefly]
-python-interpreter-path = ".venv/bin/python3"
-search-path = ["src", "tests/project", "tests/stories"]
-project-excludes = ["reference_clones"]
-
-[tool.vulture]
-paths = ["src"]
-# Cooks are resolved by entry point / config-dir convention (totchef.registry), so
-# vulture sees no static reference and reports every cook class as dead. They are the
-# app's plugins, not dead code — ignore by suffix. Same for the pydantic plumbing it
-# can't trace: `model_config` is read by the model metaclass, and @model_validator
-# methods are invoked by the decorator, never called by name.
-ignore_names = ["*Cook", "model_config"]
-# Typer invokes command/callback functions through the decorator, never by name,
-# so vulture reads them as dead — ignore by decorator, like the cooks above.
-ignore_decorators = ["@model_validator", "@app.command", "@app.callback"]
+[tool.uv.build-backend]
+module-name = "totchef"
+module-root = "src"

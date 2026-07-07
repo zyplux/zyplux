@@ -107,12 +107,6 @@ class RunReport:
     def __post_init__(self) -> None:
         self.rows = _parse_node_rows(self.full_table)
 
-    def assert_report(self, expected: str) -> None:
-        """Assert the terse report an operator saw matches `expected`, ignoring surrounding blank lines and uniform indentation so the snapshot can be written flush under the call."""
-        actual = self.report.strip("\n")
-        wanted = textwrap.dedent(expected).strip("\n")
-        assert actual == wanted, f"report mismatch:\n--- expected ---\n{wanted}\n--- actual ---\n{actual}"
-
     def assert_shows(self, node: str, action: str) -> None:
         assert node in self.rows, f"no report row for {node!r}; saw {sorted(self.rows)}"
         assert self.rows[node] == action, f"expected {node!r} to show {action!r}, but it showed {self.rows[node]!r}"

@@ -192,10 +192,19 @@ repo = "https://github.com/realSergiy/dotfiles.git"
 source_dir = "~/dotfiles"
 timer_min = 60
 
-[file.totchef]
-path = "~/.local/bin/totchef"
-mode = "0755"
-source = "totchef"
+[bash.totchef]
+depends_on = ["url.uv"]
+# Installs from the local zyplux checkout (two levels above this recipe file — see
+# $TOTCHEF_RECIPE below) rather than PyPI: totchef isn't published yet. Once it is, drop this
+# section and add "totchef" to [uv]'s `packages` list instead — the generic uv cook then
+# diffs against PyPI directly.
+current_state = '''
+installed="$(totchef --version 2>/dev/null | awk '{print $2}')"
+wanted="$(grep -m1 '^version' "$(dirname "$(dirname "$TOTCHEF_RECIPE")")/pyproject.toml" | cut -d'"' -f2)"
+[ "$installed" = "$wanted" ] && echo ok || echo stale
+'''
+desired_state = "ok"
+apply = 'uv tool install --force --reinstall "$(dirname "$(dirname "$TOTCHEF_RECIPE")")"'
 # $TOTCHEF_RECIPE is this run's own resolved recipe path (see recipe.py) — repointing the
 # symlink at it (rather than hardcoding a repo location) keeps the pin correct after the repo
 # moves, as long as `totchef up` runs once from the new location to refresh it.

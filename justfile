@@ -88,6 +88,10 @@ clone repo ref="":
 dump-rules:
     bun run --cwd packages/eslint-config dump-rules
 
+# Apply totchef's own dogfood recipe to this machine.
+totchef:
+    uv run totchef up --recipe apps/totchef/examples/totchef_recipe.toml
+
 # Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
 release:
     bun run --silent cz release-bumped-targets

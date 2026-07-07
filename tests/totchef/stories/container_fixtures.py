@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTAINER_DIR = Path(__file__).parent / "container"
 CONTAINERFILE = CONTAINER_DIR / "Containerfile"
 IGNOREFILE = CONTAINER_DIR / ".containerignore"

@@ -11,3 +11,12 @@ Do not flag code based on hedged claims about external API runtime behavior (e.g
 Before reporting that a regex matches (or misses) a given input, trace the match mechanically against the pattern's anchoring — do not infer a false positive from surface resemblance (e.g. a pattern requiring `sh` immediately after `\|\s*` cannot match `| ssh`). The same applies to claimed stdlib failure modes: verify the documented behavior first (e.g. `Path.touch()` with the default `exist_ok=True` succeeds on an existing directory via `os.utime`).
 
 The mandatory `ci` check runs the full quality gate on every push: ruff (`select = ["ALL"]`), pyrefly, vulture, knip, tsc, eslint, rumdl, and both test suites. Do not report syntax, typechecking and linting errors - leave these to the deterministic ci gate.
+
+Long single-line docstrings are house style across this repo: ruff does not enable `E501` and the formatter never wraps docstrings, so line length is not a lint concern. Don't suggest wrapping docstrings or flag them as too long.
+
+Don't suggest guards for exceptions an API can't raise. Non-strict pathlib calls (`resolve()`, `exists()`, `is_symlink()`) swallow `OSError` by documented contract — a `try/except OSError` around them is dead code. Verify an exception is actually reachable before proposing a handler for it.
+
+`apps/totchef` (a declarative, idempotent system-configuration tool) has two conventions specific to it — do not flag these as defects:
+
+- **Cooks that front an external CLI replicate that CLI's exact path semantics** — no extra `~`-expansion, normalization, or fallbacks the CLI doesn't do. Drift detection must see byte-for-byte the paths the CLI writes; "hardening" that diverges creates false drift. Check the fronted tool's source before suggesting path handling changes.
+- **`apps/totchef/examples/totchef_files/*.py` are standalone `uv` scripts**, deployed verbatim and run via their own inline `# /// script` dependencies. Their imports are not library dependencies and belong out of `[project.dependencies]`.
