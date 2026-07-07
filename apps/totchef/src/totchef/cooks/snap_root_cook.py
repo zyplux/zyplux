@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+from typing import override
 
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
@@ -47,9 +48,11 @@ def find_refreshable_snaps() -> dict[str, str]:
 class SnapCook(PackageListCook):
     needs_root = True
 
+    @override
     def list_installed(self) -> dict[str, str]:
         return parse_installed_snaps() if shutil.which("snap") else {}
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         if not shutil.which("snap"):
             return dict.fromkeys(names)
@@ -57,6 +60,7 @@ class SnapCook(PackageListCook):
         installed = parse_installed_snaps()
         return {name: pending.get(name) or installed.get(name) for name in names}
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         work = [("install", n) for n in to_install] + [("refresh", n) for n in to_upgrade]
         if not work:

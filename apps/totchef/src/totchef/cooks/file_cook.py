@@ -1,6 +1,7 @@
 """StateCook for [file.<name>] — install a file with exact content (inline `content`, a bundled `source` from the recipe's sibling totchef_files/, or with neither set the bundled file named after the entry), diffed by content hash so a `post_hook` fires only on change. `path` expands `~` for per-user installs. Privilege-agnostic; recipe.toml grants root per entry."""
 
 from pathlib import Path
+from typing import override
 
 from pydantic import ValidationInfo, model_validator
 
@@ -26,9 +27,11 @@ class FileEntry(EntrySpec):
 class FileCook(FileStateCook[FileEntry]):
     entry_model = FileEntry
 
+    @override
     def _target_path(self, name: str) -> Path:
         return Path(self.entries[name].path).expanduser()
 
+    @override
     def _render(self, name: str) -> bytes:
         entry = self.entries[name]
         if entry.source is not None:
@@ -38,6 +41,7 @@ class FileCook(FileStateCook[FileEntry]):
     def _parse_mode(self, name: str) -> int:
         return int(self.entries[name].mode, 8)
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         changed = harness.write_if_changed(
             self._target_path(name),

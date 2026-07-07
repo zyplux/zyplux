@@ -1,6 +1,7 @@
 """StateCook for [bash.<name>] — a generic idempotent shell executor whose current_state/desired_state/apply snippet keys mirror the StateCook lifecycle. Privilege-agnostic; recipe.toml grants root per entry."""
 
 import subprocess
+from typing import override
 
 from loguru import logger
 
@@ -17,6 +18,7 @@ class BashEntry(EntrySpec):
 class BashCook(StateCook[BashEntry]):
     entry_model = BashEntry
 
+    @override
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, entry in self.entries.items():
@@ -27,9 +29,11 @@ class BashCook(StateCook[BashEntry]):
             states[name] = completed.stdout.strip() or "(empty)"
         return states
 
+    @override
     def get_desired_state(self) -> dict[str, str]:
         return {name: entry.desired_state for name, entry in self.entries.items()}
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         entry = self.entries[name]
         try:
