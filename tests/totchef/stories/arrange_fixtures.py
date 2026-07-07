@@ -1,29 +1,36 @@
-"""Arrange half of the prose framework: build the recipe under test and program the system boundaries (bash, network, host, home) a test sets up before acting. The doubles inherit their assertion half from assert_fixtures."""
+"""Arrange half of the prose framework: builds the recipe and programs the bash/network/host/home boundaries; assertions live in assert_fixtures."""
 
 import platform
 import shlex
 import subprocess
 import threading
-from collections.abc import Callable, Generator
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager, nullcontext, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, TypedDict, Unpack
 
 import pytest
 from assert_fixtures import HttpAssertions, TerminalAssertions
 from totchef import __version__, harness, registry, shell
 from totchef import terminal as terminal_module
 from totchef.cooks import apt_repo_root_cook
+from totchef.cooks.bash_cook import BashCook
 from totchef.cooks.usr_local_bin_root_cook import UsrLocalBinCook
 from totchef.cooks.usr_local_sbin_root_cook import UsrLocalSbinCook
-from totchef.recipe_types import RecipeConfig, RecipeValue
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
+    from contextlib import AbstractContextManager
+    from typing import Self
+
+    from totchef.recipe_types import RecipeConfig, RecipeValue
 
 CHEZMOI_COOK = (Path(__file__).resolve().parents[3] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
 
 
 class RecipeBuilder:
-    """The recipe.toml under test, assembled one section at a time. `declares` adds a subtable entry (`bash.deep_sleep`) when given a name, or a plain-data section (`apt_pkg`) when given only fields."""
+    """The recipe.toml under test, assembled one section at a time. `declares` adds a subtable entry when given a name, else a plain-data section."""
 
     def __init__(self) -> None:
         self.config: RecipeConfig = {}
@@ -39,7 +46,7 @@ class RecipeBuilder:
 
 
 class ConcurrencyProbe:
-    """Observe how many tracked operations are in flight at once. Arm a barrier of `parties` and each tracked op blocks until that many are simultaneously in flight, so a test proves *real* overlap deterministically: a serialized implementation can never gather `parties` together, each op waits alone, times out, and the recorded `max_inflight` stays at 1."""
+    """How many tracked ops are in flight at once. `arm(parties)` blocks each op until `parties` overlap, proving concurrency deterministically."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -58,10 +65,8 @@ class ConcurrencyProbe:
             self.max_inflight = max(self.max_inflight, self._inflight)
         try:
             if self._barrier is not None:
-                try:
+                with suppress(threading.BrokenBarrierError):
                     self._barrier.wait()
-                except threading.BrokenBarrierError:
-                    pass  # serialized: the expected overlap never gathered, max_inflight tells the story
             yield
         finally:
             with self._lock:
@@ -75,6 +80,9 @@ class RanCommand:
     argv: list[str]
     stdin: bytes | str | None
     cwd: Path | None = None
+    timeout: float | None = None
+    note: str = ""
+    tag: str = ""
 
     @property
     def line(self) -> str:
@@ -89,8 +97,28 @@ class Response:
     effect: Callable[[], None] | None = None
 
 
+class _RunOptions(TypedDict, total=False):
+    """Keyword options `shell.run` accepts, bundled as one `**options` param — the call surface is fixed by production, not this file."""
+
+    stdin: bytes | str | None
+    text: bool
+    check: bool
+    timeout: float | None
+    note: str
+    cwd: Path | None
+
+
+class _StreamOptions(TypedDict, total=False):
+    """The keyword-only options `totchef.shell.stream` accepts beyond `cmd`/`tag`, bundled for the same reason as `_RunOptions`."""
+
+    note: str
+    stdin: bytes | None
+    check: bool
+    cwd: Path | None
+
+
 class FakeTerminal(TerminalAssertions):
-    """Stands in for `totchef.shell`: the single bash chokepoint. Arrange a command's reply with `arrange`, then verify interactions with `expect_ran`/`expect_not_ran` (the assertion half). Matching is substring against the shell-joined command, so an absolute binary path (`~/.cargo/bin/cargo install --list`) still matches `"cargo install --list"`. A later `arrange` for the same match wins, so a probe re-run after a change can report the new state."""
+    """Stands in for `totchef.shell`. `arrange` programs a reply; `expect_ran`/`expect_not_ran` verify it. Matching is substring; later `arrange` wins."""
 
     def __init__(self) -> None:
         self.commands: list[RanCommand] = []
@@ -99,7 +127,7 @@ class FakeTerminal(TerminalAssertions):
         self._concurrent_matches: tuple[str, ...] = ()
 
     def expect_concurrent(self, *matches: str, parties: int, timeout: float = 2.0) -> FakeTerminal:
-        """Expect every command matching one of `matches` to run concurrently with the others — `parties` of them in flight at once. Use for a cook that fans work across a thread pool (e.g. `uv tool install`/`upgrade`); non-matching commands (a serial probe) run normally."""
+        """Expect commands matching one of `matches` to run concurrently — `parties` in flight at once. Non-matching commands run normally."""
         self._concurrent_matches = matches
         self.concurrency.arm(parties, timeout)
         return self
@@ -108,13 +136,13 @@ class FakeTerminal(TerminalAssertions):
     def max_concurrent_commands(self) -> int:
         return self.concurrency.max_inflight
 
-    def _concurrency_ctx(self, line: str):
+    def _concurrency_ctx(self, line: str) -> AbstractContextManager[None]:
         if self._concurrent_matches and any(match in line for match in self._concurrent_matches):
             return self.concurrency.track()
         return nullcontext()
 
     def arrange(self, match: str, output: str = "", *, exit_code: int = 0, effect: Callable[[], None] | None = None) -> FakeTerminal:
-        """Arrange the reply for any command matching `match`: its stdout and exit code (default success). `exit_code != 0` makes a `check=True` call raise, a `pre_hook` guard skip, an install hard-fail, etc. `effect` is a side effect a *successful* command has on the world — an installer dropping a binary, say — run after the command so the next probe sees it."""
+        """Arrange the reply for commands matching `match`: stdout and exit code. `effect` runs after success, e.g. an installer dropping a binary."""
         self._responses.append(Response(match, output, exit_code, effect))
         return self
 
@@ -125,18 +153,15 @@ class FakeTerminal(TerminalAssertions):
                 return response
         return Response("", "", 0)
 
-    def run(
-        self,
-        *cmd: str,
-        stdin: bytes | str | None = None,
-        text: bool = True,
-        check: bool = False,
-        timeout: float | None = None,
-        note: str = "",
-        cwd: Path | None = None,
-    ) -> subprocess.CompletedProcess[str | bytes]:
+    def run(self, *cmd: str, **options: Unpack[_RunOptions]) -> subprocess.CompletedProcess[str | bytes]:
         argv = list(cmd)
-        self.commands.append(RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home()))
+        stdin = options.get("stdin")
+        text = options.get("text", True)
+        check = options.get("check", False)
+        timeout = options.get("timeout")
+        note = options.get("note", "")
+        cwd = options.get("cwd")
+        self.commands.append(RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home(), timeout=timeout, note=note))
         with self._concurrency_ctx(shlex.join(argv)):
             response = self._respond(argv)
             stdout: str | bytes = response.output if text else response.output.encode()
@@ -147,17 +172,12 @@ class FakeTerminal(TerminalAssertions):
                 response.effect()
             return subprocess.CompletedProcess(argv, response.exit_code, stdout=stdout, stderr=empty)
 
-    def stream(
-        self,
-        cmd: list[str],
-        tag: str = "",
-        *,
-        note: str = "",
-        stdin: bytes | None = None,
-        check: bool = True,
-        cwd: Path | None = None,
-    ) -> None:
-        self.commands.append(RanCommand(list(cmd), stdin, cwd=cwd if cwd is not None else Path.home()))
+    def stream(self, cmd: list[str], tag: str = "", **options: Unpack[_StreamOptions]) -> None:
+        note = options.get("note", "")
+        stdin = options.get("stdin")
+        check = options.get("check", True)
+        cwd = options.get("cwd")
+        self.commands.append(RanCommand(list(cmd), stdin, cwd=cwd if cwd is not None else Path.home(), tag=tag, note=note))
         with self._concurrency_ctx(shlex.join(cmd)):
             response = self._respond(list(cmd))
             if check and response.exit_code != 0:
@@ -183,7 +203,7 @@ class _Reply:
     def __init__(self, body: bytes) -> None:
         self._body = body
 
-    def __enter__(self) -> _Reply:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> bool:
@@ -194,7 +214,7 @@ class _Reply:
 
 
 class FakeHttp(HttpAssertions):
-    """Stands in for `harness.urlopen`, the single network chokepoint every `fetch_url` call funnels through. Arrange a URL's body with `arrange(url_match, body)`; an un-programmed URL raises, so no test reaches the real network. Verify interactions with `expect_fetched(match)` (the assertion half). Matching is substring against the requested URL."""
+    """Stands in for `harness.urlopen`. `arrange(match, body)` programs a URL's body; an un-programmed URL raises. `expect_fetched` verifies by substring."""
 
     def __init__(self) -> None:
         self.requests: list[str] = []
@@ -224,11 +244,12 @@ class FakeHttp(HttpAssertions):
             for response in self._responses:
                 if response.match in url:
                     return _Reply(response.body)
-        raise AssertionError(f"unexpected HTTP GET {url!r}; arrange it with http.arrange({url!r}, ...)")
+        message = f"unexpected HTTP GET {url!r}; arrange it with http.arrange({url!r}, ...)"
+        raise AssertionError(message)
 
 
 class FakeSystem:
-    """Stands in for the host: which binaries are discoverable and which OS release is running. The machine starts bare (no tools) so a cook needing one hits its real missing-tool path; `has(...)` drops an executable on PATH for `find_binary`/`shutil.which` to find. `running_release(...)` sets the codename apt_repo substitutes into `{release}` (default `noble`)."""
+    """Stands in for the host: discoverable binaries and OS release. `has(...)` drops an executable on PATH; `running_release(...)` sets `{release}`."""
 
     def __init__(self, bin_dir: Path) -> None:
         self.bin_dir = bin_dir
@@ -249,7 +270,7 @@ class FakeSystem:
 
 @pytest.fixture(autouse=True)
 def terminal(monkeypatch: pytest.MonkeyPatch) -> FakeTerminal:
-    """The single mocked bash surface: every cook calls `shell.run`/`shell.stream` module-qualified, so patching these two names intercepts all bash execution."""
+    """The single mocked bash surface: cooks call `shell.run`/`shell.stream`, so patching these two names intercepts all bash execution."""
     fake = FakeTerminal()
     monkeypatch.setattr(shell, "run", fake.run)
     monkeypatch.setattr(shell, "stream", fake.stream)
@@ -258,7 +279,7 @@ def terminal(monkeypatch: pytest.MonkeyPatch) -> FakeTerminal:
 
 @pytest.fixture(autouse=True)
 def http(monkeypatch: pytest.MonkeyPatch) -> FakeHttp:
-    """The single mocked network surface: every `fetch_url` resolves `urlopen` in harness's globals at call time, so patching `harness.urlopen` intercepts all fetches."""
+    """The single mocked network surface: `fetch_url` resolves `urlopen` at call time, so patching `harness.urlopen` intercepts every fetch."""
     fake = FakeHttp()
     monkeypatch.setattr(harness, "urlopen", fake.urlopen)
     return fake
@@ -272,7 +293,7 @@ def totchef_version() -> str:
 
 @pytest.fixture(autouse=True)
 def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redirect `$HOME` to a temp dir so `Path.home()` (and `~`) land there, isolating per-user cooks from the real home. Also scrub env vars holding an absolute path into the real home (e.g. `BUN_INSTALL`, and the `XDG_*_HOME` dirs that production code prefers over `$HOME`), which would otherwise leak past the `$HOME` redirect — CI runners set `XDG_CONFIG_HOME`, so the config-dir cook scan would miss test drop-ins without this."""
+    """Redirect `$HOME` to a temp dir so `Path.home()`/`~` land there. Also scrub `BUN_INSTALL`/`XDG_*_HOME`, which CI sets and production prefers."""
     home_dir = tmp_path / "home"
     home_dir.mkdir()
     monkeypatch.setenv("HOME", str(home_dir))
@@ -283,7 +304,7 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def system(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeSystem:
-    """Isolate the host: PATH points at an empty bin dir (so `find_binary`/`shutil.which` see only what a test provisions) and the OS release is pinned (so apt_repo's `{release}` substitution is deterministic, not the host's codename)."""
+    """Isolate the host: PATH is an empty bin dir, so `find_binary` sees only what a test provisions; the OS release is pinned for apt_repo."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     monkeypatch.setenv("PATH", str(bin_dir))
@@ -294,7 +315,7 @@ def system(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeSystem:
 
 @pytest.fixture(autouse=True)
 def fresh_registry() -> Generator[None]:
-    """Reset the per-run resolution globals around every test so nothing leaks: the cook registry (cached, HOME-dependent — it scans `~/.config/totchef/cooks`), the recipe's pinned custom-cooks dir, and its pinned assets dir."""
+    """Reset the per-run globals each test: the HOME-dependent cook registry, the recipe's pinned custom-cooks dir, and its pinned assets dir."""
     registry.set_recipe_cooks_dir(None)
     harness.set_files_dir(None)
     registry.cook_registry.cache_clear()
@@ -305,11 +326,9 @@ def fresh_registry() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
-def fresh_runner_colors() -> Generator[None]:
-    """Per-cook log/report colors are assigned into a module-global dict in first-seen order (the palette wraps once exhausted); reset it around every test so assignments don't leak across tests — otherwise the cumulative count decides which hue a cook gets."""
-    terminal_module._runner_colors.clear()
-    yield
-    terminal_module._runner_colors.clear()
+def fresh_runner_colors(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Per-cook colors are assigned into a module-global dict in first-seen order; reset before every test so leftovers don't decide a hue."""
+    monkeypatch.setattr(terminal_module, "_runner_colors", {})
 
 
 @pytest.fixture
@@ -346,7 +365,7 @@ def apt_sources_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def bundled_files(tmp_path: Path) -> Path:
-    """The recipe's sibling assets dir (totchef_files/), populated by the test — resolved by the real in-process run from the recipe written under tmp_path, so a story exercises recipe-relative asset resolution, not a patched global."""
+    """The recipe's sibling assets dir (totchef_files/), resolved by the real run from tmp_path — recipe-relative resolution, not a patched global."""
     files_dir = tmp_path / "totchef_files"
     files_dir.mkdir()
     return files_dir
@@ -354,7 +373,7 @@ def bundled_files(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def custom_cooks(tmp_path: Path) -> Path:
-    """The recipe's sibling custom-cooks dir (totchef_cooks/), populated by the test — scanned by the real in-process run for loose `*_cook.py` plugins beside the recipe."""
+    """The recipe's sibling custom-cooks dir (totchef_cooks/), scanned by the real run for loose `*_cook.py` plugins beside the recipe."""
     cooks_dir = tmp_path / "totchef_cooks"
     cooks_dir.mkdir()
     return cooks_dir
@@ -362,7 +381,7 @@ def custom_cooks(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def chezmoi_cook(custom_cooks: Path) -> Path:
-    """Drop the externalized chezmoi cook into the recipe's totchef_cooks/, so §11 drives the real cook the way it now ships — as a discovered custom cook, not a built-in."""
+    """Drop the externalized chezmoi cook into totchef_cooks/, so §11 drives it as a discovered custom cook, not a built-in."""
     target = custom_cooks / "chezmoi_cook.py"
     target.write_text(CHEZMOI_COOK)
     return target
@@ -370,7 +389,7 @@ def chezmoi_cook(custom_cooks: Path) -> Path:
 
 @pytest.fixture
 def chezmoi_repo(tmp_path: Path) -> Path:
-    """A recipe repo (a recognized recipe name beside a totchef_cooks/chezmoi_cook.py) to cd into — for listing the discovered chezmoi cook through plain cwd resolution, without the in-process recipe harness."""
+    """A recipe repo (a recognized name beside totchef_cooks/chezmoi_cook.py), for listing the cook via plain cwd resolution, no harness."""
     repo = tmp_path / "chezmoi-repo"
     cooks = repo / "totchef_cooks"
     cooks.mkdir(parents=True)
@@ -386,16 +405,13 @@ def recipe() -> RecipeBuilder:
 
 @pytest.fixture
 def scenario() -> Callable[[], RecipeBuilder]:
-    """Arrange an independent recipe with its own fresh builder — for a test that exercises several distinct recipes (e.g. a few ways a dependency can be malformed). Hand the built recipe to `chef` to run it."""
+    """Arrange an independent recipe with its own builder, for a test exercising several recipes malformed differently. Hand it to `chef`."""
     return RecipeBuilder
 
 
 @pytest.fixture
 def register_plugin(monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], None]:
-    """Register a fake third-party cook under the `totchef.cooks` entry-point group, exactly as an installed plugin distribution would — so a story can observe its `plugin:<dist>` origin via `--list-cooks` without building and installing a real package."""
-    from totchef import registry
-    from totchef.cooks.bash_cook import BashCook
-
+    """Register a fake third-party cook under `totchef.cooks`, as an installed plugin would, so a story observes its `plugin:<dist>` origin."""
     real_entry_points = registry.entry_points
 
     def register(section: str, dist: str) -> None:

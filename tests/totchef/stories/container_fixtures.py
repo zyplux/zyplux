@@ -4,11 +4,14 @@ import base64
 import os
 import shutil
 import subprocess
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTAINER_DIR = Path(__file__).parent / "container"
@@ -27,7 +30,7 @@ CLEAN_ENV = dict(os.environ)
 
 @dataclass
 class ContainerRun:
-    """What a `totchef up` inside the container produced: the owner (`stat -c %U`) of each probed artifact, the owner of the run's log file, and the full transcript for failure messages."""
+    """What a `totchef up` inside the container produced: each probed artifact's owner (`stat -c %U`), the log file's owner, and the full transcript."""
 
     transcript: str
     owners: dict[str, str | None] = field(default_factory=dict)
@@ -43,6 +46,7 @@ def container_image() -> str:
         capture_output=True,
         text=True,
         env=CLEAN_ENV,
+        check=False,
     )
     if build.returncode != 0:
         pytest.fail(f"podman build failed:\n{build.stdout}\n{build.stderr}")
@@ -51,7 +55,7 @@ def container_image() -> str:
 
 @pytest.fixture(scope="session")
 def apply_in_container(container_image: str) -> Callable[[str, list[str]], ContainerRun]:
-    """Run `totchef up` against `recipe` inside a fresh container as the non-root `tester`, then report the owner of each path in `artifacts` and of the run's log file."""
+    """Run `totchef up` against `recipe` in a fresh container as the non-root `tester`, reporting the owner of each `artifacts` path and log file."""
     assert podman is not None
     binary = podman
 
@@ -66,7 +70,9 @@ def apply_in_container(container_image: str) -> Callable[[str, list[str]], Conta
             f"{probes}\n"
             'for log in ~/.local/state/totchef/logs/*.log; do stat -c "LOG %U" "$log"; done 2>/dev/null || true\n'
         )
-        proc = subprocess.run([binary, "run", "--rm", IMAGE, "bash", "-lc", script], capture_output=True, text=True, env=CLEAN_ENV)
+        proc = subprocess.run(
+            [binary, "run", "--rm", container_image, "bash", "-lc", script], capture_output=True, text=True, env=CLEAN_ENV, check=False
+        )
         return _parse(proc.stdout + proc.stderr)
 
     return apply
