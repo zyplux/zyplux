@@ -58,7 +58,7 @@ def ensure_node_shim(bun: Path) -> None:
     if is_link and node.resolve() == bun.resolve():
         return
     if not is_link and node.exists():
-        logger.warning(f"leaving {node} as-is — not a symlink, won't clobber a real node runtime")
+        logger.warning("leaving {node} as-is — not a symlink, won't clobber a real node runtime", node=node)
         return
     try:
         if is_link:
@@ -66,9 +66,9 @@ def ensure_node_shim(bun: Path) -> None:
         node.parent.mkdir(parents=True, exist_ok=True)
         node.symlink_to(bun)
     except OSError as exc:
-        logger.warning(f"could not link {node} -> bun: {exc}")
+        logger.warning("could not link {node} -> bun: {exc}", node=node, exc=exc)
         return
-    logger.info(f"linked {node} -> {bun} so bun serves as the node runtime")
+    logger.info("linked {node} -> {bun} so bun serves as the node runtime", node=node, bun=bun)
 
 
 def parse_installed_globals(modules_dir: Path) -> dict[str, str]:
@@ -112,6 +112,6 @@ class BunCook(PackageListCook):
         if not targets:
             return SyncOutcome("ok")
 
-        logger.info(f"Installing/upgrading {len(targets)} bun global(s): " + ", ".join(targets))
+        logger.info("Installing/upgrading {count} bun global(s): {names}", count=len(targets), names=", ".join(targets))
         shell.stream([str(bun), "add", "-g", "--ignore-scripts", *targets])
         return SyncOutcome("ok")

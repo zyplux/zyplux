@@ -67,7 +67,7 @@ def run_installer(url: str, args: list[str], note: str) -> None:
 def update_existing(entry: UrlEntry, bin_path: Path) -> None:
     action = entry.update_action
     if action is None:
-        logger.info(f"No update_action; leaving {bin_path} as-is")
+        logger.info("No update_action; leaving {bin_path} as-is", bin_path=bin_path)
         return
     if guard := entry.update_guard:
         guard_command = f"PATH={shlex.quote(str(bin_path.parent))}:$PATH; {guard}"
@@ -124,9 +124,9 @@ class UrlCook(VersionedCook):
             except (OSError, subprocess.CalledProcessError) as exc:
                 return SyncOutcome("hard_fail", f"{name} install failed: {exc}")
             if found := find_binary(bin_name):
-                logger.info(f"Installed: {found}")
+                logger.info("Installed: {found}", found=found)
             else:
-                logger.warning(f"{bin_name} not found after install")
+                logger.warning("{bin_name} not found after install", bin_name=bin_name)
             return SyncOutcome("ok")
 
         try:
