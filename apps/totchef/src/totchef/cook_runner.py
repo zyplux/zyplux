@@ -1,12 +1,15 @@
-"""Cook execution engine: chef diffs each cook and acts; `run_recipe` topo-sorts the graph and forks every node (user nodes concurrent and privilege-dropped, root nodes serialized)."""
+"""Cook execution engine: chef diffs, this acts; `run_recipe` topo-sorts the graph and forks every node (concurrent+privilege-dropped, root serialized)."""
 
+import json
 import os
-import pickle
 import pwd
 import re
+import subprocess
 import time
 import traceback
+from dataclasses import asdict, dataclass, field
 from graphlib import TopologicalSorter
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -20,8 +23,10 @@ from totchef.recipe_graph import (
     build_node_graph,
     build_nodes,
 )
-from totchef.recipe_types import RecipeConfig
 from totchef.terminal import progress_region
+
+if TYPE_CHECKING:
+    from totchef.recipe_types import RecipeConfig
 
 STATUS_RANK: dict[Status, int] = {"ok": 0, "soft_fail": 1, "hard_fail": 2}
 
@@ -44,17 +49,23 @@ def format_state(token: str) -> str:
     return f"#{token[:8]}" if CONTENT_DIGEST.fullmatch(token) else token
 
 
+_SECONDS_PER_MINUTE = 60
+_MINUTES_PER_HOUR = 60
+_HOURS_PER_DAY = 24
+_MIN_REPORTABLE_DURATION = 1e-4
+
+
 def format_duration(seconds: float) -> str:
-    """A wall-clock duration in its natural unit, stepping up at each calendar boundary: fractional seconds (4 sig figs) under a minute, then whole minutes+seconds, hours+minutes past an hour, days+hours past a day."""
-    if seconds < 60:
-        return f"{seconds:.4g}s" if seconds >= 1e-4 else "0s"
-    minutes, sec = int(seconds // 60), int(seconds % 60)
-    if minutes < 60:
+    """A wall-clock duration, stepping up per boundary: fractional seconds under a minute, then minutes+seconds, hours+minutes, days+hours."""
+    if seconds < _SECONDS_PER_MINUTE:
+        return f"{seconds:.4g}s" if seconds >= _MIN_REPORTABLE_DURATION else "0s"
+    minutes, sec = int(seconds // _SECONDS_PER_MINUTE), int(seconds % _SECONDS_PER_MINUTE)
+    if minutes < _MINUTES_PER_HOUR:
         return f"{minutes}m {sec}s"
-    hours, minutes = minutes // 60, minutes % 60
-    if hours < 24:
+    hours, minutes = minutes // _MINUTES_PER_HOUR, minutes % _MINUTES_PER_HOUR
+    if hours < _HOURS_PER_DAY:
         return f"{hours}h {minutes}m"
-    days, hours = hours // 24, hours % 24
+    days, hours = hours // _HOURS_PER_DAY, hours % _HOURS_PER_DAY
     return f"{days}d {hours}h"
 
 
@@ -62,50 +73,66 @@ def run_pre_hook(snippet: str) -> bool:
     """A `pre_hook` guard: zero exit proceeds, non-zero skips this item (a benign skip, e.g. "browser is running", not a failure)."""
     try:
         shell.stream(["bash", "-c", snippet], note=f"pre_hook: {snippet}")
-        return True
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         logger.info("pre_hook not satisfied; skipping")
         return False
+    else:
+        return True
 
 
 def run_post_hook(snippet: str) -> Status:
     """A `post_hook` runs after a successful change; non-zero -> soft failure."""
     try:
         shell.stream(["bash", "-c", snippet], note=f"post_hook: {snippet}")
-        return "ok"
-    except Exception as exc:
+    except (subprocess.CalledProcessError, OSError) as exc:
         logger.warning(f"post_hook failed: {exc}")
         return "soft_fail"
+    else:
+        return "ok"
 
 
-def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResult:
+def _plan_row(name: str, installed_before: dict[str, str], latest: dict[str, str | None]) -> ReportRow:
+    """One dry-run preview row: what `run_versioned` would do for `name` without touching the system."""
+    installed = installed_before.get(name)
+    available = latest.get(name)
+    if installed is None:
+        action, changed = "would install", True
+    elif available is None:
+        action, changed = "would sync", True
+    elif available != installed:
+        action, changed = "would upgrade", True
+    else:
+        action, changed = "up-to-date", False
+    return ReportRow(name, installed or "(none)", installed or "(none)", format_version(available), action, changed)
+
+
+def _gated_row(name: str, installed_before: dict[str, str], latest: dict[str, str | None], pending: set[str]) -> ReportRow:
+    """A row for a sync the section-level `pre_hook` blocked: `name` stays put, labeled `skipped` if it was due to move, else `unchanged`."""
+    installed = installed_before.get(name)
+    action = "skipped" if name in pending else "unchanged"
+    return ReportRow(name, installed or "(none)", installed or "(none)", format_version(latest.get(name)), action, changed=False)
+
+
+def _synced_row(name: str, before: str | None, after: str | None, available: str | None, *, hard_failed: bool) -> ReportRow:
+    """One post-sync report row: how `name` moved (or didn't) from its pre-sync to post-sync installed version."""
+    if before is None and after is not None:
+        action, changed = "installed", True
+    elif before is not None and after is not None and before != after:
+        action, changed = "upgraded", True
+    elif after is None:
+        action, changed = ("failed" if hard_failed else "missing"), False
+    else:
+        action, changed = "unchanged", False
+    return ReportRow(name, before or "(none)", after or before or "(none)", format_version(available), action, changed)
+
+
+def run_versioned(cook: VersionedCook, section: str, *, dry_run: bool) -> CookResult:
     requested = cook.list_requested()
     installed_before = cook.list_installed()
     latest = cook.find_latest(requested)
 
     if dry_run:
-        rows: list[ReportRow] = []
-        for name in requested:
-            installed = installed_before.get(name)
-            available = latest.get(name)
-            if installed is None:
-                action, changed = "would install", True
-            elif available is None:
-                action, changed = "would sync", True
-            elif available != installed:
-                action, changed = "would upgrade", True
-            else:
-                action, changed = "up-to-date", False
-            rows.append(
-                ReportRow(
-                    name,
-                    installed or "(none)",
-                    installed or "(none)",
-                    format_version(available),
-                    action,
-                    changed,
-                )
-            )
+        rows = [_plan_row(name, installed_before, latest) for name in requested]
         return CookResult(section, "ok", rows)
 
     to_install = [n for n in requested if n not in installed_before]
@@ -114,17 +141,7 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
     pre_hook, post_hook = cook.get_hooks()
 
     if pending and pre_hook and not run_pre_hook(pre_hook):
-        rows = [
-            ReportRow(
-                name,
-                installed_before.get(name) or "(none)",
-                installed_before.get(name) or "(none)",
-                format_version(latest.get(name)),
-                "skipped" if name in pending else "unchanged",
-                False,
-            )
-            for name in requested
-        ]
+        rows = [_gated_row(name, installed_before, latest, pending) for name in requested]
         return CookResult(section, "ok", rows)
 
     result = cook.sync(to_install, to_upgrade)
@@ -134,29 +151,10 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
         logger.info(result.delayed_message)
 
     installed_after = cook.list_installed()
-    rows = []
-    for name in cook.list_reportable(requested, installed_after):
-        before = installed_before.get(name)
-        after = installed_after.get(name)
-        if before is None and after is not None:
-            action, changed = "installed", True
-        elif before is not None and after is not None and before != after:
-            action, changed = "upgraded", True
-        elif after is None:
-            action = "failed" if result.status == "hard_fail" else "missing"
-            changed = False
-        else:
-            action, changed = "unchanged", False
-        rows.append(
-            ReportRow(
-                name,
-                before or "(none)",
-                after or before or "(none)",
-                format_version(latest.get(name)),
-                action,
-                changed,
-            )
-        )
+    rows = [
+        _synced_row(name, installed_before.get(name), installed_after.get(name), latest.get(name), hard_failed=result.status == "hard_fail")
+        for name in cook.list_reportable(requested, installed_after)
+    ]
 
     status = result.status
     if status == "ok" and post_hook and any(row.changed for row in rows) and run_post_hook(post_hook) == "soft_fail":
@@ -165,10 +163,10 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
 
 
 def apply_state_resource(cook: StateCook[EntrySpec], name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status, str]:
-    """Apply one state-cook resource and build its row plus any delayed operator follow-up: pre_hook gates, apply mutates, post_hook fires on a real change; a pre_hook-gated skip reports as `ok`."""
+    """Apply one state-cook resource and build its row plus follow-up: pre_hook gates, apply mutates, post_hook fires on change; a gated skip is `ok`."""
     pre_hook, post_hook = cook.get_hooks(name)
     if pre_hook and not run_pre_hook(pre_hook):
-        return ReportRow(name, current_label, current_label, desired_label, "skipped", False), "ok", ""
+        return ReportRow(name, current_label, current_label, desired_label, "skipped", changed=False), "ok", ""
 
     outcome = cook.apply_resource(name)
     if outcome.message:
@@ -190,19 +188,16 @@ def apply_state_resource(cook: StateCook[EntrySpec], name: str, current_label: s
     return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status, outcome.delayed_message
 
 
-def run_state(cook: StateCook[EntrySpec], section: str, dry_run: bool) -> CookResult:
+def run_state(cook: StateCook[EntrySpec], section: str, *, dry_run: bool) -> CookResult:
     resources = cook.list_resources()
     current = cook.get_current_state()
     desired = cook.get_desired_state()
     to_apply = [n for n in resources if current.get(n) != desired.get(n)]
 
     def labels(name: str) -> tuple[str, str, str]:
-        """Pre-state, target and post-apply labels: a digest reads 'matches'/'differs' against the rendered recipe content, the target column shows its short content id, raw tokens pass through."""
+        """Pre-state, target and post-apply labels: a digest reads matches/differs against the desired content; the target column shows its short content id."""
         current_token, desired_token = current.get(name, "?"), desired.get(name, "?")
-        if CONTENT_DIGEST.fullmatch(current_token):
-            current_label = "matches" if current_token == desired_token else "differs"
-        else:
-            current_label = current_token
+        current_label = ("matches" if current_token == desired_token else "differs") if CONTENT_DIGEST.fullmatch(current_token) else current_token
         applied_label = "matches" if CONTENT_DIGEST.fullmatch(desired_token) else desired_token
         return current_label, format_state(desired_token), applied_label
 
@@ -218,7 +213,7 @@ def run_state(cook: StateCook[EntrySpec], section: str, dry_run: bool) -> CookRe
         if will:
             return apply_state_resource(cook, name, current_label, desired_label, applied_label)
 
-        return ReportRow(name, current_label, current_label, desired_label, "unchanged", False), "ok", ""
+        return ReportRow(name, current_label, current_label, desired_label, "unchanged", changed=False), "ok", ""
 
     rows: list[ReportRow] = []
     statuses: list[Status] = []
@@ -233,48 +228,66 @@ def run_state(cook: StateCook[EntrySpec], section: str, dry_run: bool) -> CookRe
     return CookResult(section, pick_worst_status(statuses), rows, delayed_messages=delayed_messages)
 
 
-def run_cook(node: Node, config: RecipeConfig, dry_run: bool) -> CookResult:
+def run_cook(node: Node, config: RecipeConfig, *, dry_run: bool) -> CookResult:
     cook = build_cook(node, config)
     if isinstance(cook, VersionedCook):
-        return run_versioned(cook, node.id, dry_run)
+        return run_versioned(cook, node.id, dry_run=dry_run)
     if isinstance(cook, StateCook):
-        return run_state(cook, node.id, dry_run)
+        return run_state(cook, node.id, dry_run=dry_run)
     return CookResult(node.id, "hard_fail", [], f"{node.id}: unknown cook kind")
 
 
-def run_cook_guarded(
-    node: Node,
-    config: RecipeConfig,
-    dry_run: bool,
-    dependents: tuple[str, ...] = (),
-    reach: dict[str, int] | None = None,
-    weights: dict[str, int] | None = None,
-) -> CookResult:
-    """Run one cook in its forked child and log its start line (completion is logged parent-side by log_completion); a dry-run drops the `as <user>` identity."""
-    reach = reach or {}
-    weights = weights or {}
-    combined = reach.get(node.id, 0) - weights.get(node.id, 0)
+@dataclass(frozen=True)
+class Scheduling:
+    """Per-run scheduling data off the DAG: `dependents` feeds queueing/unlocked log lines, `reach`/`weights` drive ready-node priority and wait math."""
+
+    dependents: dict[str, tuple[str, ...]]
+    reach: dict[str, int]
+    weights: dict[str, int]
+
+
+@dataclass
+class UnlockProgress:
+    """Live blocker tally: `blocker_count` is fixed off the DAG, `satisfied` increments per completion; together they drive the `(satisfied/total)` note."""
+
+    blocker_count: dict[str, int]
+    satisfied: dict[str, int]
+
+
+def run_cook_guarded(node: Node, config: RecipeConfig, *, dry_run: bool, scheduling: Scheduling) -> CookResult:
+    """Run one cook in its forked child and log its start line (log_completion logs completion parent-side); a dry-run drops the `as <user>` identity."""
+    dependents = scheduling.dependents.get(node.id, ())
+    combined = scheduling.reach.get(node.id, 0) - scheduling.weights.get(node.id, 0)
     with cook_context(node.id):
         started = "started" if dry_run else f"started as {pwd.getpwuid(os.geteuid()).pw_name}"
         if not node.needs_root and node.depends_on:
             started += f"; depends_on {', '.join(node.depends_on)}"
-        started += format_queueing(dependents, reach, combined)
+        started += format_queueing(dependents, scheduling.reach, combined)
         logger.info(started)
         try:
-            return run_cook(node, config, dry_run)
+            return run_cook(node, config, dry_run=dry_run)
         except Exception:
             return CookResult(node.id, "hard_fail", [], traceback.format_exc())
 
 
-def fork_cook(
-    node: Node,
-    config: RecipeConfig,
-    dry_run: bool,
-    dependents: dict[str, tuple[str, ...]],
-    reach: dict[str, int],
-    weights: dict[str, int],
-) -> tuple[int, int]:
-    """Fork a child to run one cook (user node drops privilege, root keeps it) and pickle its CookResult back over a pipe; main-thread-only for loguru's locks."""
+def _encode_result(result: CookResult) -> bytes:
+    """A CookResult as JSON bytes: it's built entirely from str/bool/list/dict, so JSON round-trips it exactly, without pickle's arbitrary-object surface."""
+    return json.dumps(asdict(result)).encode()
+
+
+def _decode_result(payload: bytes) -> CookResult:
+    data = json.loads(payload)
+    return CookResult(
+        cook=data["cook"],
+        status=data["status"],
+        rows=[ReportRow(**row) for row in data["rows"]],
+        message=data["message"],
+        delayed_messages=data["delayed_messages"],
+    )
+
+
+def fork_cook(node: Node, config: RecipeConfig, *, dry_run: bool, scheduling: Scheduling) -> tuple[int, int]:
+    """Fork a child to run one cook (user drops privilege, root keeps it), JSON-encode its CookResult over a pipe; main-thread-only for loguru's locks."""
     read_fd, write_fd = os.pipe()
     pid = os.fork()
     if pid == 0:
@@ -282,11 +295,11 @@ def fork_cook(
         try:
             if not node.needs_root:
                 become_user()
-            result = run_cook_guarded(node, config, dry_run, dependents.get(node.id, ()), reach, weights)
+            result = run_cook_guarded(node, config, dry_run=dry_run, scheduling=scheduling)
         except Exception:
             result = CookResult(node.id, "hard_fail", [], traceback.format_exc())
         with os.fdopen(write_fd, "wb") as out:
-            out.write(pickle.dumps(result))
+            out.write(_encode_result(result))
         os._exit(0)
     os.close(write_fd)
     return pid, read_fd
@@ -303,8 +316,8 @@ def read_child_result(read_fd: int, exit_status: int, node_id: str) -> CookResul
             f"{node_id} produced no result (status {exit_status}).",
         )
     try:
-        return pickle.loads(payload)
-    except Exception as exc:
+        return _decode_result(payload)
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
         return CookResult(node_id, "hard_fail", [], f"{node_id} result unreadable: {exc}")
 
 
@@ -358,19 +371,12 @@ def format_unlocked(
     return f"; unlocked: {', '.join(parts)}"
 
 
-def log_completion(
-    node_id: str,
-    result: CookResult,
-    dependants: tuple[str, ...],
-    satisfied: dict[str, int],
-    blocker_count: dict[str, int],
-    elapsed: float,
-) -> None:
+def log_completion(node_id: str, result: CookResult, dependants: tuple[str, ...], progress: UnlockProgress, elapsed: float) -> None:
     """Emit a cook's completion line parent-side, timed from fork to reap: success unlocks dependants, failure blocks them."""
     with cook_context(node_id):
         timing = f"({format_duration(elapsed)})"
         if result.status == "ok":
-            logger.info(f"completed {timing}{format_unlocked(dependants, satisfied, blocker_count)}")
+            logger.info(f"completed {timing}{format_unlocked(dependants, progress.satisfied, progress.blocker_count)}")
         else:
             blocked = f"; blocked: {', '.join(dependants)}" if dependants else ""
             message = result.message or "see log above"
@@ -378,90 +384,113 @@ def log_completion(
             emit(f"completed with failure {timing}: {message}{blocked}")
 
 
-def run_recipe_inline(config: RecipeConfig, dry_run: bool) -> dict[str, CookResult]:
-    """Run the DAG in this process — no fork, no privilege drop — one node at a time in topological order. The foreground/debug path (and the seam tests drive the CLI on); intra-cook concurrency (a cook's own thread pool) still applies."""
+def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
+    """Run the DAG in-process, no fork or privilege drop, one node at a time in topo order: the foreground/debug path the seam tests drive."""
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
     dependents = build_dependents(graph)
     weights = build_weights(config, nodes)
     reach = build_reach(dependents, weights)
-    blocker_count = {node_id: len(deps) for node_id, deps in graph.items()}
-    satisfied: dict[str, int] = dict.fromkeys(graph, 0)
+    scheduling = Scheduling(dependents, reach, weights)
+    progress = UnlockProgress(blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0))
     results: dict[str, CookResult] = {}
     for node_id in TopologicalSorter(graph).static_order():
         started = time.monotonic()
-        result = run_cook_guarded(nodes[node_id], config, dry_run, dependents[node_id], reach, weights)
+        result = run_cook_guarded(nodes[node_id], config, dry_run=dry_run, scheduling=scheduling)
         results[node_id] = result
         for dependant in dependents[node_id]:
-            satisfied[dependant] += 1
-        log_completion(node_id, result, dependents[node_id], satisfied, blocker_count, time.monotonic() - started)
+            progress.satisfied[dependant] += 1
+        log_completion(node_id, result, dependents[node_id], progress, time.monotonic() - started)
         if result.status == "hard_fail":
             break
     return results
 
 
-def run_recipe(config: RecipeConfig, dry_run: bool) -> dict[str, CookResult]:
-    """Schedule the DAG: fork ready user nodes concurrently, serialize root nodes in their own lane, reap as they finish; ties broken by reach (highest gated work first)."""
+@dataclass
+class _Scheduler:
+    """Fork/reap state for one `run_recipe` pass: launches ready nodes (a root node queues, serialized), reaps children, folding results into shared tallies."""
+
+    nodes: dict[str, Node]
+    config: RecipeConfig
+    scheduling: Scheduling
+    progress: UnlockProgress
+    dry_run: bool
+    sorter: TopologicalSorter[str]
+    results: dict[str, CookResult] = field(default_factory=dict)
+    running: dict[int, tuple[str, int]] = field(default_factory=dict)
+    started_at: dict[str, float] = field(default_factory=dict)
+    pending_root: list[str] = field(default_factory=list)
+    root_pid: int | None = None
+
+    def _fork(self, node_id: str) -> int:
+        pid, read_fd = fork_cook(self.nodes[node_id], self.config, dry_run=self.dry_run, scheduling=self.scheduling)
+        self.running[pid] = (node_id, read_fd)
+        self.started_at[node_id] = time.monotonic()
+        return pid
+
+    def launch_ready(self) -> None:
+        ready = sorted(self.sorter.get_ready(), key=lambda n: self.scheduling.reach[n], reverse=True)
+        for node_id in ready:
+            if self.nodes[node_id].needs_root:
+                self.pending_root.append(node_id)
+            else:
+                self._fork(node_id)
+        if self.root_pid is None and self.pending_root:
+            self.pending_root.sort(key=lambda n: self.scheduling.reach[n])
+            self.root_pid = self._fork(self.pending_root.pop())
+
+    def reap_one(self) -> CookResult:
+        pid, exit_status = os.waitpid(-1, 0)
+        node_id, read_fd = self.running.pop(pid)
+        if pid == self.root_pid:
+            self.root_pid = None
+        result = self._finish(node_id, read_fd, exit_status)
+        self.sorter.done(node_id)
+        return result
+
+    def drain_one(self) -> None:
+        pid, exit_status = os.waitpid(-1, 0)
+        node_id, read_fd = self.running.pop(pid)
+        self._finish(node_id, read_fd, exit_status)
+
+    def _finish(self, node_id: str, read_fd: int, exit_status: int) -> CookResult:
+        result = read_child_result(read_fd, exit_status, node_id)
+        self.results[node_id] = result
+        for dependant in self.scheduling.dependents[node_id]:
+            self.progress.satisfied[dependant] += 1
+        elapsed = time.monotonic() - self.started_at.get(node_id, time.monotonic())
+        log_completion(node_id, result, self.scheduling.dependents[node_id], self.progress, elapsed)
+        return result
+
+
+def run_recipe(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
+    """Schedule the DAG: fork ready nodes concurrently, serialize root nodes in their lane, reap as they finish; ties break by reach (highest work first)."""
     if inline_mode():
-        return run_recipe_inline(config, dry_run)
+        return run_recipe_inline(config, dry_run=dry_run)
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
     dependents = build_dependents(graph)
     weights = build_weights(config, nodes)
     reach = build_reach(dependents, weights)
-    blocker_count = {node_id: len(deps) for node_id, deps in graph.items()}
-    satisfied: dict[str, int] = dict.fromkeys(graph, 0)
+    scheduling = Scheduling(dependents, reach, weights)
+    progress = UnlockProgress(blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0))
     sorter: TopologicalSorter[str] = TopologicalSorter(graph)
     sorter.prepare()
-    results: dict[str, CookResult] = {}
-    running: dict[int, tuple[str, int]] = {}
-    started_at: dict[str, float] = {}
-    pending_root: list[str] = []
-    root_pid: int | None = None
-    abort = False
-
-    def settle(done_id: str, result: CookResult) -> None:
-        for dependant in dependents[done_id]:
-            satisfied[dependant] += 1
-        elapsed = time.monotonic() - started_at.get(done_id, time.monotonic())
-        log_completion(done_id, result, dependents[done_id], satisfied, blocker_count, elapsed)
+    scheduler = _Scheduler(nodes, config, scheduling, progress, dry_run, sorter)
 
     with progress_region("Cooking", total=len(nodes)) as bar:
+        abort = False
         while sorter.is_active() and not abort:
-            ready = sorted(sorter.get_ready(), key=lambda n: reach[n], reverse=True)
-            for node_id in ready:
-                if nodes[node_id].needs_root:
-                    pending_root.append(node_id)
-                else:
-                    pid, read_fd = fork_cook(nodes[node_id], config, dry_run, dependents, reach, weights)
-                    running[pid] = (node_id, read_fd)
-                    started_at[node_id] = time.monotonic()
-            if root_pid is None and pending_root:
-                pending_root.sort(key=lambda n: reach[n])
-                node_id = pending_root.pop()
-                root_pid, read_fd = fork_cook(nodes[node_id], config, dry_run, dependents, reach, weights)
-                running[root_pid] = (node_id, read_fd)
-                started_at[node_id] = time.monotonic()
-            if not running:
+            scheduler.launch_ready()
+            if not scheduler.running:
                 break
-            pid, exit_status = os.waitpid(-1, 0)
-            node_id, read_fd = running.pop(pid)
-            if pid == root_pid:
-                root_pid = None
-            result = read_child_result(read_fd, exit_status, node_id)
-            results[node_id] = result
-            settle(node_id, result)
-            sorter.done(node_id)
+            result = scheduler.reap_one()
             bar.advance()
             if result.status == "hard_fail":
                 abort = True
 
-        while running:
-            pid, exit_status = os.waitpid(-1, 0)
-            node_id, read_fd = running.pop(pid)
-            result = read_child_result(read_fd, exit_status, node_id)
-            results[node_id] = result
-            settle(node_id, result)
+        while scheduler.running:
+            scheduler.drain_one()
             bar.advance()
 
-    return results
+    return scheduler.results
