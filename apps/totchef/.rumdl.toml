@@ -1,0 +1,12 @@
+[global]
+disable = [
+    "MD013", # line-length
+    "MD022", # blanks-around-headings
+    "MD031", # blanks-around-fences
+    "MD032", # blanks-around-lists
+    "MD033", # no-inline-html
+]
+
+# no-duplicate-heading
+[MD024]
+siblings-only = true

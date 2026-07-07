@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "meta.pyrefly",
+    "nefrob.vscode-just-syntax",
+    "rvben.rumdl"
+  ]
+}

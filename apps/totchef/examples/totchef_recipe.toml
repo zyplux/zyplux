@@ -1,0 +1,326 @@
+# Duplicates [apt_pkg]'s build toolchain so [cargo] needn't wait for the full apt transaction.
+[bash.apt_prereqs]
+needs_root = true
+apply = '''
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y --no-install-recommends curl gnupg ca-certificates nala build-essential pkg-config libssl-dev
+'''
+current_state = "command -v nala gcc pkg-config >/dev/null && test -f /usr/include/openssl/ssl.h && echo present || echo absent"
+
+[usr_local_bin.write-if-changed]
+
+[bash.ubuntu_pin]
+needs_root = true
+apply = '''
+. /etc/os-release
+rel="${VERSION_CODENAME:-$UBUNTU_CODENAME}"
+[ -n "$rel" ] || { echo "ERROR: could not determine release codename" >&2; exit 1; }
+cat <<EOF | write-if-changed /etc/apt/preferences.d/ubuntu-archives.pref
+# Prefer Ubuntu archives (priority 900) over third-party repos (default 500).
+Package: *
+Pin: release o=Ubuntu, a=$rel
+Pin-Priority: 900
+
+Package: *
+Pin: release o=Ubuntu, a=$rel-updates
+Pin-Priority: 900
+
+Package: *
+Pin: release o=Ubuntu, a=$rel-security
+Pin-Priority: 900
+EOF
+'''
+current_state = "test -f /etc/apt/preferences.d/ubuntu-archives.pref && echo present || echo absent"
+depends_on = ["usr_local_bin.write-if-changed"]
+
+[bash.code_insiders_debconf]
+needs_root = true
+apply = "echo 'code-insiders code-insiders/add-microsoft-repo boolean false' | debconf-set-selections"
+current_state = "debconf-show code-insiders 2>/dev/null | grep -q 'add-microsoft-repo: false' && echo set || echo unset"
+desired_state = "set"
+
+[file.trusted_gpgd_hardening]
+needs_root = true
+path = "/etc/apt/apt.conf.d/99-trusted-gpgd-autounlock"
+mode = "0644"
+content = """
+// Lift trusted.gpg.d's immutable bit around each dpkg run, then restore it.
+DPkg::Pre-Invoke  { "/usr/bin/chattr -i /etc/apt/trusted.gpg.d/ 2>/dev/null || true"; };
+DPkg::Post-Invoke { "/usr/bin/chattr +i /etc/apt/trusted.gpg.d/ 2>/dev/null || true"; };
+"""
+post_hook = "lsattr -d /etc/apt/trusted.gpg.d/ 2>/dev/null | awk '{print $1}' | grep -q i || chattr +i /etc/apt/trusted.gpg.d/"
+
+[conf.nala]
+needs_root = true
+target = "/etc/nala/nala.conf"
+depends_on = ["bash.apt_prereqs"]
+lines = ["[Nala]", "full_upgrade = true", "update_show_packages = true"]
+
+[apt_repo]
+depends_on = ["bash.apt_prereqs"]
+
+[apt_repo.griffo]
+url = "debian.griffo.io"
+key_url = "EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc"
+uris = "apt"
+suites = "{release}"
+
+[apt_repo.brave-browser]
+url = "brave-browser-apt-release.s3.brave.com"
+key_url = "brave-browser-archive-keyring.gpg"
+
+# The file names the code package's postinst itself maintains — assert them, don't fight them.
+[apt_repo.vscode]
+url = "packages.microsoft.com"
+key_url = "keys/microsoft.asc"
+uris = "repos/code"
+keyring = "/usr/share/keyrings/microsoft.gpg"
+
+[apt_repo.github-cli]
+url = "cli.github.com/packages"
+key_url = "githubcli-archive-keyring.gpg"
+pin_priority = 1001
+
+[apt_repo.signal-desktop]
+url = "updates.signal.org/desktop/apt"
+key_url = "keys.asc"
+suites = "xenial"
+
+[apt_pkg]
+depends_on = ["apt_repo", "bash.ubuntu_pin", "bash.code_insiders_debconf"]
+packages = [
+    "build-essential",
+    "pkg-config",
+    "libssl-dev",
+    "just",
+    "ghostty",
+    "nala",
+    "vainfo",
+    "linux-crashdump",
+    "nvidia-driver-580-open",
+    "nvidia-vaapi-driver",
+    "zed",
+    "brave-browser",
+    "code",
+    "code-insiders",
+    "git",
+    "gh",
+    "lazygit",
+    "signal-desktop",
+    "podman",
+    "labwc",
+    "hyprland",
+    "gimp",
+    "blender",
+    "openshot-qt",
+    "shotcut",
+    "kdenlive",
+]
+
+[snap]
+packages = ["firefox", "chromium"]
+
+[bash.nix]
+needs_root = true
+apply = "curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --no-confirm"
+current_state = "test -e /nix/var/nix/profiles/default/bin/nix && echo present || echo absent"
+depends_on = ["bash.apt_prereqs"]
+
+[conf.nix]
+needs_root = true
+target = "/etc/nix/nix.custom.conf"
+depends_on = ["bash.nix"]
+line = "extra-experimental-features = nix-command flakes"
+
+[url.rustup]
+url = "sh.rustup.rs"
+args = ["-y"]
+update_action = ["update"]
+
+# bash.apt_prereqs: binstall falls back to source builds (gcc + system OpenSSL).
+[cargo]
+depends_on = ["url.rustup", "bash.apt_prereqs"]
+packages = ["cargo-binstall", "cargo-update", "just", "just-lsp", "rumdl"]
+
+[url.uv]
+url = "astral.sh/uv/install.sh"
+update_action = ["self", "update"]
+
+# graphify ships on PyPI as `graphifyy` (the `graphify` name is still being reclaimed);
+# its binary stays `graphify`. `graphify install` then drops the skill into ~/.claude
+# (skills/graphify/SKILL.md + a registration block in ~/.claude/CLAUDE.md). It's
+# idempotent, so the post_hook re-running on any [uv] change is harmless and keeps the
+# skill in sync after a graphifyy upgrade. Full path: uv tools land in ~/.local/bin,
+# which is only on PATH under sudo (cf. find_binary in the uv cook).
+[uv]
+depends_on = ["url.uv"]
+packages = ["ruff", "pyrefly", "graphifyy"]
+
+[url.bun]
+url = "bun.sh/install"
+update_action = ["upgrade"]
+
+[bun]
+depends_on = ["url.bun"]
+packages = ["@earendil-works/pi-coding-agent", "@zyplux/cz"]
+post_hook = 'mkdir -p "$HOME/.local/bin" && ln -sf "${BUN_INSTALL:-$HOME/.bun}/bin/pi" "$HOME/.local/bin/pi"'
+
+[skills]
+depends_on = ["url.bun"]
+repos = ["zyplux/zyp-skills"]
+
+[url.claude]
+url = "claude.ai/install.sh"
+update_action = ["update"]
+
+[url.herdr]
+url = "herdr.dev/install.sh"
+update_action = ["update"]
+update_guard = "command -v herdr >/dev/null || exit 0; herdr server stop || true; for _ in {1..30}; do herdr status server | grep -q 'not running' && exit 0; sleep 0.1; done; exit 1"
+
+[url.agy]
+url = "antigravity.google/cli/install.sh"
+
+[url.chezmoi]
+url = "get.chezmoi.io/lb"
+update_action = ["upgrade"]
+
+[chezmoi]
+depends_on = ["apt_pkg", "url.chezmoi"]
+repo = "https://github.com/realSergiy/dotfiles.git"
+source_dir = "~/dotfiles"
+timer_min = 60
+
+[file.totchef]
+path = "~/.local/bin/totchef"
+mode = "0755"
+source = "totchef"
+# $TOTCHEF_RECIPE is this run's own resolved recipe path (see recipe.py) — repointing the
+# symlink at it (rather than hardcoding a repo location) keeps the pin correct after the repo
+# moves, as long as `totchef up` runs once from the new location to refresh it.
+post_hook = 'cfg="${XDG_CONFIG_HOME:-$HOME/.config}/totchef"; mkdir -p "$cfg" && ln -sfn "$TOTCHEF_RECIPE" "$cfg/recipe.toml" && totchef init "$cfg/recipe.toml"'
+
+[local_bin.ctop]
+
+[file.grub_deep_sleep]
+needs_root = true
+path = "/etc/default/grub.d/99-mem-sleep-deep.cfg"
+mode = "0644"
+content = """
+# Force deep S3 suspend (s2idle crash mitigation; docs/issues/sleep-crash/sleep-crash.md).
+GRUB_CMDLINE_LINUX_DEFAULT="$(echo "$GRUB_CMDLINE_LINUX_DEFAULT" | sed -E 's/ *mem_sleep_default=[^ "]*//g') mem_sleep_default=deep"
+"""
+post_hook = "update-grub"
+
+[usr_local_sbin.egpu-prime-switch]
+depends_on = ["apt_pkg"]
+
+[file.egpu-prime]
+needs_root = true
+path = "/etc/systemd/system/egpu-prime.service"
+mode = "0644"
+depends_on = ["apt_pkg"]
+post_hook = "systemctl daemon-reload; systemctl enable egpu-prime.service"
+
+[file.nvidia_power]
+needs_root = true
+path = "/etc/modprobe.d/nvidia-power.conf"
+mode = "0644"
+depends_on = ["apt_pkg"]
+content = """
+options nvidia NVreg_PreserveVideoMemoryAllocations=1
+options nvidia NVreg_DynamicPowerManagement=0x00
+options nvidia NVreg_EnableS0ixPowerManagement=0
+"""
+post_hook = "systemctl enable nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service 2>/dev/null || true; update-initramfs -u"
+
+# Chromium 149+ decode buffers break stock nvidia-vaapi-driver (<= 0.0.17) — silent
+# software-decode fallback. Divert a container build of PR #430 over the deb's file.
+# See docs/issues/laptop-rendering-sluggishness/investigation.md.
+[bash.nvidia_vaapi_chromium_fix]
+needs_root = true
+depends_on = ["apt_pkg"]
+remove_when = "gh api repos/elFarto/nvidia-vaapi-driver/pulls/430 --jq .merged | grep -qx true"
+remove_how = "nvidia-vaapi-driver PR #430 merged upstream — advance this watch: point remove_when at the fixed release reaching the Ubuntu archive (apt-cache policy nvidia-vaapi-driver); once it ships, delete this section, run `sudo dpkg-divert --rename --remove /usr/lib/x86_64-linux-gnu/dri/nvidia_drv_video.so`, upgrade the package, restart Brave."
+apply = '''
+set -euo pipefail
+commit=288a7ba79d47219ea6dea737ec8d684b53a8de36
+so=/usr/lib/x86_64-linux-gnu/dri/nvidia_drv_video.so
+build_dir=$(mktemp -d)
+trap 'rm -rf "$build_dir"' EXIT
+podman run --rm -e commit="$commit" -v "$build_dir":/out docker.io/library/ubuntu:26.04 bash -c '
+set -e
+sed -i "s/^Types: deb$/Types: deb deb-src/" /etc/apt/sources.list.d/ubuntu.sources
+apt-get update -q
+DEBIAN_FRONTEND=noninteractive apt-get install -y -q git ca-certificates
+DEBIAN_FRONTEND=noninteractive apt-get build-dep -y -q nvidia-vaapi-driver
+git clone https://github.com/elFarto/nvidia-vaapi-driver.git /src
+cd /src
+git fetch origin pull/430/head
+git checkout "$commit"
+meson setup build
+ninja -C build
+cp build/nvidia_drv_video.so /out/
+'
+dpkg-divert --list "$so" | grep -q . || dpkg-divert --local --rename --add "$so"
+install -m 0644 "$build_dir/nvidia_drv_video.so" "$so"
+mkdir -p /usr/local/share/totchef
+echo "$commit" > /usr/local/share/totchef/nvidia-vaapi-chromium-fix.commit
+'''
+current_state = "test -f /usr/lib/x86_64-linux-gnu/dri/nvidia_drv_video.so.distrib && grep -qxF 288a7ba79d47219ea6dea737ec8d684b53a8de36 /usr/local/share/totchef/nvidia-vaapi-chromium-fix.commit 2>/dev/null && echo present || echo absent"
+
+[desktop]
+depends_on = ["apt_pkg"]
+features = [
+    "VaapiOnNvidiaGPUs",
+    "AcceleratedVideoDecodeLinuxGL",
+    "AcceleratedVideoDecodeLinuxZeroCopyGL",
+    "WaylandLinuxDrmSyncobj",
+]
+
+[desktop.brave]
+desktop = "/usr/share/applications/brave-browser.desktop"
+features = ["AcceleratedVideoEncoder", "WebRTCPipeWireCapturer"]
+
+[desktop.code]
+desktop = "/usr/share/applications/code.desktop"
+
+[desktop.code_insiders]
+desktop = "/usr/share/applications/code-insiders.desktop"
+
+[chromium_flags]
+depends_on = ["apt_pkg"]
+features = [
+    "VaapiOnNvidiaGPUs",
+    "AcceleratedVideoDecodeLinuxGL",
+    "AcceleratedVideoDecodeLinuxZeroCopyGL",
+    "WaylandLinuxDrmSyncobj",
+]
+
+[chromium_flags.brave]
+local_state = ".config/BraveSoftware/Brave-Browser/Local State"
+local_state_flags = []
+
+[chromium_flags.code]
+argv_json = ".vscode/argv.json"
+
+[chromium_flags.code.argv]
+"ozone-platform-hint" = "auto"
+"enable-gpu-rasterization" = true
+"ignore-gpu-blocklist" = true
+
+[chromium_flags.code_insiders]
+argv_json = ".vscode-insiders/argv.json"
+
+[chromium_flags.code_insiders.argv]
+"ozone-platform-hint" = "auto"
+"enable-gpu-rasterization" = true
+"ignore-gpu-blocklist" = true
+
+[settings]
+depends_on = ["apt_pkg"]
+
+[settings.claude_code]
+settings_json = ".claude/settings.json"
+settings_env = { ENABLE_CLAUDEAI_MCP_SERVERS = "false" }
