@@ -18,6 +18,7 @@ from totchef import terminal as terminal_module
 from totchef.cooks import apt_repo_root_cook
 from totchef.cooks.usr_local_bin_root_cook import UsrLocalBinCook
 from totchef.cooks.usr_local_sbin_root_cook import UsrLocalSbinCook
+from totchef.recipe_types import RecipeConfig, RecipeValue
 
 CHEZMOI_COOK = (Path(__file__).resolve().parents[3] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
 
@@ -26,10 +27,11 @@ class RecipeBuilder:
     """The recipe.toml under test, assembled one section at a time. `declares` adds a subtable entry (`bash.deep_sleep`) when given a name, or a plain-data section (`apt_pkg`) when given only fields."""
 
     def __init__(self) -> None:
-        self.config: dict = {}
+        self.config: RecipeConfig = {}
 
-    def declares(self, section: str, name: str | None = None, **fields) -> "RecipeBuilder":
+    def declares(self, section: str, name: str | None = None, **fields: RecipeValue) -> "RecipeBuilder":
         target = self.config.setdefault(section, {})
+        assert isinstance(target, dict)  # declares always seeds a section with a subtable or plain-data dict
         if name is None:
             target.update(fields)
         else:
@@ -133,7 +135,7 @@ class FakeTerminal(TerminalAssertions):
         timeout: float | None = None,
         note: str = "",
         cwd: Path | None = None,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str | bytes]:
         argv = list(cmd)
         self.commands.append(RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home()))
         with self._concurrency_ctx(shlex.join(argv)):

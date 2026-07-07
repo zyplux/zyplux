@@ -3,11 +3,13 @@
 import os
 import subprocess
 from pathlib import Path
+from typing import override
 
 from pydantic import Field
 
 from totchef import harness, shell
 from totchef.cook_base import CookBase, EntrySpec, StateChangeOutcome, StateCook
+from totchef.recipe_types import RecipeConfig
 
 RESOURCE = "dotfiles"
 # chezmoi's own default source directory; overridable per recipe.
@@ -39,7 +41,7 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
     entry_model = ChezmoiEntry
     entry_keyed = False
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         CookBase.__init__(self, section)
         self.entries = {RESOURCE: ChezmoiEntry.model_validate(section)}
 
@@ -97,9 +99,11 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
     def _timer_enabled(self) -> bool:
         return (self._user_unit_dir() / "timers.target.wants" / CAPTURE_TIMER).is_symlink()
 
+    @override
     def get_desired_state(self) -> dict[str, str]:
         return {RESOURCE: "capturing"}
 
+    @override
     def get_current_state(self) -> dict[str, str]:
         if harness.find_binary("chezmoi") is None:
             return {RESOURCE: "chezmoi-missing"}
@@ -124,6 +128,7 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
         shell.run("systemctl", "--user", "daemon-reload")
         shell.run("systemctl", "--user", "start", CAPTURE_TIMER)
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         spec = self.entries[name]
         chezmoi = harness.find_binary("chezmoi")
