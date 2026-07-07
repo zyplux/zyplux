@@ -123,10 +123,10 @@ def print_report(results: dict[str, CookResult], *, dry_run: bool, title: str = 
 
 def preview_plan(config: RecipeConfig) -> None:
     """Before a real run, print the plan table from a probe-only pass; the probe's cook logs go to the file only, so the terminal shows just the table."""
-    set_terminal_echo(False)
+    set_terminal_echo(enabled=False)
     results = run_recipe(config, dry_run=True)
     drain_logs()
-    set_terminal_echo(True)
+    set_terminal_echo(enabled=True)
     print_report(results, dry_run=True, title="Plan")
 
 
@@ -135,7 +135,7 @@ def _run_and_report(config: RecipeConfig, log_file: Path, start: float, *, dry_r
     results = run_recipe(config, dry_run=dry_run)
     append_removal_notices(config, results)
     drain_logs()
-    set_terminal_echo(True)
+    set_terminal_echo(enabled=True)
     print_report(results, dry_run=dry_run, elapsed=time.monotonic() - start)
 
     hard = [r.cook for r in results.values() if r.status == "hard_fail"]
@@ -165,7 +165,7 @@ def apply(recipe_path: Path, *, dry_run: bool) -> None:
     log_file = start_logging()
     logger.info(f"=== totchef {__version__} ===")
     drain_logs()
-    set_terminal_echo(not dry_run)
+    set_terminal_echo(enabled=not dry_run)
     start = time.monotonic()
 
     try:
@@ -173,7 +173,7 @@ def apply(recipe_path: Path, *, dry_run: bool) -> None:
             preview_plan(config)
         exit_code = _run_and_report(config, log_file, start, dry_run=dry_run)
     except Exception:
-        set_terminal_echo(True)
+        set_terminal_echo(enabled=True)
         logger.exception("=== Crashed outside any cook — a totchef bug, not a recipe failure ===")
         drain_logs()
         raise typer.Exit(1) from None

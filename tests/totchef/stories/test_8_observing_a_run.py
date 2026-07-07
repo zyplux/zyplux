@@ -173,8 +173,8 @@ def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(apply_in_contai
 def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, log_internals: ModuleType) -> None:
     """Parent and every forked cook's stdout/stderr funnel through one pump so log lines never interleave with the live region."""
     log_file = tmp_path / "run.log"
-    monkeypatch.setattr(log_internals, "LOG_HANDLE", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
-    monkeypatch.setattr(log_internals, "ECHO_LOGS_TO_TERMINAL", True)
+    monkeypatch.setattr(log_internals.log_state, "log_handle", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
+    monkeypatch.setattr(log_internals.log_state, "echo_to_terminal", True)
     emitted: list[str] = []
     monkeypatch.setattr(log_internals, "LINE_SINK", emitted.append)  # the terminal sink the pump feeds
 
@@ -190,7 +190,7 @@ def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch: pytest.Monk
     assert log_file.read_text() == "url.bun   installing\napt_pkg   updating\n"  # one ordered writer to the file
     assert emitted == ["url.bun   installing\n", "apt_pkg   updating\n"]  # one ordered sink to the terminal — never interleaved
 
-    monkeypatch.setattr(log_internals, "LOG_HANDLE", None)
+    monkeypatch.setattr(log_internals.log_state, "log_handle", None)
     log_internals.write_log("dropped")  # no handle yet ⇒ a safe no-op
 
 
@@ -199,21 +199,21 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 ) -> None:
     """A dry run shows only the plan table on the terminal while still recording every line to the log file."""
     log_file = tmp_path / "run.log"
-    monkeypatch.setattr(log_internals, "LOG_HANDLE", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
-    monkeypatch.setattr(log_internals, "ECHO_LOGS_TO_TERMINAL", True)
+    monkeypatch.setattr(log_internals.log_state, "log_handle", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
+    monkeypatch.setattr(log_internals.log_state, "echo_to_terminal", True)
     emitted: list[str] = []
     monkeypatch.setattr(log_internals, "LINE_SINK", emitted.append)
 
-    log_internals.set_terminal_echo(False)  # dry-run suppresses cook log echo to the terminal …
-    assert not log_internals.ECHO_LOGS_TO_TERMINAL
+    log_internals.set_terminal_echo(enabled=False)  # dry-run suppresses cook log echo to the terminal …
+    assert not log_internals.log_state.echo_to_terminal
     log_internals._emit_terminal("cook chatter\n")  # what the pump would mirror for a cook's line
     log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …
     assert log_file.read_text() == "cook chatter\n"  # … yet the log file still recorded every line
 
-    log_internals.set_terminal_echo(True)
-    assert log_internals.ECHO_LOGS_TO_TERMINAL
+    log_internals.set_terminal_echo(enabled=True)
+    assert log_internals.log_state.echo_to_terminal
 
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
     plan = totchef.plan()

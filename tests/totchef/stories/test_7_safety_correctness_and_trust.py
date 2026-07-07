@@ -120,7 +120,7 @@ def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Tot
     escalations: list[tuple[str, list[str]]] = []
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
-    monkeypatch.setattr("totchef.cli.run_recipe", lambda _config, _dry_run: {})  # don't fork real cooks in-process
+    monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})  # don't fork real cooks in-process
     monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: totchef.workdir / "log")
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
     recipe_path = totchef.workdir / "recipe.toml"

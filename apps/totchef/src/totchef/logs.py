@@ -44,20 +44,21 @@ def inline_mode() -> bool:
     return bool(os.environ.get(INLINE_ENV))
 
 
-class _PumpFds:
-    """The pump's own fds, mutated in place (never rebound) so start_logging avoids `global`: terminal is stdout's dup, pipe_write feeds drain_logs."""
+class _LogState:
+    """Pump state, mutated in place: terminal is stdout dup, pipe_write feeds drain_logs, log_handle the run log file, echo_to_terminal the mirror toggle."""
 
     terminal: int | None = None
     pipe_write: int | None = None
+    log_handle: TextIO | None = None
+    echo_to_terminal: bool = True
 
 
-pump_fds = _PumpFds()
+log_state = _LogState()
 
 # The log pump: one parent thread reads the merged stdout/stderr of the parent and
 # every forked cook off the pipe, then mirrors each line to the log file (under
 # LOG_LOCK) and the terminal (via LINE_SINK). One reader => the terminal has exactly
 # one writer, so a live region (table / progress bar) never interleaves with logs.
-LOG_HANDLE: TextIO | None = None
 LOG_LOCK = threading.Lock()
 DRAIN_EVENTS: dict[str, threading.Event] = {}
 
@@ -65,10 +66,6 @@ DRAIN_EVENTS: dict[str, threading.Event] = {}
 # (so they coordinate with live regions). Kept as a hook to avoid a logs ->
 # terminal import cycle.
 LINE_SINK: Callable[[str], None] | None = None
-
-# Whether the pump also mirrors log lines to the terminal. Dry-run turns this off
-# so `just plan` shows only the report table; the log file still records every line.
-ECHO_LOGS_TO_TERMINAL: bool = True
 
 # Configured at import so pre-sudo messages get timestamped too.
 logger.remove()
@@ -88,21 +85,20 @@ def cook_context(runner: str) -> Generator[None]:
 
 def write_log(text: str) -> None:
     """Append text to the run's log file under a lock — the only writer, shared by the pump thread and terminal.py's TOON writer."""
-    if LOG_HANDLE is None:
+    if log_state.log_handle is None:
         return
     with LOG_LOCK:
-        LOG_HANDLE.write(text)
-        LOG_HANDLE.flush()
+        log_state.log_handle.write(text)
+        log_state.log_handle.flush()
 
 
-def set_terminal_echo(enabled: bool) -> None:
+def set_terminal_echo(*, enabled: bool) -> None:
     """Toggle whether the pump mirrors log lines to the terminal; the log file is written either way."""
-    global ECHO_LOGS_TO_TERMINAL
-    ECHO_LOGS_TO_TERMINAL = enabled
+    log_state.echo_to_terminal = enabled
 
 
 def _emit_terminal(line: str) -> None:
-    if ECHO_LOGS_TO_TERMINAL and LINE_SINK is not None:
+    if log_state.echo_to_terminal and LINE_SINK is not None:
         LINE_SINK(line)
 
 
@@ -119,11 +115,11 @@ def _pump(read_fd: int) -> None:
 
 def drain_logs(timeout: float = 5.0) -> None:
     """FIFO barrier: block until the pump drains everything written so far; call only once all forked cooks are reaped."""
-    if pump_fds.pipe_write is None:
+    if log_state.pipe_write is None:
         return
     marker = uuid.uuid4().hex
     DRAIN_EVENTS[marker] = event = threading.Event()
-    os.write(pump_fds.pipe_write, f"{marker}\n".encode())
+    os.write(log_state.pipe_write, f"{marker}\n".encode())
     event.wait(timeout)
 
 
@@ -146,9 +142,8 @@ def open_log_file() -> Path:
 
 def start_inline_logging() -> Path:
     """Inline start: no fd redirect, no pump. Open the log file, re-point loguru at live stderr so logs scroll to the terminal (and get captured by callers)."""
-    global LOG_HANDLE
     log_file = open_log_file()
-    LOG_HANDLE = Path(log_file).open("a", encoding="utf-8")
+    log_state.log_handle = Path(log_file).open("a", encoding="utf-8")
     logger.remove()
     logger.configure(extra={"runner": DEFAULT_RUNNER})
     logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
@@ -157,18 +152,17 @@ def start_inline_logging() -> Path:
 
 def start_logging(*, echo_to_terminal: bool = True) -> Path:
     """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe a thread reads); honor SHARED_LOG_ENV or create a file, chowned to SUDO_USER."""
-    set_terminal_echo(echo_to_terminal)
+    set_terminal_echo(enabled=echo_to_terminal)
     if inline_mode():
         return start_inline_logging()
     log_file = open_log_file()
 
-    global LOG_HANDLE
-    if pump_fds.terminal is None:
-        pump_fds.terminal = os.dup(1)
-    LOG_HANDLE = Path(log_file).open("a", encoding="utf-8")
+    if log_state.terminal is None:
+        log_state.terminal = os.dup(1)
+    log_state.log_handle = Path(log_file).open("a", encoding="utf-8")
 
     read_fd, write_fd = os.pipe()
-    pump_fds.pipe_write = os.dup(write_fd)
+    log_state.pipe_write = os.dup(write_fd)
     os.dup2(write_fd, 1)
     os.dup2(write_fd, 2)
     os.close(write_fd)

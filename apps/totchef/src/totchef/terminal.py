@@ -76,7 +76,7 @@ RUNNER_PALETTE = (
 @cache
 def _pump_console() -> Console:
     """rich Console on the saved real-stdout fd, independent of the log pipe, so is_terminal reflects the real terminal. Cached: the dup happens once."""
-    terminal_fd = logs.pump_fds.terminal
+    terminal_fd = logs.log_state.terminal
     if terminal_fd is None:
         msg = "_pump_console requires a running pump; reach it through console()"
         raise RuntimeError(msg)
@@ -85,7 +85,7 @@ def _pump_console() -> Console:
 
 def console() -> Console:
     """The presentation console: the cached terminal-fd console with a pump running, else a fresh Console on live stdout tracking the environment per call."""
-    if logs.pump_fds.terminal is None:
+    if logs.log_state.terminal is None:
         return Console()
     return _pump_console()
 
