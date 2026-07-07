@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Idempotent file writer for [bash.*] snippets: read stdin, write to the dest path only if bytes differ. Installed verbatim to /usr/local/bin; standalone python3 + stdlib only. Usage: <producer> | write-if-changed <dest-path> [octal-mode]."""
+"""Idempotent file writer for [bash.*] snippets: read stdin, write to the dest path only if bytes differ. Installed verbatim to /usr/local/bin;
+standalone python3 + stdlib only. Usage: <producer> | write-if-changed <dest-path> [octal-mode]."""
 
 import argparse
 import sys
@@ -22,9 +23,9 @@ def main() -> None:
     args = parse_cli()
     content = sys.stdin.buffer.read()
     if args.dest.exists() and args.dest.read_bytes() == content:
-        print(f"Unchanged: {args.dest}")
+        sys.stdout.write(f"Unchanged: {args.dest}\n")
         return
-    print(f"Writing  : {args.dest}")
+    sys.stdout.write(f"Writing  : {args.dest}\n")
     args.dest.parent.mkdir(parents=True, exist_ok=True)
     args.dest.write_bytes(content)
     args.dest.chmod(int(args.mode, 8))

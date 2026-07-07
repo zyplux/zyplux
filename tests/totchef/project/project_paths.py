@@ -4,15 +4,25 @@ import tomllib
 from pathlib import Path
 
 
+class WrongProjectRootError(RuntimeError):
+    def __init__(self, pyproject: Path, name: str | None) -> None:
+        super().__init__(f"nearest pyproject.toml names project '{name}', not 'zyplux': {pyproject}")
+
+
+class ZypluxRootNotFoundError(RuntimeError):
+    def __init__(self) -> None:
+        super().__init__("zyplux pyproject.toml not found above the totchef meta-tests")
+
+
 def find_zyplux_root() -> Path:
     for directory in Path(__file__).resolve().parents:
         pyproject = directory / "pyproject.toml"
         if pyproject.is_file():
-            name = tomllib.loads(pyproject.read_text()).get("project", {}).get("name")
+            name = tomllib.loads(pyproject.read_text(encoding="utf-8")).get("project", {}).get("name")
             if name != "zyplux":
-                raise RuntimeError(f"nearest pyproject.toml names project '{name}', not 'zyplux': {pyproject}")
+                raise WrongProjectRootError(pyproject, name)
             return directory
-    raise RuntimeError("zyplux pyproject.toml not found above the totchef meta-tests")
+    raise ZypluxRootNotFoundError
 
 
 REPO_ROOT = find_zyplux_root()

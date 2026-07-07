@@ -1,7 +1,8 @@
-"""Derives the story-header links in the numbered story docs from the tests/stories test files — each h1 doc title links to its section's test file, h2 story and h3 criterion headers stay plain; run as a script (`just lint` does) it refreshes stale links in place."""
+"""Derives story-doc header links from tests/stories: h1 links to its test file, h2/h3 stay plain; `just lint` runs this to refresh stale links."""
 
 import ast
 import re
+import sys
 from dataclasses import dataclass
 
 from project_paths import STORIES_DIR, list_story_docs
@@ -37,7 +38,7 @@ def split_id_and_title(func_name: str) -> tuple[str, str]:
 def collect_story_tests() -> dict[str, StoryTest]:
     tests: dict[str, StoryTest] = {}
     for path in sorted(STORIES_DIR.glob("test_[0-9]*.py")):
-        for node in ast.parse(path.read_text()).body:
+        for node in ast.parse(path.read_text(encoding="utf-8")).body:
             if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
                 story_id, title = split_id_and_title(node.name)
                 if story_id:
@@ -97,14 +98,14 @@ def sync_links() -> list[str]:
     tests = collect_story_tests()
     refreshed: list[str] = []
     for doc_path in list_story_docs():
-        doc = doc_path.read_text()
+        doc = doc_path.read_text(encoding="utf-8")
         relinked = render_linked_doc(doc, tests)
         if relinked != doc:
-            doc_path.write_text(relinked)
+            doc_path.write_text(relinked, encoding="utf-8")
             refreshed.append(doc_path.name)
     return refreshed
 
 
 if __name__ == "__main__":
     refreshed = sync_links()
-    print(f"links refreshed: {', '.join(refreshed)}" if refreshed else "story links fresh")
+    sys.stdout.write((f"links refreshed: {', '.join(refreshed)}" if refreshed else "story links fresh") + "\n")

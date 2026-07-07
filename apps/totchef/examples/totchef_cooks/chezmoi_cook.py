@@ -1,14 +1,19 @@
-"""StateCook for [chezmoi] — provision a dotfiles repo for one-way capture: clone it into source_dir, persist chezmoi's config (sourceDir plus a pinned umask for deterministic file modes), and install a systemd user service+timer that runs `chezmoi re-add` every timer_min minutes to capture $HOME edits back into the repo and auto-commit/push them. The sync is one-way ($HOME → repo); seeding a fresh machine the other way is a manual `chezmoi apply`. Idempotent and user-scoped, gated on [url.chezmoi] for the binary."""
+"""StateCook for [chezmoi] — provision a dotfiles repo for one-way capture: clone it into source_dir, persist chezmoi's config (sourceDir plus a
+pinned umask for deterministic file modes), and install a systemd user service+timer that runs `chezmoi re-add` every timer_min minutes to capture
+$HOME edits back into the repo and auto-commit/push them. The sync is one-way ($HOME → repo); seeding a fresh machine the other way is a manual
+`chezmoi apply`. Idempotent and user-scoped, gated on [url.chezmoi] for the binary."""
 
 import os
 import subprocess
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from pydantic import Field
 from totchef import harness, shell
 from totchef.cook_base import CookBase, EntrySpec, StateChangeOutcome, StateCook
-from totchef.recipe_types import RecipeConfig
+
+if TYPE_CHECKING:
+    from totchef.recipe_types import RecipeConfig
 
 RESOURCE = "dotfiles"
 # chezmoi's own default source directory; overridable per recipe.
@@ -35,7 +40,8 @@ class ChezmoiEntry(EntrySpec):
 
 
 class ChezmoiCook(StateCook[ChezmoiEntry]):
-    """The single flat [chezmoi] section is one resource, so it validates the slice directly into one synthetic `dotfiles` entry rather than the subtable map StateCook assumes."""
+    """The single flat [chezmoi] section is one resource, so it validates the slice directly into one synthetic `dotfiles` entry rather than the
+    subtable map StateCook assumes."""
 
     entry_model = ChezmoiEntry
     entry_keyed = False
@@ -51,12 +57,14 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
     def _source_path(self) -> Path:
         return Path(self.spec.source_dir).expanduser()
 
-    def _config_home(self) -> Path:
+    @staticmethod
+    def _config_home() -> Path:
         """$XDG_CONFIG_HOME (else ~/.config); resolved per call so a forked user cook's repointed $HOME is honored."""
         return Path(os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config"))
 
     def _config_path(self) -> Path:
-        """chezmoi reads its config from $XDG_CONFIG_HOME/chezmoi (else ~/.config/chezmoi); write it there so the operator's bare chezmoi commands find the same source."""
+        """chezmoi reads its config from $XDG_CONFIG_HOME/chezmoi (else ~/.config/chezmoi); write it there so the operator's bare chezmoi
+        commands find the same source."""
         return self._config_home() / "chezmoi" / "chezmoi.toml"
 
     def _user_unit_dir(self) -> Path:
@@ -64,7 +72,8 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
         return self._config_home() / "systemd" / "user"
 
     def _config_bytes(self) -> bytes:
-        """chezmoi's config: the sourceDir, a pinned umask (deterministic apply modes), and a [git] block when auto-commit/push are on so `chezmoi re-add` self-commits and pushes captured $HOME edits."""
+        """chezmoi's config: the sourceDir, a pinned umask (deterministic apply modes), and a [git] block when auto-commit/push are on so
+        `chezmoi re-add` self-commits and pushes captured $HOME edits."""
         lines = [f'sourceDir = "{self.spec.source_dir}"', f"umask = {CONFIG_UMASK}"]
         git = []
         if self.spec.auto_commit:
@@ -115,7 +124,8 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
         return self.get_desired_state()
 
     def _setup_capture(self) -> None:
-        """Install the capture service+timer units, then enable the timer without a session D-Bus (write the timers.target.wants symlink `systemctl --user enable` would create) and best-effort start it — so a later `chezmoi re-add` runs on schedule."""
+        """Install the capture service+timer units, then enable the timer without a session D-Bus (write the timers.target.wants symlink
+        `systemctl --user enable` would create) and best-effort start it — so a later `chezmoi re-add` runs on schedule."""
         unit_dir = self._user_unit_dir()
         harness.write_if_changed(unit_dir / CAPTURE_SERVICE, SERVICE_UNIT, note=CAPTURE_SERVICE)
         harness.write_if_changed(unit_dir / CAPTURE_TIMER, self._timer_bytes(), note=CAPTURE_TIMER)

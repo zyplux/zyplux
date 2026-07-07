@@ -3,7 +3,10 @@
 # requires-python = ">=3.14"
 # dependencies = ["psutil>=7", "rich>=14", "typer>=0.16", "websockets>=14"]
 # ///
-"""Live top-like CPU view of the VS Code process trees, each process labeled by role or owning extension. Installed verbatim to ~/.local/bin; uv resolves the inline dependencies on first run."""
+"""Live top-like CPU view of the VS Code process trees, each process labeled by role or owning extension.
+
+Installed verbatim to ~/.local/bin; uv resolves the inline dependencies on first run.
+"""
 
 import json
 import os
@@ -15,10 +18,11 @@ import time
 import tty
 import urllib.request
 from collections import Counter
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from itertools import count
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import psutil
 import typer
@@ -29,6 +33,11 @@ from rich.table import Column, Table
 from rich.text import Text
 from websockets.exceptions import WebSocketException
 from websockets.sync.client import connect
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from websockets.sync.connection import Connection
 
 __version__ = "0.2.1"
 
@@ -77,7 +86,18 @@ def describe_script(cmdline: list[str], process_name: str) -> str:
     return process_name
 
 
-def label_role(cmdline: list[str], process_name: str, is_main: bool) -> str:
+def label_unclassified_process(cmdline: list[str], process_name: str, joined: str, *, is_main: bool) -> str:
+    if is_main:
+        return "main"
+    if extension_dir := EXTENSION_DIR_PATTERN.search(joined):
+        prefix = "builtin:" if BUILTIN_EXTENSIONS_PATH in joined else "ext:"
+        return prefix + EXTENSION_VERSION_SUFFIX.sub("", extension_dir.group(1))
+    if process_name in VSCODE_PROCESS_NAMES:
+        return describe_script(cmdline, process_name)
+    return process_name
+
+
+def label_role(cmdline: list[str], process_name: str, *, is_main: bool) -> str:
     joined = " ".join(cmdline)
     match find_chromium_type(cmdline):
         case "utility" if "node.mojom.NodeService" in joined:
@@ -87,15 +107,8 @@ def label_role(cmdline: list[str], process_name: str, is_main: bool) -> str:
             return "network service"
         case str() as chromium_type:
             return CHROMIUM_ROLE_NAMES.get(chromium_type, chromium_type)
-        case None if is_main:
-            return "main"
-        case None if extension_dir := EXTENSION_DIR_PATTERN.search(joined):
-            prefix = "builtin:" if BUILTIN_EXTENSIONS_PATH in joined else "ext:"
-            return prefix + EXTENSION_VERSION_SUFFIX.sub("", extension_dir.group(1))
-        case None if process_name in VSCODE_PROCESS_NAMES:
-            return describe_script(cmdline, process_name)
         case _:
-            return process_name
+            return label_unclassified_process(cmdline, process_name, joined, is_main=is_main)
 
 
 def find_main_processes() -> list[psutil.Process]:
@@ -165,26 +178,28 @@ def find_inspector_websocket(pid: int) -> str | None:
     return None
 
 
+def run_profiler_session(inspector: Connection, seconds: float) -> dict[str, Any] | None:
+    request_ids = count(1)
+
+    def call(method: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        pending = next(request_ids)
+        inspector.send(json.dumps({"id": pending, "method": method, "params": params or {}}))
+        while True:
+            message = json.loads(inspector.recv(timeout=PROFILE_RECV_TIMEOUT_SECONDS))
+            if message.get("id") == pending:
+                return message.get("result")
+
+    call("Profiler.enable")
+    call("Profiler.setSamplingInterval", {"interval": PROFILE_SAMPLING_INTERVAL_US})
+    call("Profiler.start")
+    time.sleep(seconds)
+    return call("Profiler.stop")
+
+
 def sample_exthost_profile(websocket_url: str, seconds: float) -> dict[str, Any] | None:
     try:
         with connect(websocket_url, max_size=None, open_timeout=2) as inspector:
-            request_id = 0
-
-            def call(method: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
-                nonlocal request_id
-                request_id += 1
-                pending = request_id
-                inspector.send(json.dumps({"id": pending, "method": method, "params": params or {}}))
-                while True:
-                    message = json.loads(inspector.recv(timeout=PROFILE_RECV_TIMEOUT_SECONDS))
-                    if message.get("id") == pending:
-                        return message.get("result")
-
-            call("Profiler.enable")
-            call("Profiler.setSamplingInterval", {"interval": PROFILE_SAMPLING_INTERVAL_US})
-            call("Profiler.start")
-            time.sleep(seconds)
-            result = call("Profiler.stop")
+            result = run_profiler_session(inspector, seconds)
     except OSError, ValueError, TimeoutError, WebSocketException:
         return None
     return result.get("profile") if result else None
@@ -244,6 +259,7 @@ def build_view(
     rows: list[ProcessRow],
     visible_count: int | None,
     attribution: dict[int, list[tuple[str, float]]] | None = None,
+    *,
     profiling: bool = False,
     interactive: bool = False,
 ) -> Group:
@@ -297,7 +313,7 @@ def get_visible_row_capacity() -> int:
 
 
 @contextmanager
-def raw_keyboard():
+def raw_keyboard() -> Generator[None]:
     if not sys.stdin.isatty():
         yield
         return
@@ -321,9 +337,42 @@ def read_key(timeout: float) -> str | None:
     return os.read(sys.stdin.fileno(), 1).decode("utf-8", "ignore")
 
 
+def print_single_snapshot(tracked: dict[int, psutil.Process], *, profile_exthost: bool) -> None:
+    rows = sample_processes(tracked)
+    attribution = profile_busy_exthosts(rows) if profile_exthost else None
+    console.print(build_view(rows, visible_count=None, attribution=attribution))
+
+
+def run_interactive_loop(tracked: dict[int, psutil.Process], interval: float, *, profile_exthost: bool) -> None:
+    profiling = profile_exthost
+    with raw_keyboard(), Live(console=console, screen=True, auto_refresh=False) as live:
+        while True:
+            rows = sample_processes(tracked)
+            attribution = None
+            if profiling:
+                live.update(build_view(rows, get_visible_row_capacity(), None, profiling=True, interactive=True), refresh=True)
+                attribution = profile_busy_exthosts(rows)
+            live.update(build_view(rows, get_visible_row_capacity(), attribution, profiling=profiling, interactive=True), refresh=True)
+            key = read_key(interval)
+            if key in {"q", "Q"}:
+                break
+            if key in {"p", "P"}:
+                profiling = not profiling
+
+
+def run_ctop(tracked: dict[int, psutil.Process], interval: float, *, once: bool, profile_exthost: bool) -> None:
+    sample_processes(tracked)
+    time.sleep(interval)
+    if once or not console.is_terminal:
+        print_single_snapshot(tracked, profile_exthost=profile_exthost)
+        return
+    run_interactive_loop(tracked, interval, profile_exthost=profile_exthost)
+
+
 @app.command()
 def main(
     interval: Annotated[float, typer.Option("--interval", "-d", min=0.1, help="seconds between refreshes")] = 2.0,
+    *,
     once: Annotated[bool, typer.Option("--once", help="print one snapshot and exit")] = False,
     profile_exthost: Annotated[
         bool,
@@ -336,30 +385,8 @@ def main(
         console.print(__version__)
         return
     tracked: dict[int, psutil.Process] = {}
-    try:
-        sample_processes(tracked)
-        time.sleep(interval)
-        if once or not console.is_terminal:
-            rows = sample_processes(tracked)
-            attribution = profile_busy_exthosts(rows) if profile_exthost else None
-            console.print(build_view(rows, visible_count=None, attribution=attribution))
-            return
-        profiling = profile_exthost
-        with raw_keyboard(), Live(console=console, screen=True, auto_refresh=False) as live:
-            while True:
-                rows = sample_processes(tracked)
-                attribution = None
-                if profiling:
-                    live.update(build_view(rows, get_visible_row_capacity(), None, profiling=True, interactive=True), refresh=True)
-                    attribution = profile_busy_exthosts(rows)
-                live.update(build_view(rows, get_visible_row_capacity(), attribution, profiling=profiling, interactive=True), refresh=True)
-                key = read_key(interval)
-                if key in ("q", "Q"):
-                    break
-                if key in ("p", "P"):
-                    profiling = not profiling
-    except KeyboardInterrupt:
-        pass
+    with suppress(KeyboardInterrupt):
+        run_ctop(tracked, interval, once=once, profile_exthost=profile_exthost)
 
 
 if __name__ == "__main__":
