@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 def _exec_line(desktop_file: Path) -> str:
-    return next(line for line in desktop_file.read_text().splitlines() if line.startswith("Exec="))
+    return next(line for line in desktop_file.read_text(encoding="utf-8").splitlines() if line.startswith("Exec="))
 
 
 # 5.1 Override an app's desktop launcher
