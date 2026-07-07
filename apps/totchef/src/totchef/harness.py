@@ -81,9 +81,9 @@ def write_if_changed(path: Path, content: bytes | str, mode: int = 0o644, note: 
     if isinstance(content, str):
         content = content.encode()
     if path.exists() and path.read_bytes() == content:
-        logger.info(f"Unchanged: {path}")
+        logger.info("Unchanged: {path}", path=path)
         return False
-    logger.info(f"Writing  : {path}" + (f"  ({note})" if note else ""))
+    logger.info("Writing  : {path}{note}", path=path, note=f"  ({note})" if note else "")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     path.chmod(mode)
@@ -143,6 +143,6 @@ def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | N
             try:
                 latest[name] = future.result()
             except Exception as exc:
-                logger.debug(f"latest lookup for {name} failed: {exc}")
+                logger.debug("latest lookup for {name} failed: {exc}", name=name, exc=exc)
                 latest[name] = None
     return latest
