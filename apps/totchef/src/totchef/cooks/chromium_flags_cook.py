@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any, override
 
 from pydantic import model_validator
 
@@ -32,10 +33,12 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
     entry_model = ChromiumFlagsEntry
     _unrendered_label = "(no base file)"
 
+    @override
     def _target_path(self, name: str) -> Path:
         app = self.entries[name]
         return Path.home() / (app.local_state or app.argv_json or "")
 
+    @override
     def _render(self, name: str) -> bytes | None:
         """Desired file bytes, or None when there is no base file or it is invalid JSON (apply_resource soft-fails the latter); returns on-disk bytes verbatim when no flag changes, so chef skips the entry."""
         app = self.entries[name]
@@ -63,7 +66,7 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
         features = app.features
         if features:
             argv["enable-features"] = ",".join(features)
-        existing: dict = {}
+        existing: dict[str, Any] = {}
         if target.exists():
             stripped = _strip_json_comments(target.read_text())
             if stripped.strip():
@@ -74,6 +77,7 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
         merged = {**existing, **argv}
         return (json.dumps(merged, indent=2) + "\n").encode()
 
+    @override
     def get_hooks(self, name: str) -> tuple[str | None, str | None]:
         app = self.entries[name]
         # Skip the Local State write while the browser runs (it would race the
@@ -81,6 +85,7 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
         guard = f"! pgrep -x {app.process_name or name} >/dev/null" if app.local_state is not None else None
         return (chain_hooks(guard, app.pre_hook), app.post_hook)
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         content = self._render(name)
         if content is None:

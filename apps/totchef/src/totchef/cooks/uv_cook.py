@@ -3,6 +3,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import override
 
 from loguru import logger
 
@@ -39,13 +40,16 @@ def parse_tool_versions(uv: Path) -> dict[str, str]:
 
 
 class UvCook(PackageListCook):
+    @override
     def list_installed(self) -> dict[str, str]:
         uv = find_binary("uv")
         return parse_tool_versions(uv) if uv else {}
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return fetch_latest_concurrent(names, fetch_pypi_latest)
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         work = [("install", n) for n in to_install] + [("upgrade", n) for n in to_upgrade]
         if not work:

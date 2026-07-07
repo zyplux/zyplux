@@ -1,6 +1,7 @@
 """StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + --enable-features) under ~/.local/share/applications, diffed by content hash. Runs as the invoking user."""
 
 from pathlib import Path
+from typing import override
 
 from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec, chain_hooks
 from totchef.harness import write_if_changed
@@ -59,10 +60,12 @@ class DesktopCook(FileStateCook[DesktopEntry]):
     entry_model = DesktopEntry
     _unrendered_label = "(no source)"
 
+    @override
     def _target_path(self, name: str) -> Path:
         system_desktop = Path(self.entries[name].desktop)
         return Path.home() / ".local/share/applications" / system_desktop.name
 
+    @override
     def _render(self, name: str) -> bytes | None:
         app = self.entries[name]
         system_desktop = Path(app.desktop)
@@ -79,10 +82,12 @@ class DesktopCook(FileStateCook[DesktopEntry]):
                 lines.append(line)
         return ("\n".join(lines) + "\n").encode()
 
+    @override
     def get_hooks(self, name: str) -> tuple[str | None, str | None]:
         app = self.entries[name]
         return (app.pre_hook, chain_hooks(app.post_hook, KSYCOCA_REFRESH))
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         content = self._render(name)
         if content is None:

@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, override
 
 from pydantic import ValidationInfo, model_validator
 
@@ -60,6 +60,7 @@ class BinCommandCook(StateCook[BinEntry]):
     def _target_path(self, name: str) -> Path:
         return Path(self.bin_dir).expanduser() / Path(self.entries[name].source).stem
 
+    @override
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name in self.entries:
@@ -67,12 +68,14 @@ class BinCommandCook(StateCook[BinEntry]):
             states[name] = (find_embedded_version(target.read_text(errors="replace")) or "unversioned") if target.is_file() else "absent"
         return states
 
+    @override
     def get_desired_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, entry in self.entries.items():
             states[name] = find_embedded_version((harness.files_dir() / entry.source).read_text(errors="replace")) or "unversioned"
         return states
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         command_bytes = (harness.files_dir() / self.entries[name].source).read_bytes()
         changed = harness.write_if_changed(self._target_path(name), command_bytes, EXECUTABLE_MODE, note=name)

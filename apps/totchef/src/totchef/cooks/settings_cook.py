@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any, override
 
 from totchef.cook_base import FileStateCook, StateChangeOutcome, EntrySpec
 from totchef.harness import write_if_changed
@@ -16,19 +17,22 @@ class SettingsCook(FileStateCook[SettingsEntry]):
     entry_model = SettingsEntry
     _unrendered_label = "invalid-json"
 
+    @override
     def _target_path(self, name: str) -> Path:
         return Path.home() / self.entries[name].settings_json
 
+    @override
     def _render(self, name: str) -> bytes | None:
         target = self._target_path(name)
         env_overrides = self.entries[name].settings_env
         try:
-            existing: dict = json.loads(target.read_text()) if target.exists() else {}
+            existing: dict[str, Any] = json.loads(target.read_text()) if target.exists() else {}
         except json.JSONDecodeError:
             return None
         merged = {**existing, "env": {**existing.get("env", {}), **env_overrides}}
         return (json.dumps(merged, indent=2) + "\n").encode()
 
+    @override
     def apply_resource(self, name: str) -> StateChangeOutcome:
         content = self._render(name)
         if content is None:

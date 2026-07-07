@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+from typing import override
 
 from loguru import logger
 
@@ -74,12 +75,15 @@ def parse_installed_globals(modules_dir: Path) -> dict[str, str]:
 
 
 class BunCook(PackageListCook):
+    @override
     def list_installed(self) -> dict[str, str]:
         return parse_installed_globals(global_modules_dir())
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return fetch_latest_concurrent(names, fetch_npm_latest)
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         targets = to_install + to_upgrade
         bun = find_binary("bun")

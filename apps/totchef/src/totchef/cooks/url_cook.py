@@ -4,7 +4,7 @@ import re
 import shlex
 import subprocess
 from pathlib import Path
-from typing import Literal
+from typing import Literal, override
 
 from loguru import logger
 from pydantic import model_validator
@@ -12,6 +12,7 @@ from pydantic import model_validator
 from totchef import shell
 from totchef.cook_base import EntrySpec, SyncOutcome, VersionedCook
 from totchef.harness import assume_https, fetch_url, find_binary
+from totchef.recipe_types import RecipeConfig
 
 RERUN_INSTALLER = "rerun-installer"
 
@@ -74,24 +75,29 @@ class UrlCook(VersionedCook):
     entry_model = UrlEntry
     entry_keyed = True
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: dict[str, RecipeConfig]) -> None:
         super().__init__(section)
         self.installs = {name: UrlEntry.model_validate(raw) for name, raw in section.items()}
 
+    @override
     def list_requested(self) -> list[str]:
         return list(self.installs)
 
+    @override
     def get_hooks(self) -> tuple[str | None, str | None]:
         [entry] = self.installs.values()
         return (entry.pre_hook, entry.post_hook)
 
+    @override
     def list_installed(self) -> dict[str, str]:
         found = {name: find_binary(entry.bin or name) for name, entry in self.installs.items()}
         return {name: probe_version(path) for name, path in found.items() if path}
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return dict.fromkeys(names)
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         if not (to_install or to_upgrade):
             return SyncOutcome("ok")

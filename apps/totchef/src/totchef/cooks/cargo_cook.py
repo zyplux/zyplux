@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import override
 
 from loguru import logger
 
@@ -43,9 +44,11 @@ def parse_installed_crates() -> dict[str, str]:
 
 
 class CargoCook(PackageListCook):
+    @override
     def list_installed(self) -> dict[str, str]:
         return parse_installed_crates()
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return fetch_latest_concurrent(names, fetch_crates_latest)
 
@@ -59,6 +62,7 @@ class CargoCook(PackageListCook):
         shell.stream([str(cargo), "install", "cargo-binstall"])
         return find_binary("cargo-binstall")
 
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         targets = to_install + to_upgrade
         if not targets:
