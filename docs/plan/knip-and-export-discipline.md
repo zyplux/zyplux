@@ -2,7 +2,7 @@
 
 **Status: implemented in `zyplux` itself** (new `knip-config` cerberus check,
 widened `lib-ts-tests` gate, `knip.json`/`knip.prod.json`, doubled
-`knip` justfile recipe — all uncommitted, pending review). Not yet rolled out
+`knip` justfile recipe — in this PR, pending review/merge). Not yet rolled out
 to `zyp-vps`/`zyp`/`zyp-ocr`/`zyplux-ai`/`totchef` — see Sequencing.
 
 ## Origin

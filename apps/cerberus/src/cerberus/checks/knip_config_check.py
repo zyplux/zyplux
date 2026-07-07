@@ -106,6 +106,21 @@ def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
         res.fail(f"{BASE_CONFIG} does not match the allowlisted config for {repo.name}")
 
 
+def _workspace_exemptions(workspaces: object) -> tuple[set[str], list[str]]:
+    """Split a `workspaces` map into exact `{"includeEntryExports": false}` entries vs. malformed ones."""
+    exempted: set[str] = set()
+    malformed: list[str] = []
+    if isinstance(workspaces, dict):
+        for key, cfg in workspaces.items():
+            if not isinstance(key, str):
+                continue
+            if cfg == {"includeEntryExports": False}:
+                exempted.add(key)
+            else:
+                malformed.append(key)
+    return exempted, malformed
+
+
 def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     content = ctx.file(repo, PROD_CONFIG)
     if content is None:
@@ -134,14 +149,12 @@ def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
 
     manifest = ctx.file(repo, _RELEASE_TARGETS)
     published = _npm_workspace_dirs(manifest) if manifest is not None else set()
-    workspaces = parsed.get("workspaces")
-    exempted: set[str] = set()
-    if isinstance(workspaces, dict):
-        exempted = {
-            key
-            for key, cfg in workspaces.items()
-            if isinstance(key, str) and isinstance(cfg, dict) and cfg.get("includeEntryExports") is False
-        }
+    exempted, malformed = _workspace_exemptions(parsed.get("workspaces"))
+    if malformed:
+        res.fail(
+            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: '
+            f"{', '.join(sorted(malformed))}"
+        )
     missing = sorted(published - exempted)
     if missing:
         res.fail(f"{PROD_CONFIG} workspaces must exempt published target(s): {', '.join(missing)}")

@@ -34,6 +34,10 @@ _ENTRY_EXPORTS_CORRECT_WITH_TARGET = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
     ' "workspaces": {"packages/lib": {"includeEntryExports": false}}}'
 )
+_ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY = (
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
+    ' "workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
+)
 _ENTRY_EXPORTS_ZYPLUX = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["podman", "uv"]}'
 )
@@ -348,3 +352,20 @@ def test_27_4_15_passes_when_the_prod_config_repeats_the_repos_allowlisted_base_
         repo_name="zyplux",
     )
     assert result.findings == [finding(status.PASS, _OK)]
+
+
+def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.prod.json": _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY,
+        "release-targets.toml": _RELEASE_TARGETS_ONE_NPM,
+    })
+    assert (
+        finding(
+            status.FAIL,
+            'knip.prod.json workspaces entries must be exactly {"includeEntryExports": false}: packages/lib',
+        )
+        in result.findings
+    )
