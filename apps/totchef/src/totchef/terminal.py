@@ -6,6 +6,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cache
+from typing import override
 
 from rich.box import ROUNDED
 from rich.console import Console
@@ -133,7 +134,7 @@ def _emit_log_line(line: str) -> None:
 logs.LINE_SINK = _emit_log_line
 
 
-def show_table(rows: list[dict], title: str = "", summary: list[dict] | None = None) -> None:
+def show_table(rows: list[dict[str, str]], title: str = "", summary: list[dict[str, str]] | None = None) -> None:
     """Render rows as a rich table plus TOON in the log file on an interactive terminal; on a non-terminal stdout, emit plain TOON to both. `summary` rows close the table under a divider."""
     summary = summary or []
     if not rows or not is_interactive():
@@ -156,7 +157,7 @@ def _report_cell(column: str, value: str, action: str) -> Text:
     return Text(value)
 
 
-def _render_table(rows: list[dict], title: str, summary: list[dict]) -> None:
+def _render_table(rows: list[dict[str, str]], title: str, summary: list[dict[str, str]]) -> None:
     columns = list(rows[0])
     table = Table(
         title=title or None,
@@ -167,18 +168,18 @@ def _render_table(rows: list[dict], title: str, summary: list[dict]) -> None:
     for column in columns:
         table.add_column(column)
     for row in rows:
-        action = str(row.get("action", ""))
-        cells = [_report_cell(column, str(row[column]), action) for column in columns]
+        action = row.get("action", "")
+        cells = [_report_cell(column, row[column], action) for column in columns]
         quiet = action in QUIET_ACTIONS
         table.add_row(*cells, style="dim" if quiet else "")
     if summary:
         table.add_section()
         for row in summary:
-            table.add_row(*(Text(str(row.get(column, ""))) for column in columns), style="dim")
+            table.add_row(*(Text(row.get(column, "")) for column in columns), style="dim")
     console().print(table)
 
 
-def _append_toon(rows: list[dict], title: str) -> None:
+def _append_toon(rows: list[dict[str, str]], title: str) -> None:
     """Append rows as a TOON block to the log file (keeping it minimalist while the terminal got rich), via logs.write_log's single locked writer."""
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     head = f"[{stamp}] {title}\n" if title else ""
@@ -196,6 +197,7 @@ class _LiveProgress(ProgressHandle):
         self._progress = progress
         self._task = task
 
+    @override
     def advance(self, amount: int = 1) -> None:
         self._progress.advance(self._task, amount)
 

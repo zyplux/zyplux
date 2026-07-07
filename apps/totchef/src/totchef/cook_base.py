@@ -3,9 +3,11 @@
 import hashlib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import ClassVar, Literal, cast
+from typing import ClassVar, Literal, cast, override
 
 from pydantic import BaseModel, ConfigDict, ValidationInfo, model_validator
+
+from totchef.recipe_types import RecipeConfig
 
 Status = Literal["ok", "soft_fail", "hard_fail"]
 
@@ -95,7 +97,7 @@ class CookBase:
     entry_model: ClassVar[type[EntrySpec] | None] = None
     entry_keyed: ClassVar[bool] = False
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         self.section = section
 
     @property
@@ -106,6 +108,7 @@ class CookBase:
 
 class VersionedCook(CookBase):
     @property
+    @override
     def unit_count(self) -> int:
         return len(self.list_requested())
 
@@ -135,18 +138,21 @@ class PackageListCook(VersionedCook):
 
     entry_model = PackagesConfig
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
         config = PackagesConfig.model_validate(section)
         self.packages = config.packages
         self.hooks = (config.pre_hook, config.post_hook)
 
+    @override
     def list_requested(self) -> list[str]:
         return self.packages
 
+    @override
     def get_hooks(self) -> tuple[str | None, str | None]:
         return self.hooks
 
+    @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         return dict.fromkeys(names)
 
@@ -156,7 +162,7 @@ class StateCook[EntryModel: EntrySpec](CookBase):
 
     entry_keyed = True
 
-    def __init__(self, section: dict) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
         model = self.entry_model
         assert model is not None, f"{type(self).__name__} must set entry_model"
@@ -192,6 +198,7 @@ class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
     def _render(self, name: str) -> bytes | None:
         raise NotImplementedError
 
+    @override
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name in self.entries:
@@ -199,6 +206,7 @@ class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
             states[name] = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "absent"
         return states
 
+    @override
     def get_desired_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name in self.entries:

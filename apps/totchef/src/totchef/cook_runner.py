@@ -11,7 +11,7 @@ from graphlib import TopologicalSorter
 from loguru import logger
 
 from totchef import shell
-from totchef.cook_base import CookResult, ReportRow, StateCook, Status, VersionedCook
+from totchef.cook_base import CookResult, EntrySpec, ReportRow, StateCook, Status, VersionedCook
 from totchef.harness import become_user
 from totchef.logs import cook_context, inline_mode
 from totchef.recipe_graph import (
@@ -20,6 +20,7 @@ from totchef.recipe_graph import (
     build_node_graph,
     build_nodes,
 )
+from totchef.recipe_types import RecipeConfig
 from totchef.terminal import progress_region
 
 STATUS_RANK: dict[Status, int] = {"ok": 0, "soft_fail": 1, "hard_fail": 2}
@@ -164,7 +165,7 @@ def run_versioned(cook: VersionedCook, section: str, dry_run: bool) -> CookResul
     return CookResult(section, status, rows, result.message, delayed_messages=[result.delayed_message] if result.delayed_message else [])
 
 
-def apply_state_resource(cook: StateCook, name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status, str]:
+def apply_state_resource(cook: StateCook[EntrySpec], name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status, str]:
     """Apply one state-cook resource and build its row plus any delayed operator follow-up: pre_hook gates, apply mutates, post_hook fires on a real change; a pre_hook-gated skip reports as `ok`."""
     pre_hook, post_hook = cook.get_hooks(name)
     if pre_hook and not run_pre_hook(pre_hook):
@@ -190,7 +191,7 @@ def apply_state_resource(cook: StateCook, name: str, current_label: str, desired
     return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status, outcome.delayed_message
 
 
-def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
+def run_state(cook: StateCook[EntrySpec], section: str, dry_run: bool) -> CookResult:
     resources = cook.list_resources()
     current = cook.get_current_state()
     desired = cook.get_desired_state()
@@ -233,7 +234,7 @@ def run_state(cook: StateCook, section: str, dry_run: bool) -> CookResult:
     return CookResult(section, pick_worst_status(statuses), rows, delayed_messages=delayed_messages)
 
 
-def run_cook(node: Node, config: dict, dry_run: bool) -> CookResult:
+def run_cook(node: Node, config: RecipeConfig, dry_run: bool) -> CookResult:
     cook = build_cook(node, config)
     if isinstance(cook, VersionedCook):
         return run_versioned(cook, node.id, dry_run)
@@ -244,7 +245,7 @@ def run_cook(node: Node, config: dict, dry_run: bool) -> CookResult:
 
 def run_cook_guarded(
     node: Node,
-    config: dict,
+    config: RecipeConfig,
     dry_run: bool,
     dependents: tuple[str, ...] = (),
     reach: dict[str, int] | None = None,
@@ -268,7 +269,7 @@ def run_cook_guarded(
 
 def fork_cook(
     node: Node,
-    config: dict,
+    config: RecipeConfig,
     dry_run: bool,
     dependents: dict[str, tuple[str, ...]],
     reach: dict[str, int],
@@ -317,7 +318,7 @@ def build_dependents(graph: dict[str, set[str]]) -> dict[str, tuple[str, ...]]:
     return {node_id: tuple(sorted(ids)) for node_id, ids in dependents.items()}
 
 
-def build_weights(config: dict, nodes: dict[str, Node]) -> dict[str, int]:
+def build_weights(config: RecipeConfig, nodes: dict[str, Node]) -> dict[str, int]:
     """Each node's own work weight, read off its cook's unit_count."""
     return {node_id: build_cook(node, config).unit_count for node_id, node in nodes.items()}
 
@@ -378,7 +379,7 @@ def log_completion(
             emit(f"completed with failure {timing}: {message}{blocked}")
 
 
-def run_recipe_inline(config: dict, dry_run: bool) -> dict[str, CookResult]:
+def run_recipe_inline(config: RecipeConfig, dry_run: bool) -> dict[str, CookResult]:
     """Run the DAG in this process — no fork, no privilege drop — one node at a time in topological order. The foreground/debug path (and the seam tests drive the CLI on); intra-cook concurrency (a cook's own thread pool) still applies."""
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
@@ -400,7 +401,7 @@ def run_recipe_inline(config: dict, dry_run: bool) -> dict[str, CookResult]:
     return results
 
 
-def run_recipe(config: dict, dry_run: bool) -> dict[str, CookResult]:
+def run_recipe(config: RecipeConfig, dry_run: bool) -> dict[str, CookResult]:
     """Schedule the DAG: fork ready user nodes concurrently, serialize root nodes in their own lane, reap as they finish; ties broken by reach (highest gated work first)."""
     if inline_mode():
         return run_recipe_inline(config, dry_run)

@@ -11,6 +11,7 @@ from totchef.cook_base import CookResult
 from totchef.harness import become_user
 from totchef.logs import cook_context, inline_mode
 from totchef.recipe_graph import build_nodes, node_slice
+from totchef.recipe_types import RecipeConfig, RecipeValue
 
 REMOVE_WHEN_TIMEOUT_SECONDS = 30
 GENERIC_REMOVAL_NOTICE = "remove_when satisfied — this entry can be removed from the recipe."
@@ -25,14 +26,19 @@ class RemovalWatch:
     instruction: str
 
 
-def list_removal_watches(config: dict) -> list[RemovalWatch]:
+def _str(value: RecipeValue | None) -> str | None:
+    """A `remove_when`/`remove_how` value coerced to the string it always is by schema, None when the key is absent."""
+    return value if isinstance(value, str) else None
+
+
+def list_removal_watches(config: RecipeConfig) -> list[RemovalWatch]:
     """Every node's `remove_when` watch, read off the already-validated recipe slices."""
     watches: list[RemovalWatch] = []
     for node_id, node in build_nodes(config).items():
         slice_ = node_slice(config, node)
-        condition = slice_.get("remove_when")
+        condition = _str(slice_.get("remove_when"))
         if condition:
-            watches.append(RemovalWatch(node_id, condition, slice_.get("remove_how") or GENERIC_REMOVAL_NOTICE))
+            watches.append(RemovalWatch(node_id, condition, _str(slice_.get("remove_how")) or GENERIC_REMOVAL_NOTICE))
     return watches
 
 
@@ -64,7 +70,7 @@ def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
             become_user()
             fired = [watch.node_id for watch in watches if is_removable(watch)]
         except Exception:
-            fired = []
+            fired: list[str] = []
         with os.fdopen(write_fd, "wb") as out:
             out.write(pickle.dumps(fired))
         os._exit(0)
@@ -76,7 +82,7 @@ def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
     return [watch for watch in watches if watch.node_id in fired_ids]
 
 
-def append_removal_notices(config: dict, results: dict[str, CookResult]) -> None:
+def append_removal_notices(config: RecipeConfig, results: dict[str, CookResult]) -> None:
     """Probe every declared watch and append each fired instruction to its node's delayed messages so the `Action required` block names it; a node absent from the results (aborted run) still gets its notice."""
     for watch in find_removable(list_removal_watches(config)):
         result = results.setdefault(watch.node_id, CookResult(watch.node_id, "ok"))
