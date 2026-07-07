@@ -68,7 +68,7 @@ class UvCook(PackageListCook):
                 "uv must be installed first; the [url] section must run before [uv].",
             )
 
-        logger.info(f"Running {len(work)} uv tool action(s) in parallel")
+        logger.info("Running {count} uv tool action(s) in parallel", count=len(work))
         tag_width = max(len(name) for _, name in work)
         failures: list[str] = []
         with ThreadPoolExecutor(max_workers=len(work)) as pool:
@@ -79,7 +79,7 @@ class UvCook(PackageListCook):
                     future.result()
                 except (subprocess.CalledProcessError, OSError) as exc:
                     failures.append(name)
-                    logger.error(f"{name} failed: {exc}")
+                    logger.exception("{name} failed: {exc}", name=name, exc=exc)
 
         if failures:
             return SyncOutcome(
