@@ -12,6 +12,8 @@ Before reporting that a regex matches (or misses) a given input, trace the match
 
 The mandatory `ci` check runs the full quality gate on every push: ruff (`select = ["ALL"]`), pyrefly, vulture, knip, tsc, eslint, rumdl, and both test suites. Do not report syntax, typechecking and linting errors - leave these to the deterministic ci gate.
 
+Don't flag long lines or long docstrings — ruff's line-length check is enforced deterministically in `ci` and will catch anything that's actually too long; a style comment here is redundant noise.
+
 Don't suggest guards for exceptions an API can't raise. Non-strict pathlib calls (`resolve()`, `exists()`, `is_symlink()`) swallow `OSError` by documented contract — a `try/except OSError` around them is dead code. Verify an exception is actually reachable before proposing a handler for it.
 
 `apps/totchef` (a declarative, idempotent system-configuration tool) has two conventions specific to it — do not flag these as defects:
