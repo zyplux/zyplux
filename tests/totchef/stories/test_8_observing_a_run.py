@@ -1,7 +1,9 @@
-"""User stories §8 — Observing a run. §8.1 report and §8.3.1 log ownership are observed end-to-end; §8.2/§8.3.2-3 scheduler/pump rendering stay white-box."""
+(
+    """User stories §8 — Observing a run. §8.1 report and §8.3.1 log ownership are observed end-to-end; §8.2 rendering and §8.3.2's pump logic go """
+    """through their own public seams (rich's Progress, log_pump's pump_lines/emit_terminal) rather than reaching into totchef's private helpers."""
+)
 
 import io
-import os
 import re
 import threading
 from pathlib import Path
@@ -9,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.progress import MofNCompleteColumn, Progress, TimeElapsedColumn
+from totchef.log_pump import emit_terminal, pump_lines
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -190,26 +193,33 @@ def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(apply_in_contai
     assert run.log_owner == "tester", run.transcript
 
 
-def test_8_3_2_all_output_funnels_through_a_single_pump(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, log_internals: ModuleType) -> None:
-    """Parent and every forked cook's stdout/stderr funnel through one pump so log lines never interleave with the live region."""
+def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path) -> None:
+    """Parent and every forked cook's stdout/stderr funnel through one pump: every line reaches the file and the terminal, in order, except a drain marker."""
     log_file = tmp_path / "run.log"
-    monkeypatch.setattr(log_internals.log_state, "log_handle", Path(log_file).open("a", encoding="utf-8"))  # noqa: SIM115 — the pump owns the handle for the run
-    monkeypatch.setattr(log_internals.log_state, "echo_to_terminal", True)
     emitted: list[str] = []
-    monkeypatch.setattr(log_internals, "LINE_SINK", emitted.append)  # the terminal sink the pump feeds
+    marker_event = threading.Event()
+    drain_events: dict[str, threading.Event] = {"marker": marker_event}
 
-    # the real pump: one thread draining the merged fd that parent and every forked cook write to
-    read_fd, write_fd = os.pipe()
-    pump = threading.Thread(target=log_internals._pump, args=(read_fd,))
-    pump.start()
-    with os.fdopen(write_fd, "w") as stream:  # two "cooks" interleaving their writes onto the one pipe
-        stream.write("url.bun   installing\n")
-        stream.write("apt_pkg   updating\n")
-    pump.join(timeout=2)
+    with log_file.open("a", encoding="utf-8") as handle:
+
+        def write_log(line: str) -> None:
+            handle.write(line)
+
+        pump_lines(
+            ["url.bun   installing\n", "apt_pkg   updating\n", "marker\n"],
+            write_log=write_log,
+            emit_terminal=emitted.append,
+            drain_events=drain_events,
+        )
 
     assert log_file.read_text() == "url.bun   installing\napt_pkg   updating\n"  # one ordered writer to the file
     assert emitted == ["url.bun   installing\n", "apt_pkg   updating\n"]  # one ordered sink to the terminal — never interleaved
+    assert marker_event.is_set()  # a line matching a registered marker signals its event …
+    assert "marker" not in drain_events  # … and is popped once consumed, not written or mirrored like a real log line
 
+
+def test_8_3_2_2_write_log_is_a_safe_no_op_before_a_run_opens_a_handle(monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType) -> None:
+    """write_log tolerates being called before any run has opened a log handle, rather than raising."""
     monkeypatch.setattr(log_internals.log_state, "log_handle", None)
     log_internals.write_log("dropped")  # no handle yet ⇒ a safe no-op
 
@@ -226,7 +236,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 
     log_internals.set_terminal_echo(enabled=False)  # dry-run suppresses cook log echo to the terminal …
     assert not log_internals.log_state.echo_to_terminal
-    log_internals._emit_terminal("cook chatter\n")  # what the pump would mirror for a cook's line
+    emit_terminal("cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK)  # what the pump would mirror
     log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …

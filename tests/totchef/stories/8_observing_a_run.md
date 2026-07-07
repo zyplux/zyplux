@@ -81,6 +81,11 @@ All output — the parent's and every forked cook's stdout/stderr — funnels
 through a single pump so log lines never interleave with the live table/progress
 region.
 
+### 8.3.2.2 write log is a safe no-op before a run opens a handle
+
+Before any run has opened a log handle, writing a log line is a safe no-op
+rather than a crash.
+
 ### 8.3.3 dry run shows only plan on terminal but logs everything
 
 A dry run shows only the version banner (§8.3.5) and the plan table on the

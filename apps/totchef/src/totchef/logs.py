@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, TextIO
 from loguru import logger
 from toon_format import encode
 
+from totchef.log_pump import emit_terminal, pump_lines
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Mapping, Sequence
 
@@ -98,19 +100,13 @@ def set_terminal_echo(*, enabled: bool) -> None:
 
 
 def _emit_terminal(line: str) -> None:
-    if log_state.echo_to_terminal and LINE_SINK is not None:
-        LINE_SINK(line)
+    emit_terminal(line, enabled=log_state.echo_to_terminal, sink=LINE_SINK)
 
 
 def _pump(read_fd: int) -> None:
     """Mirror each line of the merged log stream to the file and terminal; a line matching a registered drain marker is swallowed and signals its event."""
     with os.fdopen(read_fd, "r", errors="replace") as stream:
-        for line in stream:
-            if (event := DRAIN_EVENTS.pop(line.strip(), None)) is not None:
-                event.set()
-                continue
-            write_log(line)
-            _emit_terminal(line)
+        pump_lines(stream, write_log=write_log, emit_terminal=_emit_terminal, drain_events=DRAIN_EVENTS)
 
 
 def drain_logs(timeout: float = 5.0) -> None:

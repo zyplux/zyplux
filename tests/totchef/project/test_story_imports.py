@@ -1,7 +1,8 @@
 (
     """Meta-test: story tests assert behavior through fixtures only, zero *runtime* imports; a `TYPE_CHECKING`-guarded import (needed to annotate a fixture """
-    """parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3 white-box and §7.3.2/§8.3.1 container are pinned exceptions. The """
-    """act/assert fixtures, in turn, reach totchef only through its public CLI — never its internals."""
+    """parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3's timing/rendering assertions (needing threading/rich, not totchef """
+    """internals — those stay behind public seams too) and §7.3.2/§8.3.1's container fixture are pinned exceptions. The act/assert fixtures, in turn, """
+    """reach totchef only through its public CLI — never its internals."""
 )
 
 import ast
@@ -12,7 +13,8 @@ from project_paths import STORIES_DIR
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-CONTAINER_BOUND = {"test_8_observing_a_run.py"}  # §8.2/§8.3.2-3: rendering/timing white-box (the ownership stories are fixture-driven, zero-import)
+# §8.2/§8.3.2-3 need threading/rich for timing/rendering asserts (the ownership stories are fixture-driven, zero-import)
+CONTAINER_BOUND = {"test_8_observing_a_run.py"}
 
 # The arrange layer owns the sanctioned system-boundary doubles (bash, network, host),
 # so it imports those production modules to patch them; the act and assert layers must
