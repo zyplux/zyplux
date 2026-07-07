@@ -1,5 +1,8 @@
 #!/usr/bin/python3
-"""Boot-time eGPU-primary selector (egpu-prime.service, as root): when an NVIDIA eGPU is on the bus, flip boot_vga + write KWIN_DRM_DEVICES/WLR_DRM_DEVICES/AQ_DRM_DEVICES/VULKAN_ADAPTER + `prime-select nvidia`, else revert. STANDALONE: system python3 + stdlib only — a non-stdlib import breaks the graphical session at boot. Resolves /dev/dri/by-path to cardN every boot (a baked-in card number caused an earlier login loop)."""
+"""Boot-time eGPU-primary selector (egpu-prime.service, as root): when an NVIDIA eGPU is on the bus, flip boot_vga + write
+KWIN_DRM_DEVICES/WLR_DRM_DEVICES/AQ_DRM_DEVICES/VULKAN_ADAPTER + `prime-select nvidia`, else revert. STANDALONE: system python3 + stdlib only — a
+non-stdlib import breaks the graphical session at boot. Resolves /dev/dri/by-path to cardN every boot (a baked-in card number caused an earlier
+login loop)."""
 
 import argparse
 import os
@@ -8,8 +11,11 @@ import subprocess
 import sys
 import syslog
 import time
-from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 __version__ = "1.0.0"
 
@@ -24,16 +30,16 @@ NVIDIA_DISPLAY_CLASS_PREFIXES = ("0x0300", "0x0302")
 
 def log(message: str, level: int = syslog.LOG_INFO) -> None:
     syslog.syslog(level, message)
-    print(f"{SYSLOG_IDENT}: {message}", file=sys.stderr)
+    sys.stderr.write(f"{SYSLOG_IDENT}: {message}\n")
 
 
 def run(*command: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, capture_output=True, text=True)
+    return subprocess.run(command, capture_output=True, text=True, check=False)
 
 
 def read_pci_attr(pci_address: str, attr: str) -> str:
     try:
-        return (PCI_DEVICES_DIR / pci_address / attr).read_text().strip()
+        return (PCI_DEVICES_DIR / pci_address / attr).read_text(encoding="utf-8").strip()
     except OSError:
         return ""
 
@@ -77,11 +83,11 @@ def bind_boot_vga_override(boot_vga_value: str, target: Path) -> bool:
 
 def flip_boot_vga() -> None:
     BOOT_VGA_OVERRIDES_DIR.mkdir(parents=True, exist_ok=True)
-    (BOOT_VGA_OVERRIDES_DIR / "one").write_text("1")
-    (BOOT_VGA_OVERRIDES_DIR / "zero").write_text("0")
+    (BOOT_VGA_OVERRIDES_DIR / "one").write_text("1", encoding="utf-8")
+    (BOOT_VGA_OVERRIDES_DIR / "zero").write_text("0", encoding="utf-8")
     for boot_vga_file in PCI_DEVICES_DIR.glob("*/boot_vga"):
         pci_address = boot_vga_file.parent.name
-        is_primary = boot_vga_file.read_text().strip() == "1"
+        is_primary = boot_vga_file.read_text(encoding="utf-8").strip() == "1"
         is_nvidia = read_pci_attr(pci_address, "vendor") == NVIDIA_PCI_VENDOR_ID
         if is_nvidia and not is_primary and bind_boot_vga_override("1", boot_vga_file):
             log(f"boot_vga: {pci_address} -> 1 (eGPU primary)")
@@ -134,7 +140,7 @@ def write_compositor_primary() -> None:
         lines.append(f"VULKAN_ADAPTER={vendor_id}:{device_id}")
 
     EGPU_PRIMARY_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    EGPU_PRIMARY_CONFIG_FILE.write_text("\n".join(lines) + "\n")
+    EGPU_PRIMARY_CONFIG_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
     EGPU_PRIMARY_CONFIG_FILE.chmod(0o644)
     log(f"wrote {EGPU_PRIMARY_CONFIG_FILE}: {' | '.join(lines)}")
 
