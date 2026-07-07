@@ -1,9 +1,17 @@
 """User stories §5 — Configuring system state. One test per §5 criterion on the real chef in-process; only system boundaries (bash, network, host) are faked."""
 
+from collections.abc import Callable
+from pathlib import Path
+
+from act_fixtures import Cli, Totchef
+from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
+
 # 5.1 Add third-party apt repositories securely
 
 
-def test_5_1_1_apt_repo_fetches_key_dearmors_writes_keyring_and_sources(recipe, terminal, http, totchef, tmp_path):
+def test_5_1_1_apt_repo_fetches_key_dearmors_writes_keyring_and_sources(
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, tmp_path: Path
+) -> None:
     """`[apt_repo.<name>]` fetches the GPG key (de-armoring if needed), writes the keyring, and writes a deb822 .sources with `Signed-By:`."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -22,7 +30,7 @@ def test_5_1_1_apt_repo_fetches_key_dearmors_writes_keyring_and_sources(recipe, 
     assert f"Signed-By: {keyring}" in sources.read_text()
 
 
-def test_5_1_2_operator_declares_key_url_uris_and_optional_fields(recipe, http, totchef, tmp_path):
+def test_5_1_2_operator_declares_key_url_uris_and_optional_fields(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef, tmp_path: Path) -> None:
     """Declares key_url and uris, with optional suites, components, architectures, and custom keyring/source_path."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -49,7 +57,9 @@ def test_5_1_2_operator_declares_key_url_uris_and_optional_fields(recipe, http, 
     assert keyring.read_bytes() == b"raw-binary-key"
 
 
-def test_5_1_3_suites_release_placeholder_substituted_with_codename(recipe, http, totchef, system, tmp_path):
+def test_5_1_3_suites_release_placeholder_substituted_with_codename(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef, system: FakeSystem, tmp_path: Path
+) -> None:
     """`{release}` in `suites` is substituted with the detected Ubuntu codename."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -62,7 +72,7 @@ def test_5_1_3_suites_release_placeholder_substituted_with_codename(recipe, http
     assert "Suites: plucky" in sources.read_text()
 
 
-def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(recipe, totchef, tmp_path):
+def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """Configured only when both the keyring and the .sources file exist; otherwise re-applied."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -76,7 +86,15 @@ def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(recipe, 
     totchef.plan().assert_shows("apt_repo.vendor", "ok")
 
 
-def test_5_1_5_relative_urls_resolve_against_the_repo_url(recipe, scenario, chef, apt_keyrings_dir, apt_sources_dir, http, totchef):
+def test_5_1_5_relative_urls_resolve_against_the_repo_url(
+    recipe: RecipeBuilder,
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    apt_keyrings_dir: Path,
+    apt_sources_dir: Path,
+    http: FakeHttp,
+    totchef: Totchef,
+) -> None:
     """Relative `key_url`/`uris` — or an omitted `uris` — resolve against `url` (scheme optional, https assumed); the files keep the entry's name; a relative URL without `url` is rejected."""
     recipe.declares("apt_repo", "vendor", url="vendor.example/apt", key_url="key.gpg")
     http.arrange("https://vendor.example/apt/key.gpg", "raw-key")
@@ -93,7 +111,7 @@ def test_5_1_5_relative_urls_resolve_against_the_repo_url(recipe, scenario, chef
     chef(baseless).lint().assert_rejected("set `url` or absolute URLs")
 
 
-def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe, http, totchef, tmp_path):
+def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef, tmp_path: Path) -> None:
     """`pin_priority` writes `/etc/apt/preferences.d/<name>.pref` pinning the repo's origin host (derived from `uris`) to that priority, so a package it ships can outrank the Ubuntu-archive pin; the repo counts as configured only once that pref also exists."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -124,7 +142,14 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe, http, tot
 # 5.2 Install files with exact content
 
 
-def test_5_2_1_file_writes_from_content_or_bundled_source_with_mode(recipe, scenario, chef, bundled_files, totchef, tmp_path):
+def test_5_2_1_file_writes_from_content_or_bundled_source_with_mode(
+    recipe: RecipeBuilder,
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    bundled_files: Path,
+    totchef: Totchef,
+    tmp_path: Path,
+) -> None:
     """`[file.<name>]` writes from inline content or a bundled source asset beside the recipe with a mode; setting both is rejected."""
     (bundled_files / "asset.txt").write_text("bundled-bytes\n")
     inline = tmp_path / "drop.conf"
@@ -142,7 +167,7 @@ def test_5_2_1_file_writes_from_content_or_bundled_source_with_mode(recipe, scen
     chef(both).lint().assert_rejected()  # content and source together are rejected
 
 
-def test_5_2_2_file_diffed_by_content_hash(recipe, totchef, tmp_path):
+def test_5_2_2_file_diffed_by_content_hash(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """The file is diffed by content hash, rewritten only when bytes differ."""
     target = tmp_path / "f"
     recipe.declares("file", "f", path=str(target), content="A\n")
@@ -154,7 +179,7 @@ def test_5_2_2_file_diffed_by_content_hash(recipe, totchef, tmp_path):
     totchef.up().assert_shows("file.f", "applied")
 
 
-def test_5_2_3_post_hook_runs_only_when_the_file_changed(recipe, terminal, totchef, tmp_path):
+def test_5_2_3_post_hook_runs_only_when_the_file_changed(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
     """A post_hook (e.g. update-grub, daemon-reload) runs only when the file changed."""
     target = tmp_path / "grub.cfg"
     recipe.declares("file", "grub", path=str(target), content="GRUB_TIMEOUT=2\n", post_hook="update-grub")
@@ -167,7 +192,7 @@ def test_5_2_3_post_hook_runs_only_when_the_file_changed(recipe, terminal, totch
     terminal.expect_not_ran("update-grub")
 
 
-def test_5_2_4_file_path_expands_tilde_for_per_user_installs(recipe, home, totchef):
+def test_5_2_4_file_path_expands_tilde_for_per_user_installs(recipe: RecipeBuilder, home: Path, totchef: Totchef) -> None:
     """A `~` in path resolves against `$HOME`, so per-user entries stay portable across machines."""
     recipe.declares("file", "tool", path="~/.local/bin/tool", content="#!/usr/bin/env python3\n", mode="0755")
 
@@ -178,7 +203,7 @@ def test_5_2_4_file_path_expands_tilde_for_per_user_installs(recipe, home, totch
     assert (installed.stat().st_mode & 0o777) == 0o755
 
 
-def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe, totchef, cli, tmp_path):
+def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe: RecipeBuilder, totchef: Totchef, cli: Cli, tmp_path: Path) -> None:
     """Privilege-agnostic: set needs_root per entry for files under /etc, /usr, etc."""
     cli.run("--list-cooks").assert_lists("file", scope="user")  # the cook itself is privilege-agnostic
 
@@ -194,7 +219,14 @@ def test_5_2_5_file_is_privilege_agnostic_root_per_entry(recipe, totchef, cli, t
     # the grant actually escalating only that entry is verified end-to-end in the container — test_6_3_2
 
 
-def test_5_2_6_source_defaults_to_the_bundled_file_named_after_the_entry(recipe, scenario, chef, bundled_files, totchef, tmp_path):
+def test_5_2_6_source_defaults_to_the_bundled_file_named_after_the_entry(
+    recipe: RecipeBuilder,
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    bundled_files: Path,
+    totchef: Totchef,
+    tmp_path: Path,
+) -> None:
     """With neither `content` nor `source`, the entry installs the unique bundled file whose stem matches the entry name; zero or several matches fail lint asking for an explicit `source`."""
     (bundled_files / "motd.txt").write_text("welcome\n")
     target = tmp_path / "motd"
@@ -213,7 +245,7 @@ def test_5_2_6_source_defaults_to_the_bundled_file_named_after_the_entry(recipe,
 # 5.3 Run arbitrary idempotent shell steps
 
 
-def test_5_3_1_bash_skips_apply_when_current_state_equals_desired(recipe, terminal, totchef):
+def test_5_3_1_bash_skips_apply_when_current_state_equals_desired(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """totchef runs current_state; if its output equals desired_state the step is skipped, otherwise apply runs."""
     recipe.declares("bash", "pin", current_state="cat /etc/apt/preferences.d/pin", desired_state="Pin: release o=vendor", apply="install-pin")
     terminal.arrange("cat /etc/apt/preferences.d/pin", "Pin: release o=vendor")
@@ -227,7 +259,7 @@ def test_5_3_1_bash_skips_apply_when_current_state_equals_desired(recipe, termin
     terminal.expect_ran("install-pin")
 
 
-def test_5_3_2_bash_with_no_current_state_always_applies(recipe, terminal, totchef):
+def test_5_3_2_bash_with_no_current_state_always_applies(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """With no current_state, the step is "no check" and always applies."""
     recipe.declares("bash", "always", apply="run-it")
 
@@ -235,7 +267,7 @@ def test_5_3_2_bash_with_no_current_state_always_applies(recipe, terminal, totch
     terminal.expect_ran("run-it")
 
 
-def test_5_3_3_bash_guarded_steps_are_no_ops_on_rerun(recipe, terminal, totchef):
+def test_5_3_3_bash_guarded_steps_are_no_ops_on_rerun(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
     """Used for pinning / preseed / prereqs, each guarded by a cheap state probe so re-runs are no-ops."""
     recipe.declares("bash", "preseed", current_state="debconf-show ttf-mscorefonts", desired_state="accepted", apply="debconf-set-selections")
     terminal.arrange("debconf-show ttf-mscorefonts", "accepted")
@@ -245,7 +277,7 @@ def test_5_3_3_bash_guarded_steps_are_no_ops_on_rerun(recipe, terminal, totchef)
     terminal.expect_not_ran("debconf-set-selections")
 
 
-def test_5_3_4_bash_is_privilege_agnostic_root_per_entry(recipe, totchef, cli):
+def test_5_3_4_bash_is_privilege_agnostic_root_per_entry(recipe: RecipeBuilder, totchef: Totchef, cli: Cli) -> None:
     """Privilege-agnostic: grant root per entry."""
     cli.run("--list-cooks").assert_lists("bash", scope="user")  # the cook itself is privilege-agnostic
 
@@ -264,7 +296,9 @@ def test_5_3_4_bash_is_privilege_agnostic_root_per_entry(recipe, totchef, cli):
 # 5.4 Install versioned commands onto the PATH
 
 
-def test_5_4_1_usr_local_bin_and_local_bin_install_command_named_after_source_stem(recipe, home, usr_local_bin_dir, bundled_files, totchef):
+def test_5_4_1_usr_local_bin_and_local_bin_install_command_named_after_source_stem(
+    recipe: RecipeBuilder, home: Path, usr_local_bin_dir: Path, bundled_files: Path, totchef: Totchef
+) -> None:
     """`[usr_local_bin.<name>]` installs a bundled script to /usr/local/bin and `[local_bin.<name>]` to ~/.local/bin — mode 0755, command named after the source stem, only `source` declared."""
     command = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo usage;; esac\n'
     (bundled_files / "write-if-changed.py").write_text(command)
@@ -282,7 +316,7 @@ def test_5_4_1_usr_local_bin_and_local_bin_install_command_named_after_source_st
     assert (user_command.stat().st_mode & 0o777) == 0o755
 
 
-def test_5_4_2_version_decides_the_update_not_content(recipe, home, bundled_files, totchef):
+def test_5_4_2_version_decides_the_update_not_content(recipe: RecipeBuilder, home: Path, bundled_files: Path, totchef: Totchef) -> None:
     """The diff key is the command's embedded `__version__`: an older install is rewritten, equal versions leave differing bytes alone, and the report columns carry the versions."""
     bash_tool = '#!/bin/bash\n__version__="2.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: tool";; esac\n'
     (bundled_files / "tool.sh").write_text(bash_tool)
@@ -303,7 +337,7 @@ def test_5_4_2_version_decides_the_update_not_content(recipe, home, bundled_file
     assert "# local tweak" in installed.read_text()  # equal versions never reinstall
 
 
-def test_5_4_3_command_may_be_any_language_even_a_binary(recipe, home, bundled_files, totchef):
+def test_5_4_3_command_may_be_any_language_even_a_binary(recipe: RecipeBuilder, home: Path, bundled_files: Path, totchef: Totchef) -> None:
     """The contract markers are read off the file's bytes, so a compiled binary qualifies — embed `__version__ = "<version>"` as a constant string."""
     binary = b'\x7fELF\x02\x01junk\x00__version__ = "3.1.4"\x00usage: tool [--version] [--help]\x00\xff\xfe\xfd'
     (bundled_files / "tool.bin").write_bytes(binary)
@@ -316,13 +350,13 @@ def test_5_4_3_command_may_be_any_language_even_a_binary(recipe, home, bundled_f
     assert (home / ".local/bin/tool").read_bytes() == binary  # installed verbatim, bytes untouched
 
 
-def test_5_4_4_usr_local_bin_is_always_root_local_bin_is_user_scoped(cli):
+def test_5_4_4_usr_local_bin_is_always_root_local_bin_is_user_scoped(cli: Cli) -> None:
     """`usr_local_bin` lists as a root cook (its domain is /usr/local/bin); `local_bin` stays user-scoped."""
     cli.run("--list-cooks").assert_lists("usr_local_bin", scope="root")
     cli.run("--list-cooks").assert_lists("local_bin", scope="user")
 
 
-def test_5_4_5_source_defaults_to_the_bundled_command_named_after_the_entry(recipe, home, bundled_files, totchef):
+def test_5_4_5_source_defaults_to_the_bundled_command_named_after_the_entry(recipe: RecipeBuilder, home: Path, bundled_files: Path, totchef: Totchef) -> None:
     """With no `source`, the entry installs the unique bundled command whose stem matches the entry name — `[local_bin.tool]` needs no keys at all."""
     tool = '#!/bin/bash\n__version__="1.2.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: tool";; esac\n'
     (bundled_files / "tool.sh").write_text(tool)
@@ -335,7 +369,9 @@ def test_5_4_5_source_defaults_to_the_bundled_command_named_after_the_entry(reci
     assert (home / ".local/bin/tool").read_text() == tool  # command still named after the resolved stem
 
 
-def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(recipe, usr_local_sbin_dir, bundled_files, totchef, cli):
+def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(
+    recipe: RecipeBuilder, usr_local_sbin_dir: Path, bundled_files: Path, totchef: Totchef, cli: Cli
+) -> None:
     """`[usr_local_sbin.<name>]` installs to /usr/local/sbin — admin and daemon helpers, outside ordinary users' PATH — always as root, under the same version contract."""
     helper = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo "usage: helper";; esac\n'
     (bundled_files / "helper.sh").write_text(helper)
@@ -352,7 +388,7 @@ def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(recipe, usr
 # 5.5 Set specific lines in a config file
 
 
-def test_5_5_1_conf_replaces_matching_lines_in_place_and_appends_missing_ones(recipe, totchef, tmp_path):
+def test_5_5_1_conf_replaces_matching_lines_in_place_and_appends_missing_ones(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """`[conf.<name>]` keys each declared line on the text before `=` (the whole line when there is none): a line with the same key is replaced in place, a missing one is appended, and every other line — comments included — is left untouched."""
     target = tmp_path / "nala.conf"
     target.write_text("[Nala]\n# full_upgrade = true is what we want\nfull_upgrade = false\nassume_yes = false\n")
@@ -363,7 +399,7 @@ def test_5_5_1_conf_replaces_matching_lines_in_place_and_appends_missing_ones(re
     assert target.read_text() == "[Nala]\n# full_upgrade = true is what we want\nfull_upgrade = true\nassume_yes = false\nupdate_show_packages = true\n"
 
 
-def test_5_5_2_conf_creates_a_missing_target(recipe, totchef, tmp_path):
+def test_5_5_2_conf_creates_a_missing_target(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """A missing `target` is created (parents included) holding exactly the declared lines."""
     target = tmp_path / "etc" / "fresh.conf"
     recipe.declares("conf", "fresh", target=str(target), lines=["[Nala]", "full_upgrade = true"])
@@ -373,7 +409,7 @@ def test_5_5_2_conf_creates_a_missing_target(recipe, totchef, tmp_path):
     assert target.read_text() == "[Nala]\nfull_upgrade = true\n"
 
 
-def test_5_5_3_conf_rewrites_only_when_a_line_differs(recipe, terminal, totchef, tmp_path):
+def test_5_5_3_conf_rewrites_only_when_a_line_differs(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
     """Diffed by content hash: a compliant file is never rewritten and a post_hook fires only on a real change."""
     target = tmp_path / "app.conf"
     target.write_text("mode = fast\n")

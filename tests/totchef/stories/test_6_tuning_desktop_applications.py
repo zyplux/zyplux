@@ -1,14 +1,21 @@
 """User stories §6 — Tuning desktop apps. One test per §6 criterion; these cooks edit real files under `$HOME` (faked by the `home` fixture)."""
 
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
 
-def _exec_line(desktop_file) -> str:
+from act_fixtures import Totchef
+from arrange_fixtures import FakeTerminal, RecipeBuilder
+
+
+def _exec_line(desktop_file: Path) -> str:
     return next(line for line in desktop_file.read_text().splitlines() if line.startswith("Exec="))
 
 
 # 5.1 Override an app's desktop launcher
 
 
-def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(recipe, totchef, home, tmp_path):
+def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
     """`[desktop.<app>]` rewrites a system .desktop Exec= line (env prefix, switches, --enable-features) into ~/.local/share/applications/."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nName=Brave\nExec=/usr/bin/brave %U\n")
@@ -24,7 +31,7 @@ def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(recipe, totchef, 
     assert line.split()[-1] == "%U"
 
 
-def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(recipe, totchef, home, tmp_path):
+def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
     """Re-applying doesn't stack duplicate flags; a changed switch value is replaced; new args go before trailing field codes."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=env OLD=1 /usr/bin/brave --use-gl=angle %U\n")
@@ -41,7 +48,7 @@ def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(recipe, totchef, 
     totchef.up().assert_shows("desktop.brave", "unchanged")
 
 
-def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(recipe, terminal, totchef, tmp_path):
+def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
     """On change it refreshes KDE's ksycoca (tolerant of non-KDE) and reminds the operator to restart the app."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
@@ -58,7 +65,7 @@ def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(recipe, t
     terminal.expect_not_ran("kbuildsycoca6")
 
 
-def test_6_1_4_desktop_missing_source_reports_install_package_first(recipe, totchef, tmp_path):
+def test_6_1_4_desktop_missing_source_reports_install_package_first(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
     """If the source .desktop doesn't exist, it reports the package must be installed first rather than failing the run."""
     recipe.declares("desktop", "ghost", desktop=str(tmp_path / "ghost.desktop"), switches=["use-gl=egl"])
 
@@ -72,7 +79,9 @@ def test_6_1_4_desktop_missing_source_reports_install_package_first(recipe, totc
 # 5.2 Inject flags into Chromium and Electron apps
 
 
-def test_6_2_1_1_local_state_merges_into_enabled_labs_experiments(recipe, totchef, home, read_json):
+def test_6_2_1_1_local_state_merges_into_enabled_labs_experiments(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, read_json: Callable[[Path], Any]
+) -> None:
     """`local_state` merges local_state_flags into browser.enabled_labs_experiments of a Chromium Local State JSON."""
     local_state = home / ".config/chromium/Local State"
     local_state.parent.mkdir(parents=True)
@@ -86,7 +95,9 @@ def test_6_2_1_1_local_state_merges_into_enabled_labs_experiments(recipe, totche
     assert "existing-flag@1" in experiments
 
 
-def test_6_2_1_2_argv_json_merges_argv_and_enable_features_tolerating_comments(recipe, totchef, home, read_json):
+def test_6_2_1_2_argv_json_merges_argv_and_enable_features_tolerating_comments(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, read_json: Callable[[Path], Any]
+) -> None:
     """`argv_json` merges an argv table and --enable-features from a features list, tolerating // comments in the existing file."""
     argv_json = home / ".config/Code/argv.json"
     argv_json.parent.mkdir(parents=True)
@@ -107,7 +118,7 @@ def test_6_2_1_2_argv_json_merges_argv_and_enable_features_tolerating_comments(r
     assert data["enable-features"] == "UseOzonePlatform,WaylandWindowDecorations"
 
 
-def test_6_2_2_chromium_flags_diffed_by_rendered_json_hash(recipe, totchef, home):
+def test_6_2_2_chromium_flags_diffed_by_rendered_json_hash(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
     """Diffed by rendered-JSON hash, so it only writes when flags actually change."""
     local_state = home / ".config/chromium/Local State"
     local_state.parent.mkdir(parents=True)
@@ -118,7 +129,7 @@ def test_6_2_2_chromium_flags_diffed_by_rendered_json_hash(recipe, totchef, home
     totchef.up().assert_shows("chromium_flags.chromium", "unchanged")
 
 
-def test_6_2_3_local_state_skipped_while_browser_running(recipe, terminal, totchef, home):
+def test_6_2_3_local_state_skipped_while_browser_running(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path) -> None:
     """For Local State it won't write while the browser runs (a pgrep guard skips the entry), naming the process via process_name if it differs."""
     local_state = home / ".config/BraveSoftware/Brave-Browser/Local State"
     local_state.parent.mkdir(parents=True)
@@ -134,7 +145,7 @@ def test_6_2_3_local_state_skipped_while_browser_running(recipe, terminal, totch
     terminal.expect_ran("pgrep -x brave-browser")
 
 
-def test_6_2_4_missing_base_file_advises_launch_once_invalid_json_soft_fails(recipe, totchef, home):
+def test_6_2_4_missing_base_file_advises_launch_once_invalid_json_soft_fails(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
     """A missing base file tells the operator to launch the app once and re-run; invalid JSON is left untouched and soft-fails."""
     broken = home / ".config/electron/argv.json"
     broken.parent.mkdir(parents=True)
@@ -150,7 +161,7 @@ def test_6_2_4_missing_base_file_advises_launch_once_invalid_json_soft_fails(rec
     report.assert_logged("invalid JSON")
 
 
-def test_6_2_5_chromium_flags_on_change_reminds_restart(recipe, totchef, home):
+def test_6_2_5_chromium_flags_on_change_reminds_restart(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
     """On change it reminds the operator to restart the app."""
     argv_json = home / ".config/Code/argv.json"
     argv_json.parent.mkdir(parents=True)
@@ -166,7 +177,9 @@ def test_6_2_5_chromium_flags_on_change_reminds_restart(recipe, totchef, home):
 # 5.3 Merge environment settings into a JSON config
 
 
-def test_6_3_1_settings_merges_settings_env_into_env_preserving_other_keys(recipe, totchef, home, read_json):
+def test_6_3_1_settings_merges_settings_env_into_env_preserving_other_keys(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, read_json: Callable[[Path], Any]
+) -> None:
     """`[settings.<app>]` merges settings_env into the env object of a JSON file, keeping all other keys intact."""
     settings = home / ".claude/settings.json"
     settings.parent.mkdir(parents=True)
@@ -180,7 +193,7 @@ def test_6_3_1_settings_merges_settings_env_into_env_preserving_other_keys(recip
     assert data["env"] == {"EXISTING": "1", "DISABLE_TELEMETRY": "1"}
 
 
-def test_6_3_2_settings_diffed_by_merged_json_hash_invalid_json_soft_fails(recipe, totchef, home):
+def test_6_3_2_settings_diffed_by_merged_json_hash_invalid_json_soft_fails(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
     """Diffed by merged-JSON hash; invalid JSON is left as-is and soft-fails."""
     settings = home / ".claude/settings.json"
     settings.parent.mkdir(parents=True)
