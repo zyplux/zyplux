@@ -126,8 +126,8 @@ def fetch_url(url: str) -> bytes:
     if not url.startswith(("http://", "https://")):
         msg = f"refusing to fetch {url!r}: only http/https URLs are allowed"
         raise ValueError(msg)
-    request = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:
+    request = Request(url, headers={"User-Agent": USER_AGENT})  # noqa: S310 — scheme validated above; ruff's own preview mode still flags it: https://github.com/astral-sh/ruff/issues/7918
+    with urlopen(request, timeout=FETCH_TIMEOUT_SECONDS) as response:  # noqa: S310 — same scheme guard, same acknowledged preview-mode limitation
         return response.read()
 
 
@@ -142,7 +142,7 @@ def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | N
             name = pending[future]
             try:
                 latest[name] = future.result()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — fetch_one is a real plugin extension point (totchef.cooks entry points); narrowing would silently break "a fetch that raises yields None" for third-party fetchers
                 logger.debug("latest lookup for {name} failed: {exc}", name=name, exc=exc)
                 latest[name] = None
     return latest
