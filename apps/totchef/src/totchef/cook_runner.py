@@ -73,7 +73,7 @@ def run_pre_hook(snippet: str) -> bool:
     """A `pre_hook` guard: zero exit proceeds, non-zero skips this item (a benign skip, e.g. "browser is running", not a failure)."""
     try:
         shell.stream(["bash", "-c", snippet], note=f"pre_hook: {snippet}")
-    except (subprocess.CalledProcessError, OSError):
+    except subprocess.CalledProcessError, OSError:
         logger.info("pre_hook not satisfied; skipping")
         return False
     else:
