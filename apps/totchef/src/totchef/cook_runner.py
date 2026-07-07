@@ -85,7 +85,7 @@ def run_post_hook(snippet: str) -> Status:
     try:
         shell.stream(["bash", "-c", snippet], note=f"post_hook: {snippet}")
     except (subprocess.CalledProcessError, OSError) as exc:
-        logger.warning(f"post_hook failed: {exc}")
+        logger.warning("post_hook failed: {exc}", exc=exc)
         return "soft_fail"
     else:
         return "ok"
@@ -267,6 +267,7 @@ def run_cook_guarded(node: Node, config: RecipeConfig, *, dry_run: bool, schedul
         try:
             return run_cook(node, config, dry_run=dry_run)
         except Exception:
+            logger.exception("cook raised; recording as hard_fail")
             return CookResult(node.id, "hard_fail", [], traceback.format_exc())
 
 
@@ -297,6 +298,7 @@ def fork_cook(node: Node, config: RecipeConfig, *, dry_run: bool, scheduling: Sc
                 become_user()
             result = run_cook_guarded(node, config, dry_run=dry_run, scheduling=scheduling)
         except Exception:
+            logger.exception("cook {node_id} crashed before producing a result", node_id=node.id)
             result = CookResult(node.id, "hard_fail", [], traceback.format_exc())
         with os.fdopen(write_fd, "wb") as out:
             out.write(_encode_result(result))
@@ -376,7 +378,7 @@ def log_completion(node_id: str, result: CookResult, dependants: tuple[str, ...]
     with cook_context(node_id):
         timing = f"({format_duration(elapsed)})"
         if result.status == "ok":
-            logger.info(f"completed {timing}{format_unlocked(dependants, progress.satisfied, progress.blocker_count)}")
+            logger.info("completed {timing}{unlocked}", timing=timing, unlocked=format_unlocked(dependants, progress.satisfied, progress.blocker_count))
         else:
             blocked = f"; blocked: {', '.join(dependants)}" if dependants else ""
             message = result.message or "see log above"
