@@ -1,5 +1,11 @@
 """User stories §9 — Extending totchef. One test per §9 criterion, each driving a real local-cook drop-in through `totchef` and asserting observable output."""
 
+from collections.abc import Callable
+from pathlib import Path
+
+from act_fixtures import Cli, Totchef
+from arrange_fixtures import FakeTerminal, RecipeBuilder
+
 VERSIONED_COOK = """
 from totchef import shell
 from totchef.cook_base import PackageListCook, SyncOutcome
@@ -92,7 +98,7 @@ class ShadowBashCook(StateCook[ShadowBashEntry]):
 """
 
 
-def _drop_local_cook(home, filename: str, source: str) -> None:
+def _drop_local_cook(home: Path, filename: str, source: str) -> None:
     cooks_dir = home / ".config/totchef/cooks"
     cooks_dir.mkdir(parents=True, exist_ok=True)
     (cooks_dir / filename).write_text(source)
@@ -101,7 +107,7 @@ def _drop_local_cook(home, filename: str, source: str) -> None:
 # 8.1 Add a new configuration domain as a plugin
 
 
-def test_9_1_1_cook_registered_under_entry_point_group_serves_its_section(cli, register_plugin):
+def test_9_1_1_cook_registered_under_entry_point_group_serves_its_section(cli: Cli, register_plugin: Callable[[str, str], None]) -> None:
     """A CookBase subclass registered in the `totchef.cooks` entry-point group serves the section named by its entry-point; origin shows in `--list-cooks`."""
     cli.run("--list-cooks").assert_lists("apt_pkg", scope="root", origin="built-in")
 
@@ -113,14 +119,16 @@ def test_9_1_1_cook_registered_under_entry_point_group_serves_its_section(cli, r
 # 8.2 Prototype a cook without packaging it
 
 
-def test_9_2_1_local_cook_file_is_picked_up_and_shadows_a_builtin(cli, home):
+def test_9_2_1_local_cook_file_is_picked_up_and_shadows_a_builtin(cli: Cli, home: Path) -> None:
     """A loose ~/.config/totchef/cooks/<section>_cook.py is loaded as a local cook and shadows a built-in of the same name."""
     _drop_local_cook(home, "bash_cook.py", SHADOW_BASH_COOK)
 
     cli.run("--list-cooks").assert_lists("bash", origin="local")  # the built-in `bash` is now shadowed
 
 
-def test_9_2_2_custom_cook_loads_from_totchef_cooks_beside_the_recipe(recipe, custom_cooks, terminal, totchef):
+def test_9_2_2_custom_cook_loads_from_totchef_cooks_beside_the_recipe(
+    recipe: RecipeBuilder, custom_cooks: Path, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """A loose `<section>_cook.py` in the recipe's sibling totchef_cooks/ is discovered and serves its section, so a recipe repo carries highly custom cooks beside it."""
     (custom_cooks / "switch_cook.py").write_text(PROBE_ONLY_COOK)
     recipe.declares("switch", "drifted", current="off", desired="on")
@@ -135,7 +143,9 @@ def test_9_2_2_custom_cook_loads_from_totchef_cooks_beside_the_recipe(recipe, cu
 # 8.3 Choose the right cook shape for my domain
 
 
-def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(recipe, terminal, totchef, home):
+def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """VersionedCook: implement list_requested/list_installed/find_latest/sync; PackageListCook covers plain `packages = [...]` sections."""
     _drop_local_cook(home, "gadget_cook.py", VERSIONED_COOK)
     recipe.declares("gadget", packages=["alpha", "beta"])
@@ -149,7 +159,9 @@ def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(recipe,
     terminal.expect_ran("install-gadget beta")
 
 
-def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(recipe, totchef, home, tmp_path):
+def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
+) -> None:
     """StateCook: implement get_current_state/get_desired_state/apply_resource; FileStateCook already diffs by sha256."""
     _drop_local_cook(home, "note_cook.py", FILE_STATE_COOK)
     target = tmp_path / "note.txt"
@@ -161,7 +173,9 @@ def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(recip
     totchef.up().assert_shows("note.n", "unchanged")  # sha256 matches ⇒ no rewrite, for free
 
 
-def test_9_3_3_cook_only_probes_and_acts_orchestrator_owns_the_diff(recipe, terminal, totchef, home):
+def test_9_3_3_cook_only_probes_and_acts_orchestrator_owns_the_diff(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """The cook only probes and acts; the orchestrator owns every diff and idempotency decision."""
     _drop_local_cook(home, "switch_cook.py", PROBE_ONLY_COOK)
     recipe.declares("switch", "matched", current="on", desired="on")  # cook reports states …
