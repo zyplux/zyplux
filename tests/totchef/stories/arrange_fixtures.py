@@ -19,7 +19,7 @@ from totchef.cooks import apt_repo_root_cook
 from totchef.cooks.usr_local_bin_root_cook import UsrLocalBinCook
 from totchef.cooks.usr_local_sbin_root_cook import UsrLocalSbinCook
 
-CHEZMOI_COOK = (Path(__file__).resolve().parents[2] / "examples/totchef_cooks/chezmoi_cook.py").read_text()
+CHEZMOI_COOK = (Path(__file__).resolve().parents[3] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
 
 
 class RecipeBuilder:
