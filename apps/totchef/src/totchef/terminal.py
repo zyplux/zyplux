@@ -1,12 +1,11 @@
-"""Terminal presentation: minimalist TOON in the log, rich tables/progress bars on an interactive terminal, all routed through the single Console the log pump feeds."""
+"""Terminal presentation: minimalist TOON in the log, rich tables/progress bars on a terminal, all routed through the one Console the pump feeds."""
 
 import os
 import re
-from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cache
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from rich.box import ROUNDED
 from rich.console import Console
@@ -25,6 +24,9 @@ from toon_format import encode
 
 from totchef import logs
 from totchef.logs import log_toon
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 ACTION_STYLES = {
     "installed": "green",
@@ -73,14 +75,17 @@ RUNNER_PALETTE = (
 
 @cache
 def _pump_console() -> Console:
-    """rich Console on the saved real-stdout fd (duped, owned independently of TERMINAL_FD) so is_terminal reflects the real terminal, not the log pipe. Cached: the dup happens once and the one console the pump feeds stays stable."""
-    assert logs.TERMINAL_FD is not None, "_pump_console requires a running pump; reach it through console()"
-    return Console(file=os.fdopen(os.dup(logs.TERMINAL_FD), "w"))
+    """rich Console on the saved real-stdout fd, independent of the log pipe, so is_terminal reflects the real terminal. Cached: the dup happens once."""
+    terminal_fd = logs.pump_fds.terminal
+    if terminal_fd is None:
+        msg = "_pump_console requires a running pump; reach it through console()"
+        raise RuntimeError(msg)
+    return Console(file=os.fdopen(os.dup(terminal_fd), "w"))
 
 
 def console() -> Console:
-    """The presentation console. With a pump running it's the cached terminal-fd console; without one (inline/foreground, before start_logging) a fresh Console on the live stdout, so its color and is_terminal track the current environment per call."""
-    if logs.TERMINAL_FD is None:
+    """The presentation console: the cached terminal-fd console with a pump running, else a fresh Console on live stdout tracking the environment per call."""
+    if logs.pump_fds.terminal is None:
         return Console()
     return _pump_console()
 
@@ -90,7 +95,7 @@ def is_interactive() -> bool:
 
 
 def _line_style(level: str, message: str) -> str:
-    """The color for a terminal log line, chosen by severity then by what the line announces: errors red, warnings yellow, a cook starting bluish, a success green, else plain."""
+    """The color for a terminal log line, chosen by severity then by what it announces: errors red, warnings yellow, starting bluish, success green."""
     if level in {"ERROR", "CRITICAL"}:
         return "bold red"
     if level == "WARNING":
@@ -106,14 +111,14 @@ _runner_colors: dict[str, str] = {}
 
 
 def _runner_style(runner: str) -> str:
-    """A stable color for a cook's name, assigned from the palette in first-seen order so cooks running together are always distinct hues (the palette repeats only once exhausted) — letting one cook's lines be tracked by color."""
+    """A stable color for a cook's name, assigned from the palette in first-seen order so cooks running together are always distinct hues."""
     if runner not in _runner_colors:
         _runner_colors[runner] = RUNNER_PALETTE[len(_runner_colors) % len(RUNNER_PALETTE)]
     return _runner_colors[runner]
 
 
 def _colorize_log_line(line: str) -> Text:
-    """Restyle a pumped log line for the terminal: drop the level column, dim the timestamp, give the runner its per-cook color, and tint the message by what the line reports; an unrecognized line stays plain."""
+    """Restyle a pumped log line for the terminal: drop the level column, dim the timestamp, color the runner, tint the message; unrecognized stays plain."""
     match = LOG_LINE.match(line)
     if match is None:
         return Text(line)
@@ -127,7 +132,7 @@ def _colorize_log_line(line: str) -> Text:
 
 
 def _emit_log_line(line: str) -> None:
-    """The pump's terminal sink: print a pumped log line through the Console so it coordinates with live regions; soft_wrap keeps long lines unbroken, like out()."""
+    """The pump's terminal sink: print a pumped log line through the Console so it coordinates with live regions; soft_wrap keeps lines unbroken."""
     console().print(_colorize_log_line(line.rstrip("\n")), soft_wrap=True)
 
 
@@ -135,7 +140,7 @@ logs.LINE_SINK = _emit_log_line
 
 
 def show_table(rows: list[dict[str, str]], title: str = "", summary: list[dict[str, str]] | None = None) -> None:
-    """Render rows as a rich table plus TOON in the log file on an interactive terminal; on a non-terminal stdout, emit plain TOON to both. `summary` rows close the table under a divider."""
+    """Render rows as a rich table plus TOON in the log on an interactive terminal, plain TOON otherwise; `summary` rows close under a divider."""
     summary = summary or []
     if not rows or not is_interactive():
         log_toon(rows + summary, note=title)
@@ -145,7 +150,7 @@ def show_table(rows: list[dict[str, str]], title: str = "", summary: list[dict[s
 
 
 def _report_cell(column: str, value: str, action: str) -> Text:
-    """Style one report cell as a diff: the verb colors `action`, the target `latest` echoes that verb (the value the action drives toward), `current` is the present truth in plain text, `before` dims as the prior state; the identity column carries its cook's color."""
+    """Style one report cell as a diff: `action`/`latest` get the verb's color, `current` stays plain, `before` dims; identity carries its cook's color."""
     if column == "action":
         return Text(value, style=ACTION_STYLES.get(value, ""))
     if column == "latest":
@@ -181,7 +186,7 @@ def _render_table(rows: list[dict[str, str]], title: str, summary: list[dict[str
 
 def _append_toon(rows: list[dict[str, str]], title: str) -> None:
     """Append rows as a TOON block to the log file (keeping it minimalist while the terminal got rich), via logs.write_log's single locked writer."""
-    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    stamp = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
     head = f"[{stamp}] {title}\n" if title else ""
     logs.write_log(head + encode(rows) + "\n")
 

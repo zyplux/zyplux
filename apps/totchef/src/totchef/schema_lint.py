@@ -1,7 +1,8 @@
-"""Lint recipe.toml before chef runs it: every section resolves to a cook, the depends_on graph is acyclic, and every node's cook constructs from its slice (the same `build_cook` path a run takes)."""
+"""Lint recipe.toml before chef runs it: every section resolves to a cook, the depends_on graph is acyclic, and every slice builds its cook."""
 
 import sys
 from graphlib import CycleError, TopologicalSorter
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
@@ -11,12 +12,15 @@ from totchef.recipe_graph import (
     build_node_graph,
     build_nodes,
     load_cook_class,
+    require_table,
 )
-from totchef.recipe_types import RecipeConfig
+
+if TYPE_CHECKING:
+    from totchef.recipe_types import RecipeConfig
 
 
 def find_schema_problems(config: RecipeConfig, nodes: dict[str, Node]) -> list[str]:
-    """Validate each node by constructing its cook — the exact `build_cook` path a run takes, so lint never accepts a shape the run can't build — collecting every Pydantic error as a readable `[node] loc: message` line (empty == valid)."""
+    """Validate each node via `build_cook` — the exact path a run takes — collecting Pydantic errors as `[node] loc: message` lines (empty == valid)."""
     problems: list[str] = []
     for node_id, node in nodes.items():
         try:
@@ -43,9 +47,7 @@ def rule_dependencies_acyclic(nodes: dict[str, Node]) -> None:
 
 
 def _section_needs_root(config: RecipeConfig, section: str) -> bool:
-    data = config[section]
-    assert isinstance(data, dict)  # every top-level recipe key is a TOML table (a section)
-    return bool(data.get("needs_root"))
+    return bool(require_table(config[section], section).get("needs_root"))
 
 
 def rule_root_only_on_leaves(config: RecipeConfig, nodes: dict[str, Node]) -> None:
