@@ -1,0 +1,174 @@
+"""knip config governance: a repo's knip settings live in standalone files,
+never inline in `package.json`, so they read the same way `ruff.toml`/
+`.rumdl.toml` do. A bare `knip.json` is optional and, if present, must match
+the repo's allowlisted content — knip's own defaults are the baseline, and a
+repo only earns a customization by being listed in `ALLOWED_KNIP_JSON`.
+
+A second file, `knip.prod.json`, runs knip's entry-exports pass with the test
+harness excluded: `includeEntryExports` makes knip check a workspace's own
+`exports["."]` surface for dead/test-only exports, which knip otherwise treats
+as an intentional public API — correct for a genuinely published package,
+wrong for everything else. `ignoreWorkspaces` drops every `tests/*` workspace
+member from the graph entirely, so an export reachable only from a test
+workspace reads as unused rather than used — this org tears every package's
+tests out to its own `tests/<basename>` workspace, so excluding those members
+is exactly "only production code counts." The workspaces exempted from
+`includeEntryExports` must match exactly the npm-kind targets declared in
+`release-targets.toml` — those packages have consumers outside the monorepo
+this pass can't see. `--config` replaces knip's config wholesale rather than
+layering on top of `knip.json` (knip has no `extends`), so this file must also
+repeat the repo's allowlisted `knip.json` content verbatim — otherwise this
+pass would flag things the base pass was told to ignore.
+"""
+
+from __future__ import annotations
+
+import json
+import tomllib
+from typing import TYPE_CHECKING, Any
+
+from cerberus.model import CheckResult, Scope
+
+if TYPE_CHECKING:
+    from cerberus.context import Context
+    from cerberus.model import Repo
+
+ID = "knip-config"
+SUMMARY = (
+    "knip config is standalone (never inline in package.json) and its prod pass "
+    "exempts exactly the repo's published npm targets"
+)
+SCOPE = Scope.CONTENT
+
+PACKAGE_JSON = "package.json"
+BASE_CONFIG = "knip.json"
+PROD_CONFIG = "knip.prod.json"
+_RELEASE_TARGETS = "release-targets.toml"
+_REQUIRED_IGNORE_WORKSPACES = ["tests/*"]
+_PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces"})
+_OK_MESSAGE = (
+    "knip.json (if any) matches the repo's allowlisted config; "
+    "knip.prod.json exactly exempts every published npm target"
+)
+
+# A repo earns a standalone knip.json only by being listed here, with its exact allowed content
+# ($schema aside — every repo may add it for editor support without it being part of the diff).
+ALLOWED_KNIP_JSON: dict[str, dict[str, Any]] = {
+    "zyplux": {"ignoreBinaries": ["podman", "uv"]},
+}
+
+
+def _without_schema(parsed: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in parsed.items() if key != "$schema"}
+
+
+def _npm_workspace_dirs(manifest: str) -> set[str]:
+    try:
+        data = tomllib.loads(manifest)
+    except tomllib.TOMLDecodeError:
+        return set()
+    targets = data.get("target")
+    if not isinstance(targets, list):
+        return set()
+    dirs: set[str] = set()
+    for entry in targets:
+        if not isinstance(entry, dict) or entry.get("kind") != "npm":
+            continue
+        version = entry.get("version")
+        file = version.get("file") if isinstance(version, dict) else None
+        if isinstance(file, str) and file.endswith(f"/{PACKAGE_JSON}"):
+            dirs.add(file[: -len(f"/{PACKAGE_JSON}")])
+    return dirs
+
+
+def _check_no_inline_key(manifest: dict[str, Any], res: CheckResult) -> None:
+    if "knip" in manifest:
+        res.fail(f'{PACKAGE_JSON} must not have a "knip" key; move its content to a standalone {BASE_CONFIG}')
+
+
+def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
+    content = ctx.file(repo, BASE_CONFIG)
+    if content is None:
+        return
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as exc:
+        res.error(f"could not parse {BASE_CONFIG}: {exc}")
+        return
+    if not isinstance(parsed, dict):
+        res.error(f"{BASE_CONFIG} must be a JSON object")
+        return
+    allowed = ALLOWED_KNIP_JSON.get(repo.name)
+    if allowed is None:
+        res.fail(f"{BASE_CONFIG} present but {repo.name} has no allowlisted customization; remove it or allowlist it")
+        return
+    if _without_schema(parsed) != allowed:
+        res.fail(f"{BASE_CONFIG} does not match the allowlisted config for {repo.name}")
+
+
+def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
+    content = ctx.file(repo, PROD_CONFIG)
+    if content is None:
+        res.fail(f"no {PROD_CONFIG} at repo root — needed to catch dead/test-only exports")
+        return
+    try:
+        parsed = json.loads(content)
+    except json.JSONDecodeError as exc:
+        res.error(f"could not parse {PROD_CONFIG}: {exc}")
+        return
+    if not isinstance(parsed, dict):
+        res.error(f"{PROD_CONFIG} must be a JSON object")
+        return
+
+    required = {
+        **ALLOWED_KNIP_JSON.get(repo.name, {}),
+        "includeEntryExports": True,
+        "ignoreWorkspaces": _REQUIRED_IGNORE_WORKSPACES,
+    }
+    stray_keys = sorted(set(parsed) - set(required) - _PROD_EXTRA_KEYS)
+    if stray_keys:
+        res.fail(f"{PROD_CONFIG} has unexpected key(s): {', '.join(stray_keys)}")
+    for key, expected in required.items():
+        if parsed.get(key) != expected:
+            res.fail(f'{PROD_CONFIG} must set "{key}": {json.dumps(expected)}')
+
+    manifest = ctx.file(repo, _RELEASE_TARGETS)
+    published = _npm_workspace_dirs(manifest) if manifest is not None else set()
+    workspaces = parsed.get("workspaces")
+    exempted: set[str] = set()
+    if isinstance(workspaces, dict):
+        exempted = {
+            key
+            for key, cfg in workspaces.items()
+            if isinstance(key, str) and isinstance(cfg, dict) and cfg.get("includeEntryExports") is False
+        }
+    missing = sorted(published - exempted)
+    if missing:
+        res.fail(f"{PROD_CONFIG} workspaces must exempt published target(s): {', '.join(missing)}")
+    extra = sorted(exempted - published)
+    if extra:
+        res.fail(f"{PROD_CONFIG} workspaces exempts non-published dir(s): {', '.join(extra)}")
+
+
+def run(repo: Repo, ctx: Context) -> CheckResult:
+    res = CheckResult(ID, repo.name)
+    root = ctx.file(repo, PACKAGE_JSON)
+    if root is None:
+        res.skip("no package.json")
+        return res
+    try:
+        manifest = json.loads(root)
+    except json.JSONDecodeError as exc:
+        res.error(f"could not parse {PACKAGE_JSON}: {exc}")
+        return res
+    if not isinstance(manifest, dict):
+        res.error(f"{PACKAGE_JSON} must be a JSON object")
+        return res
+
+    _check_no_inline_key(manifest, res)
+    _check_base_config(repo, ctx, res)
+    _check_prod_config(repo, ctx, res)
+
+    if not res.problems:
+        res.ok(_OK_MESSAGE)
+    return res

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["podman", "uv"],
+  "includeEntryExports": true,
+  "ignoreWorkspaces": ["tests/*"],
+  "workspaces": {
+    "apps/cz": { "includeEntryExports": false },
+    "packages/eslint-config": { "includeEntryExports": false },
+    "packages/tsconfig": { "includeEntryExports": false },
+    "packages/util-ts": { "includeEntryExports": false },
+    "tests/fixtures": { "includeEntryExports": false }
+  }
+}

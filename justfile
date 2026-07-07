@@ -21,9 +21,10 @@ install:
     bun install
     uv sync --all-packages --all-groups
 
-# Report unused files, deps, and exports: knip (JS workspace) + vulture (Python).
+# Report unused files, deps, and exports: knip (JS workspace, default + prod pass) + vulture (Python).
 knip:
     bun run knip
+    bun run knip --config knip.prod.json
     uv run vulture
 
 # Type-check both workspaces: tsc/bun for .ts, pyrefly for .py.
