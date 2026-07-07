@@ -121,6 +121,26 @@ def _workspace_exemptions(workspaces: object) -> tuple[set[str], list[str]]:
     return exempted, malformed
 
 
+def _check_workspace_exemptions(repo: Repo, ctx: Context, parsed: dict[str, Any], res: CheckResult) -> None:
+    manifest = ctx.file(repo, _RELEASE_TARGETS)
+    published = _npm_workspace_dirs(manifest) if manifest is not None else set()
+    workspaces = parsed.get("workspaces")
+    if workspaces is not None and not isinstance(workspaces, dict):
+        res.fail(f'{PROD_CONFIG} "workspaces" must be a JSON object')
+    exempted, malformed = _workspace_exemptions(workspaces)
+    if malformed:
+        res.fail(
+            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: '
+            f"{', '.join(sorted(malformed))}"
+        )
+    missing = sorted(published - exempted)
+    if missing:
+        res.fail(f"{PROD_CONFIG} workspaces must exempt published target(s): {', '.join(missing)}")
+    extra = sorted(exempted - published)
+    if extra:
+        res.fail(f"{PROD_CONFIG} workspaces exempts non-published dir(s): {', '.join(extra)}")
+
+
 def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     content = ctx.file(repo, PROD_CONFIG)
     if content is None:
@@ -147,20 +167,7 @@ def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
         if parsed.get(key) != expected:
             res.fail(f'{PROD_CONFIG} must set "{key}": {json.dumps(expected)}')
 
-    manifest = ctx.file(repo, _RELEASE_TARGETS)
-    published = _npm_workspace_dirs(manifest) if manifest is not None else set()
-    exempted, malformed = _workspace_exemptions(parsed.get("workspaces"))
-    if malformed:
-        res.fail(
-            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: '
-            f"{', '.join(sorted(malformed))}"
-        )
-    missing = sorted(published - exempted)
-    if missing:
-        res.fail(f"{PROD_CONFIG} workspaces must exempt published target(s): {', '.join(missing)}")
-    extra = sorted(exempted - published)
-    if extra:
-        res.fail(f"{PROD_CONFIG} workspaces exempts non-published dir(s): {', '.join(extra)}")
+    _check_workspace_exemptions(repo, ctx, parsed, res)
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:

@@ -59,3 +59,5 @@
 ### 27.4.15 passes when the prod config repeats the repo's allowlisted base config
 
 ### 27.4.16 fails and names a workspace entry with extra keys
+
+### 27.4.17 fails when the workspaces key is not an object

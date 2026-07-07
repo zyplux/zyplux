@@ -38,6 +38,9 @@ _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
     ' "workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
 )
+_ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT = (
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": []}'
+)
 _ENTRY_EXPORTS_ZYPLUX = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["podman", "uv"]}'
 )
@@ -369,3 +372,13 @@ def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(
         )
         in result.findings
     )
+
+
+def test_27_4_17_fails_when_the_workspaces_key_is_not_an_object(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.prod.json": _ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT,
+    })
+    assert finding(status.FAIL, 'knip.prod.json "workspaces" must be a JSON object') in result.findings
