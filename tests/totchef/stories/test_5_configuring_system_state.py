@@ -141,6 +141,22 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(recipe: RecipeBui
     prefs.unlink()  # the pin is gone on disk → drift, even though keyring + sources remain
     totchef.plan().assert_shows("apt_repo.vendor", "would apply")
 
+    recipe.declares(
+        "apt_repo",
+        "vendor",
+        key_url="https://cli.github.test/key",
+        uris="file:///no-host-here",  # no hostname to pin an origin to
+        keyring=str(keyring),
+        source_path=str(sources),
+        preferences_path=str(prefs),
+        pin_priority=1001,
+    )
+
+    report = totchef.up()
+
+    report.assert_hard_failed()
+    report.assert_logged("cannot derive a pin origin host")
+
 
 # 5.2 Install files with exact content
 

@@ -272,6 +272,19 @@ def test_1_3_7_init_pins_a_symlink_as_given(cli: Cli, home: Path, tmp_path: Path
     cli.run("where").assert_prints(str(moved))  # repointing the symlink moved the pin without touching init
 
 
+def test_1_3_8_init_errors_when_no_recipe_is_found_and_none_pinned(cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """With no path, nothing discoverable, and nothing pinned yet, `init` rejects instead of pinning nothing."""
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.chdir(empty)
+    monkeypatch.delenv("TOTCHEF_RECIPE", raising=False)
+
+    missing = cli.run("init")
+
+    missing.assert_failed()
+    missing.assert_prints("no recipe found here to pin")
+
+
 # 1.4 Discover available cooks
 
 

@@ -199,7 +199,7 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     http: FakeHttp,
     system: FakeSystem,
 ) -> None:
-    """update_action: an arg list run against the binary, "rerun-installer", or absent."""
+    """update_action: an arg list run against the binary, "rerun-installer", or absent; an empty arg list is none of these and fails the update."""
     system.has("bun")
     terminal.arrange("bun --version", "1.1.0")
     http.arrange("bun.sh/install", "#!/bin/bash")
@@ -224,6 +224,14 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     chef(absent).up().assert_succeeded()
     terminal.expect_not_ran("bash -s --")
     terminal.expect_not_ran("bun upgrade")
+
+    terminal.reset()
+    system.has("bun")
+    terminal.arrange("bun --version", "1.1.0")
+    empty_list = scenario().declares("url", "bun", url="https://bun.sh/install", update_action=[])
+    unrecognized = chef(empty_list).up()
+    unrecognized.assert_hard_failed()
+    unrecognized.assert_logged("unrecognized update_action")
 
 
 def test_3_3_4_update_guard_runs_before_updating(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
@@ -319,3 +327,13 @@ $HOME where `find_binary` looks — not in whatever directory totchef was invoke
     totchef.up().assert_shows("url.bun", "installed")
 
     assert terminal.cwd_for("bash -s --") == totchef.workdir / "home"  # piped to bash from $HOME, not the repo dir
+
+
+def test_3_3_9_url_only_fetches_http_or_https(recipe: RecipeBuilder, totchef: Totchef) -> None:
+    """A `url` scheme other than http/https is refused before any fetch is attempted."""
+    recipe.declares("url", "mirror", url="ftp://mirror.example/install.sh")
+
+    report = totchef.up()
+
+    report.assert_hard_failed()
+    report.assert_logged("refusing to fetch")

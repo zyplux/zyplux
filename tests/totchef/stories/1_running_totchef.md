@@ -106,6 +106,11 @@ pins it once the operator confirms.
 repointing the symlink to a moved or renamed repo checkout carries the pin along without
 rerunning `init`.
 
+### 1.3.8 init errors when no recipe is found and none pinned
+
+Run with no path, no recipe discoverable from the current directory, and nothing
+pinned yet, `totchef init` rejects with a clear error instead of pinning nothing.
+
 ## 1.4 Discover available cooks
 
 > As an operator, I want to list every configuration domain totchef can manage on
