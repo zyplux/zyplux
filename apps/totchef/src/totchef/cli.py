@@ -12,11 +12,12 @@ from loguru import logger
 from toon_format import encode
 
 from totchef import __version__, harness, registry
-from totchef.cook_base import CookResult
+from totchef.cook_base import CookResult, ReportRow
 from totchef.cook_runner import format_duration, run_recipe
 from totchef.harness import SOFT_FAIL_EXIT
 from totchef.logs import SHARED_LOG_ENV, drain_logs, inline_mode, set_terminal_echo, start_logging, write_log
 from totchef.recipe import RECIPE_ENV, find_cooks_dir, find_files_dir, find_recipe, resolve_explicit, save_recipe, try_find_recipe
+from totchef.recipe_types import RecipeConfig
 from totchef.removal_watch import append_removal_notices
 from totchef.schema_lint import validate
 from totchef.terminal import show_table
@@ -51,7 +52,7 @@ def ensure_root(recipe_path: Path) -> None:
     os.execvp("sudo", ["sudo", f"--preserve-env={SHARED_LOG_ENV},{RECIPE_ENV}", *relaunch])
 
 
-def load_recipe(recipe_path: Path) -> dict:
+def load_recipe(recipe_path: Path) -> RecipeConfig:
     with recipe_path.open("rb") as f:
         return tomllib.load(f)
 
@@ -61,7 +62,7 @@ def cook_node(node_id: str, name: str) -> str:
     return f"{node_id.split('.', 1)[0]}.{name}"
 
 
-def summary_rows(unchanged: int, elapsed: float | None) -> list[dict]:
+def summary_rows(unchanged: int, elapsed: float | None) -> list[dict[str, str]]:
     """The report's footer rows (under a divider): how many resources were left untouched and the total wall-clock — empty when there's nothing to total."""
     if not unchanged and elapsed is None:
         return []
@@ -76,12 +77,14 @@ def summary_rows(unchanged: int, elapsed: float | None) -> list[dict]:
     ]
 
 
-def report_row(node_id: str, row) -> dict:
+def report_row(node_id: str, row: ReportRow) -> dict[str, str]:
     """One report row as the flat dict the table/TOON render from: the cook-node identity plus its before/current/latest/action cells (past, present, target, verb)."""
     return {"cook-node": cook_node(node_id, row.name), "before": row.before, "current": row.current, "latest": row.latest, "action": row.action}
 
 
-def log_report_block(all_rows: list[dict], shown_rows: list[dict], summary: list[dict], title: str, nothing_changed: str) -> None:
+def log_report_block(
+    all_rows: list[dict[str, str]], shown_rows: list[dict[str, str]], summary: list[dict[str, str]], title: str, nothing_changed: str
+) -> None:
     """Inline mode records the report to the log file as a structured block: the full node table (every row, including unchanged) and the terse view an operator sees, between sentinels so it can be read back machine-cleanly."""
     full = encode(all_rows) if all_rows else ""
     terse = encode(shown_rows + summary) if shown_rows else nothing_changed
@@ -109,7 +112,7 @@ def print_report(results: dict[str, CookResult], dry_run: bool, title: str = "Re
         show_table(delayed_rows, title="Action required")
 
 
-def preview_plan(config: dict) -> None:
+def preview_plan(config: RecipeConfig) -> None:
     """Before a real run, print the plan table to the terminal from a probe-only pass; the probe's cook logs go to the file only, so the terminal shows just the table."""
     set_terminal_echo(False)
     results = run_recipe(config, dry_run=True)

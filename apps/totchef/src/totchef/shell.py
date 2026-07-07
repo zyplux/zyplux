@@ -4,6 +4,7 @@ import os
 import subprocess
 import threading
 from pathlib import Path
+from typing import Literal, overload
 
 from loguru import logger
 
@@ -13,6 +14,26 @@ def resolve_workdir(cwd: Path | None) -> Path:
     return cwd if cwd is not None else Path.home()
 
 
+@overload
+def run(
+    *cmd: str,
+    stdin: bytes | str | None = None,
+    text: Literal[True] = True,
+    check: bool = False,
+    timeout: float | None = None,
+    note: str = "",
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[str]: ...
+@overload
+def run(
+    *cmd: str,
+    stdin: bytes | str | None = None,
+    text: Literal[False],
+    check: bool = False,
+    timeout: float | None = None,
+    note: str = "",
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[bytes]: ...
 def run(
     *cmd: str,
     stdin: bytes | str | None = None,
@@ -21,7 +42,7 @@ def run(
     timeout: float | None = None,
     note: str = "",
     cwd: Path | None = None,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
     """Run a command to completion, capturing stdout+stderr; the one-shot half of the bash boundary (probes that read output). `text=False` keeps bytes for binary stdin/stdout (a GPG de-armor). Runs from $HOME unless `cwd` overrides."""
     if note:
         logger.info(note)

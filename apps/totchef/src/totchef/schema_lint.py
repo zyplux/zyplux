@@ -12,9 +12,10 @@ from totchef.recipe_graph import (
     build_nodes,
     load_cook_class,
 )
+from totchef.recipe_types import RecipeConfig
 
 
-def find_schema_problems(config: dict, nodes: dict[str, Node]) -> list[str]:
+def find_schema_problems(config: RecipeConfig, nodes: dict[str, Node]) -> list[str]:
     """Validate each node by constructing its cook — the exact `build_cook` path a run takes, so lint never accepts a shape the run can't build — collecting every Pydantic error as a readable `[node] loc: message` line (empty == valid)."""
     problems: list[str] = []
     for node_id, node in nodes.items():
@@ -41,13 +42,19 @@ def rule_dependencies_acyclic(nodes: dict[str, Node]) -> None:
         sys.exit(f"ERROR: dependency cycle in recipe.toml: {' -> '.join(exc.args[1])}")
 
 
-def rule_root_only_on_leaves(config: dict, nodes: dict[str, Node]) -> None:
+def _section_needs_root(config: RecipeConfig, section: str) -> bool:
+    data = config[section]
+    assert isinstance(data, dict)  # every top-level recipe key is a TOML table (a section)
+    return bool(data.get("needs_root"))
+
+
+def rule_root_only_on_leaves(config: RecipeConfig, nodes: dict[str, Node]) -> None:
     """needs_root must be granted per leaf, never on a subtable header — build_nodes folds a header's needs_root onto every entry, granting root wholesale."""
     sections: dict[str, list[Node]] = {}
     for node in nodes.values():
         sections.setdefault(node.section, []).append(node)
     offenders = sorted(
-        section for section, entries in sections.items() if config[section].get("needs_root") and any(entry.entry is not None for entry in entries)
+        section for section, entries in sections.items() if _section_needs_root(config, section) and any(entry.entry is not None for entry in entries)
     )
     if offenders:
         named = ", ".join(f"[{section}]" for section in offenders)
@@ -58,13 +65,13 @@ def rule_root_only_on_leaves(config: dict, nodes: dict[str, Node]) -> None:
         )
 
 
-def rule_slices_match_schema(config: dict, nodes: dict[str, Node]) -> None:
+def rule_slices_match_schema(config: RecipeConfig, nodes: dict[str, Node]) -> None:
     """Each node's cook constructs from its slice — the same validation `up` performs."""
     if problems := find_schema_problems(config, nodes):
         sys.exit("ERROR: recipe.toml schema validation failed:\n" + "\n".join(problems))
 
 
-def validate(config: dict) -> None:
+def validate(config: RecipeConfig) -> None:
     nodes = build_nodes(config)
     rule_sections_resolve_to_cooks(nodes)
     rule_root_only_on_leaves(config, nodes)
