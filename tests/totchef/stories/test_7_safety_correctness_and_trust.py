@@ -15,6 +15,19 @@ if TYPE_CHECKING:
 GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n        500 http://archive noble/main amd64 Packages\n"
 
 
+class _NullContext:
+    """contextlib.nullcontext without the import — this file is held to zero runtime imports (see test_story_imports.py)."""
+
+    def __init__(self, value: Path) -> None:
+        self._value = value
+
+    def __enter__(self) -> Path:
+        return self._value
+
+    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
+        return None
+
+
 # 7.1 Trust that re-runs only change what drifted
 
 
@@ -121,7 +134,7 @@ def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Tot
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
     monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})  # don't fork real cooks in-process
-    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: totchef.workdir / "log")
+    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log"))
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
     recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
