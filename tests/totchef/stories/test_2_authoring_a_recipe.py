@@ -19,7 +19,7 @@ git:
 
 
 def _exec_line(desktop_file: Path) -> str:
-    return next(line for line in desktop_file.read_text().splitlines() if line.startswith("Exec="))
+    return next(line for line in desktop_file.read_text(encoding="utf-8").splitlines() if line.startswith("Exec="))
 
 
 # 2.1 Declare the machine I want in one TOML file
@@ -152,7 +152,8 @@ def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(recipe: 
 
 
 def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
-    """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) the run is silent about it; once it exits 0 the `remove_how` instruction lands in the Action required block labeled with the node, on every run until the entry is deleted."""
+    """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) the run is silent about it; once it exits 0 the `remove_how` \
+instruction lands in the Action required block labeled with the node, on every run until the entry is deleted."""
     recipe.declares(
         "bash",
         "vaapi_fix",
@@ -186,7 +187,8 @@ def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(reci
 
 
 def test_2_5_2_plan_also_evaluates_remove_when(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
-    """A dry run evaluates the probes too — `plan` doubles as "check everything I'm waiting on" — and a watch without `remove_how` carries the generic removal notice."""
+    """A dry run evaluates the probes too — `plan` doubles as "check everything I'm waiting on" — and a watch without `remove_how` carries the generic removal \
+notice."""
     recipe.declares("bash", "workaround", apply="install-it", remove_when="upstream-shipped-the-fix")
 
     plan = totchef.plan()
@@ -198,9 +200,7 @@ def test_2_5_2_plan_also_evaluates_remove_when(recipe: RecipeBuilder, terminal: 
     terminal.expect_not_ran("install-it")  # still a dry run: probed, never applied
 
 
-def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(
-    recipe: RecipeBuilder, terminal: FakeTerminal, system: FakeSystem, totchef: Totchef, tmp_path: Path
-) -> None:
+def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, tmp_path: Path) -> None:
     """`remove_when`/`remove_how` sit on the base entry contract: a subtable entry and a plain-data section alike declare their expiry."""
     recipe.declares("file", "pin", path=str(tmp_path / "pin.conf"), content="pinned\n", remove_when="true", remove_how="pin obsolete")
     recipe.declares("uv", packages=[], remove_when="true", remove_how="section obsolete")

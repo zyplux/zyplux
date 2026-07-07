@@ -17,10 +17,10 @@ GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version t
 
 
 def test_1_1_1_up_resolves_validates_escalates_previews_then_executes(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path, cli: Cli, monkeypatch: pytest.MonkeyPatch
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """`totchef up` resolves the recipe, validates it, escalates to root, then previews and executes — creating or updating every resource that differs."""
-    target = tmp_path / "drop.conf"
+    target = totchef.workdir / "drop.conf"
     recipe.declares("file", "drop", path=str(target), content="X=1\n")
     recipe.declares("bash", "tweak", current_state="probe", desired_state="ok", apply="make-it-ok")
     terminal.arrange("probe", "drift")  # current state differs from desired
@@ -33,11 +33,11 @@ def test_1_1_1_up_resolves_validates_escalates_previews_then_executes(
     assert target.read_text() == "X=1\n"
 
     # validation comes first: an invalid recipe is rejected before the sudo re-exec ever happens
-    invalid = tmp_path / "invalid.toml"
+    invalid = totchef.workdir / "invalid.toml"
     invalid.write_text("[nosuchsection]\nx = 1\n")
     escalated: dict[str, str] = {}
 
-    def capture_exec(target: str, argv: list[str]) -> None:
+    def capture_exec(target: str, _argv: list[str]) -> None:
         escalated["target"] = target
         raise SystemExit(0)  # sudo would replace the process here
 
@@ -107,9 +107,7 @@ def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(recipe: RecipeBuilder,
     assert not (tmp_path / "f").exists()
 
 
-def test_1_2_2_plan_requires_no_root(
-    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_1_2_2_plan_requires_no_root(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
     """A dry run never escalates privileges."""
     recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook, planned without root
     terminal.arrange("apt-cache policy git", GIT_NEEDS_INSTALL)
@@ -121,10 +119,10 @@ def test_1_2_2_plan_requires_no_root(
     escalations: list[tuple[str, list[str]]] = []
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
-    monkeypatch.setattr("totchef.cli.run_recipe", lambda config, dry_run: {})  # don't fork real cooks in-process
-    monkeypatch.setattr("totchef.cli.start_logging", lambda echo_to_terminal=True: tmp_path / "log")
+    monkeypatch.setattr("totchef.cli.run_recipe", lambda _config, _dry_run: {})  # don't fork real cooks in-process
+    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: totchef.workdir / "log")
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
-    recipe_path = tmp_path / "recipe.toml"
+    recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
 
     cli.run("plan", "--recipe", str(recipe_path)).assert_succeeded()
@@ -143,7 +141,8 @@ def test_1_2_3_plan_shows_all_resources_including_unchanged(recipe: RecipeBuilde
 
     plan.assert_shows("file.settled", "ok")  # unchanged, but still shown
     plan.assert_shows("bash.step", "would apply")
-    assert "file.settled" in plan.report and "bash.step" in plan.report
+    assert "file.settled" in plan.report
+    assert "bash.step" in plan.report
 
 
 def test_1_2_4_up_prints_plan_first_from_silent_probe(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
@@ -327,4 +326,5 @@ def test_1_5_version_reports_installed_version(cli: Cli) -> None:
 
     version.assert_succeeded()
     version.assert_prints("totchef ")
-    assert "." in version.output and any(char.isdigit() for char in version.output)
+    assert "." in version.output
+    assert any(char.isdigit() for char in version.output)
