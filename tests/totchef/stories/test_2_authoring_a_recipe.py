@@ -106,7 +106,7 @@ def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(
     brave = tmp_path / "brave.desktop"
     brave.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
     recipe.declares("desktop", desktop=str(shared), features=["Shared"])  # section-level defaults
-    recipe.config["desktop"]["brave"] = {"desktop": str(brave), "features": ["Extra"]}
+    recipe.declares("desktop", "brave", desktop=str(brave), features=["Extra"])
 
     totchef.up().assert_shows("desktop.brave", "applied")
 
@@ -120,7 +120,7 @@ def test_2_3_2_shared_desktop_features_yield_union_per_entry(recipe: RecipeBuild
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
     recipe.declares("desktop", features=["SharedFeature"])  # shared across the section
-    recipe.config["desktop"]["brave"] = {"desktop": str(source), "features": ["BraveFeature"]}
+    recipe.declares("desktop", "brave", desktop=str(source), features=["BraveFeature"])
 
     totchef.up().assert_shows("desktop.brave", "applied")
 

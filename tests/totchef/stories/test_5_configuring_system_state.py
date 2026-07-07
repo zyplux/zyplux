@@ -175,7 +175,7 @@ def test_5_2_2_file_diffed_by_content_hash(recipe: RecipeBuilder, totchef: Totch
     totchef.up().assert_shows("file.f", "applied")
     totchef.up().assert_shows("file.f", "unchanged")
 
-    recipe.config["file"]["f"]["content"] = "B\n"
+    recipe.declares("file", "f", path=str(target), content="B\n")
     totchef.up().assert_shows("file.f", "applied")
 
 

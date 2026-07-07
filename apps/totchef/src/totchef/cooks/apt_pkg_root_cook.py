@@ -121,7 +121,7 @@ class AptPkgCook(PackageListCook):
 
         rows = [self._refresh_policy(p) for p in self.packages]
         log_toon(
-            [dict(row) for row in rows],
+            rows,
             note="Verification — installed/candidate versions and effective pin priorities:",
         )
         # Fail fast before full-upgrade: priority 0 = not found in any configured repo.

@@ -75,7 +75,7 @@ class UrlCook(VersionedCook):
     entry_model = UrlEntry
     entry_keyed = True
 
-    def __init__(self, section: dict[str, RecipeConfig]) -> None:
+    def __init__(self, section: RecipeConfig) -> None:
         super().__init__(section)
         self.installs = {name: UrlEntry.model_validate(raw) for name, raw in section.items()}
 

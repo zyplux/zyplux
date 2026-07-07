@@ -179,7 +179,7 @@ def start_logging(echo_to_terminal: bool = True) -> Path:
     return log_file
 
 
-def log_toon(rows: Sequence[Mapping[str, str | int]], note: str = "") -> None:
+def log_toon(rows: Sequence[Mapping[str, object]], note: str = "") -> None:
     """Log a list of flat dicts as a TOON table, one logger line per row line."""
     if note:
         logger.info(note)
