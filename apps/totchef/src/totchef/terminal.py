@@ -1,4 +1,5 @@
-"""Terminal presentation: minimalist TOON in the log, rich tables/progress bars on a terminal, all routed through the one Console the pump feeds."""
+"""Terminal presentation: minimalist TOON in the log, rich tables/progress bars on a terminal, all
+routed through the one Console the pump feeds."""
 
 import os
 import re
@@ -75,7 +76,8 @@ RUNNER_PALETTE = (
 
 @cache
 def _pump_console() -> Console:
-    """rich Console on the saved real-stdout fd, independent of the log pipe, so is_terminal reflects the real terminal. Cached: the dup happens once."""
+    """rich Console on the saved real-stdout fd, independent of the log pipe, so is_terminal reflects the
+    real terminal. Cached: the dup happens once."""
     terminal_fd = logs.log_state.terminal
     if terminal_fd is None:
         msg = "_pump_console requires a running pump; reach it through console()"
@@ -84,7 +86,8 @@ def _pump_console() -> Console:
 
 
 def console() -> Console:
-    """The presentation console: the cached terminal-fd console with a pump running, else a fresh Console on live stdout tracking the environment per call."""
+    """The presentation console: the cached terminal-fd console with a pump running, else a fresh Console
+    on live stdout tracking the environment per call."""
     if logs.log_state.terminal is None:
         return Console()
     return _pump_console()
@@ -95,7 +98,8 @@ def is_interactive() -> bool:
 
 
 def _line_style(level: str, message: str) -> str:
-    """The color for a terminal log line, chosen by severity then by what it announces: errors red, warnings yellow, starting bluish, success green."""
+    """The color for a terminal log line, chosen by severity then by what it announces: errors red,
+    warnings yellow, starting bluish, success green."""
     if level in {"ERROR", "CRITICAL"}:
         return "bold red"
     if level == "WARNING":
@@ -111,14 +115,16 @@ _runner_colors: dict[str, str] = {}
 
 
 def _runner_style(runner: str) -> str:
-    """A stable color for a cook's name, assigned from the palette in first-seen order so cooks running together are always distinct hues."""
+    """A stable color for a cook's name, assigned from the palette in first-seen order so cooks running
+    together are always distinct hues."""
     if runner not in _runner_colors:
         _runner_colors[runner] = RUNNER_PALETTE[len(_runner_colors) % len(RUNNER_PALETTE)]
     return _runner_colors[runner]
 
 
 def _colorize_log_line(line: str) -> Text:
-    """Restyle a pumped log line for the terminal: drop the level column, dim the timestamp, color the runner, tint the message; unrecognized stays plain."""
+    """Restyle a pumped log line for the terminal: drop the level column, dim the timestamp, color the
+    runner, tint the message; unrecognized stays plain."""
     match = LOG_LINE.match(line)
     if match is None:
         return Text(line)
@@ -132,7 +138,8 @@ def _colorize_log_line(line: str) -> Text:
 
 
 def _emit_log_line(line: str) -> None:
-    """The pump's terminal sink: print a pumped log line through the Console so it coordinates with live regions; soft_wrap keeps lines unbroken."""
+    """The pump's terminal sink: print a pumped log line through the Console so it coordinates with live
+    regions; soft_wrap keeps lines unbroken."""
     console().print(_colorize_log_line(line.rstrip("\n")), soft_wrap=True)
 
 
@@ -140,7 +147,8 @@ logs.LINE_SINK = _emit_log_line
 
 
 def show_table(rows: list[dict[str, str]], title: str = "", summary: list[dict[str, str]] | None = None) -> None:
-    """Render rows as a rich table plus TOON in the log on an interactive terminal, plain TOON otherwise; `summary` rows close under a divider."""
+    """Render rows as a rich table plus TOON in the log on an interactive terminal, plain TOON otherwise;
+    `summary` rows close under a divider."""
     summary = summary or []
     if not rows or not is_interactive():
         log_toon(rows + summary, note=title)
@@ -150,7 +158,8 @@ def show_table(rows: list[dict[str, str]], title: str = "", summary: list[dict[s
 
 
 def _report_cell(column: str, value: str, action: str) -> Text:
-    """Style one report cell as a diff: `action`/`latest` get the verb's color, `current` stays plain, `before` dims; identity carries its cook's color."""
+    """Style one report cell as a diff: `action`/`latest` get the verb's color, `current` stays plain,
+    `before` dims; identity carries its cook's color."""
     if column == "action":
         return Text(value, style=ACTION_STYLES.get(value, ""))
     if column == "latest":
@@ -185,14 +194,16 @@ def _render_table(rows: list[dict[str, str]], title: str, summary: list[dict[str
 
 
 def _append_toon(rows: list[dict[str, str]], title: str) -> None:
-    """Append rows as a TOON block to the log file (keeping it minimalist while the terminal got rich), via logs.write_log's single locked writer."""
+    """Append rows as a TOON block to the log file (keeping it minimalist while the terminal got rich),
+    via logs.write_log's single locked writer."""
     stamp = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S")
     head = f"[{stamp}] {title}\n" if title else ""
     logs.write_log(head + encode(rows) + "\n")
 
 
 class ProgressHandle:
-    """No-op progress handle (the non-interactive yield); the live subclass drives a rich bar, callers advance through this interface regardless of TTY."""
+    """No-op progress handle (the non-interactive yield); the live subclass drives a rich bar, callers
+    advance through this interface regardless of TTY."""
 
     def advance(self, amount: int = 1) -> None: ...
 
@@ -209,7 +220,8 @@ class _LiveProgress(ProgressHandle):
 
 @contextmanager
 def progress_region(description: str, total: int) -> Generator[ProgressHandle]:
-    """A live, transient progress bar on an interactive terminal (cleared on exit, leaving the logs above it); a no-op handle otherwise."""
+    """A live, transient progress bar on an interactive terminal (cleared on exit, leaving the logs above
+    it); a no-op handle otherwise."""
     if not is_interactive():
         yield ProgressHandle()
         return

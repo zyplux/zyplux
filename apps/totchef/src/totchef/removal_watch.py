@@ -1,4 +1,5 @@
-"""Per-entry expiry watches: collect `remove_when`/`remove_how`, probe as the invoking user, append a fired instruction to the node's delayed messages."""
+"""Per-entry expiry watches: collect `remove_when`/`remove_how`, probe as the invoking user, append a
+fired instruction to the node's delayed messages."""
 
 import json
 import os
@@ -23,7 +24,8 @@ GENERIC_REMOVAL_NOTICE = "remove_when satisfied — this entry can be removed fr
 
 @dataclass(frozen=True)
 class RemovalWatch:
-    """One node's expiry declaration: the probe that decides removability and the operator instruction to surface once it fires."""
+    """One node's expiry declaration: the probe that decides removability and the operator instruction to
+    surface once it fires."""
 
     node_id: str
     condition: str
@@ -47,7 +49,8 @@ def list_removal_watches(config: RecipeConfig) -> list[RemovalWatch]:
 
 
 def is_removable(watch: RemovalWatch) -> bool:
-    """Probe one watch: exit 0 fires it; non-zero or any probe failure reads as still waiting, so an outage never fabricates a removal notice."""
+    """Probe one watch: exit 0 fires it; non-zero or any probe failure reads as still waiting, so an outage
+    never fabricates a removal notice."""
     with cook_context(watch.node_id):
         try:
             completed = shell.run(
@@ -67,7 +70,8 @@ def is_removable(watch: RemovalWatch) -> bool:
 
 
 def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
-    """The watches whose conditions fired, probed as the invoking user even when chef runs as root: a privilege-dropped forked child does the probing."""
+    """The watches whose conditions fired, probed as the invoking user even when chef runs as root: a
+    privilege-dropped forked child does the probing."""
     if not watches:
         return []
     if inline_mode() or os.geteuid() != 0:
@@ -93,7 +97,8 @@ def find_removable(watches: list[RemovalWatch]) -> list[RemovalWatch]:
 
 
 def append_removal_notices(config: RecipeConfig, results: dict[str, CookResult]) -> None:
-    """Probe every watch and append each fired instruction to its node's delayed messages; a node absent from results still gets its notice."""
+    """Probe every watch and append each fired instruction to its node's delayed messages; a node absent
+    from results still gets its notice."""
     for watch in find_removable(list_removal_watches(config)):
         result = results.setdefault(watch.node_id, CookResult(watch.node_id, "ok"))
         result.delayed_messages.append(watch.instruction)
