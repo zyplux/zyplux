@@ -133,7 +133,7 @@ class UrlCook(VersionedCook):
         if (existing := find_binary(bin_name)) is None:
             try:
                 run_installer(entry.url, entry.args, note=f"Installing {entry.url}")
-            except (OSError, subprocess.CalledProcessError) as exc:
+            except (OSError, subprocess.CalledProcessError, ValueError) as exc:
                 return SyncOutcome("hard_fail", f"{name} install failed: {exc}")
             if found := find_binary(bin_name):
                 logger.info("Installed: {found}", found=found)
@@ -143,6 +143,6 @@ class UrlCook(VersionedCook):
 
         try:
             update_existing(entry, existing)
-        except subprocess.CalledProcessError as exc:
+        except (subprocess.CalledProcessError, ValueError) as exc:
             return SyncOutcome("soft_fail", f"{name} update failed (still installed): {exc}")
         return SyncOutcome("ok")

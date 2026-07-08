@@ -203,6 +203,22 @@ def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(
     assert relaunch[1:] == ["up", "--recipe", str(recipe_path)]  # only the user's original args follow
 
 
+def test_7_3_5_a_pinned_log_path_outside_the_operators_own_log_dir_is_ignored(
+    apply_in_container: Callable[[str, list[str], dict[str, str] | None, dict[str, str] | None], ContainerRun],
+) -> None:
+    (
+        """A `TOTCHEF_LOG_FILE` preserved across the sudo boundary is trusted only inside the """
+        """operator's own log directory — an outside path is ignored rather than touched and """
+        """chowned to the operator, closing off a root-owned-path takeover. In a container."""
+    )
+    run = apply_in_container(
+        '[bash.step]\napply = "true"\n', ["/etc/evil.log"], None, {"TOTCHEF_LOG_FILE": "/etc/evil.log"}
+    )
+
+    assert run.owners["/etc/evil.log"] is None, run.transcript  # never touched, let alone chowned
+    assert run.log_owner == "tester", run.transcript  # the run still logged, to its own auto-generated file
+
+
 # 7.4 Distinguish recoverable failures from fatal ones
 
 

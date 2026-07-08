@@ -152,5 +152,8 @@ class AptRepoCook(StateCook[AptRepoEntry]):
     def apply_resource(self, name: str) -> StateChangeOutcome:
         release = detect_release()
         logger.info("Configuring repo {name} (release codename: {release})", name=name, release=release)
-        changed = configure_repo(name, self.entries[name], release)
+        try:
+            changed = configure_repo(name, self.entries[name], release)
+        except ValueError as exc:
+            return StateChangeOutcome(changed=False, status="hard_fail", message=f"{name}: {exc}")
         return StateChangeOutcome(changed=changed)

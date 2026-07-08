@@ -61,16 +61,21 @@ def container_image() -> str:
 
 
 @pytest.fixture(scope="session")
-def apply_in_container(container_image: str) -> Callable[[str, list[str], dict[str, str] | None], ContainerRun]:
+def apply_in_container(
+    container_image: str,
+) -> Callable[[str, list[str], dict[str, str] | None, dict[str, str] | None], ContainerRun]:
     (
         """Run `totchef up` against `recipe` in a fresh container as the non-root `tester`, """
         """reporting the owner of each `artifacts` path and log file. `extra_files` (path -> """
-        """content) is written before `up` runs, e.g. a config-dir cook drop-in."""
+        """content) is written before `up` runs, e.g. a config-dir cook drop-in; `env` is """
+        """exported into the shell before `up` runs, e.g. to simulate an inherited variable."""
     )
     assert podman is not None
     binary = podman
 
-    def apply(recipe: str, artifacts: list[str], extra_files: dict[str, str] | None = None) -> ContainerRun:
+    def apply(
+        recipe: str, artifacts: list[str], extra_files: dict[str, str] | None = None, env: dict[str, str] | None = None
+    ) -> ContainerRun:
         recipe_b64 = base64.b64encode(recipe.encode()).decode()
         probes = "\n".join(
             f'stat -c "OWNER %U {path}" "{path}" 2>/dev/null || echo "MISSING {path}"' for path in artifacts
@@ -80,9 +85,11 @@ def apply_in_container(container_image: str) -> Callable[[str, list[str], dict[s
             f"echo {base64.b64encode(content.encode()).decode()} | base64 -d > {shlex.quote(path)}"
             for path, content in (extra_files or {}).items()
         )
+        exports = "\n".join(f"export {key}={shlex.quote(value)}" for key, value in (env or {}).items())
         script = (
             "set -e\n"
             f"{setup}\n"
+            f"{exports}\n"
             f"echo {recipe_b64} | base64 -d > ~/recipe.toml\n"
             "totchef up --recipe ~/recipe.toml || true\n"
             f"echo {RESULT_MARKER}\n"

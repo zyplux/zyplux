@@ -375,3 +375,4 @@ def test_3_3_9_url_only_fetches_http_or_https(recipe: RecipeBuilder, totchef: To
 
     report.assert_hard_failed()
     report.assert_logged("refusing to fetch")
+    assert "Traceback" not in report.logs, "a bad url scheme should hard-fail cleanly, not crash"

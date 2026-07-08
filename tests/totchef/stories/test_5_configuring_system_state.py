@@ -197,6 +197,7 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(
 
     report.assert_hard_failed()
     report.assert_logged("cannot derive a pin origin host")
+    assert "Traceback" not in report.logs, "an unpinnable origin should hard-fail cleanly, not crash"
 
 
 # 5.2 Install files with exact content

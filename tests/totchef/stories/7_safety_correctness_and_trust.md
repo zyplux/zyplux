@@ -63,6 +63,14 @@ resolved absolute path. The sudo re-exec must run that absolute `sys.executable`
 search) followed by only the user's args (`argv[1:]`) — never the bare `argv[0]`,
 which sudo would treat as a command to look up or Typer as a bogus sub-command.
 
+### 7.3.5 a pinned log path outside the operators own log dir is ignored
+
+`TOTCHEF_LOG_FILE` is preserved across the sudo boundary so both sides of the
+re-exec share one log file, but the root process only trusts an inherited value
+that resolves inside the operator's own log directory. A value pointing outside
+it (however it got set) is ignored — the root process never touches, let alone
+chowns to the operator, a path it doesn't already expect to own.
+
 ## 7.4 Distinguish recoverable failures from fatal ones
 
 > As an operator, I want failures classified by severity, so that a cosmetic

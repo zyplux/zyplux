@@ -120,16 +120,28 @@ def drain_logs(timeout: float = 5.0) -> None:
 
 
 def open_log_file() -> Path:
-    """Resolve the run's log file (honors SHARED_LOG_ENV), create it, chown to SUDO_USER; shared by both start paths."""
+    (
+        """Resolve the run's log file (honors SHARED_LOG_ENV, confined to the user's own log dir once root is """
+        """chowning it), create it, chown to SUDO_USER; shared by both start paths."""
+    )
     directory = log_dir()
     directory.mkdir(parents=True, exist_ok=True)
-    if existing := os.environ.get(SHARED_LOG_ENV):
+    sudo_user = os.environ.get("SUDO_USER")
+    existing = os.environ.get(SHARED_LOG_ENV)
+    if existing and (not sudo_user or Path(existing).resolve().is_relative_to(directory.resolve())):
         log_file = Path(existing)
     else:
+        if existing:
+            logger.warning(
+                "Ignoring {env}={value} outside {directory} for a root-escalated run",
+                env=SHARED_LOG_ENV,
+                value=existing,
+                directory=directory,
+            )
         log_file = directory / f"totchef-{datetime.now().astimezone():%Y%m%d-%H%M%S}.log"
-        os.environ[SHARED_LOG_ENV] = str(log_file)
+    os.environ[SHARED_LOG_ENV] = str(log_file)
     log_file.touch(exist_ok=True)
-    if sudo_user := os.environ.get("SUDO_USER"):
+    if sudo_user:
         pw = pwd.getpwnam(sudo_user)
         for path in (directory.parent, directory, log_file):
             os.chown(path, pw.pw_uid, pw.pw_gid)
