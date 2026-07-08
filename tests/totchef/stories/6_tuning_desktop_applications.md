@@ -76,6 +76,12 @@ once and re-run; invalid JSON is left untouched and soft-fails.
 
 On change it reminds the operator to restart the app.
 
+### 6.2.6 a base file that parses but is not the expected shape soft fails the same way
+
+Syntactically valid JSON that isn't an object (or, for `local_state`, whose
+`browser` key isn't) soft-fails the same as unparseable JSON, never crashes —
+for both the `local_state` and `argv_json` target shapes.
+
 ## 6.3 Merge environment settings into a JSON config
 
 > As an operator, I want to merge a block of environment values into the `env` key

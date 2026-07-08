@@ -376,3 +376,24 @@ def test_3_3_9_url_only_fetches_http_or_https(recipe: RecipeBuilder, totchef: To
     report.assert_hard_failed()
     report.assert_logged("refusing to fetch")
     assert "Traceback" not in report.logs, "a bad url scheme should hard-fail cleanly, not crash"
+
+
+def test_3_3_10_url_update_exec_failure_is_also_a_soft_failure(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
+    """An update command that fails to even exec (OSError, not just a nonzero exit) is a soft failure, not a crash."""
+
+    def _raise_exec_failure() -> None:
+        msg = "exec failed"
+        raise OSError(msg)
+
+    system.has("bun")
+    terminal.arrange("bun --version", "1.1.0")
+    terminal.arrange("bun upgrade", effect=_raise_exec_failure)
+    recipe.declares("url", "bun", url="https://bun.sh/install", update_action=["upgrade"])
+
+    report = totchef.up()
+
+    report.assert_soft_failed()
+    report.assert_logged("update failed")
+    assert "Traceback" not in report.logs, "an exec failure on update should soft-fail cleanly, not crash"

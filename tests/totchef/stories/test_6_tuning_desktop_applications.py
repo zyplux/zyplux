@@ -246,6 +246,34 @@ def test_6_2_5_chromium_flags_on_change_reminds_restart(recipe: RecipeBuilder, t
     report.assert_logged("restart the app")
 
 
+def test_6_2_6_a_base_file_that_parses_but_is_not_the_expected_shape_soft_fails_the_same_way(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path
+) -> None:
+    """Syntactically valid JSON that isn't the expected shape soft-fails, never crashes — local_state and argv_json."""
+    local_state = home / ".config/chromium/Local State"
+    local_state.parent.mkdir(parents=True)
+    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["x@1"])
+
+    local_state.write_text("[1, 2, 3]")
+    array_report = totchef.up()
+    array_report.assert_soft_failed()
+    array_report.assert_logged("invalid JSON")
+
+    local_state.write_text('{"browser": "not-an-object"}')
+    bad_browser_report = totchef.up()
+    bad_browser_report.assert_soft_failed()
+    bad_browser_report.assert_logged("invalid JSON")
+
+    argv_json = home / ".config/Code/argv.json"
+    argv_json.parent.mkdir(parents=True)
+    recipe.declares("chromium_flags", "code", argv_json=".config/Code/argv.json", features=["UseOzonePlatform"])
+
+    argv_json.write_text("[1, 2, 3]")
+    argv_array_report = totchef.up()
+    argv_array_report.assert_soft_failed()
+    argv_array_report.assert_logged("invalid JSON")
+
+
 # 5.3 Merge environment settings into a JSON config
 
 

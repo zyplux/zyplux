@@ -143,6 +143,6 @@ class UrlCook(VersionedCook):
 
         try:
             update_existing(entry, existing)
-        except (subprocess.CalledProcessError, ValueError) as exc:
+        except (OSError, subprocess.CalledProcessError, ValueError) as exc:
             return SyncOutcome("soft_fail", f"{name} update failed (still installed): {exc}")
         return SyncOutcome("ok")

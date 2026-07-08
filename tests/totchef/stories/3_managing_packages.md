@@ -112,3 +112,8 @@ the cook's presence check (`find_binary`) looks.
 
 Only `http`/`https` URLs are ever fetched — any other scheme (e.g. `ftp://`) is
 refused before the install runs.
+
+### 3.3.10 url update exec failure is also a soft failure
+
+An update command that fails to even exec (not just a nonzero exit) is a soft
+failure too — the same as a nonzero exit, never a crash.

@@ -68,11 +68,14 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
             data = json.loads(raw)
         except json.JSONDecodeError:
             return None
-        experiments = data.setdefault("browser", {}).setdefault("enabled_labs_experiments", [])
+        if not isinstance(data, dict) or not isinstance(data.get("browser", {}), dict):
+            return None
+        browser = data.setdefault("browser", {})
+        experiments = browser.setdefault("enabled_labs_experiments", [])
         merged = sorted(set(experiments) | set(flags))
         if set(merged) == set(experiments):
             return raw
-        data["browser"]["enabled_labs_experiments"] = merged
+        browser["enabled_labs_experiments"] = merged
         return json.dumps(data, indent=2).encode()
 
     @staticmethod
@@ -86,9 +89,12 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
             stripped = _strip_json_comments(target.read_text(encoding="utf-8"))
             if stripped.strip():
                 try:
-                    existing = json.loads(stripped)
+                    parsed = json.loads(stripped)
                 except json.JSONDecodeError:
                     return None
+                if not isinstance(parsed, dict):
+                    return None
+                existing = parsed
         merged = {**existing, **argv}
         return (json.dumps(merged, indent=2) + "\n").encode()
 
