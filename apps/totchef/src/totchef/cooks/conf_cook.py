@@ -1,7 +1,9 @@
 (
-    """StateCook for [conf.<name>] — own specific lines of a config file another package ships: each declared line is keyed on the text before `=` (the """
-    """whole line when there is none), replacing same-key lines in place, appending missing ones, and leaving the rest of the file untouched. Creates """
-    """`target` when absent; diffed by content hash so a `post_hook` fires only on change. Privilege-agnostic; recipe.toml grants root per entry."""
+    """StateCook for [conf.<name>] — own specific lines of a config file another package ships: each declared """
+    """line is keyed on the text before `=` (the whole line when there is none), replacing same-key lines in """
+    """place, appending missing ones, and leaving the rest of the file untouched. Creates `target` when """
+    """absent; diffed by content hash so a `post_hook` fires only on change. Privilege-agnostic; recipe.toml """
+    """grants root per entry."""
 )
 
 from pathlib import Path

@@ -1,6 +1,7 @@
 (
-    """StateCook for [chromium_flags.<app>] — GPU-flag injection into a Chromium `Local State` JSON or an Electron argv.json, picked per app by marker """
-    """and diffed by rendered-JSON hash. Runs as the invoking user."""
+    """StateCook for [chromium_flags.<app>] — GPU-flag injection into a Chromium `Local State` JSON or an """
+    """Electron argv.json, picked per app by marker and diffed by rendered-JSON hash. Runs as the invoking """
+    """user."""
 )
 
 import json
@@ -45,8 +46,9 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
     @override
     def _render(self, name: str) -> bytes | None:
         (
-            """Desired file bytes, or None when there is no base file or it is invalid JSON (apply_resource soft-fails the latter); returns on-disk """
-            """bytes verbatim when no flag changes, so chef skips the entry."""
+            """Desired file bytes, or None when there is no base file or it is invalid JSON (apply_resource """
+            """soft-fails the latter); returns on-disk bytes verbatim when no flag changes, so chef skips """
+            """the entry."""
         )
         app = self.entries[name]
         target = self._target_path(name)

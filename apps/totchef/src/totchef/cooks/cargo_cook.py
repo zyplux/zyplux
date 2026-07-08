@@ -1,6 +1,6 @@
 (
-    """VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate skip-if-current, bootstrapping cargo-binstall """
-    """once. Runs as the invoking user; depends on [url]."""
+    """VersionedCook for [cargo] — crates via a single batched `cargo binstall` that does its own per-crate """
+    """skip-if-current, bootstrapping cargo-binstall once. Runs as the invoking user; depends on [url]."""
 )
 
 import json
@@ -20,7 +20,10 @@ MIN_CRATE_LIST_TOKENS = 2
 
 
 def parse_crates_latest(payload: bytes) -> str | None:
-    """Latest version from the crates.io crate endpoint, preferring `max_stable_version` over a pre-release `newest_version`."""
+    (
+        """Latest version from the crates.io crate endpoint, preferring `max_stable_version` over a """
+        """pre-release `newest_version`."""
+    )
     crate = json.loads(payload)["crate"]
     return crate.get("max_stable_version") or crate.get("newest_version")
 
@@ -30,7 +33,10 @@ def fetch_crates_latest(name: str) -> str | None:
 
 
 def parse_crate_list(output: str) -> dict[str, str]:
-    """Map crate name -> version from `cargo install --list`: each crate is a column-0 `<name> v<version>:` line, binaries are indented."""
+    (
+        """Map crate name -> version from `cargo install --list`: each crate is a column-0 `<name> """
+        """v<version>:` line, binaries are indented."""
+    )
     versions: dict[str, str] = {}
     for line in output.splitlines():
         if not line or line[0].isspace():
@@ -66,7 +72,8 @@ class CargoCook(PackageListCook):
         if not cargo:
             return None
         logger.info(
-            "cargo-binstall missing — bootstrapping via `cargo install` (slow source compile; happens once per fresh system)"
+            "cargo-binstall missing — bootstrapping via `cargo install` (slow source compile; happens once "
+            "per fresh system)"
         )
         shell.stream([str(cargo), "install", "cargo-binstall"])
         return find_binary("cargo-binstall")

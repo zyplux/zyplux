@@ -1,6 +1,7 @@
 (
-    """StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + --enable-features) under ~/.local/share/applications, """
-    """diffed by content hash. Runs as the invoking user."""
+    """StateCook for [desktop.<app>] — per-user .desktop Exec= overrides (env prefix + --switches + """
+    """--enable-features) under ~/.local/share/applications, diffed by content hash. Runs as the invoking """
+    """user."""
 )
 
 from pathlib import Path
@@ -24,8 +25,8 @@ def rewrite_exec_line(
     switches: list[str],
 ) -> str:
     (
-        """Idempotent rewrite of a .desktop Exec= value with env prefix, --<switch>es, and --enable-features, inserting new args before trailing field """
-        """codes (%U/%u/%F/%f)."""
+        """Idempotent rewrite of a .desktop Exec= value with env prefix, --<switch>es, and --enable-features, """
+        """inserting new args before trailing field codes (%U/%u/%F/%f)."""
     )
     tokens = exec_value.split()
 

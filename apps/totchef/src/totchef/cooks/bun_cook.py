@@ -1,6 +1,7 @@
 (
-    """VersionedCook for [bun] — global npm packages via `bun add -g`, installed versions read from bun's global tree and resolved against the npm """
-    """registry. Runs as the invoking user; depends on [url] (bun itself)."""
+    """VersionedCook for [bun] — global npm packages via `bun add -g`, installed versions read from bun's """
+    """global tree and resolved against the npm registry. Runs as the invoking user; depends on [url] (bun """
+    """itself)."""
 )
 
 import json
@@ -28,8 +29,9 @@ def fetch_npm_latest(name: str) -> str | None:
 
 def bun_install_root() -> Path:
     (
-        """Bun's install prefix — `$BUN_INSTALL` when the user set one (binaries land in `$BUN_INSTALL/bin`), else the `~/.bun` default. Resolved at call """
-        """time so it follows become_user's $HOME drop in a forked child."""
+        """Bun's install prefix — `$BUN_INSTALL` when the user set one (binaries land in `$BUN_INSTALL/bin`), """
+        """else the `~/.bun` default. Resolved at call time so it follows become_user's $HOME drop in a """
+        """forked child."""
     )
     return Path(os.environ["BUN_INSTALL"]) if os.environ.get("BUN_INSTALL") else Path.home() / ".bun"
 
@@ -48,10 +50,11 @@ def read_package_version(package_json: Path) -> str | None:
 
 def ensure_node_shim(bun: Path) -> None:
     (
-        """Drop a `node` symlink to bun in bun's install bin dir (on PATH, user-owned), so node-shebang global CLIs (e.g. `pi`) resolve a runtime — bun """
-        """runs in node-compat mode when invoked as `node`, and `bun add -g` leaves a package's `#!/usr/bin/env node` shebang untouched. The link lives """
-        """beside the global bins it serves while pointing at the real bun binary wherever it sits. Best-effort: idempotent, refuses to clobber a real """
-        """`node`, and a failure to link only warns."""
+        """Drop a `node` symlink to bun in bun's install bin dir (on PATH, user-owned), so node-shebang """
+        """global CLIs (e.g. `pi`) resolve a runtime — bun runs in node-compat mode when invoked as `node`, """
+        """and `bun add -g` leaves a package's `#!/usr/bin/env node` shebang untouched. The link lives beside """
+        """the global bins it serves while pointing at the real bun binary wherever it sits. Best-effort: """
+        """idempotent, refuses to clobber a real `node`, and a failure to link only warns."""
     )
     node = bun_install_root() / "bin" / "node"
     is_link = node.is_symlink()
@@ -72,7 +75,10 @@ def ensure_node_shim(bun: Path) -> None:
 
 
 def parse_installed_globals(modules_dir: Path) -> dict[str, str]:
-    """Map package name -> installed version by reading each `package.json` under bun's global node_modules, descending one level into `@scope` directories."""
+    (
+        """Map package name -> installed version by reading each `package.json` under bun's global """
+        """node_modules, descending one level into `@scope` directories."""
+    )
     if not modules_dir.is_dir():
         return {}
     versions: dict[str, str] = {}

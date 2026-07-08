@@ -1,4 +1,7 @@
-"""Cook execution engine: chef diffs, this acts; `run_recipe` topo-sorts the graph and forks every node (concurrent+privilege-dropped, root serialized)."""
+(
+    """Cook execution engine: chef diffs, this acts; `run_recipe` topo-sorts the graph and forks every """
+    """node (concurrent+privilege-dropped, root serialized)."""
+)
 
 import json
 import os
@@ -56,7 +59,10 @@ _MIN_REPORTABLE_DURATION = 1e-4
 
 
 def format_duration(seconds: float) -> str:
-    """A wall-clock duration, stepping up per boundary: fractional seconds under a minute, then minutes+seconds, hours+minutes, days+hours."""
+    (
+        """A wall-clock duration, stepping up per boundary: fractional seconds under a minute, then """
+        """minutes+seconds, hours+minutes, days+hours."""
+    )
     if seconds < _SECONDS_PER_MINUTE:
         return f"{seconds:.4g}s" if seconds >= _MIN_REPORTABLE_DURATION else "0s"
     minutes, sec = int(seconds // _SECONDS_PER_MINUTE), int(seconds % _SECONDS_PER_MINUTE)
@@ -70,7 +76,10 @@ def format_duration(seconds: float) -> str:
 
 
 def run_pre_hook(snippet: str) -> bool:
-    """A `pre_hook` guard: zero exit proceeds, non-zero skips this item (a benign skip, e.g. "browser is running", not a failure)."""
+    (
+        """A `pre_hook` guard: zero exit proceeds, non-zero skips this item (a benign skip, e.g. """
+        """"browser is running", not a failure)."""
+    )
     try:
         shell.stream(["bash", "-c", snippet], note=f"pre_hook: {snippet}")
     except subprocess.CalledProcessError, OSError:
@@ -109,7 +118,10 @@ def _plan_row(name: str, installed_before: dict[str, str], latest: dict[str, str
 def _gated_row(
     name: str, installed_before: dict[str, str], latest: dict[str, str | None], pending: set[str]
 ) -> ReportRow:
-    """A row for a sync the section-level `pre_hook` blocked: `name` stays put, labeled `skipped` if it was due to move, else `unchanged`."""
+    (
+        """A row for a sync the section-level `pre_hook` blocked: `name` stays put, labeled `skipped` """
+        """if it was due to move, else `unchanged`."""
+    )
     installed = installed_before.get(name)
     action = "skipped" if name in pending else "unchanged"
     return ReportRow(
@@ -185,7 +197,10 @@ def run_versioned(cook: VersionedCook, section: str, *, dry_run: bool) -> CookRe
 def apply_state_resource(
     cook: StateCook[EntrySpec], name: str, current_label: str, desired_label: str, applied_label: str
 ) -> tuple[ReportRow, Status, str]:
-    """Apply one state-cook resource and build its row plus follow-up: pre_hook gates, apply mutates, post_hook fires on change; a gated skip is `ok`."""
+    (
+        """Apply one state-cook resource and build its row plus follow-up: pre_hook gates, apply """
+        """mutates, post_hook fires on change; a gated skip is `ok`."""
+    )
     pre_hook, post_hook = cook.get_hooks(name)
     if pre_hook and not run_pre_hook(pre_hook):
         return ReportRow(name, current_label, current_label, desired_label, "skipped", changed=False), "ok", ""
@@ -221,7 +236,10 @@ def run_state(cook: StateCook[EntrySpec], section: str, *, dry_run: bool) -> Coo
     to_apply = [n for n in resources if current.get(n) != desired.get(n)]
 
     def labels(name: str) -> tuple[str, str, str]:
-        """Pre-state, target and post-apply labels: a digest reads matches/differs against the desired content; the target column shows its short content id."""
+        (
+            """Pre-state, target and post-apply labels: a digest reads matches/differs against the """
+            """desired content; the target column shows its short content id."""
+        )
         current_token, desired_token = current.get(name, "?"), desired.get(name, "?")
         current_label = (
             ("matches" if current_token == desired_token else "differs")
@@ -232,7 +250,10 @@ def run_state(cook: StateCook[EntrySpec], section: str, *, dry_run: bool) -> Coo
         return current_label, format_state(desired_token), applied_label
 
     def row_for(name: str) -> tuple[ReportRow, Status, str]:
-        """The (row, status, delayed follow-up) one resource contributes: a dry-run preview, an unchanged-on-up row, or a real apply."""
+        (
+            """The (row, status, delayed follow-up) one resource contributes: a dry-run preview, an """
+            """unchanged-on-up row, or a real apply."""
+        )
         current_label, desired_label, applied_label = labels(name)
         will = name in to_apply
 
@@ -269,7 +290,10 @@ def run_cook(node: Node, config: RecipeConfig, *, dry_run: bool) -> CookResult:
 
 @dataclass(frozen=True)
 class Scheduling:
-    """Per-run scheduling data off the DAG: `dependents` feeds queueing/unlocked log lines, `reach`/`weights` drive ready-node priority and wait math."""
+    (
+        """Per-run scheduling data off the DAG: `dependents` feeds queueing/unlocked log lines, """
+        """`reach`/`weights` drive ready-node priority and wait math."""
+    )
 
     dependents: dict[str, tuple[str, ...]]
     reach: dict[str, int]
@@ -278,14 +302,20 @@ class Scheduling:
 
 @dataclass
 class UnlockProgress:
-    """Live blocker tally: `blocker_count` is fixed off the DAG, `satisfied` increments per completion; together they drive the `(satisfied/total)` note."""
+    (
+        """Live blocker tally: `blocker_count` is fixed off the DAG, `satisfied` increments per """
+        """completion; together they drive the `(satisfied/total)` note."""
+    )
 
     blocker_count: dict[str, int]
     satisfied: dict[str, int]
 
 
 def run_cook_guarded(node: Node, config: RecipeConfig, *, dry_run: bool, scheduling: Scheduling) -> CookResult:
-    """Run one cook in its forked child and log its start line (log_completion logs completion parent-side); a dry-run drops the `as <user>` identity."""
+    (
+        """Run one cook in its forked child and log its start line (log_completion logs completion """
+        """parent-side); a dry-run drops the `as <user>` identity."""
+    )
     dependents = scheduling.dependents.get(node.id, ())
     combined = scheduling.reach.get(node.id, 0) - scheduling.weights.get(node.id, 0)
     with cook_context(node.id):
@@ -302,7 +332,10 @@ def run_cook_guarded(node: Node, config: RecipeConfig, *, dry_run: bool, schedul
 
 
 def _encode_result(result: CookResult) -> bytes:
-    """A CookResult as JSON bytes: it's built entirely from str/bool/list/dict, so JSON round-trips it exactly, without pickle's arbitrary-object surface."""
+    (
+        """A CookResult as JSON bytes: it's built entirely from str/bool/list/dict, so JSON round-trips """
+        """it exactly, without pickle's arbitrary-object surface."""
+    )
     return json.dumps(asdict(result)).encode()
 
 
@@ -318,7 +351,10 @@ def _decode_result(payload: bytes) -> CookResult:
 
 
 def fork_cook(node: Node, config: RecipeConfig, *, dry_run: bool, scheduling: Scheduling) -> tuple[int, int]:
-    """Fork a child to run one cook (user drops privilege, root keeps it), JSON-encode its CookResult over a pipe; main-thread-only for loguru's locks."""
+    (
+        """Fork a child to run one cook (user drops privilege, root keeps it), JSON-encode its """
+        """CookResult over a pipe; main-thread-only for loguru's locks."""
+    )
     read_fd, write_fd = os.pipe()
     pid = os.fork()
     if pid == 0:
@@ -368,7 +404,10 @@ def build_weights(config: RecipeConfig, nodes: dict[str, Node]) -> dict[str, int
 
 
 def build_reach(dependents: dict[str, tuple[str, ...]], weights: dict[str, int]) -> dict[str, int]:
-    """Weight each node by the work it gates: its own unit_count plus that of every transitively-downstream node, counting each once across all paths."""
+    (
+        """Weight each node by the work it gates: its own unit_count plus that of every """
+        """transitively-downstream node, counting each once across all paths."""
+    )
     gated: dict[str, frozenset[str]] = {}
 
     def closure(node_id: str) -> frozenset[str]:
@@ -383,7 +422,10 @@ def build_reach(dependents: dict[str, tuple[str, ...]], weights: dict[str, int])
 
 
 def format_queueing(dependants: tuple[str, ...], reach: dict[str, int], combined: int) -> str:
-    """The `queueing: …` start-line suffix: each dependant annotated with its reach, led by `combined` (their deduplicated total); counts of 1 are omitted."""
+    (
+        """The `queueing: …` start-line suffix: each dependant annotated with its reach, led by """
+        """`combined` (their deduplicated total); counts of 1 are omitted."""
+    )
     if not dependants:
         return ""
     parts = [f"{dep} ({reach[dep]})" if reach.get(dep, 1) > 1 else dep for dep in dependants]
@@ -396,7 +438,10 @@ def format_unlocked(
     satisfied: dict[str, int],
     blocker_count: dict[str, int],
 ) -> str:
-    """The `unlocked: …` completion-line suffix: each dependant annotated `(satisfied/total)` blockers done; single-blocker dependants carry no count."""
+    (
+        """The `unlocked: …` completion-line suffix: each dependant annotated `(satisfied/total)` """
+        """blockers done; single-blocker dependants carry no count."""
+    )
     if not dependants:
         return ""
     parts = [f"{dep} ({satisfied[dep]}/{blocker_count[dep]})" if blocker_count[dep] > 1 else dep for dep in dependants]
@@ -406,7 +451,10 @@ def format_unlocked(
 def log_completion(
     node_id: str, result: CookResult, dependants: tuple[str, ...], progress: UnlockProgress, elapsed: float
 ) -> None:
-    """Emit a cook's completion line parent-side, timed from fork to reap: success unlocks dependants, failure blocks them."""
+    (
+        """Emit a cook's completion line parent-side, timed from fork to reap: success unlocks """
+        """dependants, failure blocks them."""
+    )
     with cook_context(node_id):
         timing = f"({format_duration(elapsed)})"
         if result.status == "ok":
@@ -423,7 +471,10 @@ def log_completion(
 
 
 def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
-    """Run the DAG in-process, no fork or privilege drop, one node at a time in topo order: the foreground/debug path the seam tests drive."""
+    (
+        """Run the DAG in-process, no fork or privilege drop, one node at a time in topo order: the """
+        """foreground/debug path the seam tests drive."""
+    )
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
     dependents = build_dependents(graph)
@@ -448,7 +499,10 @@ def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookR
 
 @dataclass
 class _Scheduler:
-    """Fork/reap state for one `run_recipe` pass: launches ready nodes (a root node queues, serialized), reaps children, folding results into shared tallies."""
+    (
+        """Fork/reap state for one `run_recipe` pass: launches ready nodes (a root node queues, """
+        """serialized), reaps children, folding results into shared tallies."""
+    )
 
     nodes: dict[str, Node]
     config: RecipeConfig
@@ -504,7 +558,10 @@ class _Scheduler:
 
 
 def run_recipe(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
-    """Schedule the DAG: fork ready nodes concurrently, serialize root nodes in their lane, reap as they finish; ties break by reach (highest work first)."""
+    (
+        """Schedule the DAG: fork ready nodes concurrently, serialize root nodes in their lane, reap as """
+        """they finish; ties break by reach (highest work first)."""
+    )
     if inline_mode():
         return run_recipe_inline(config, dry_run=dry_run)
     nodes = build_nodes(config)

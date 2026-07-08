@@ -1,6 +1,7 @@
 (
-    """VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap candidate """
-    """version and always running nala's full system transaction. Runs as root; depends on [bash] and [apt_repo]."""
+    """VersionedCook for [apt_pkg] — package install/upgrade via nala, using `apt-cache policy` for a cheap """
+    """candidate version and always running nala's full system transaction. Runs as root; depends on [bash] """
+    """and [apt_repo]."""
 )
 
 import os
@@ -84,8 +85,9 @@ def build_policy_row(package: str) -> PolicyRow:
 
 def find_reboot_notice() -> str:
     (
-        """The pending-reboot notice update-notifier leaves under /var/run after a kernel/driver transaction — empty when """
-        """none; the .pkgs companion names the packages that caused it (deduped, it logs one line per dpkg trigger)."""
+        """The pending-reboot notice update-notifier leaves under /var/run after a kernel/driver transaction — """
+        """empty when none; the .pkgs companion names the packages that caused it (deduped, it logs one line """
+        """per dpkg trigger)."""
     )
     notice = shell.run("cat", "/var/run/reboot-required").stdout.strip()
     if not notice:
@@ -138,7 +140,8 @@ class AptPkgCook(PackageListCook):
             return SyncOutcome(
                 "hard_fail",
                 f"package(s) not available in any configured repo: {', '.join(missing)}\n"
-                "  - Check release-specific naming (e.g. libva-nvidia-driver -> nvidia-vaapi-driver on Ubuntu 26.04+).\n"
+                "  - Check release-specific naming (e.g. libva-nvidia-driver -> nvidia-vaapi-driver on Ubuntu "
+                "26.04+).\n"
                 "  - Confirm the package's component is enabled (main / universe / multiverse / restricted).\n"
                 "  - For a third-party package, confirm its [apt_repo.<name>] subtable is in recipe.toml.",
             )
