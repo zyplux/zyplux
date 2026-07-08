@@ -1,10 +1,11 @@
 import type { LibraryFixtures } from '@zyplux/tests-fixtures';
 import type { TestAPI } from 'vitest';
 
-import { zyplux } from '@zyplux/eslint-config';
+import { plugin, zyplux } from '@zyplux/eslint-config';
 import { libraryTest } from '@zyplux/tests-fixtures';
 import { ESLint, Linter } from 'eslint';
 import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
 import * as z from 'zod';
@@ -37,13 +38,50 @@ const getMergedRule = (ruleId: string) => {
 
 const eslintConfigDir = fileURLToPath(new URL('../../packages/eslint-config/', import.meta.url));
 
+const storiesRootDir = fileURLToPath(new URL('./', import.meta.url));
+
+type RuleLintOptions = { filename?: string; options?: unknown[] };
+
+const ruleSeverityEntry = (options: undefined | unknown[]): Linter.RuleSeverityAndOptions =>
+  options === undefined ? ['error'] : ['error', ...options];
+
+const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => ({
+  files: ['**/*.ts', '**/*.tsx'],
+  languageOptions: {
+    parser: tseslint.parser,
+    parserOptions: {
+      projectService: { allowDefaultProject: ['*.ts*'], defaultProject: 'tsconfig.json' },
+      tsconfigRootDir: storiesRootDir,
+    },
+  },
+  plugins: { '@zyplux': plugin },
+  rules: { [`@zyplux/${ruleName}`]: ruleSeverityEntry(options) },
+});
+
+export const applySuggestion = (code: string, { suggestions }: Linter.LintMessage, index = 0) => {
+  const suggestion = suggestions?.[index];
+  if (suggestion === undefined) throw new Error(`message has no suggestion at index ${index}`);
+  const { range, text } = suggestion.fix;
+  return code.slice(0, range[0]) + text + code.slice(range[1]);
+};
+
 type EslintFixtures = {
+  fixRule: (code: string, lintOptions?: RuleLintOptions) => string;
   lint: (code: string) => Linter.LintMessage[];
+  lintRule: (code: string, lintOptions?: RuleLintOptions) => Linter.LintMessage[];
   printedConfig: string;
   ruleId: string;
+  ruleName: string;
 };
 
 export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.extend<EslintFixtures>({
+  fixRule: async ({ ruleName }, use) => {
+    const linter = new Linter();
+    await use(
+      (code, { filename = 'file.ts', options } = {}) =>
+        linter.verifyAndFix(code, pluginRuleConfig(ruleName, options), path.join(storiesRootDir, filename)).output,
+    );
+  },
   lint: async ({ ruleId }, use) => {
     const mergedRule = await getMergedRule(ruleId);
     const linter = new Linter();
@@ -55,6 +93,12 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
       }),
     );
   },
+  lintRule: async ({ ruleName }, use) => {
+    const linter = new Linter();
+    await use((code, { filename = 'file.ts', options } = {}) =>
+      linter.verify(code, pluginRuleConfig(ruleName, options), path.join(storiesRootDir, filename)),
+    );
+  },
   printedConfig: [
     async ({}, use) => {
       await use(execFileSync('eslint', ['--print-config', 'src/index.ts'], { cwd: eslintConfigDir, encoding: 'utf8' }));
@@ -62,6 +106,7 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
     { scope: 'file' },
   ],
   ruleId: '',
+  ruleName: '',
 });
 
 export { plugin, zyplux } from '@zyplux/eslint-config';
