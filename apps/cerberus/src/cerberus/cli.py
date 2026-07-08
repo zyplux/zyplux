@@ -44,7 +44,7 @@ app = typer.Typer(
     cls=LinterGroup,
     no_args_is_help=False,
     add_completion=False,
-    help="Lint a repo checkout against org invariants.",
+    help="🐺 Lint a repo checkout against org invariants.",
 )
 
 console = Console(highlight=False)
@@ -52,19 +52,19 @@ err = Console(stderr=True, highlight=False)
 logger = logging.getLogger(__name__)
 
 _GLYPH = {
-    Status.PASS: "[green]✓[/green]",
+    Status.PASS: "[green]🐾[/green]",
     Status.SKIP: "[dim]○[/dim]",
-    Status.FAIL: "[red]✗[/red]",
+    Status.FAIL: "[red]💢[/red]",
     Status.ERROR: "[magenta]‼[/magenta]",
 }
 
 ConfigOpt = Annotated[Path | None, typer.Option("--config", help="Path to a cerberus.toml.")]
-CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to named check(s).")]
+CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to named bite(s).")]
 
 
 class _UnknownCheckError(typer.BadParameter):
     def __init__(self, check_id: str) -> None:
-        super().__init__(f"unknown check `{check_id}` (known: {', '.join(checks.BY_ID)})")
+        super().__init__(f"unknown bite `{check_id}` (known: {', '.join(checks.BY_ID)})")
 
 
 def _select_checks(only: list[str] | None) -> list[checks.Check]:
@@ -82,9 +82,9 @@ def _run_check(check: checks.Check, repo: Repo, ctx: Context) -> CheckResult:
     try:
         return check.run(repo, ctx)
     except Exception as exc:
-        logger.exception("check %s crashed for %s", check.id, repo.name)
+        logger.exception("bite %s crashed for %s", check.id, repo.name)
         crashed = CheckResult(check.id, repo.name)
-        crashed.error(f"check crashed: {exc}")
+        crashed.error(f"bite crashed: {exc}")
         return crashed
 
 
@@ -100,8 +100,8 @@ def version() -> None:
 
 @app.command(name="list")
 def list_checks() -> None:
-    """List every check, its scope, and what it verifies."""
-    table = Table(title="cerberus checks")
+    """List every bite, its scope, and what it verifies."""
+    table = Table(title="cerberus bites")
     table.add_column("id", no_wrap=True)
     table.add_column("scope")
     table.add_column("verifies")
@@ -126,7 +126,7 @@ def lint(
 
     Exits non-zero on any FAIL or ERROR, so it drops straight into CI like any
     linter. `--fix` rewrites what it can (trailing whitespace) and leaves the
-    rest to report. A repo opts out of checks via `[tool.cerberus] disable` in
+    rest to report. A repo opts out of bites via `[tool.cerberus] disable` in
     its pyproject.toml.
     """
     ctx = context.local_context(config.load(config_path), path, fix=fix)
@@ -136,7 +136,7 @@ def lint(
     disabled = config.repo_disabled_checks(path)
     unknown = disabled - set(checks.BY_ID)
     if unknown:
-        err.print(f"[yellow]unknown disabled checks ignored: {', '.join(sorted(unknown))}[/yellow]")
+        err.print(f"[yellow]unknown disabled bites ignored: {', '.join(sorted(unknown))}[/yellow]")
     active = [chk for chk in selected if chk.id not in disabled]
 
     results = [_run_check(chk, repo, ctx) for chk in active]
@@ -200,6 +200,7 @@ def graph_query(
 
 
 def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) -> None:
+    console.print(f"🐺 cerberus v{__version__}")
     console.print(f"[bold]{repo.name}[/bold]")
     for check_id in disabled:
         console.print(rf"  {_GLYPH[Status.SKIP]} {check_id}: disabled by \[tool.cerberus]")
@@ -208,6 +209,6 @@ def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) ->
         console.print(f"  {_GLYPH[finding.status]} {check_id}: {finding.message}")
 
     if not problems:
-        console.print("  [green]✓ all checks pass[/green]")
+        console.print("  [green]🐾 all bites pass[/green]")
     else:
-        console.print(f"\n[bold]✖ {len(problems)} problems[/bold]")
+        console.print(f"\n[bold]💢 {len(problems)} problems[/bold]")

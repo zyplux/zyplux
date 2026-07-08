@@ -75,7 +75,7 @@ def invoke_lint(conforming_repo: Path) -> Callable[..., Result]:
 def test_16_1_1_passes_a_fully_conforming_checkout_given_an_explicit_path(invoke_lint: Callable[..., Result]) -> None:
     result = invoke_lint()
     assert result.exit_code == 0, result.output
-    assert "all checks pass" in result.output
+    assert "all bites pass" in result.output
 
 
 @requires_just
@@ -132,7 +132,7 @@ def test_16_4_1_runs_only_the_checks_named_on_the_command_line(
 def test_16_4_2_rejects_an_unknown_check_name_given_on_the_command_line(invoke_lint: Callable[..., Result]) -> None:
     result = invoke_lint("--check", "no-such-check")
     assert result.exit_code == USAGE_ERROR_EXIT
-    assert "unknown check" in result.output.lower()
+    assert "unknown bite" in result.output.lower()
     assert "no-such-check" in result.output
 
 
@@ -171,7 +171,7 @@ def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unkn
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["no-such-check"]\n')
     result = invoke_lint("--check", "codeowners")
     assert result.exit_code == 0, result.output
-    assert "unknown disabled checks ignored: no-such-check" in result.output
+    assert "unknown disabled bites ignored: no-such-check" in result.output
 
 
 def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
@@ -180,7 +180,7 @@ def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = "codeowners"\n')
     result = invoke_lint("--check", "codeowners")
     assert isinstance(result.exception, TypeError)
-    assert "list of check id strings" in str(result.exception)
+    assert "list of bite id strings" in str(result.exception)
 
 
 def test_16_7_1_lists_every_registered_check_by_id(known_check_ids: tuple[str, ...]) -> None:
@@ -214,4 +214,4 @@ def test_16_10_1_reports_a_crashing_check_as_an_error_instead_of_aborting_the_ru
     result = invoke_lint("--check", "codeowners")
 
     assert result.exit_code == 1
-    assert "codeowners: check crashed: boom" in result.output
+    assert "codeowners: bite crashed: boom" in result.output
