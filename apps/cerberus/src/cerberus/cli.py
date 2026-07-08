@@ -205,8 +205,12 @@ def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) ->
     for check_id in disabled:
         console.print(rf"  {_GLYPH[Status.SKIP]} {check_id}: disabled by \[tool.cerberus]")
     problems = [(r.check, f) for r in results for f in r.problems]
-    for check_id, finding in problems:
-        console.print(f"  {_GLYPH[finding.status]} {check_id}: {finding.message}")
+    for result in results:
+        if result.problems:
+            for finding in result.problems:
+                console.print(f"  {_GLYPH[finding.status]} {result.check}: {finding.message}")
+        else:
+            console.print(f"  {_GLYPH[Status.PASS]} {result.check}")
 
     if not problems:
         console.print("  [green]🐾 all bites pass[/green]")

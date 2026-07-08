@@ -10,8 +10,10 @@
 
 ### 28.1.4 errors when bunx is not on PATH
 
-## 28.2 sourcing the threshold from cerberus configuration
+## 28.2 sourcing the threshold and file selection from cerberus configuration
 
-### 28.2.1 runs jscpd at the repo root with the default threshold
+### 28.2.1 runs jscpd at the repo root with the default selection and threshold
 
 ### 28.2.2 passes a configured threshold through to jscpd
+
+### 28.2.3 passes a configured pattern and ignore through to jscpd

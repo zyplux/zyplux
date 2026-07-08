@@ -6,6 +6,8 @@
 
 ### 16.1.2 defaults to the current directory when no path argument is given
 
+### 16.1.3 prints one line per bite with its id and outcome
+
 ## 16.2 surfacing check failures end to end
 
 ### 16.2.1 fails when the ci workflow file is missing

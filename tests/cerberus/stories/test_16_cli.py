@@ -88,6 +88,21 @@ def test_16_1_2_defaults_to_the_current_directory_when_no_path_argument_is_given
 
 
 @requires_just
+def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
+    conforming_repo: Path, invoke_lint: Callable[..., Result], known_check_ids: tuple[str, ...]
+) -> None:
+    (conforming_repo / ".github" / "CODEOWNERS").unlink()
+
+    result = invoke_lint()
+
+    assert result.exit_code == 1
+    for check_id in known_check_ids:
+        assert f"🐾 {check_id}" in result.output or f"💢 {check_id}:" in result.output
+    assert "💢 codeowners:" in result.output
+    assert "🐾 justfile" in result.output
+
+
+@requires_just
 def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:

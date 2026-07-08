@@ -21,6 +21,20 @@ _OVER_THRESHOLD_OUTPUT = (
     "Found 104 clones.\nERROR: jscpd found too many duplicates (14.1%) over threshold (2.0%)\ntime: 199ms\n"
 )
 _CUSTOM_THRESHOLD_TOML = 'default_recipe_marker = "just --list"\n\n[max_duplication]\nthreshold = 5\n'
+_CUSTOM_SELECTION_TOML = (
+    'default_recipe_marker = "just --list"\n\n'
+    "[max_duplication]\n"
+    'pattern = "**/*.rs"\n'
+    'ignore = ["**/target/**"]\n'
+)
+_DEFAULT_PATTERN = "**/*.{ts,tsx,py}"
+_DEFAULT_IGNORE = (
+    "**/node_modules/**,**/dist/**,**/.venv/**,**/coverage/**,**/reference_clones/**,**/graphify-out/**"
+)
+
+
+def _argv(threshold: str = "2", pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE) -> list[str]:
+    return ["bunx", "jscpd", "--threshold", threshold, "--pattern", pattern, "--ignore", ignore, "."]
 
 
 class ProcDouble(Protocol):
@@ -72,7 +86,7 @@ def test_28_1_3_fails_with_the_exit_code_when_jscpd_emits_no_verdict_line(
     fake_proc.serve("jscpd", returncode=3)
     result = run_max_duplication()
     assert result.findings == [
-        finding(status.FAIL, "jscpd exited 3; run `bunx jscpd --threshold 2 .` locally for details")
+        finding(status.FAIL, f"jscpd exited 3; run `{' '.join(_argv())}` locally for details")
     ]
 
 
@@ -84,12 +98,12 @@ def test_28_1_4_errors_when_bunx_is_not_on_path(
     assert result.findings == [finding(status.ERROR, "`bunx` not found on PATH")]
 
 
-def test_28_2_1_runs_jscpd_at_the_repo_root_with_the_default_threshold(
+def test_28_2_1_runs_jscpd_at_the_repo_root_with_the_default_selection_and_threshold(
     run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble
 ) -> None:
     fake_proc.serve("jscpd")
     run_max_duplication()
-    assert fake_proc.calls == [(["bunx", "jscpd", "--threshold", "2", "."], Path())]
+    assert fake_proc.calls == [(_argv(), Path())]
 
 
 def test_28_2_2_passes_a_configured_threshold_through_to_jscpd(
@@ -97,5 +111,13 @@ def test_28_2_2_passes_a_configured_threshold_through_to_jscpd(
 ) -> None:
     fake_proc.serve("jscpd")
     result = run_max_duplication(config_toml=_CUSTOM_THRESHOLD_TOML)
-    assert fake_proc.calls == [(["bunx", "jscpd", "--threshold", "5", "."], Path())]
+    assert fake_proc.calls == [(_argv(threshold="5"), Path())]
     assert result.findings == [finding(status.PASS, "duplication is under the 5% jscpd threshold")]
+
+
+def test_28_2_3_passes_a_configured_pattern_and_ignore_through_to_jscpd(
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble
+) -> None:
+    fake_proc.serve("jscpd")
+    run_max_duplication(config_toml=_CUSTOM_SELECTION_TOML)
+    assert fake_proc.calls == [(_argv(pattern="**/*.rs", ignore="**/target/**"), Path())]

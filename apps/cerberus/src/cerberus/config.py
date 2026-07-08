@@ -23,6 +23,8 @@ class Config:
     ci_required_ts: tuple[str, ...]
     ci_required_python: tuple[str, ...]
     max_duplication_threshold: float
+    max_duplication_pattern: str
+    max_duplication_ignore: tuple[str, ...]
 
 
 def _from_dict(data: dict[str, Any]) -> Config:
@@ -30,6 +32,7 @@ def _from_dict(data: dict[str, Any]) -> Config:
     recipes = data.get("recipes", {})
     ci = data.get("ci", {})
     ci_required = ci.get("required", {})
+    max_duplication = data.get("max_duplication", {})
     return Config(
         default_recipe_marker=data["default_recipe_marker"],
         required_aliases=dict(aliases.get("required", {})),
@@ -42,7 +45,21 @@ def _from_dict(data: dict[str, Any]) -> Config:
         ci_image=ci.get("image", ""),
         ci_required_ts=tuple(ci_required.get("ts", [])),
         ci_required_python=tuple(ci_required.get("python", [])),
-        max_duplication_threshold=data.get("max_duplication", {}).get("threshold", 2),
+        max_duplication_threshold=max_duplication.get("threshold", 2),
+        max_duplication_pattern=max_duplication.get("pattern", "**/*.{ts,tsx,py}"),
+        max_duplication_ignore=tuple(
+            max_duplication.get(
+                "ignore",
+                [
+                    "**/node_modules/**",
+                    "**/dist/**",
+                    "**/.venv/**",
+                    "**/coverage/**",
+                    "**/reference_clones/**",
+                    "**/graphify-out/**",
+                ],
+            )
+        ),
     )
 
 

@@ -2,8 +2,9 @@
 and fails when the duplicated-lines percentage exceeds the configured
 threshold (`[max_duplication] threshold` in cerberus.toml, default 2%).
 jscpd's own exit code carries the verdict — it exits non-zero when the
-threshold is exceeded. What to scan and what to ignore stays the repo's
-business via its own `.jscpd.json`; cerberus only owns the threshold.
+threshold is exceeded. Cerberus owns the whole jscpd invocation: the file
+selection pattern and ignore globs come from `[max_duplication] pattern`
+and `ignore` in cerberus.toml, so repos need no `.jscpd.json` of their own.
 """
 
 from __future__ import annotations
@@ -36,7 +37,17 @@ def _verdict(outcome: subprocess.CompletedProcess[str]) -> str | None:
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     threshold = ctx.config.max_duplication_threshold
-    argv = ["bunx", "jscpd", "--threshold", str(threshold), "."]
+    argv = [
+        "bunx",
+        "jscpd",
+        "--threshold",
+        str(threshold),
+        "--pattern",
+        ctx.config.max_duplication_pattern,
+        "--ignore",
+        ",".join(ctx.config.max_duplication_ignore),
+        ".",
+    ]
     try:
         outcome = proc.run(argv, cwd=ctx.source.root)
     except proc.ToolNotFoundError as exc:
