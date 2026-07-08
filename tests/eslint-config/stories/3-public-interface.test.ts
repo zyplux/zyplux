@@ -44,10 +44,10 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
   describe('3.1 assembling the base flat config', () => {
     test('3.1.1 enables every rule the zyplux plugin exports', () => {
       const config = zyplux();
-      const entry = config.find(item => item.plugins !== undefined && '@zyplux' in item.plugins);
-      expect(entry).toBeDefined();
       const exported = Object.keys(plugin.rules ?? {}).toSorted((a, b) => a.localeCompare(b));
-      const enabled = Object.keys(entry?.rules ?? {})
+      const enabled = [
+        ...new Set(config.flatMap(entry => Object.keys(entry.rules ?? {}).filter(name => name.startsWith('@zyplux/')))),
+      ]
         .map(name => name.replace('@zyplux/', ''))
         .toSorted((a, b) => a.localeCompare(b));
       expect(exported.length).toBeGreaterThan(0);

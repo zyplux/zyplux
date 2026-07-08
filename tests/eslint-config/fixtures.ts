@@ -42,21 +42,23 @@ const storiesRootDir = fileURLToPath(new URL('./', import.meta.url));
 
 type RuleLintOptions = { filename?: string; options?: unknown[] };
 
-const ruleSeverityEntry = (options: undefined | unknown[]): Linter.RuleSeverityAndOptions =>
-  options === undefined ? ['error'] : ['error', ...options];
-
-const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => ({
-  files: ['**/*.ts', '**/*.tsx'],
-  languageOptions: {
-    parser: tseslint.parser,
-    parserOptions: {
-      projectService: { allowDefaultProject: ['*.ts*'], defaultProject: 'tsconfig.json' },
-      tsconfigRootDir: storiesRootDir,
+const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
+  const rules: Linter.RulesRecord = {
+    [`@zyplux/${ruleName}`]: options === undefined ? ['error'] : ['error', ...options],
+  };
+  return {
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: { allowDefaultProject: ['*.ts*', 'src/*.ts*'], defaultProject: 'tsconfig.json' },
+        tsconfigRootDir: storiesRootDir,
+      },
     },
-  },
-  plugins: { '@zyplux': plugin },
-  rules: { [`@zyplux/${ruleName}`]: ruleSeverityEntry(options) },
-});
+    plugins: { '@zyplux': plugin },
+    rules,
+  };
+};
 
 export const applySuggestion = (code: string, { suggestions }: Linter.LintMessage, index = 0) => {
   const suggestion = suggestions?.[index];
