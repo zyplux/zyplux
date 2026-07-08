@@ -1,6 +1,7 @@
 (
-    """Cook for [url.<name>] — vendor `curl | bash` bootstrappers as a presence-only VersionedCook (install-if-missing / upgrade-if-present); a `url` """
-    """without a scheme means https. Install errors hard, update errors soft. Runs as the invoking user."""
+    """Cook for [url.<name>] — vendor `curl | bash` bootstrappers as a presence-only VersionedCook """
+    """(install-if-missing / upgrade-if-present); a `url` without a scheme means https. Install errors hard, """
+    """update errors soft. Runs as the invoking user."""
 )
 
 import re
@@ -27,8 +28,9 @@ VERSION_PATTERN = re.compile(r"\d+\.\d+(?:\.\d+)*")
 
 def parse_version(output: str) -> str:
     (
-        """Pull the first dotted version out of a `--version` line; vendors format it freely ('rustup 1.29.0 (…)', '1.3.14', '2.1.150 (Claude """
-        """Code)'), so fall back to 'present' when nothing matches."""
+        """Pull the first dotted version out of a `--version` line; vendors format it freely """
+        """('rustup 1.29.0 (…)', '1.3.14', '2.1.150 (Claude Code)'), so fall back to 'present' when nothing """
+        """matches."""
     )
     first_line = next((line for line in output.splitlines() if line.strip()), "")
     match = VERSION_PATTERN.search(first_line)
@@ -37,8 +39,8 @@ def parse_version(output: str) -> str:
 
 def probe_version(bin_path: Path) -> str:
     (
-        """Best-effort installed version of a vendor CLI; presence is what the cook actually diffs, so any probe failure degrades to 'present' """
-        """rather than raising."""
+        """Best-effort installed version of a vendor CLI; presence is what the cook actually diffs, so any """
+        """probe failure degrades to 'present' rather than raising."""
     )
     try:
         completed = shell.run(str(bin_path), "--version", timeout=5)

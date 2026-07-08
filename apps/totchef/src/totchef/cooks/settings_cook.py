@@ -1,6 +1,6 @@
 (
-    """StateCook for [settings.<app>] — merge a `settings_env` block into the `env` key of a JSON settings file, preserving other keys, diffed by """
-    """merged-JSON hash. Runs as the invoking user."""
+    """StateCook for [settings.<app>] — merge a `settings_env` block into the `env` key of a JSON settings """
+    """file, preserving other keys, diffed by merged-JSON hash. Runs as the invoking user."""
 )
 
 import json

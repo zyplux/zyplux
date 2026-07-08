@@ -1,6 +1,6 @@
 (
-    """VersionedCook for [snap] — snap install/refresh via snapd, run sequentially behind snapd's global lock; install failure is hard, refresh soft. """
-    """Runs as root."""
+    """VersionedCook for [snap] — snap install/refresh via snapd, run sequentially behind snapd's global lock; """
+    """install failure is hard, refresh soft. Runs as root."""
 )
 
 import shutil
@@ -14,7 +14,10 @@ MIN_REFRESH_LIST_TOKENS = 2
 
 
 def parse_snap_list(output: str) -> dict[str, str]:
-    """Map snap name -> version from `snap list`: skip the header line, take column 0 (name) and column 1 (version) of the rest."""
+    (
+        """Map snap name -> version from `snap list`: skip the header line, take column 0 (name) and column 1 """
+        """(version) of the rest."""
+    )
     versions: dict[str, str] = {}
     for line in output.splitlines():
         if not line or line.startswith("Name"):
@@ -26,8 +29,8 @@ def parse_snap_list(output: str) -> dict[str, str]:
 
 def parse_refresh_list(output: str) -> dict[str, str]:
     (
-        """Map snap name -> available version from `snap refresh --list`: same table as `snap list` once past the `Name` header, but skip the 'All """
-        """snaps up to date.' line (no header) so it isn't read as a row."""
+        """Map snap name -> available version from `snap refresh --list`: same table as `snap list` once past """
+        """the `Name` header, but skip the 'All snaps up to date.' line (no header) so it isn't read as a row."""
     )
     versions: dict[str, str] = {}
     seen_header = False

@@ -1,18 +1,24 @@
 (
-    """VersionedCook for [skills] — Claude Code skills fetched from GitHub repos via the `skills` CLI (skills.sh), run through `bunx`. Every add targets """
-    """`--agent claude-code universal`: two distinct agent dirs keep the CLI in symlink mode (a single-agent add silently switches to copy mode and strands """
-    """the store), so each skill's files live once in the canonical ~/.agents/skills store — the source of truth any agent can share — and """
-    """~/.claude/skills/<skill> symlinks into it. An agent entry that isn't that symlink (say a real-dir copy from an old copy-mode install) is drift: its """
-    """upstream state reports unknown, which re-adds the repo and lets the CLI replace the copy with the symlink. The CLI's own ~/.agents/.skill-lock.json """
-    """holds one entry per skill, whose `skillFolderHash` (the GitHub tree SHA of the skill's folder) is the only content-change signal — the lockfile's """
-    """`updatedAt` is rewritten on every `add`, changed or not. `find_latest` asks upstream with one unauthenticated GitHub trees call per installed repo """
-    """(the same endpoint the CLI's own `update` uses, minus its token fallback), so a repo whose skills all match upstream skips `skills add` entirely; an """
-    """unreachable GitHub degrades to refresh-every-run. The report is one row per installed skill, keyed `<repo>/<skill>`, valued by the skill's declared """
-    """version (SKILL.md frontmatter, then package.json, then pyproject.toml) plus a short `#hash` content id; a never-installed repo's skills are """
-    """unknowable before its first `add`, so it plans as a single repo row that `list_reportable` splits into per-skill rows once the install lands. A """
-    """skill of the "cli" kind (e.g. peek) ships its own package.json `bin`; the skills CLI installs its files but never chmods or links that binary onto """
-    """PATH, so this cook does — chmod +x plus `bun link` from the skill's own directory, on every sync (even a converged one), best-effort and idempotent """
-    """like bun_cook's node shim. Runs as the invoking user; depends on [url] (bun)."""
+    """VersionedCook for [skills] — Claude Code skills fetched from GitHub repos via the `skills` CLI (skills.sh), """
+    """run through `bunx`. Every add targets `--agent claude-code universal`: two distinct agent dirs keep the CLI """
+    """in symlink mode (a single-agent add silently switches to copy mode and strands the store), so each """
+    """skill's files live once in the canonical ~/.agents/skills store — the source of truth any agent can """
+    """share — and ~/.claude/skills/<skill> symlinks into it. An agent entry that isn't that symlink (say a """
+    """real-dir copy from an old copy-mode install) is drift: its upstream state reports unknown, which re-adds """
+    """the repo and lets the CLI replace the copy with the symlink. The CLI's own """
+    """~/.agents/.skill-lock.json holds one entry per skill, whose `skillFolderHash` (the GitHub tree SHA of the """
+    """skill's folder) is the only content-change signal — the lockfile's `updatedAt` is rewritten on every """
+    """`add`, changed or not. `find_latest` asks upstream with one unauthenticated GitHub trees call per """
+    """installed repo (the same endpoint the CLI's own `update` uses, minus its token fallback), so a repo """
+    """whose skills all match upstream skips `skills add` entirely; an unreachable GitHub degrades to """
+    """refresh-every-run. The report is one row per installed skill, keyed `<repo>/<skill>`, valued by the """
+    """skill's declared version (SKILL.md frontmatter, then package.json, then pyproject.toml) plus a short """
+    """`#hash` content id; a never-installed repo's skills are unknowable before its first `add`, so it plans """
+    """as a single repo row that `list_reportable` splits into per-skill rows once the install lands. A skill """
+    """of the "cli" kind (e.g. peek) ships its own package.json `bin`; the skills CLI installs its files but """
+    """never chmods or links that binary onto PATH, so this cook does — chmod +x plus `bun link` from the """
+    """skill's own directory, on every sync (even a converged one), best-effort and idempotent like """
+    """bun_cook's node shim. Runs as the invoking user; depends on [url] (bun)."""
 )
 
 import json
@@ -40,8 +46,8 @@ GITHUB_TREES_URL = "https://api.github.com/repos/{repo}/git/trees/{ref}?recursiv
 
 class LockfileSkillInfo(BaseModel):
     (
-        """One skill's entry in the `skills` CLI's own `~/.agents/.skill-lock.json`; field names translate its camelCase JSON to attributes so real """
-        """dot-access replaces string-keyed lookups."""
+        """One skill's entry in the `skills` CLI's own `~/.agents/.skill-lock.json`; field names translate its """
+        """camelCase JSON to attributes so real dot-access replaces string-keyed lookups."""
     )
 
     source: str
@@ -71,22 +77,25 @@ class SkillsConfig(EntrySpec):
 
 
 def lockfile_path() -> Path:
-    """The `skills` CLI's own global lockfile; resolved at call time so it follows become_user's $HOME drop in a forked child."""
+    (
+        """The `skills` CLI's own global lockfile; resolved at call time so it follows become_user's $HOME """
+        """drop in a forked child."""
+    )
     return Path.home() / ".agents" / ".skill-lock.json"
 
 
 def canonical_skills_dir() -> Path:
     (
-        """The CLI's canonical store, where a symlink-mode add puts each skill's files — the source of truth for version reads and CLI-binary linking; """
-        """resolved at call time, same reasoning as lockfile_path."""
+        """The CLI's canonical store, where a symlink-mode add puts each skill's files — the source of truth """
+        """for version reads and CLI-binary linking; resolved at call time, same reasoning as lockfile_path."""
     )
     return Path.home() / ".agents" / "skills"
 
 
 def agent_skills_dir() -> Path:
     (
-        """Claude Code's own skills dir, resolved the way the CLI does (${CLAUDE_CONFIG_DIR:-~/.claude}/skills); a symlink-mode add fills it with """
-        """symlinks into the canonical store."""
+        """Claude Code's own skills dir, resolved the way the CLI does (${CLAUDE_CONFIG_DIR:-~/.claude}/skills); """
+        """a symlink-mode add fills it with symlinks into the canonical store."""
     )
     config_dir = os.environ.get("CLAUDE_CONFIG_DIR", "").strip()
     return (Path(config_dir) if config_dir else Path.home() / ".claude") / "skills"
@@ -94,8 +103,9 @@ def agent_skills_dir() -> Path:
 
 def is_agent_linked(name: str) -> bool:
     (
-        """Whether a skill's agent entry is the symlink into the canonical store that a symlink-mode add creates — anything else (a real-dir copy from """
-        """an old copy-mode install, a dangling or foreign link) is drift, repaired by re-adding the repo."""
+        """Whether a skill's agent entry is the symlink into the canonical store that a symlink-mode add """
+        """creates — anything else (a real-dir copy from an old copy-mode install, a dangling or foreign """
+        """link) is drift, repaired by re-adding the repo."""
     )
     agent_entry = agent_skills_dir() / name
     return (
@@ -115,9 +125,10 @@ def lockfile_skills() -> dict[str, LockfileSkillInfo]:
 
 def read_skill_md_version(skill_dir: Path) -> str | None:
     (
-        """The version declared in SKILL.md's YAML frontmatter, wherever the wild puts it: nested under `metadata:` (zyp-skills, vercel-labs — including """
-        """flow-style `metadata: {"version": ...}`) or at the top level (last30days). A real YAML parse, because a line match false-positives on """
-        """`version:` continuation lines inside plain multi-line descriptions."""
+        """The version declared in SKILL.md's YAML frontmatter, wherever the wild puts it: nested under """
+        """`metadata:` (zyp-skills, vercel-labs — including flow-style `metadata: {"version": ...}`) or at """
+        """the top level (last30days). A real YAML parse, because a line match false-positives on `version:` """
+        """continuation lines inside plain multi-line descriptions."""
     )
     skill_md = skill_dir / "SKILL.md"
     try:
@@ -154,15 +165,19 @@ def read_pyproject_version(skill_dir: Path) -> str | None:
 
 
 def read_skill_version(name: str) -> str | None:
-    """A skill's declared version, from the first manifest that states one: SKILL.md frontmatter, then package.json, then pyproject.toml."""
+    (
+        """A skill's declared version, from the first manifest that states one: SKILL.md frontmatter, then """
+        """package.json, then pyproject.toml."""
+    )
     skill_dir = canonical_skills_dir() / name
     return read_skill_md_version(skill_dir) or read_package_json_version(skill_dir) or read_pyproject_version(skill_dir)
 
 
 def skill_state(name: str, info: LockfileSkillInfo) -> str:
     (
-        """One skill's report value: its declared version when it states one, plus a short content id from the lockfile's folder hash. The hash — not """
-        """`updatedAt`, which the CLI rewrites on every `add` — is what actually moves when the skill's content changed."""
+        """One skill's report value: its declared version when it states one, plus a short content id from """
+        """the lockfile's folder hash. The hash — not `updatedAt`, which the CLI rewrites on every `add` — """
+        """is what actually moves when the skill's content changed."""
     )
     folder_hash = info.skill_folder_hash
     content_id = f"#{folder_hash[:8]}" if folder_hash else (info.updated_at or "?")
@@ -171,7 +186,10 @@ def skill_state(name: str, info: LockfileSkillInfo) -> str:
 
 
 def read_skill_states() -> dict[str, str]:
-    """Every installed skill keyed `<repo>/<skill>`, straight from the lockfile the `skills` CLI already maintains."""
+    (
+        """Every installed skill keyed `<repo>/<skill>`, straight from the lockfile the `skills` CLI already """
+        """maintains."""
+    )
     return {f"{info.source}/{name}": skill_state(name, info) for name, info in lockfile_skills().items()}
 
 
@@ -180,14 +198,18 @@ def skills_for_source(skills: dict[str, LockfileSkillInfo], source: str) -> dict
 
 
 def repo_ref(skills: dict[str, LockfileSkillInfo], repo: str) -> str:
-    """The git ref a repo's skills were installed from (the lockfile records one when the source pinned it), HEAD — the default branch — otherwise."""
+    (
+        """The git ref a repo's skills were installed from (the lockfile records one when the source pinned """
+        """it), HEAD — the default branch — otherwise."""
+    )
     return next((info.ref for info in skills.values() if info.source == repo and info.ref), "HEAD")
 
 
 def find_folder_sha(tree: GithubTree, skill_path: str) -> str | None:
     (
-        """The tree SHA of one skill's folder inside a fetched repo tree — mirrors the skills CLI's getSkillFolderHashFromTree, including the """
-        """root-level-skill case where the repo's own SHA is the folder hash."""
+        """The tree SHA of one skill's folder inside a fetched repo tree — mirrors the skills CLI's """
+        """getSkillFolderHashFromTree, including the root-level-skill case where the repo's own SHA is the """
+        """folder hash."""
     )
     folder = skill_path.replace("\\", "/")
     if folder.lower().endswith("skill.md"):
@@ -207,8 +229,9 @@ def find_folder_sha(tree: GithubTree, skill_path: str) -> str | None:
 
 def fetch_repo_trees(repos: list[str], skills: dict[str, LockfileSkillInfo]) -> dict[str, GithubTree | None]:
     (
-        """One unauthenticated GitHub trees call per repo, concurrently — the same endpoint the skills CLI's own `update` uses. Deliberately no token """
-        """fallback: a rate-limited or unreachable check degrades to 'latest unknown' (refresh-every-run), it never spawns a credential prompt."""
+        """One unauthenticated GitHub trees call per repo, concurrently — the same endpoint the skills CLI's """
+        """own `update` uses. Deliberately no token fallback: a rate-limited or unreachable check degrades to """
+        """'latest unknown' (refresh-every-run), it never spawns a credential prompt."""
     )
 
     def fetch_one(repo: str) -> str:
@@ -225,8 +248,9 @@ def fetch_repo_trees(repos: list[str], skills: dict[str, LockfileSkillInfo]) -> 
 
 def upstream_skill_state(name: str, info: LockfileSkillInfo, tree: GithubTree) -> str | None:
     (
-        """What one skill's report value would read after a sync, judged from upstream: the installed state when the upstream folder SHA matches the """
-        """lockfile (nothing to do), the new short content id when it moved, unknown when the lock entry or tree can't say."""
+        """What one skill's report value would read after a sync, judged from upstream: the installed state """
+        """when the upstream folder SHA matches the lockfile (nothing to do), the new short content id when """
+        """it moved, unknown when the lock entry or tree can't say."""
     )
     locked_hash, skill_path = info.skill_folder_hash, info.skill_path
     if not locked_hash or not skill_path:
@@ -238,7 +262,10 @@ def upstream_skill_state(name: str, info: LockfileSkillInfo, tree: GithubTree) -
 
 
 def describe_skill_changes(before: dict[str, str], after: dict[str, str]) -> str:
-    """A per-skill new/updated/unchanged breakdown for one repo's sync, read from the lockfile snapshot taken before and after `skills add` ran."""
+    (
+        """A per-skill new/updated/unchanged breakdown for one repo's sync, read from the lockfile snapshot """
+        """taken before and after `skills add` ran."""
+    )
     new = sorted(set(after) - set(before))
     updated = sorted(name for name in after.keys() & before.keys() if after[name] != before[name])
     unchanged = sorted(name for name in after.keys() & before.keys() if after[name] == before[name])
@@ -252,8 +279,8 @@ def describe_skill_changes(before: dict[str, str], after: dict[str, str]) -> str
 
 def bin_paths(package_json: Path) -> list[str]:
     (
-        """The script path(s) a skill's package.json declares as `bin` — a dict of {name: path} for one-or-many named binaries, or a bare string for """
-        """a single binary named after the package itself."""
+        """The script path(s) a skill's package.json declares as `bin` — a dict of {name: path} for one-or-many """
+        """named binaries, or a bare string for a single binary named after the package itself."""
     )
     try:
         bin_field = json.loads(package_json.read_text(encoding="utf-8")).get("bin")
@@ -267,10 +294,11 @@ def bin_paths(package_json: Path) -> list[str]:
 
 def link_cli_binary(bun: Path, name: str) -> None:
     (
-        """A skill of the "cli" kind ships its own package.json `bin`; the skills CLI installs the files but never chmods or links the binary onto """
-        """PATH. Mirror zyp-skills' skillman.py: chmod the script executable (git doesn't preserve the bit) and `bun link` from within the skill's """
-        """canonical store directory. Best-effort and idempotent, like bun_cook's node shim — runs on every sync, so a converged re-run restores the """
-        """link if it was removed."""
+        """A skill of the "cli" kind ships its own package.json `bin`; the skills CLI installs the files but """
+        """never chmods or links the binary onto PATH. Mirror zyp-skills' skillman.py: chmod the script """
+        """executable (git doesn't preserve the bit) and `bun link` from within the skill's canonical store """
+        """directory. Best-effort and idempotent, like bun_cook's node shim — runs on every sync, so a """
+        """converged re-run restores the link if it was removed."""
     )
     skill_dir = canonical_skills_dir() / name
     package_json = skill_dir / "package.json"
@@ -301,8 +329,8 @@ class SkillsCook(VersionedCook):
     @override
     def list_requested(self) -> list[str]:
         (
-            """Per-skill keys for every repo the lockfile already knows, the bare repo as a placeholder otherwise — its skills are unknowable before """
-            """the first `skills add`."""
+            """Per-skill keys for every repo the lockfile already knows, the bare repo as a placeholder """
+            """otherwise — its skills are unknowable before the first `skills add`."""
         )
         skills = lockfile_skills()
         requested: list[str] = []
@@ -322,9 +350,10 @@ class SkillsCook(VersionedCook):
     @override
     def list_reportable(self, requested: list[str], installed_after: dict[str, str], /) -> list[str]:
         (
-            """Row keys per declared repo: every skill installed after the sync — including one a re-add newly landed, which no requested key could """
-            """name up front — plus any requested key nothing landed for (a fresh-repo placeholder whose add failed, a skill that vanished), so """
-            """failures keep their rows."""
+            """Row keys per declared repo: every skill installed after the sync — including one a re-add newly """
+            """landed, which no requested key could name up front — plus any requested key nothing landed for """
+            """(a fresh-repo placeholder whose add failed, a skill that vanished), so failures keep their """
+            """rows."""
         )
         reportable: list[str] = []
         for repo in self.repos:
@@ -336,9 +365,10 @@ class SkillsCook(VersionedCook):
     @override
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         (
-            """Upstream state per requested key, from one trees call per already-installed repo. A fresh-repo placeholder stays unknown (its skills """
-            """are unknowable before the first add), as does every key of an unreachable repo and every drifted skill (its agent entry isn't the """
-            """store symlink) — unknown falls back to refresh-every-run."""
+            """Upstream state per requested key, from one trees call per already-installed repo. A fresh-repo """
+            """placeholder stays unknown (its skills are unknowable before the first add), as does every key """
+            """of an unreachable repo and every drifted skill (its agent entry isn't the store symlink) — """
+            """unknown falls back to refresh-every-run."""
         )
         skills = lockfile_skills()
         installed_repos = [repo for repo in self.repos if any(info.source == repo for info in skills.values())]
@@ -388,7 +418,10 @@ class SkillsCook(VersionedCook):
         return SyncOutcome("ok", "; ".join(f"{repo} ({change})" for repo, change in changes.items()))
 
     def _repo_of(self, target: str) -> str:
-        """The declared repo a diff key belongs to — itself for a fresh-repo placeholder, its `<repo>/` prefix for a per-skill key."""
+        (
+            """The declared repo a diff key belongs to — itself for a fresh-repo placeholder, its `<repo>/` """
+            """prefix for a per-skill key."""
+        )
         return next(repo for repo in self.repos if target == repo or target.startswith(f"{repo}/"))
 
     @staticmethod

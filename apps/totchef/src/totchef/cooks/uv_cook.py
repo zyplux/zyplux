@@ -1,6 +1,6 @@
 (
-    """VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run concurrently behind uv's own locks. Runs as """
-    """the invoking user; depends on [url]."""
+    """VersionedCook for [uv] — Python CLI tools in isolated venvs via `uv tool install`/`upgrade`, run """
+    """concurrently behind uv's own locks. Runs as the invoking user; depends on [url]."""
 )
 
 import json
@@ -30,7 +30,10 @@ def fetch_pypi_latest(name: str) -> str | None:
 
 
 def parse_tool_list(output: str) -> dict[str, str]:
-    """Map tool name -> version from `uv tool list`: each tool is a column-0 `<name> v<version>` line; indented `- <bin>` lines are skipped."""
+    (
+        """Map tool name -> version from `uv tool list`: each tool is a column-0 `<name> v<version>` line; """
+        """indented `- <bin>` lines are skipped."""
+    )
     versions: dict[str, str] = {}
     for line in output.splitlines():
         if not line or line[0].isspace() or line.startswith("-"):
