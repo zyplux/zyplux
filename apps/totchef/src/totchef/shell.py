@@ -33,11 +33,10 @@ def resolve_workdir(cwd: Path | None) -> Path:
 
 class RunOptions(TypedDict, total=False):
     (
-        """Knobs `run` takes beyond the command and `text` (plain, so Literal overloads discriminate the """
-        """return type); bundled to stay under the arg limit."""
+        """Knobs `run` takes beyond the command, `text`, and `stdin` (`stdin`'s type tracks `text` via the """
+        """overloads below, so it's kept out of this bundle); bundled to stay under the arg limit."""
     )
 
-    stdin: bytes | str | None
     check: bool
     timeout: float | None
     note: str
@@ -45,11 +44,15 @@ class RunOptions(TypedDict, total=False):
 
 
 @overload
-def run(*cmd: str, text: Literal[True] = True, **options: Unpack[RunOptions]) -> subprocess.CompletedProcess[str]: ...
-@overload
-def run(*cmd: str, text: Literal[False], **options: Unpack[RunOptions]) -> subprocess.CompletedProcess[bytes]: ...
 def run(
-    *cmd: str, text: bool = True, **options: Unpack[RunOptions]
+    *cmd: str, text: Literal[True] = True, stdin: str | None = None, **options: Unpack[RunOptions]
+) -> subprocess.CompletedProcess[str]: ...
+@overload
+def run(
+    *cmd: str, text: Literal[False], stdin: bytes | None = None, **options: Unpack[RunOptions]
+) -> subprocess.CompletedProcess[bytes]: ...
+def run(
+    *cmd: str, text: bool = True, stdin: bytes | str | None = None, **options: Unpack[RunOptions]
 ) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
     (
         """Run a command to completion, capturing stdout+stderr; the one-shot half of the bash boundary. """
@@ -60,7 +63,7 @@ def run(
         logger.info(note)
     return subprocess.run(
         list(cmd),
-        input=options.get("stdin"),
+        input=stdin,
         capture_output=True,
         text=text,
         check=options.get("check", False),
