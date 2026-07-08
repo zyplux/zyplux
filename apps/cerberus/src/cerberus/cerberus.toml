@@ -3,14 +3,7 @@ default_recipe_marker = "just --list"
 [max_duplication]
 threshold = 2
 pattern = "**/*.{ts,tsx,py}"
-ignore = [
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.venv/**",
-    "**/coverage/**",
-    "**/reference_clones/**",
-    "**/graphify-out/**",
-]
+ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 
 [aliases.required]
 i = "install"

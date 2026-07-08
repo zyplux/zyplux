@@ -27,9 +27,7 @@ _CUSTOM_SELECTION_TOML = (
     'ignore = ["**/target/**"]\n'
 )
 _DEFAULT_PATTERN = "**/*.{ts,tsx,py}"
-_DEFAULT_IGNORE = (
-    "**/node_modules/**,**/dist/**,**/.venv/**,**/coverage/**,**/reference_clones/**,**/graphify-out/**"
-)
+_DEFAULT_IGNORE = "**/dist/**,**/.venv/**,**/*.gen.*"
 _REPORT_DIR_PLACEHOLDER = "<report-dir>"
 
 
@@ -58,7 +56,7 @@ _LANGUAGE_OVER_THRESHOLD_REPORT = _report(
 )
 
 
-def _argv(pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE) -> list[str]:
+def _argv(scan_roots: list[str], pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE) -> list[str]:
     return [
         "bunx",
         "jscpd",
@@ -69,19 +67,22 @@ def _argv(pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE) -> lis
         "--reporters",
         "json",
         "--silent",
+        "--absolute",
         "--output",
         _REPORT_DIR_PLACEHOLDER,
-        ".",
+        *scan_roots,
     ]
 
 
 def _mask_report_dir(calls: list[tuple[list[str], Path | None]]) -> list[tuple[list[str], Path | None]]:
     masked = []
     for argv, cwd in calls:
-        argv = list(argv)
-        report_dir_idx = argv.index("--output") + 1
-        argv[report_dir_idx] = _REPORT_DIR_PLACEHOLDER
-        masked.append((argv, cwd))
+        masked_argv = list(argv)
+        report_dir_idx = masked_argv.index("--output") + 1
+        report_dir = masked_argv[report_dir_idx]
+        masked_argv[report_dir_idx] = _REPORT_DIR_PLACEHOLDER
+        masked_cwd = Path(_REPORT_DIR_PLACEHOLDER) if cwd == Path(report_dir) else cwd
+        masked.append((masked_argv, masked_cwd))
     return masked
 
 
@@ -107,15 +108,26 @@ class ProcDouble(Protocol):
 
 
 @pytest.fixture
+def repo_root(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
+@pytest.fixture
 def run_max_duplication(
-    repo: Repo, ctx: Context, run_check: RunCheck, make_context: MakeContext, tmp_path: Path
+    repo: Repo, run_check: RunCheck, make_context: MakeContext, tmp_path: Path, repo_root: Path
 ) -> RunMaxDuplication:
-    def _run(*, config_toml: str | None = None) -> CheckResult:
-        if config_toml is None:
-            return run_check(CHECK_ID, repo, ctx)
-        config_path = tmp_path / "cerberus.toml"
-        config_path.write_text(config_toml)
-        return run_check(CHECK_ID, repo, make_context(Path(), config_path=config_path))
+    def _run(*, config_toml: str | None = None, files: dict[str, str] | None = None) -> CheckResult:
+        for path, content in (files or {}).items():
+            target = repo_root / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        config_path = None
+        if config_toml is not None:
+            config_path = tmp_path / "cerberus.toml"
+            config_path.write_text(config_toml)
+        return run_check(CHECK_ID, repo, make_context(repo_root, config_path=config_path))
 
     return _run
 
@@ -142,15 +154,19 @@ def test_28_1_2_fails_when_one_language_exceeds_the_threshold_even_though_the_to
 
 
 def test_28_1_3_fails_with_the_exit_code_when_jscpd_itself_exits_non_zero(
-    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_max_duplication: RunMaxDuplication,
+    fake_proc: ProcDouble,
+    finding: type[Finding],
+    status: type[Status],
+    repo_root: Path,
 ) -> None:
     fake_proc.serve("jscpd", returncode=3)
     result = run_max_duplication()
     assert result.findings == [
         finding(
             status.FAIL,
-            f"jscpd exited 3; run `bunx jscpd --pattern {_DEFAULT_PATTERN} --ignore {_DEFAULT_IGNORE} .`"
-            " locally for details",
+            f"jscpd exited 3; run `bunx jscpd --pattern {_DEFAULT_PATTERN} --ignore {_DEFAULT_IGNORE}"
+            f" {repo_root.resolve()}` locally for details",
         )
     ]
 
@@ -189,12 +205,13 @@ def test_28_2_2_reads_reports_with_flat_per_language_stats(
     assert result.detail == "ts: 40 (0.50%)"
 
 
-def test_28_3_1_runs_jscpd_at_the_repo_root_with_the_default_selection(
-    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble
+def test_28_3_1_scans_the_repo_root_with_the_default_selection_and_cwd_shielded_from_repo_config(
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, repo_root: Path
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_max_duplication()
-    assert _mask_report_dir(fake_proc.calls) == [(_argv(), Path())]
+    expected = (_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
+    assert _mask_report_dir(fake_proc.calls) == [expected]
 
 
 def test_28_3_2_enforces_a_configured_threshold_per_language(
@@ -206,7 +223,7 @@ def test_28_3_2_enforces_a_configured_threshold_per_language(
 
 
 def test_28_3_3_defaults_the_threshold_to_two_percent_when_the_config_omits_it(
-    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, status: type[Status]
 ) -> None:
     fake_proc.serve("jscpd", output_files=_LANGUAGE_OVER_THRESHOLD_REPORT)
     result = run_max_duplication(config_toml=_THRESHOLDLESS_TOML)
@@ -215,8 +232,37 @@ def test_28_3_3_defaults_the_threshold_to_two_percent_when_the_config_omits_it(
 
 
 def test_28_3_4_passes_a_configured_pattern_and_ignore_through_to_jscpd(
-    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, repo_root: Path
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_max_duplication(config_toml=_CUSTOM_SELECTION_TOML)
-    assert _mask_report_dir(fake_proc.calls) == [(_argv(pattern="**/*.rs", ignore="**/target/**"), Path())]
+    expected = _argv([str(repo_root.resolve())], pattern="**/*.rs", ignore="**/target/**")
+    assert _mask_report_dir(fake_proc.calls) == [(expected, Path(_REPORT_DIR_PLACEHOLDER))]
+
+
+def test_28_4_1_scans_only_the_directories_the_workspace_manifests_register(
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, repo_root: Path
+) -> None:
+    fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
+    (repo_root / "apps" / "web").mkdir(parents=True)
+    (repo_root / "libs" / "py").mkdir(parents=True)
+    (repo_root / "docs" / "scratch").mkdir(parents=True)
+    run_max_duplication(
+        files={
+            "package.json": json.dumps({"workspaces": {"packages": ["apps/*"]}}),
+            "pyproject.toml": '[tool.uv.workspace]\nmembers = ["libs/py"]\n',
+        }
+    )
+    root = repo_root.resolve()
+    expected_roots = [str(root / "apps" / "web"), str(root / "libs" / "py")]
+    assert _mask_report_dir(fake_proc.calls) == [(_argv(expected_roots), Path(_REPORT_DIR_PLACEHOLDER))]
+
+
+def test_28_4_2_falls_back_to_the_repo_root_when_no_manifest_declares_workspaces(
+    run_max_duplication: RunMaxDuplication, fake_proc: ProcDouble, repo_root: Path
+) -> None:
+    fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
+    run_max_duplication(files={"package.json": json.dumps({"name": "demo"})})
+    assert _mask_report_dir(fake_proc.calls) == [
+        (_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
+    ]

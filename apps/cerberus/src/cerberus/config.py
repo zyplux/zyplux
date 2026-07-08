@@ -47,19 +47,7 @@ def _from_dict(data: dict[str, Any]) -> Config:
         ci_required_python=tuple(ci_required.get("python", [])),
         max_duplication_threshold=max_duplication.get("threshold", 2),
         max_duplication_pattern=max_duplication.get("pattern", "**/*.{ts,tsx,py}"),
-        max_duplication_ignore=tuple(
-            max_duplication.get(
-                "ignore",
-                [
-                    "**/node_modules/**",
-                    "**/dist/**",
-                    "**/.venv/**",
-                    "**/coverage/**",
-                    "**/reference_clones/**",
-                    "**/graphify-out/**",
-                ],
-            )
-        ),
+        max_duplication_ignore=tuple(max_duplication.get("ignore", ["**/dist/**", "**/.venv/**", "**/*.gen.*"])),
     )
 
 
