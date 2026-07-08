@@ -21,9 +21,15 @@ _LIB_MANIFEST = '[project]\nname = "demo-lib"\n\n[tool.uv.build-backend]\nmodule
 _LIB_MANIFEST_EMPTY_SCRIPTS = (
     '[project]\nname = "demo-lib"\n\n[project.scripts]\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
 )
-_CLI_MANIFEST = '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n[tool.uv.build-backend]\nmodule-name = "demo"\n'
+_CLI_MANIFEST = (
+    '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n'
+    '[tool.uv.build-backend]\nmodule-name = "demo"\n'
+)
 
-_LIB_INIT = '"""Demo library."""\n\nfrom __future__ import annotations\n\n\ndef helper() -> str:\n    return "hi"\n\n\ndef _internal() -> None:\n    return None\n'
+_LIB_INIT = (
+    '"""Demo library."""\n\nfrom __future__ import annotations\n\n\ndef helper() -> str:\n    return "hi"\n\n\n'
+    "def _internal() -> None:\n    return None\n"
+)
 
 _STORY_FILE = "packages/lib/tests/stories/test_1_first.py"
 _BASE_FILES = {
@@ -119,7 +125,10 @@ def test_24_2_5_allows_a_story_test_to_import_a_third_party_module_directly(
 def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded = "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from demolib.internal import Thing\n"
+    guarded = (
+        "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n    from demolib.internal import Thing\n"
+    )
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
@@ -127,7 +136,10 @@ def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(
 def test_24_2_7_passes_a_disallowed_import_guarded_under_a_dotted_type_checking_attribute(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded = "from __future__ import annotations\n\nimport typing\n\nif typing.TYPE_CHECKING:\n    from demolib.internal import Thing\n"
+    guarded = (
+        "from __future__ import annotations\n\nimport typing\n\n"
+        "if typing.TYPE_CHECKING:\n    from demolib.internal import Thing\n"
+    )
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 

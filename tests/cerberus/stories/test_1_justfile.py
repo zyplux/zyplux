@@ -27,7 +27,10 @@ INSTALL_RECIPE = (
     "# Install both workspaces: bun + uv.\ninstall:\n    bun install\n    uv sync --all-packages --all-groups\n\n"
 )
 DEFAULT_RECIPE = "# List available recipes.\ndefault:\n    @just --list\n\n"
-CLEAN_RECIPE = "# Remove gitignored build artifacts and caches from all workspaces.\nclean *flags:\n    bun run cz clean {{ flags }}\n"
+CLEAN_RECIPE = (
+    "# Remove gitignored build artifacts and caches from all workspaces.\n"
+    "clean *flags:\n    bun run cz clean {{ flags }}\n"
+)
 
 UNPARSEABLE = "recipe without colon\n"
 MISSING_REQUIRED_ALIAS = CONFORMING.replace("alias k := knip\n", "")
@@ -74,7 +77,8 @@ MARKERS_WITH_TRAILING_WS = CONFORMING.replace("# BASELINE\n", "# BASELINE  \n").
 ) + ("\nsmoke:\n    echo ok\n")
 UNFIXABLE_DUPLICATE_RECIPE = CONFORMING.replace(INSTALL_RECIPE, "") + "\ninstall:\n    bun install\n"
 FREE_FORM_CUSTOM_TAIL = CONFORMING + (
-    "\nset dotenv-load := true\n\ngreeting := 'hello'\n\nalias s := smoke\n\n# Smoke-test the checkout.\nsmoke:\n    echo {{ greeting }}\n"
+    "\nset dotenv-load := true\n\ngreeting := 'hello'\n\nalias s := smoke\n\n"
+    "# Smoke-test the checkout.\nsmoke:\n    echo {{ greeting }}\n"
 )
 
 CHECK_ID = "justfile"
@@ -163,7 +167,8 @@ def test_1_3_1_fails_when_the_check_recipe_runs_its_steps_out_of_order(
         status.FAIL,
         [
             (
-                "`check` dependencies ['install', 'lint', 'knip', 'typecheck', 'test'] must contain ['install', 'knip', 'typecheck', 'lint', 'test'] in order"
+                "`check` dependencies ['install', 'lint', 'knip', 'typecheck', 'test'] must contain "
+                "['install', 'knip', 'typecheck', 'lint', 'test'] in order"
             )
         ],
     )
@@ -308,7 +313,8 @@ def test_1_10_2_fails_naming_the_first_line_that_drifts_from_the_canonical_basel
     assert result.status is status.FAIL
     assert baseline_messages(result) == [
         (
-            f"baseline drift at line {DRIFTED_INSTALL_LINE}: expected `    bun install`, actual `    bun install --frozen-lockfile`"
+            f"baseline drift at line {DRIFTED_INSTALL_LINE}: expected `    bun install`, "
+            "actual `    bun install --frozen-lockfile`"
         )
     ]
 

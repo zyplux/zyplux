@@ -51,7 +51,8 @@ def test_18_2_2_fails_when_there_is_no_tool_coverage_report_fail_under(
     assert result.findings == [
         finding(
             status.FAIL,
-            "pyproject.toml has no [tool.coverage.report] fail_under; pytest coverage must enforce a floor of at least 90%",
+            "pyproject.toml has no [tool.coverage.report] fail_under; "
+            "pytest coverage must enforce a floor of at least 90%",
         )
     ]
 
