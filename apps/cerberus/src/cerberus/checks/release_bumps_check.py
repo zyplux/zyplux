@@ -60,10 +60,15 @@ def _parse_targets(manifest: str) -> list[_Target]:
     targets = []
     for entry in raw:
         version = entry["version"]
+        kind = entry["kind"]
+        if kind not in _FETCHERS:
+            label = entry.get("label", "?")
+            failure = f"target {label!r} has unknown kind {kind!r} (expected one of {sorted(_FETCHERS)})"
+            raise ValueError(failure)
         targets.append(
             _Target(
                 label=entry["label"],
-                kind=entry["kind"],
+                kind=kind,
                 tag_prefix=entry["tag_prefix"],
                 version_file=version["file"],
                 version_json=version.get("json"),

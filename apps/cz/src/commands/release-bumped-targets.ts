@@ -82,7 +82,12 @@ const publish = async (target: Target, remoteHead: string) => {
     console.log(`Run ${runId} succeeded`);
   } catch (error) {
     console.error(`Rolling back release ${target.tag} (publish did not succeed) ...`);
-    await $.gh.release.delete(target.tag, { cleanupTag: true, yes: true });
+    try {
+      await $.gh.release.delete(target.tag, { cleanupTag: true, yes: true });
+    } catch (rollbackError) {
+      const reason = rollbackError instanceof Error ? rollbackError.message : String(rollbackError);
+      console.error(`Rollback of ${target.tag} also failed: ${reason}`);
+    }
     throw error;
   }
 

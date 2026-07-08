@@ -36,7 +36,7 @@
     },
     "packages/eslint-config": {
       "name": "@zyplux/eslint-config",
-      "version": "0.6.6",
+      "version": "0.6.7",
       "dependencies": {
         "@eslint/js": "catalog:",
         "@typescript-eslint/type-utils": "catalog:",

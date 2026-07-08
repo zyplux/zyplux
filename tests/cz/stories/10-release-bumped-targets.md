@@ -30,6 +30,8 @@
 
 ### 10.3.7 rejects when the workflow completes without reporting a conclusion, rolling back the release
 
+### 10.3.8 reports the original publish failure, not the rollback failure, when rollback also fails
+
 ## 10.4 publishing multiple pending targets
 
 ### 10.4.1 publishes all pending targets concurrently, each watching its own tagged workflow run

@@ -145,6 +145,19 @@ def test_14_1_3_errors_when_the_manifest_has_no_target_array(
     ]
 
 
+def test_14_1_4_errors_when_a_target_has_an_unknown_kind(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_release_bumps(manifest=MANIFEST.replace('kind = "npm"', 'kind = "cargo"'))
+    assert result.findings == [
+        finding(
+            status.ERROR,
+            "release-targets.toml is malformed: target '@zyplux/widget' has unknown kind 'cargo' "
+            "(expected one of ['ghcr', 'npm', 'pypi'])",
+        )
+    ]
+
+
 def test_14_2_1_fails_when_the_version_file_is_missing(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:

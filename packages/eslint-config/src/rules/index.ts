@@ -12,7 +12,7 @@ import { noTypeAnnotations } from './type-aware/no-type-annotations';
 import { noUnvalidatedJson } from './type-aware/no-unvalidated-json';
 import { noZodCustom } from './type-aware/no-zod-custom';
 
-const upstreamPreferArrowFunctions = preferArrowFunctions.rules?.['prefer-arrow-functions'];
+const upstreamPreferArrowFunctions = preferArrowFunctions.rules['prefer-arrow-functions'];
 if (!upstreamPreferArrowFunctions) {
   throw new Error('eslint-plugin-prefer-arrow-functions: "prefer-arrow-functions" rule missing');
 }

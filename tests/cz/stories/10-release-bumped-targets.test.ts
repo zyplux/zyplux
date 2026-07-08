@@ -246,6 +246,32 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'unknown'"));
       expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
+
+    test('10.3.8 reports the original publish failure, not the rollback failure, when rollback also fails', async ({
+      cz,
+      findTarget,
+      logs,
+      registries,
+      repo,
+      shell,
+    }) => {
+      repo.syncMain('sha-head');
+      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
+      shell.on('gh release list', 'false');
+      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
+      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+      shell.on('gh run view 999', 'completed\nfailure');
+      shell.on('gh release delete', () => {
+        throw new Error('gh: permission denied');
+      });
+      await findTarget('zyplux-cerberus');
+
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+        '1 of 1 targets failed to publish: zyplux-cerberus',
+      );
+      expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
+      expect(logs.errorLines).toContainEqual(expect.stringContaining('Rollback of cerberus-v'));
+    });
   });
 
   describe('10.4 publishing multiple pending targets', () => {

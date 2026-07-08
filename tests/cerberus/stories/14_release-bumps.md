@@ -8,6 +8,8 @@
 
 ### 14.1.3 errors when the manifest has no target array
 
+### 14.1.4 errors when a target has an unknown kind
+
 ## 14.2 reading a target's current version
 
 ### 14.2.1 fails when the version file is missing
