@@ -61,8 +61,9 @@ export const contractsOnlySchemas = createRule<[], MessageId>({
       if (node.exportKind === 'type') return;
       const { declaration } = node;
       if (declaration === null) {
+        if (node.source !== null) return;
         for (const specifier of node.specifiers) {
-          if (specifier.exportKind === 'type' || node.source !== null) continue;
+          if (specifier.exportKind === 'type') continue;
           if (!isSchema(specifier.local)) context.report({ messageId: 'nonSchemaExport', node: specifier });
         }
         return;
