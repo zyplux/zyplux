@@ -46,7 +46,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     fail_under = _fail_under(config)
     if fail_under is None:
         res.fail(
-            f"{PYPROJECT} has no [tool.coverage.report] fail_under; pytest coverage must enforce a floor of at least {MIN_COVERAGE}%"
+            f"{PYPROJECT} has no [tool.coverage.report] fail_under; "
+            f"pytest coverage must enforce a floor of at least {MIN_COVERAGE}%"
         )
     elif not isinstance(fail_under, (int, float)):
         res.fail(f"{PYPROJECT} [tool.coverage.report] fail_under must be a number; found {fail_under!r}")

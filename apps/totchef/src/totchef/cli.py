@@ -1,4 +1,4 @@
-"""totchef CLI: find the recipe, re-exec as root for an apply, run the cooks, report. Exit codes: 0 ok, 75 soft fail, 1 hard fail (aborts)."""
+"""totchef CLI: find recipe, re-exec as root, run cooks, report. Exit: 0 ok, 75 soft fail, 1 hard fail (aborts)."""
 
 import os
 import sys
@@ -45,13 +45,16 @@ RecipeOption = Annotated[
     typer.Option(
         "--recipe",
         "-r",
-        help="Recipe file or repo dir (default: a recognized name from the cwd up, then a recipe pinned by `totchef init`).",
+        help=(
+            "Recipe file or repo dir (default: a recognized name from the cwd up, "
+            "then a recipe pinned by `totchef init`)."
+        ),
     ),
 ]
 
 
 def prepare(explicit: Path | None) -> Path:
-    """Resolve the recipe and pin its sibling assets dir (totchef_files/) and cooks dir (totchef_cooks/), so cooks/registry see recipe-local files first."""
+    """Resolve the recipe; pin its sibling totchef_files/ and totchef_cooks/ dirs so cooks/registry see local files."""
     path = find_recipe(explicit)
     harness.set_files_dir(find_files_dir(path))
     registry.set_recipe_cooks_dir(find_cooks_dir(path))
@@ -59,7 +62,7 @@ def prepare(explicit: Path | None) -> Path:
 
 
 def ensure_root(recipe_path: Path) -> None:
-    """Re-exec under sudo if not root, pinning the recipe and log path (SUDO_USER lets become_user drop back). Uses absolute `sys.executable`, frozen or not."""
+    """Re-exec under sudo if not root, pinning recipe/log path (SUDO_USER lets become_user drop back)."""
     if os.geteuid() == 0:
         return
     os.environ[RECIPE_ENV] = str(recipe_path)
@@ -73,12 +76,12 @@ def load_recipe(recipe_path: Path) -> RecipeConfig:
 
 
 def cook_node(node_id: str, name: str) -> str:
-    """The report's identity column: cook (recipe section) dotted with entry, matching `section.entry` ids in the logs (e.g. `apt_pkg.code`, `url.rustup`)."""
+    """The report's identity column: cook dotted with entry, matching `section.entry` ids in the logs."""
     return f"{node_id.split('.', 1)[0]}.{name}"
 
 
 def summary_rows(unchanged: int, elapsed: float | None) -> list[dict[str, str]]:
-    """The report's footer rows (under a divider): how many resources were left untouched and the total wall-clock — empty when there's nothing to total."""
+    """The report's footer rows: resources left untouched and the total wall-clock — empty if nothing to total."""
     if not unchanged and elapsed is None:
         return []
     return [
@@ -93,7 +96,7 @@ def summary_rows(unchanged: int, elapsed: float | None) -> list[dict[str, str]]:
 
 
 def report_row(node_id: str, row: ReportRow) -> dict[str, str]:
-    """One report row as the flat dict the table/TOON render from: cook-node identity plus before/current/latest/action cells (past, present, target, verb)."""
+    """One report row as the flat dict the table/TOON render from: identity plus before/current/latest/action cells."""
     return {
         "cook-node": cook_node(node_id, row.name),
         "before": row.before,
@@ -110,7 +113,7 @@ def log_report_block(
     title: str,
     nothing_changed: str,
 ) -> None:
-    """Inline mode logs the report as a structured block: the full node table and the terse operator view, between sentinels for clean machine readback."""
+    """Inline mode logs the report as a structured block: full node table and terse view, between sentinels."""
     full = encode(all_rows) if all_rows else ""
     terse = encode(shown_rows + summary) if shown_rows else nothing_changed
     write_log(f"##totchef-report##\ntitle={title}\n##full##\n{full}\n##shown##\n{terse}\n##end##\n")
@@ -144,7 +147,7 @@ def print_report(
 
 
 def preview_plan(config: RecipeConfig) -> None:
-    """Before a real run, print the plan table from a probe-only pass; the probe's cook logs go to the file only, so the terminal shows just the table."""
+    """Before a real run, print the plan table from a probe-only pass; its logs go to the file, not the terminal."""
     set_terminal_echo(enabled=False)
     results = run_recipe(config, dry_run=True)
     drain_logs()
@@ -153,7 +156,7 @@ def preview_plan(config: RecipeConfig) -> None:
 
 
 def _run_and_report(config: RecipeConfig, log_file: Path, start: float, *, dry_run: bool) -> int | None:
-    """Run the recipe to completion and print its report; returns the exit code it earns (None if clean, else 1 for hard failure, SOFT_FAIL_EXIT for soft)."""
+    """Run the recipe to completion and print its report; returns None if clean, 1 hard failure, SOFT_FAIL_EXIT soft."""
     results = run_recipe(config, dry_run=dry_run)
     append_removal_notices(config, results)
     drain_logs()
@@ -186,7 +189,7 @@ def _run_and_report(config: RecipeConfig, log_file: Path, start: float, *, dry_r
 
 
 def apply(recipe_path: Path, *, dry_run: bool) -> None:
-    """Load and validate the recipe, then run it: escalates to root, previews the plan, reports, signals failure via the exit code (a crash still exits 1)."""
+    """Load and validate the recipe, then run it: escalates to root, previews the plan, reports, signals exit code."""
     config = load_recipe(recipe_path)
     validate(config)
 
@@ -244,7 +247,7 @@ def init(
         Path | None, typer.Argument(help="Recipe file or repo directory to pin; omit to use the one discovered here.")
     ] = None,
 ) -> None:
-    """Pin a recipe so `totchef up` finds it anywhere — saves its path to ~/.config/totchef/config.toml. A symlink is pinned as given, not dereferenced."""
+    """Pin a recipe so `totchef up` finds it anywhere — saves to ~/.config/totchef/config.toml; symlink pinned as-is."""
     if recipe is not None:
         path = resolve_explicit(recipe, follow_symlinks=False)
     else:
@@ -265,7 +268,7 @@ def version_callback(*, value: bool) -> None:
 
 
 def list_cooks_callback(*, value: bool) -> None:
-    """Print every resolvable cook — section, scope (root/user), origin (built-in/plugin/local) — as TOON; best-effort resolves a recipe for its plugins."""
+    """Print every resolvable cook — section, scope (root/user), origin (built-in/plugin/local) — as TOON."""
     if value:
         if (path := try_find_recipe()) is not None:
             registry.set_recipe_cooks_dir(find_cooks_dir(path))

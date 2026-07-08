@@ -34,7 +34,10 @@ if TYPE_CHECKING:
     from cerberus.model import Repo
 
 ID = "knip-config"
-SUMMARY = "knip config is standalone (never inline in package.json) and its prod pass exempts exactly the repo's published npm targets"
+SUMMARY = (
+    "knip config is standalone (never inline in package.json) and its prod pass exempts "
+    "exactly the repo's published npm targets"
+)
 SCOPE = Scope.CONTENT
 
 PACKAGE_JSON = "package.json"
@@ -43,7 +46,10 @@ PROD_CONFIG = "knip.prod.json"
 _RELEASE_TARGETS = "release-targets.toml"
 _REQUIRED_IGNORE_WORKSPACES = ["tests/*"]
 _PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces"})
-_OK_MESSAGE = "knip.json (if any) matches the repo's allowlisted config; knip.prod.json exactly exempts every published npm target"
+_OK_MESSAGE = (
+    "knip.json (if any) matches the repo's allowlisted config; "
+    "knip.prod.json exactly exempts every published npm target"
+)
 
 # A repo earns a standalone knip.json only by being listed here, with its exact allowed content
 # ($schema aside — every repo may add it for editor support without it being part of the diff).
@@ -124,7 +130,8 @@ def _check_workspace_exemptions(repo: Repo, ctx: Context, parsed: dict[str, Any]
     exempted, malformed = _workspace_exemptions(workspaces)
     if malformed:
         res.fail(
-            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: {", ".join(sorted(malformed))}'
+            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: '
+            f"{', '.join(sorted(malformed))}"
         )
     missing = sorted(published - exempted)
     if missing:

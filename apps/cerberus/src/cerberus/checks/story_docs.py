@@ -318,7 +318,8 @@ def _check_title_drift(res: CheckResult, group: _Group, headers: dict[str, Heade
         header_title, test_title = headers[story_id].title, group.tests[story_id].title
         if word_sequence(header_title) != word_sequence(test_title):
             res.fail(
-                f"{group.directory}: header/test title drift for {story_id} — header={header_title!r} test={test_title!r}"
+                f"{group.directory}: header/test title drift for {story_id} — "
+                f"header={header_title!r} test={test_title!r}"
             )
 
 
