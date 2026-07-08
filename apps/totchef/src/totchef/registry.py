@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+import pwd
 import sys
 from dataclasses import dataclass
 from functools import cache
@@ -30,9 +31,11 @@ def set_recipe_cooks_dir(path: Path | None) -> None:
 
 
 def config_cooks_dir() -> Path:
-    """The user config dir scanned for loose `<section>_cook.py` plugins, honoring XDG_CONFIG_HOME."""
-    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
-    return Path(base) / "totchef" / "cooks"
+    """The user config dir for loose `<section>_cook.py` plugins, honoring XDG_CONFIG_HOME; SUDO_USER-resolved."""
+    sudo_user = os.environ.get("SUDO_USER")
+    home = Path(pwd.getpwnam(sudo_user).pw_dir) if sudo_user else Path.home()
+    base = Path(os.environ["XDG_CONFIG_HOME"]) if os.environ.get("XDG_CONFIG_HOME") else home / ".config"
+    return base / "totchef" / "cooks"
 
 
 @dataclass(frozen=True)

@@ -31,6 +31,12 @@ its section — the primary way a recipe repo carries highly custom cooks (e.g. 
 without packaging them. It takes precedence over a built-in or config-dir cook of the same
 name.
 
+### 9.2.3 a config dir cook survives the sudo re-exec a real up performs
+
+A `~/.config/totchef/cooks/<section>_cook.py` is still found by a real `totchef up`,
+which re-execs under `sudo` before scheduling any cook — the invoking user's config
+dir, not root's, is what gets scanned.
+
 ## 9.3 Choose the right cook shape for my domain
 
 > As a cook author, I want base classes that match common patterns, so that I only

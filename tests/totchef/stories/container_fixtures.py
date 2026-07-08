@@ -5,6 +5,7 @@
 
 import base64
 import os
+import shlex
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -60,21 +61,28 @@ def container_image() -> str:
 
 
 @pytest.fixture(scope="session")
-def apply_in_container(container_image: str) -> Callable[[str, list[str]], ContainerRun]:
+def apply_in_container(container_image: str) -> Callable[[str, list[str], dict[str, str] | None], ContainerRun]:
     (
         """Run `totchef up` against `recipe` in a fresh container as the non-root `tester`, """
-        """reporting the owner of each `artifacts` path and log file."""
+        """reporting the owner of each `artifacts` path and log file. `extra_files` (path -> """
+        """content) is written before `up` runs, e.g. a config-dir cook drop-in."""
     )
     assert podman is not None
     binary = podman
 
-    def apply(recipe: str, artifacts: list[str]) -> ContainerRun:
+    def apply(recipe: str, artifacts: list[str], extra_files: dict[str, str] | None = None) -> ContainerRun:
         recipe_b64 = base64.b64encode(recipe.encode()).decode()
         probes = "\n".join(
             f'stat -c "OWNER %U {path}" "{path}" 2>/dev/null || echo "MISSING {path}"' for path in artifacts
         )
+        setup = "\n".join(
+            f"mkdir -p {shlex.quote(str(Path(path).parent))} && "
+            f"echo {base64.b64encode(content.encode()).decode()} | base64 -d > {shlex.quote(path)}"
+            for path, content in (extra_files or {}).items()
+        )
         script = (
             "set -e\n"
+            f"{setup}\n"
             f"echo {recipe_b64} | base64 -d > ~/recipe.toml\n"
             "totchef up --recipe ~/recipe.toml || true\n"
             f"echo {RESULT_MARKER}\n"

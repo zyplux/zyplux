@@ -101,6 +101,12 @@ file whose stem matches the entry name (`[file.egpu-prime]` →
 `egpu-prime.service`). Zero or several matches fail lint, asking for an
 explicit `source`.
 
+### 5.2.7 a file whose mode drifted is corrected even when content matches
+
+Content-unchanged is not the whole story: if the file's mode no longer
+matches what the entry declares — a manual `chmod`, or the entry's own `mode`
+edited — the mode is corrected on the next `up`, reported as changed.
+
 ## 5.3 Run arbitrary idempotent shell steps
 
 > As an operator, I want an escape hatch to run a shell command idempotently — with

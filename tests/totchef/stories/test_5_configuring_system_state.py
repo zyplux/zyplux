@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
 
 PRIVATE_FILE_MODE = 0o600
+DEFAULT_FILE_MODE = 0o644
 EXECUTABLE_MODE = 0o755
 
 # 5.1 Add third-party apt repositories securely
@@ -309,6 +310,21 @@ def test_5_2_6_source_defaults_to_the_bundled_file_named_after_the_entry(
     chef(ghost).lint().assert_rejected("no bundled file")
 
 
+def test_5_2_7_a_file_whose_mode_drifted_is_corrected_even_when_content_matches(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
+    """A file whose mode drifted (a manual chmod, or the entry's own mode edited) is corrected on the next up."""
+    target = tmp_path / "f"
+    recipe.declares("file", "f", path=str(target), content="X\n", mode="0644")
+
+    totchef.up().assert_shows("file.f", "applied")
+    assert (target.stat().st_mode & 0o777) == DEFAULT_FILE_MODE
+
+    target.chmod(PRIVATE_FILE_MODE)
+    totchef.up().assert_shows("file.f", "applied")  # content unchanged, but the drifted mode must be corrected
+    assert (target.stat().st_mode & 0o777) == DEFAULT_FILE_MODE
+
+
 # 5.3 Run arbitrary idempotent shell steps
 
 
@@ -421,6 +437,7 @@ def test_5_4_2_version_decides_the_update_not_content(
     installed = home / ".local/bin/tool"
     installed.parent.mkdir(parents=True)
     installed.write_text('#!/bin/bash\n__version__="1.0.0"\n')
+    installed.chmod(0o755)
     recipe.declares("local_bin", "tool", source="tool.sh")
 
     report = totchef.up()

@@ -22,6 +22,9 @@ if TYPE_CHECKING:
     from totchef.recipe_types import RecipeConfig
 
 RERUN_INSTALLER = "rerun-installer"
+EMPTY_UPDATE_ACTION_ERROR = (
+    f"update_action must be a non-empty arg list, {RERUN_INSTALLER!r}, or absent — an empty list is none of these"
+)
 
 VERSION_PATTERN = re.compile(r"\d+\.\d+(?:\.\d+)*")
 
@@ -61,12 +64,22 @@ class UrlEntry(EntrySpec):
         self.url = assume_https(self.url)
         return self
 
+    @model_validator(mode="after")
+    def _reject_empty_update_action(self) -> UrlEntry:
+        if isinstance(self.update_action, list) and not self.update_action:
+            raise ValueError(EMPTY_UPDATE_ACTION_ERROR)
+        return self
+
 
 def run_installer(url: str, args: list[str], note: str) -> None:
     shell.stream(["bash", "-s", "--", *args], note=note, stdin=fetch_url(url))
 
 
 def update_existing(entry: UrlEntry, bin_path: Path) -> None:
+    (
+        """Run `entry.update_action` against an already-installed binary; `entry_model` already rejects an """
+        """empty arg list, so every remaining shape here is a real action."""
+    )
     action = entry.update_action
     if action is None:
         logger.info("No update_action; leaving {bin_path} as-is", bin_path=bin_path)
@@ -76,14 +89,11 @@ def update_existing(entry: UrlEntry, bin_path: Path) -> None:
         shell.stream(["bash", "-c", guard_command], note=f"Update guard: {guard}")
     if action == RERUN_INSTALLER:
         run_installer(entry.url, entry.args, note=f"Updating from {entry.url}")
-    elif isinstance(action, list) and action:
+    elif isinstance(action, list):
         shell.stream(
             [str(bin_path), *action],
             note=f"Updating via `{bin_path.name} {' '.join(action)}`",
         )
-    else:
-        msg = f"unrecognized update_action {action!r} (expected an arg list, {RERUN_INSTALLER!r}, or absent)"
-        raise ValueError(msg)
 
 
 class UrlCook(VersionedCook):

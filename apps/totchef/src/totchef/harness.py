@@ -3,6 +3,7 @@
 import os
 import pwd
 import shutil
+import stat
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -88,12 +89,16 @@ def become_user() -> None:
 def write_if_changed(path: Path, content: bytes | str, mode: int = 0o644, note: str = "") -> bool:
     if isinstance(content, str):
         content = content.encode()
-    if path.exists() and path.read_bytes() == content:
+    content_matches = path.exists() and path.read_bytes() == content
+    if content_matches and stat.S_IMODE(path.stat().st_mode) == mode:
         logger.info("Unchanged: {path}", path=path)
         return False
-    logger.info("Writing  : {path}{note}", path=path, note=f"  ({note})" if note else "")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(content)
+    if content_matches:
+        logger.info("Chmod    : {path}{note}", path=path, note=f"  ({note})" if note else "")
+    else:
+        logger.info("Writing  : {path}{note}", path=path, note=f"  ({note})" if note else "")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
     path.chmod(mode)
     return True
 

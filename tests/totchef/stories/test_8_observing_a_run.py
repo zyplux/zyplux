@@ -55,6 +55,7 @@ def test_8_1_2_up_shows_changed_rows_plus_footer_plan_shows_all(
     """A real up shows only changed/failed rows plus a footer (unchanged count, elapsed); a plan shows every row."""
     settled = tmp_path / "settled"
     settled.write_text("X\n")
+    settled.chmod(0o644)
     recipe.declares("file", "settled", path=str(settled), content="X\n")
     recipe.declares("file", "changed", path=str(tmp_path / "changed"), content="Y\n")
 
@@ -80,6 +81,7 @@ def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(
     drift.write_text("OLD\n")  # exists but will be rewritten
     settled = tmp_path / "settled"
     settled.write_text("SAME\n")  # already matches
+    settled.chmod(0o644)  # …and mode
     recipe.declares("file", "drift", path=str(drift), content="NEW\n")
     recipe.declares("file", "settled", path=str(settled), content="SAME\n")
     recipe.declares("file", "fresh", path=str(tmp_path / "fresh"), content="NEW\n")

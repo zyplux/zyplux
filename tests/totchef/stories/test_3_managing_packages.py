@@ -228,7 +228,7 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
 ) -> None:
     (
         """update_action: an arg list run against the binary, "rerun-installer", or absent; """
-        """an empty arg list is none of these and fails the update."""
+        """an empty arg list is none of these and is rejected at lint, before anything runs."""
     )
     system.has("bun")
     terminal.arrange("bun --version", "1.1.0")
@@ -255,13 +255,8 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     terminal.expect_not_ran("bash -s --")
     terminal.expect_not_ran("bun upgrade")
 
-    terminal.reset()
-    system.has("bun")
-    terminal.arrange("bun --version", "1.1.0")
     empty_list = scenario().declares("url", "bun", url="https://bun.sh/install", update_action=[])
-    unrecognized = chef(empty_list).up()
-    unrecognized.assert_hard_failed()
-    unrecognized.assert_logged("unrecognized update_action")
+    chef(empty_list).up().assert_rejected("update_action")
 
 
 def test_3_3_4_update_guard_runs_before_updating(

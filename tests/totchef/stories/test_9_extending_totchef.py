@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
     from act_fixtures import Cli, Totchef
     from arrange_fixtures import FakeTerminal, RecipeBuilder
+    from container_fixtures import ContainerRun
 
 VERSIONED_COOK = """
 from totchef import shell
@@ -157,6 +158,23 @@ def test_9_2_2_custom_cook_loads_from_totchef_cooks_beside_the_recipe(
     report.assert_succeeded()
     report.assert_shows("switch.drifted", "applied")  # discovered from totchef_cooks/, then applied
     terminal.expect_ran("flip-switch drifted")
+
+
+def test_9_2_3_a_config_dir_cook_survives_the_sudo_re_exec_a_real_up_performs(
+    apply_in_container: Callable[[str, list[str], dict[str, str] | None], ContainerRun],
+) -> None:
+    (
+        """A `~/.config/totchef/cooks/<section>_cook.py` is still found by a real `totchef up`, """
+        """which re-execs under sudo before scheduling any cook — the invoking user's config """
+        """dir, not root's. In a container."""
+    )
+    run = apply_in_container(
+        '[note.n]\npath = "/home/tester/note.txt"\nbody = "hello\\n"\n',
+        ["/home/tester/note.txt"],
+        {"/home/tester/.config/totchef/cooks/note_cook.py": FILE_STATE_COOK},
+    )
+
+    assert run.owners["/home/tester/note.txt"] == "tester", run.transcript
 
 
 # 8.3 Choose the right cook shape for my domain

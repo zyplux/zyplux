@@ -286,3 +286,24 @@ def test_6_3_2_settings_diffed_by_merged_json_hash_invalid_json_soft_fails(
 
     report.assert_soft_failed()
     report.assert_logged("invalid JSON")
+
+
+def test_6_3_3_settings_file_that_parses_but_is_not_an_object_soft_fails_the_same_way(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path
+) -> None:
+    """Syntactically valid JSON that isn't an object (or whose `env` isn't) soft-fails, never crashes."""
+    settings = home / ".claude/settings.json"
+    settings.parent.mkdir(parents=True)
+    recipe.declares(
+        "settings", "claude", settings_json=".claude/settings.json", settings_env={"DISABLE_TELEMETRY": "1"}
+    )
+
+    settings.write_text("[1, 2, 3]")
+    array_report = totchef.up()
+    array_report.assert_soft_failed()
+    array_report.assert_logged("invalid JSON")
+
+    settings.write_text('{"env": "not-an-object"}')
+    bad_env_report = totchef.up()
+    bad_env_report.assert_soft_failed()
+    bad_env_report.assert_logged("invalid JSON")

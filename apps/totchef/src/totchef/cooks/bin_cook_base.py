@@ -6,6 +6,7 @@
 )
 
 import re
+import stat
 from pathlib import Path
 from typing import ClassVar, override
 
@@ -80,11 +81,12 @@ class BinCommandCook(StateCook[BinEntry]):
         states: dict[str, str] = {}
         for name in self.entries:
             target = self._target_path(name)
-            states[name] = (
-                (find_embedded_version(target.read_text(encoding="utf-8", errors="replace")) or "unversioned")
-                if target.is_file()
-                else "absent"
-            )
+            if not target.is_file():
+                states[name] = "absent"
+                continue
+            version = find_embedded_version(target.read_text(encoding="utf-8", errors="replace")) or "unversioned"
+            actual_mode = stat.S_IMODE(target.stat().st_mode)
+            states[name] = version if actual_mode == EXECUTABLE_MODE else f"{version} (mode {actual_mode:o})"
         return states
 
     @override

@@ -1,6 +1,7 @@
 """Shared contract for totchef cooks: probes and acts (chef owns the diff); VersionedCook packages, StateCook state."""
 
 import hashlib
+import stat
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 
@@ -217,12 +218,28 @@ class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
     def _render(self, name: str) -> bytes | None:
         raise NotImplementedError
 
+    def _mode(self, name: str) -> int | None:
+        """The declared target mode to diff against, read off the entry's own `mode` field if it has one."""
+        mode = getattr(self.entries[name], "mode", None)
+        return int(mode, 8) if isinstance(mode, str) else None
+
     @override
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name in self.entries:
             path = self._target_path(name)
-            states[name] = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else "absent"
+            if not path.exists():
+                states[name] = "absent"
+                continue
+            raw = path.read_bytes()
+            wanted_mode = self._mode(name)
+            actual_mode = stat.S_IMODE(path.stat().st_mode)
+            mode_drifted = wanted_mode is not None and actual_mode != wanted_mode
+            # A drifted mode must still force this entry to diff as "differs" against a pure content
+            # digest, without masking a genuine content difference behind a mode-only message — so it's
+            # mixed into the hashed bytes rather than replacing the digest.
+            digest_input = raw + b"\0mode-drift" if mode_drifted else raw
+            states[name] = hashlib.sha256(digest_input).hexdigest()
         return states
 
     @override

@@ -183,6 +183,7 @@ def test_1_2_3_plan_shows_all_resources_including_unchanged(
     """The plan shows every resource, not just the diff, so the full intended end state is visible."""
     settled = tmp_path / "settled"
     settled.write_text("X\n")  # already matches the desired content
+    settled.chmod(0o644)  # …and mode
     recipe.declares("file", "settled", path=str(settled), content="X\n")
     recipe.declares("bash", "step", apply="do-it")
 

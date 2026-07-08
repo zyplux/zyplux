@@ -78,7 +78,7 @@ The binary name defaults to the entry name but can be overridden with `bin`.
 Updating is controlled by `update_action`: a command arg list run against the
 binary (e.g. `["self", "update"]`), the literal `"rerun-installer"` (re-pipe the
 install script), or absent (leave as-is). An empty arg list is none of these
-and fails the update.
+and is rejected at lint, before anything runs.
 
 ### 3.3.4 update guard runs before updating
 

@@ -46,6 +46,7 @@ def test_7_1_1_cooks_probe_and_act_only_on_the_difference(
     """Versioned cooks skip up-to-date packages; state cooks skip resources whose content hash already matches."""
     already = totchef.workdir / "already.conf"
     already.write_text("A\n")
+    already.chmod(0o644)
     totchef.recipe.declares("cargo", packages=["ripgrep"])
     totchef.recipe.declares("file", "f", path=str(already), content="A\n")
     system.has("cargo", "cargo-binstall")

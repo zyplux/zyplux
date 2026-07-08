@@ -30,10 +30,16 @@ class SettingsCook(FileStateCook[SettingsEntry]):
     def _render(self, name: str) -> bytes | None:
         target = self._target_path(name)
         env_overrides = self.entries[name].settings_env
-        try:
-            existing: dict[str, Any] = json.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
-        except json.JSONDecodeError:
-            return None
+        if not target.exists():
+            existing: dict[str, Any] = {}
+        else:
+            try:
+                parsed = json.loads(target.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                return None
+            if not isinstance(parsed, dict) or not isinstance(parsed.get("env", {}), dict):
+                return None
+            existing = parsed
         merged = {**existing, "env": {**existing.get("env", {}), **env_overrides}}
         return (json.dumps(merged, indent=2) + "\n").encode()
 

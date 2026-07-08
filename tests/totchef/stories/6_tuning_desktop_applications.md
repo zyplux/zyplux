@@ -92,3 +92,9 @@ under the operator's home, keeping all other keys intact.
 
 Diffed by merged-JSON hash; invalid JSON is left as-is and soft-fails rather
 than corrupting the file.
+
+### 6.3.3 settings file that parses but is not an object soft fails the same way
+
+Syntactically valid JSON that isn't an object at the top level (or whose `env`
+key isn't one) is treated the same as invalid JSON — left as-is, soft-fail —
+never a crash.
