@@ -39,6 +39,7 @@ class CheckResult:
     check: str
     repo: str
     findings: list[Finding] = field(default_factory=list)
+    detail: str | None = None
 
     def record(self, status: Status, message: str) -> None:
         self.findings.append(Finding(status, message))

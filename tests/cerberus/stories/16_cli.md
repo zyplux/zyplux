@@ -8,6 +8,8 @@
 
 ### 16.1.3 prints one line per bite with its id and outcome
 
+### 16.1.4 appends a bite's measured detail to its line
+
 ## 16.2 surfacing check failures end to end
 
 ### 16.2.1 fails when the ci workflow file is missing

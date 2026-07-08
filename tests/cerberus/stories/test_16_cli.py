@@ -102,6 +102,22 @@ def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
     assert "🐾 justfile" in result.output
 
 
+def test_16_1_4_appends_a_bites_measured_detail_to_its_line(
+    invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
+) -> None:
+    def measured(repo: Repo, _ctx: Context) -> CheckResult:
+        result = check_result("codeowners", repo.name)
+        result.detail = "ts: 1167 (2.20%); py: 1623 (1.30%)"
+        return result
+
+    register_fake_check("codeowners", measured)
+
+    result = invoke_lint("--check", "codeowners")
+
+    assert result.exit_code == 0, result.output
+    assert "🐾 codeowners ts: 1167 (2.20%); py: 1623 (1.30%)" in result.output
+
+
 @requires_just
 def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(
     conforming_repo: Path, invoke_lint: Callable[..., Result]

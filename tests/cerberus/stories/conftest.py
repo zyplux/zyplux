@@ -28,7 +28,7 @@ import pytest
 from cerberus import checks, config, context, proc, registries
 from cerberus.checks.rumdl_config_check import CANONICAL as _RUMDL_CANONICAL
 from cerberus.graph import search as _graph_search
-from cerberus.model import Finding, Repo, Scope, Status
+from cerberus.model import CheckResult, Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
 
 if TYPE_CHECKING:
@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from cerberus.context import Context
-    from cerberus.model import CheckResult
 
 type RunCheck = Callable[[str, Repo, Context], CheckResult]
 type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
@@ -135,6 +134,11 @@ def finding() -> type[Finding]:
 
 
 @pytest.fixture
+def check_result() -> type[CheckResult]:
+    return CheckResult
+
+
+@pytest.fixture
 def scope() -> type[Scope]:
     return Scope
 
@@ -180,24 +184,50 @@ class FakeProc:
     """An in-memory double for `cerberus.proc`'s single subprocess boundary.
 
     Outcomes are served per tool — the program a `bunx <tool> ...` invocation
-    launches, or `argv[0]` itself for direct invocations.
+    launches, or `argv[0]` itself for direct invocations. A tool that runs
+    distinct subcommands can be served per subcommand via a `"tool subcommand"`
+    key. `output_files` are written into the directory the invocation names
+    after `--output`, mimicking tools that emit report files there.
     """
 
     outcomes: dict[str, subprocess.CompletedProcess[str]] = field(default_factory=dict)
+    served_output_files: dict[str, dict[str, str]] = field(default_factory=dict)
     calls: list[tuple[list[str], Path | None]] = field(default_factory=list)
     missing: set[str] = field(default_factory=set)
 
-    def serve(self, tool: str, *, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+    def serve(
+        self,
+        tool: str,
+        *,
+        returncode: int = 0,
+        stdout: str = "",
+        stderr: str = "",
+        output_files: dict[str, str] | None = None,
+    ) -> None:
         self.outcomes[tool] = subprocess.CompletedProcess([tool], returncode, stdout, stderr)
+        if output_files is not None:
+            self.served_output_files[tool] = dict(output_files)
 
     def serve_missing(self, tool: str) -> None:
         self.missing.add(tool)
+
+    def _write_output_files(self, tool: str, argv: list[str]) -> None:
+        files = self.served_output_files.get(tool)
+        if files is None or "--output" not in argv:
+            return
+        out_dir = Path(argv[argv.index("--output") + 1])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for name, text in files.items():
+            (out_dir / name).write_text(text)
 
     def run(self, argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         self.calls.append((list(argv), cwd))
         if argv[0] in self.missing:
             raise proc.ToolNotFoundError(argv[0])
-        tool = argv[1] if argv[0] == "bunx" and len(argv) > 1 else argv[0]
+        launched = argv[1:] if argv[0] == "bunx" and len(argv) > 1 else argv
+        subcommand_key = " ".join(launched[:2])
+        tool = subcommand_key if subcommand_key in self.outcomes else launched[0]
+        self._write_output_files(tool, argv)
         outcome = self.outcomes[tool]
         return subprocess.CompletedProcess(argv, outcome.returncode, outcome.stdout, outcome.stderr)
 
