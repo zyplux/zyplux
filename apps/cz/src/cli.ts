@@ -35,9 +35,6 @@ const program = defineProgram({
   ),
 });
 
-export { readVersion, VersionSourceSchema } from '#release-targets';
-export type { VersionSource } from '#release-targets';
-
 type CzIo = {
   onExit?: (exitCode: number) => never;
   stderr?: (line: string) => void;

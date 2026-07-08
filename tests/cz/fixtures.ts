@@ -1,8 +1,10 @@
+import type { VersionSource } from '@zyplux/cz/contracts';
 import type { CliRunner, ConsoleCapture, FetchFake, ShellFake, TempDir } from '@zyplux/tests-fixtures';
 
-import { readVersion, runCz, VersionSourceSchema } from '@zyplux/cz';
+import { runCz } from '@zyplux/cz';
+import { ManifestSchema } from '@zyplux/cz/contracts';
 import { cliTest, createCliRunner, notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
-import { parseJson, parseToml } from '@zyplux/util';
+import { parseJson, parseToml, readJson } from '@zyplux/util';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -70,9 +72,6 @@ const BENIGN_WRITE_COMMANDS = [
   'git push',
 ];
 
-const TargetEntrySchema = z.object({ label: z.string(), version: VersionSourceSchema });
-const TargetManifestSchema = z.object({ target: z.array(TargetEntrySchema) });
-
 const CatalogSchema = z.array(z.string());
 
 const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: ConsoleCapture) => {
@@ -101,14 +100,25 @@ const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: ConsoleCap
   } satisfies Catalog;
 };
 
+const readSourceVersion = async (source: VersionSource) => {
+  const sourcePath = path.join(workspaceRoot, source.file);
+  if ('json' in source) {
+    const fields = await readJson(sourcePath, z.record(z.string(), z.unknown()));
+    return z.string().parse(fields[source.json]);
+  }
+  const match = new RegExp(source.regex, 'm').exec(await readFile(sourcePath, 'utf8'))?.[1];
+  if (match === undefined) throw new Error(`could not read version from ${source.file}`);
+  return match;
+};
+
 const findTargetFacts = async (label: string) => {
   const manifestText = await readFile(path.join(workspaceRoot, 'release-targets.toml'), 'utf8');
-  const manifest = parseToml(manifestText, TargetManifestSchema);
+  const manifest = parseToml(manifestText, ManifestSchema);
   const target = manifest.target.find(candidate => candidate.label === label);
   if (target === undefined) throw new Error(`${label} target missing from release-targets.toml`);
   return {
     dir: path.join(workspaceRoot, path.dirname(target.version.file)),
-    version: await readVersion(workspaceRoot, target.version),
+    version: await readSourceVersion(target.version),
   };
 };
 

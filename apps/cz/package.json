@@ -27,10 +27,15 @@
       "types": "./src/cli.ts",
       "default": "./src/cli.ts"
     },
+    "./contracts": {
+      "types": "./src/contracts.ts",
+      "default": "./src/contracts.ts"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
     "#cli": "./src/cli.ts",
+    "#contracts": "./src/contracts.ts",
     "#commands/assert-tag-version": "./src/commands/assert-tag-version.ts",
     "#commands/bootstrap-npm-target": "./src/commands/bootstrap-npm-target.ts",
     "#commands/clean": "./src/commands/clean.ts",
