@@ -1,7 +1,8 @@
 (
-    """StateCook for [file.<name>] — install a file with exact content (inline `content`, a bundled `source` from the recipe's sibling totchef_files/, or """
-    """with neither set the bundled file named after the entry), diffed by content hash so a `post_hook` fires only on change. `path` expands `~` for """
-    """per-user installs. Privilege-agnostic; recipe.toml grants root per entry."""
+    """StateCook for [file.<name>] — install a file with exact content (inline `content`, a bundled `source` """
+    """from the recipe's sibling totchef_files/, or with neither set the bundled file named after the entry), """
+    """diffed by content hash so a `post_hook` fires only on change. `path` expands `~` for per-user """
+    """installs. Privilege-agnostic; recipe.toml grants root per entry."""
 )
 
 from pathlib import Path
