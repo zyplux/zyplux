@@ -1,4 +1,4 @@
 preset = "strict"
 
-project-includes = ["apps/cerberus/src", "packages/util_py/src", "tests/cerberus"]
-search-path = ["apps/cerberus/src", "packages/util_py/src"]
+project-includes = ["apps/cerberus/src", "apps/totchef", "packages/util_py/src", "tests/cerberus", "tests/totchef"]
+search-path = ["apps/cerberus/src", "apps/totchef/src", "packages/util_py/src", "tests/totchef/project", "tests/totchef/stories"]

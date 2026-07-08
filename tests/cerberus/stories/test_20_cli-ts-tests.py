@@ -22,20 +22,20 @@ _SEAM_CLI = (
 )
 _SEAM_CLI_NO_EXPORTS = '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}}'
 _SEAM_CLI_LEAKY = (
-    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"},'
-    ' "exports": {".": "./src/cli.ts", "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts",'
+    ' "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
 )
 _SEAM_CLI_NO_ROOT = (
     '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {"./package.json": "./package.json"}}'
 )
 _SEAM_CLI_CONDITIONS = (
-    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"},'
-    ' "exports": {"types": "./src/cli.ts", "default": "./src/cli.ts"}}'
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, '
+    '"exports": {"types": "./src/cli.ts", "default": "./src/cli.ts"}}'
 )
 _SEAM_TESTS_PKG = '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts"}}'
 _SEAM_TESTS_PKG_SNEAKY = (
-    '{"name": "@demo/tests-cli",'
-    ' "imports": {"#fixtures": "./fixtures.ts", "#sneaky": "../../apps/cli/src/internal.ts"}}'
+    '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts",'
+    ' "#sneaky": "../../apps/cli/src/internal.ts"}}'
 )
 _SEAM_CLEAN_STORY = "import path from 'node:path';\n\nimport { describe, expect, test } from '#fixtures';\n"
 _SEAM_APP_IMPORT_STORY = "import { runCli } from '@demo/cli';\n\nimport { test } from '#fixtures';\n"

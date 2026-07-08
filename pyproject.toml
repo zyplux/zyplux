@@ -8,19 +8,22 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/cerberus", "packages/util_py"]
+members = ["apps/cerberus", "apps/totchef", "packages/util_py"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=cerberus --cov-report=term-missing"
-testpaths = ["tests/cerberus"]
+addopts = "--cov=cerberus --cov=totchef --cov-report=term-missing"
+testpaths = ["tests/cerberus", "tests/totchef"]
 
 [tool.coverage.report]
 fail_under = 90
 
 [tool.vulture]
-paths = ["apps/cerberus/src", "packages/util_py/src", "tests/cerberus"]
-ignore_decorators = ["@app.command"]
-ignore_names = ["pytestmark"]
+paths = ["apps/cerberus/src", "apps/totchef/src", "packages/util_py/src", "tests/cerberus", "tests/totchef"]
+ignore_decorators = ["@app.command", "@app.callback", "@model_validator"]
+# Cooks are resolved by entry point / config-dir convention (totchef.registry), so vulture
+# sees no static reference and reports every cook class as dead — they're totchef's plugins,
+# not dead code. `model_config` is read by pydantic's model metaclass, never called by name.
+ignore_names = ["pytestmark", "*Cook", "model_config"]
 
 [dependency-groups]
 lint = [
@@ -31,9 +34,16 @@ lint = [
 test = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "tomli-w>=1.1",
 ]
 type = [
     "pyrefly>=1.1.1",
     "types-networkx>=3.6.1.20260624",
     "types-pyyaml>=6.0.12.20260518",
+    # psutil/websockets back the standalone apps/totchef/examples/totchef_files/ctop.py script,
+    # which carries its own inline `# dependencies` and runs via `uv run --script`. They live
+    # here only so pyrefly can resolve ctop.py's imports; types-psutil supplies psutil's stubs.
+    "psutil>=7.2.2",
+    "websockets>=14",
+    "types-psutil>=7.2.2.20260518",
 ]

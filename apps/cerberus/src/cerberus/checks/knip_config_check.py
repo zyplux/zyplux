@@ -35,8 +35,8 @@ if TYPE_CHECKING:
 
 ID = "knip-config"
 SUMMARY = (
-    "knip config is standalone (never inline in package.json) and its prod pass "
-    "exempts exactly the repo's published npm targets"
+    "knip config is standalone (never inline in package.json) and its prod pass exempts "
+    "exactly the repo's published npm targets"
 )
 SCOPE = Scope.CONTENT
 

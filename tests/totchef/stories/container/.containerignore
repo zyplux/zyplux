@@ -1,0 +1,6 @@
+*
+!pyproject.toml
+!uv.lock
+!apps/totchef
+!apps/cerberus/pyproject.toml
+!packages/util_py/pyproject.toml

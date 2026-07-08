@@ -16,7 +16,7 @@ PYPROJECT = "pyproject.toml"
 PATH = "ruff.toml"
 
 REQUIRED_SELECT = ["ALL"]
-SANCTIONED_IGNORE = frozenset({"COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S607"})
+SANCTIONED_IGNORE = frozenset({"COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S606", "S607"})
 SANCTIONED_TEST_IGNORE = frozenset({"ANN001", "INP001", "S101"})
 
 

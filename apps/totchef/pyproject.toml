@@ -1,0 +1,56 @@
+[project]
+name = "totchef"
+version = "0.3.1"
+description = "Declarative, idempotent system configuration for Ubuntu/Kubuntu — hand it a recipe, it makes the machine comply."
+readme = "README.md"
+requires-python = ">=3.14"
+license = "MIT"
+keywords = [
+    "configuration",
+    "idempotent",
+    "ubuntu",
+    "apt",
+    "declarative",
+    "provisioning",
+]
+dependencies = [
+    "loguru>=0.7",
+    "pydantic>=2.13.4",
+    "pyyaml>=6.0.3",
+    "rich>=14",
+    "toon-format>=0.9.0b1",
+    "typer>=0.12",
+]
+
+[project.scripts]
+totchef = "totchef.cli:main"
+
+# Built-in cooks register through the same entry-point group third-party plugins use:
+# `pip install`/`uv tool install --with` a package that adds to [project.entry-points."totchef.cooks"]
+# and its sections become available with no change to totchef itself.
+[project.entry-points."totchef.cooks"]
+url = "totchef.cooks.url_cook:UrlCook"
+cargo = "totchef.cooks.cargo_cook:CargoCook"
+uv = "totchef.cooks.uv_cook:UvCook"
+bun = "totchef.cooks.bun_cook:BunCook"
+skills = "totchef.cooks.skills_cook:SkillsCook"
+file = "totchef.cooks.file_cook:FileCook"
+conf = "totchef.cooks.conf_cook:ConfCook"
+usr_local_bin = "totchef.cooks.usr_local_bin_root_cook:UsrLocalBinCook"
+usr_local_sbin = "totchef.cooks.usr_local_sbin_root_cook:UsrLocalSbinCook"
+local_bin = "totchef.cooks.local_bin_cook:LocalBinCook"
+bash = "totchef.cooks.bash_cook:BashCook"
+apt_repo = "totchef.cooks.apt_repo_root_cook:AptRepoCook"
+apt_pkg = "totchef.cooks.apt_pkg_root_cook:AptPkgCook"
+snap = "totchef.cooks.snap_root_cook:SnapCook"
+desktop = "totchef.cooks.desktop_cook:DesktopCook"
+chromium_flags = "totchef.cooks.chromium_flags_cook:ChromiumFlagsCook"
+settings = "totchef.cooks.settings_cook:SettingsCook"
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "totchef"
+module-root = "src"

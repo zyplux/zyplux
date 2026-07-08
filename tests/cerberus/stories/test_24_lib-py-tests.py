@@ -22,15 +22,12 @@ _LIB_MANIFEST_EMPTY_SCRIPTS = (
     '[project]\nname = "demo-lib"\n\n[project.scripts]\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
 )
 _CLI_MANIFEST = (
-    '[project]\nname = "demo-cli"\n\n'
-    '[project.scripts]\ncli = "demo.cli:app"\n\n'
+    '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n'
     '[tool.uv.build-backend]\nmodule-name = "demo"\n'
 )
 
 _LIB_INIT = (
-    '"""Demo library."""\n\n'
-    "from __future__ import annotations\n\n\n"
-    'def helper() -> str:\n    return "hi"\n\n\n'
+    '"""Demo library."""\n\nfrom __future__ import annotations\n\n\ndef helper() -> str:\n    return "hi"\n\n\n'
     "def _internal() -> None:\n    return None\n"
 )
 
@@ -129,10 +126,8 @@ def test_24_2_6_passes_a_disallowed_import_guarded_under_type_checking(
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
     guarded = (
-        "from __future__ import annotations\n\n"
-        "from typing import TYPE_CHECKING\n\n"
-        "if TYPE_CHECKING:\n"
-        "    from demolib.internal import Thing\n"
+        "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n    from demolib.internal import Thing\n"
     )
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
@@ -142,10 +137,8 @@ def test_24_2_7_passes_a_disallowed_import_guarded_under_a_dotted_type_checking_
     run_lib_py_tests: RunLibPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
     guarded = (
-        "from __future__ import annotations\n\n"
-        "import typing\n\n"
-        "if typing.TYPE_CHECKING:\n"
-        "    from demolib.internal import Thing\n"
+        "from __future__ import annotations\n\nimport typing\n\n"
+        "if typing.TYPE_CHECKING:\n    from demolib.internal import Thing\n"
     )
     result = run_lib_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]

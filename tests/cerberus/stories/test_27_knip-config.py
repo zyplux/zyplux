@@ -27,16 +27,16 @@ _ENTRY_EXPORTS_WRONG_IGNORE = '{"includeEntryExports": true, "ignoreWorkspaces":
 _ENTRY_EXPORTS_STRAY_KEY = '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "extra": true}'
 _ENTRY_EXPORTS_MISSING_OVERRIDE = _ENTRY_EXPORTS_OK
 _ENTRY_EXPORTS_EXTRA_OVERRIDE = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/other": {"includeEntryExports": false}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], '
+    '"workspaces": {"packages/other": {"includeEntryExports": false}}}'
 )
 _ENTRY_EXPORTS_CORRECT_WITH_TARGET = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/lib": {"includeEntryExports": false}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], '
+    '"workspaces": {"packages/lib": {"includeEntryExports": false}}}'
 )
 _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"],'
-    ' "workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], '
+    '"workspaces": {"packages/lib": {"includeEntryExports": false, "entry": "src/other.ts"}}}'
 )
 _ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": []}'

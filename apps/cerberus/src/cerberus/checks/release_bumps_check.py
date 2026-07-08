@@ -138,8 +138,8 @@ def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None
     if changed:
         major, minor, patch = current
         res.fail(
-            f"{target.label}: surface changed since {latest_tag} but version is still "
-            f"{version} — bump it (e.g. {major}.{minor}.{patch + 1})"
+            f"{target.label}: surface changed since {latest_tag} but version is still {version} — "
+            f"bump it (e.g. {major}.{minor}.{patch + 1})"
         )
 
 

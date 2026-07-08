@@ -20,7 +20,7 @@ _RUFF_CANONICAL = (
     "preview = true\n\n"
     "[lint]\n"
     'select = ["ALL"]\n'
-    'ignore = ["COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S607"]\n\n'
+    'ignore = ["COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S606", "S607"]\n\n'
     "[lint.per-file-ignores]\n"
     '"**/tests/**" = ["ANN001", "INP001", "S101"]\n'
 )
@@ -111,7 +111,7 @@ def test_13_4_1_fails_unless_lint_select_is_exactly_all(
 def test_13_5_1_passes_when_only_some_sanctioned_rules_are_ignored(
     run_ruff: RunRuff, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_ruff(ruff=_RUFF_CANONICAL.replace(', "S404", "S603", "S607"', ""))
+    result = run_ruff(ruff=_RUFF_CANONICAL.replace(', "S404", "S603", "S606", "S607"', ""))
 
     assert result.findings == [_pass_finding(finding, status)]
 

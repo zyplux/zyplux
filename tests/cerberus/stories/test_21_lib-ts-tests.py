@@ -16,8 +16,7 @@ CHECK_ID = "lib-ts-tests"
 
 _SEAM_ROOT_WS = '{"workspaces": ["apps/*", "packages/*", "tests/*"]}'
 _SEAM_LIB = (
-    '{"name": "@demo/lib",'
-    ' "exports": {".": {"types": "./src/index.ts", "default": "./src/index.ts"},'
+    '{"name": "@demo/lib", "exports": {".": {"types": "./src/index.ts", "default": "./src/index.ts"},'
     ' "./package.json": "./package.json"}}'
 )
 _SEAM_LIB_NO_EXPORTS = '{"name": "@demo/lib"}'
@@ -30,8 +29,8 @@ _SEAM_LIB_CONDITIONS = '{"name": "@demo/lib", "exports": {"types": "./src/index.
 _SEAM_LIB_STRING_EXPORTS = '{"name": "@demo/lib", "exports": "./src/index.ts"}'
 _SEAM_JSON_ONLY = '{"name": "@demo/tsconfig"}'
 _SEAM_CLI_LEAKY = (
-    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"},'
-    ' "exports": {".": "./src/cli.ts", "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts",'
+    ' "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
 )
 _SEAM_FIXTURES_LIB_LEAKY = (
     '{"name": "@demo/tests-fixtures", "exports": {".": "./src/index.ts", "./story": "./src/story.ts"}}'

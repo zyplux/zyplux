@@ -78,15 +78,7 @@ const git = {
   branch: async (name: string, flags: BranchFlags = {}) => Bun.$`git ${['branch', ...toArgs(flags), name]}`,
   checkout: async (ref: string) => Bun.$`git ${['checkout', ref]}`,
   clean: async (cwd: string, { dryRun = false, protect = [] }: CleanFlags = {}) =>
-    Bun.$`git ${[
-      'clean',
-      '-d',
-      '-f',
-      '-f',
-      '-X',
-      ...(dryRun ? ['-n'] : []),
-      ...protect.flatMap(pattern => ['-e', `!${pattern}`]),
-    ]}`
+    Bun.$`git ${['clean', '-d', '-f', '-f', '-X', ...(dryRun ? ['-n'] : []), ...protect.flatMap(pattern => ['-e', `!${pattern}`])]}`
       .cwd(cwd)
       .quiet(),
   clone: async (url: string, dest: string, flags: CloneFlags = {}) =>

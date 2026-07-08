@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, override
 
@@ -48,6 +49,7 @@ app = typer.Typer(
 
 console = Console(highlight=False)
 err = Console(stderr=True, highlight=False)
+logger = logging.getLogger(__name__)
 
 _GLYPH = {
     Status.PASS: "[green]✓[/green]",
@@ -79,7 +81,8 @@ def _select_checks(only: list[str] | None) -> list[checks.Check]:
 def _run_check(check: checks.Check, repo: Repo, ctx: Context) -> CheckResult:
     try:
         return check.run(repo, ctx)
-    except Exception as exc:  # noqa: BLE001 — isolation boundary: one check must never crash the run
+    except Exception as exc:
+        logger.exception("check %s crashed for %s", check.id, repo.name)
         crashed = CheckResult(check.id, repo.name)
         crashed.error(f"check crashed: {exc}")
         return crashed

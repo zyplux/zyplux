@@ -17,13 +17,8 @@ PY_CHECK_ID = "story-tests-py"
 TS_CHECK_ID = "story-tests-ts"
 
 DOC = (
-    "# 1. Configuring a widget\n"
-    "\n"
-    "## 1.1 Widget setup\n"
-    "\n"
-    "### 1.1.1 shows the widget name\n"
-    "\n"
-    "### 1.1.2 accepts a custom color\n"
+    "# 1. Configuring a widget\n\n## 1.1 Widget setup\n\n"
+    "### 1.1.1 shows the widget name\n\n### 1.1.2 accepts a custom color\n"
 )
 DOC_PATH = "tests/stories/1_widget.md"
 

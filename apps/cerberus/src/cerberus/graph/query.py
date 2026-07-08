@@ -105,9 +105,8 @@ def _render(graph: nx.Graph[str], nodes: set[str], edges: list[tuple[str, str]],
     for node_id in sorted(nodes, key=lambda n: (-graph.degree(n), n)):
         data = graph.nodes[node_id]
         line = (
-            f"NODE {data.get('label', node_id)} "
-            f"[src={data.get('source_file', '')} loc={data.get('source_location', '')} "
-            f"community={data.get('community', '')}]"
+            f"NODE {data.get('label', node_id)} [src={data.get('source_file', '')} "
+            f"loc={data.get('source_location', '')} community={data.get('community', '')}]"
         )
         if not emit(line):
             return "\n".join(lines)

@@ -1,0 +1,43 @@
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_NO_DEV=1
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends sudo curl unzip ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --create-home tester \
+ && echo 'tester ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/tester \
+ && chmod 0440 /etc/sudoers.d/tester
+
+# bun on the system PATH; the [bun] cook resolves it via find_binary and must drive
+# its globals into the user's ~/.bun, not the cache dir bun defaults to (§4.3.3).
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash
+
+WORKDIR /src
+
+# `uv sync --locked` validates the lock against every workspace member's pyproject.toml,
+# even one it isn't installing — apps/cerberus and packages/util_py must be present too, or
+# uv sees the workspace as changed and refuses the (otherwise up-to-date) lockfile.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=apps/totchef/pyproject.toml,target=apps/totchef/pyproject.toml \
+    --mount=type=bind,source=apps/cerberus/pyproject.toml,target=apps/cerberus/pyproject.toml \
+    --mount=type=bind,source=packages/util_py/pyproject.toml,target=packages/util_py/pyproject.toml \
+    uv sync --locked --no-install-project --package totchef
+
+COPY pyproject.toml uv.lock ./
+COPY apps/totchef ./apps/totchef
+COPY apps/cerberus/pyproject.toml ./apps/cerberus/pyproject.toml
+COPY packages/util_py/pyproject.toml ./packages/util_py/pyproject.toml
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --package totchef
+
+RUN ln -s /src/.venv/bin/totchef /usr/local/bin/totchef
+
+ENV PATH="/src/.venv/bin:$PATH"
+
+USER tester
+WORKDIR /home/tester

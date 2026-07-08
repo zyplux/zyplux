@@ -1,0 +1,94 @@
+(
+    """Meta-test: story tests assert behavior through fixtures only, zero *runtime* imports; """
+    """a `TYPE_CHECKING`-guarded import (needed to annotate a fixture """
+    """parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3's """
+    """timing/rendering assertions (needing threading/rich, not totchef """
+    """internals — those stay behind public seams too) and §7.3.2/§8.3.1's container """
+    """fixture are pinned exceptions. The act/assert fixtures, in turn, """
+    """reach totchef only through its public CLI — never its internals."""
+)
+
+import ast
+from typing import TYPE_CHECKING
+
+from project_paths import STORIES_DIR
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+# §8.2/§8.3.2-3 need threading/rich for timing/rendering asserts (the ownership stories are fixture-driven, zero-import)
+CONTAINER_BOUND = {"test_8_observing_a_run.py"}
+
+# The arrange layer owns the sanctioned system-boundary doubles (bash, network, host),
+# so it imports those production modules to patch them; the act and assert layers must
+# drive totchef the way an operator does — through nothing but its public CLI.
+PUBLIC_ONLY_FIXTURES = ("act_fixtures.py", "assert_fixtures.py")
+PUBLIC_CLI_IMPORT = "totchef.cli"  # the one production handle: `from totchef.cli import app`
+
+
+def _is_type_checking_guard(node: ast.AST) -> bool:
+    return isinstance(node, ast.If) and (
+        (isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING")
+        or (isinstance(node.test, ast.Attribute) and node.test.attr == "TYPE_CHECKING")
+    )
+
+
+def _is_type_checking_flag_import(node: ast.AST) -> bool:
+    return (
+        isinstance(node, ast.ImportFrom)
+        and node.module == "typing"
+        and any(alias.name == "TYPE_CHECKING" for alias in node.names)
+    )
+
+
+def _walk_runtime(tree: ast.AST) -> Iterator[ast.AST]:
+    """Like `ast.walk`, but doesn't descend into a `TYPE_CHECKING` guard's body — those imports never execute."""
+    for node in ast.iter_child_nodes(tree):
+        if _is_type_checking_guard(node):
+            continue
+        yield node
+        yield from _walk_runtime(node)
+
+
+def _import_bearing_story_tests() -> set[str]:
+    bearing = set()
+    for path in STORIES_DIR.glob("test_*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        if any(
+            isinstance(node, (ast.Import, ast.ImportFrom)) and not _is_type_checking_flag_import(node)
+            for node in _walk_runtime(tree)
+        ):
+            bearing.add(path.name)
+    return bearing
+
+
+def _totchef_imports(source: str) -> list[str]:
+    """Every module path a source file pulls from totchef — `from totchef.x import y` and `import totchef.x` alike."""
+    modules: list[str] = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "totchef":
+            modules.append(node.module or "")
+        elif isinstance(node, ast.Import):
+            modules += [alias.name for alias in node.names if alias.name.split(".")[0] == "totchef"]
+    return modules
+
+
+def test_story_tests_use_fixtures_only() -> None:
+    bearing = _import_bearing_story_tests()
+    unexpected = bearing - CONTAINER_BOUND
+    resolved = CONTAINER_BOUND - bearing
+    assert bearing == CONTAINER_BOUND, (
+        f"story tests must reach production code only through fixtures (zero imports).\n"
+        f"  unexpected import-bearing files: {sorted(unexpected)}\n"
+        f"  exceptions now import-free (drop from CONTAINER_BOUND): {sorted(resolved)}"
+    )
+
+
+def test_act_and_assert_fixtures_touch_only_the_public_cli() -> None:
+    for name in PUBLIC_ONLY_FIXTURES:
+        modules = _totchef_imports((STORIES_DIR / name).read_text(encoding="utf-8"))
+        leaked = sorted(module for module in modules if module != PUBLIC_CLI_IMPORT)
+        assert not leaked, (
+            f"{name} reaches totchef internals {leaked}; the act/assert layers must operate totchef "
+            f"only through its public CLI (`from {PUBLIC_CLI_IMPORT} import app`)."
+        )

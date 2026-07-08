@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 ID = "justfile"
 SUMMARY = (
-    "canonical baseline block, recipe names, aliases, check pipeline, "
-    "local cerberus run, clean via cz clean, wrapped tool calls, no trailing whitespace"
+    "canonical baseline block, recipe names, aliases, check pipeline, local cerberus run, "
+    "clean via cz clean, wrapped tool calls, no trailing whitespace"
 )
 SCOPE = Scope.CONTENT
 
