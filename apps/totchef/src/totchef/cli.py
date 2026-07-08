@@ -15,7 +15,15 @@ from toon_format import encode
 from totchef import __version__, harness, registry
 from totchef.cook_runner import format_duration, run_recipe
 from totchef.harness import SOFT_FAIL_EXIT
-from totchef.logs import SHARED_LOG_ENV, drain_logs, inline_mode, set_terminal_echo, start_logging, write_log
+from totchef.logs import (
+    SHARED_LOG_ENV,
+    choose_log_file,
+    drain_logs,
+    inline_mode,
+    set_terminal_echo,
+    start_logging,
+    write_log,
+)
 from totchef.recipe import (
     RECIPE_ENV,
     find_cooks_dir,
@@ -66,6 +74,7 @@ def ensure_root(recipe_path: Path) -> None:
     if os.geteuid() == 0:
         return
     os.environ[RECIPE_ENV] = str(recipe_path)
+    os.environ.setdefault(SHARED_LOG_ENV, str(choose_log_file()))
     relaunch = [sys.executable, *sys.argv[1:]] if getattr(sys, "frozen", False) else [sys.executable, *sys.argv]
     os.execvp("sudo", ["sudo", f"--preserve-env={SHARED_LOG_ENV},{RECIPE_ENV}", *relaunch])
 

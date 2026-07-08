@@ -119,6 +119,11 @@ def drain_logs(timeout: float = 5.0) -> None:
     event.wait(timeout)
 
 
+def choose_log_file() -> Path:
+    """Pick this run's log path under the invoking user's own log dir; doesn't create it or the directory yet."""
+    return log_dir() / f"totchef-{datetime.now().astimezone():%Y%m%d-%H%M%S}.log"
+
+
 def open_log_file() -> Path:
     (
         """Resolve the run's log file (honors SHARED_LOG_ENV, confined to the user's own log dir once root is """
@@ -138,7 +143,7 @@ def open_log_file() -> Path:
                 value=existing,
                 directory=directory,
             )
-        log_file = directory / f"totchef-{datetime.now().astimezone():%Y%m%d-%H%M%S}.log"
+        log_file = choose_log_file()
     os.environ[SHARED_LOG_ENV] = str(log_file)
     log_file.touch(exist_ok=True)
     if sudo_user:

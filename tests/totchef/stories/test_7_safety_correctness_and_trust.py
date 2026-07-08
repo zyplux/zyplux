@@ -104,14 +104,22 @@ def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text('[bash.step]\napply = "true"\n')
     escalation: dict[str, str | list[str]] = {}
+    chosen_log = tmp_path / "pinned.log"
+    picks: list[Path] = []
 
     def capture_exec(target: str, argv: list[str]) -> None:
         escalation.update(target=target, argv=list(argv))
         raise SystemExit(0)  # sudo replaces the process — control never returns
 
+    def fake_choose_log_file() -> Path:
+        picks.append(chosen_log)
+        return chosen_log
+
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root yet
     monkeypatch.setattr("os.execvp", capture_exec)
+    monkeypatch.setattr("totchef.cli.choose_log_file", fake_choose_log_file)
     monkeypatch.delenv("TOTCHEF_RECIPE", raising=False)
+    monkeypatch.delenv("TOTCHEF_LOG_FILE", raising=False)
 
     cli.run("up", "--recipe", str(recipe_path))
 
@@ -119,6 +127,7 @@ def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(
     preserve = next(arg for arg in escalation["argv"] if arg.startswith("--preserve-env="))
     assert "TOTCHEF_RECIPE" in preserve  # recipe pinned across the boundary
     assert "LOG" in preserve  # log file pinned across the boundary
+    assert picks == [chosen_log]  # a log path is actively chosen before the re-exec, not left to chance
     cli.run("where").assert_prints(str(recipe_path))  # the pinned recipe is what a fresh resolution now finds
 
 
