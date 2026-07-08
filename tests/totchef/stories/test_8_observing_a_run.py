@@ -235,9 +235,7 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 
     log_internals.set_terminal_echo(enabled=False)  # dry-run suppresses cook log echo to the terminal …
     assert not log_internals.log_state.echo_to_terminal
-    log_pump.emit_terminal(
-        "cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK
-    )  # what the pump would mirror
+    log_pump.emit_terminal("cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK)  # what the pump would mirror
     log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …
