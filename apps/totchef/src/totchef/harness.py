@@ -142,7 +142,7 @@ def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | N
             name = pending[future]
             try:
                 latest[name] = future.result()
-            except Exception as exc:
-                logger.debug("latest lookup for {name} failed: {exc}", name=name, exc=exc)
+            except Exception as exc:  # noqa: BLE001 — fetch_one is a plugin extension point (totchef.cooks); logger.opt(exception=True) is loguru's own idiom for propagating the trace below, but ruff doesn't recognize the .opt() chain as a logging call: https://github.com/astral-sh/ruff/issues/19075
+                logger.opt(exception=True).debug("latest lookup for {name} failed: {exc}", name=name, exc=exc)
                 latest[name] = None
     return latest

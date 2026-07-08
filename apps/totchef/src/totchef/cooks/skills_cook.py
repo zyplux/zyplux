@@ -303,7 +303,7 @@ class SkillsCook(VersionedCook):
         return read_skill_states()
 
     @override
-    def list_reportable(self, requested: list[str], installed_after: dict[str, str]) -> list[str]:
+    def list_reportable(self, requested: list[str], installed_after: dict[str, str], /) -> list[str]:
         (
             """Row keys per declared repo: every skill installed after the sync — including one a re-add newly landed, which no requested key could """
             """name up front — plus any requested key nothing landed for (a fresh-repo placeholder whose add failed, a skill that vanished), so """

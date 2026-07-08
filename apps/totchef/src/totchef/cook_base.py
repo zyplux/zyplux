@@ -134,7 +134,7 @@ class VersionedCook(CookBase):
         raise NotImplementedError
 
     @staticmethod
-    def list_reportable(requested: list[str], installed_after: dict[str, str]) -> list[str]:  # noqa: ARG004 — part of the override contract; SkillsCook's override uses it to split finer rows
+    def list_reportable(requested: list[str], _installed_after: dict[str, str], /) -> list[str]:
         """Row keys for the post-sync report — requested names by default. A cook discovering finer items (skills in a repo) overrides this to split them."""
         return requested
 
