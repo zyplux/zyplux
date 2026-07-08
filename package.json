@@ -29,7 +29,7 @@
       "eslint-plugin-prefer-arrow-functions": "^3.10.1",
       "eslint-plugin-react": "^7.37.5",
       "eslint-plugin-react-hooks": "^7.1.1",
-      "eslint-plugin-unicorn": "^70.0.0",
+      "eslint-plugin-unicorn": "^71.1.0",
       "knip": "^6.25.0",
       "npm-check-updates": "^22.2.9",
       "prettier": "^3.9.4",
