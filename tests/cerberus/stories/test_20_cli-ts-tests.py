@@ -32,6 +32,14 @@ _SEAM_CLI_CONDITIONS = (
     '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, '
     '"exports": {"types": "./src/cli.ts", "default": "./src/cli.ts"}}'
 )
+_SEAM_CLI_CONTRACTS = (
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"},'
+    ' "exports": {".": "./src/cli.ts", "./contracts": "./src/contracts.ts"}}'
+)
+_SEAM_CLI_CONTRACTS_ASTRAY = (
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"},'
+    ' "exports": {".": "./src/cli.ts", "./contracts": "./src/schemas.ts"}}'
+)
 _SEAM_TESTS_PKG = '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts"}}'
 _SEAM_TESTS_PKG_SNEAKY = (
     '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts",'
@@ -131,6 +139,31 @@ def test_20_2_5_accepts_a_conditions_object_as_the_root_seam(
         "apps/cli/package.json": _SEAM_CLI_CONDITIONS,
     })
     assert result.findings == [finding(status.PASS, _SEAM_OK)]
+
+
+def test_20_2_6_accepts_a_contracts_seam_mapping_to_the_contracts_module(
+    run_cli_ts_tests: RunCliTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_cli_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "apps/cli/package.json": _SEAM_CLI_CONTRACTS,
+    })
+    assert result.findings == [finding(status.PASS, _SEAM_OK)]
+
+
+def test_20_2_7_fails_a_contracts_seam_mapping_elsewhere(
+    run_cli_ts_tests: RunCliTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_cli_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "apps/cli/package.json": _SEAM_CLI_CONTRACTS_ASTRAY,
+    })
+    assert result.findings == [
+        finding(
+            status.FAIL,
+            "apps/cli/package.json: cli app './contracts' seam must map to './src/contracts.ts'",
+        )
+    ]
 
 
 def test_20_3_1_passes_story_tests_importing_only_fixture_aliases_and_node_builtins(

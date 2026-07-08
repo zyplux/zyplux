@@ -18,6 +18,10 @@
 
 ### 20.2.5 accepts a conditions object as the root seam
 
+### 20.2.6 accepts a contracts seam mapping to the contracts module
+
+### 20.2.7 fails a contracts seam mapping elsewhere
+
 ## 20.3 requiring story tests to import only fixture aliases and node builtins
 
 ### 20.3.1 passes story tests importing only fixture aliases and node builtins

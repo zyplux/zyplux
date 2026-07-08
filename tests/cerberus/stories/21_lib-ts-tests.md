@@ -30,6 +30,12 @@
 
 ### 21.2.7 accepts a string exports as the root seam
 
+### 21.2.8 accepts a contracts seam conditions object mapping to the contracts module
+
+### 21.2.9 fails a contracts seam mapping elsewhere
+
+### 21.2.10 fails an extra subpath beside a valid contracts seam
+
 ## 21.3 requiring story tests to reach workspace code only through fixture aliases
 
 ### 21.3.1 passes story tests importing only fixture aliases and node builtins

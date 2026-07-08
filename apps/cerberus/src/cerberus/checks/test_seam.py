@@ -1,12 +1,14 @@
 """Shared machinery for the `cli-ts-tests`/`lib-ts-tests` checks.
 
-A public TypeScript package exposes exactly one seam: the root export. Three
-facts enforce that together, whatever the package type: the package's
-`exports` map exposes nothing beyond the root seam, its user-story tests
-reach workspace code only through `#` fixture aliases (third-party modules
-and node builtins are fair game — they cannot touch package internals), and
-the governing test package's `imports` aliases stay inside the package so an
-alias cannot tunnel back into package internals.
+A public TypeScript package exposes the root export plus at most one extra
+seam: `./contracts`, which must map to `./src/contracts.ts` (the schemas
+describing the package's file and wire formats). Three facts enforce that
+together, whatever the package type: the package's `exports` map exposes
+nothing beyond those seams, its user-story tests reach workspace code only
+through `#` fixture aliases (third-party modules and node builtins are fair
+game — they cannot touch package internals), and the governing test
+package's `imports` aliases stay inside the package so an alias cannot
+tunnel back into package internals.
 """
 
 from __future__ import annotations
@@ -22,7 +24,9 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
 
-_SEAM_EXPORT_KEYS = frozenset({".", "./package.json"})
+_CONTRACTS_EXPORT_KEY = "./contracts"
+_CONTRACTS_TARGET = "./src/contracts.ts"
+_SEAM_EXPORT_KEYS = frozenset({".", "./package.json", _CONTRACTS_EXPORT_KEY})
 _SEAM_SPECIFIER_PREFIXES = ("#", "node:")
 _PATH_SPECIFIER_PREFIXES = (".", "/")
 _STORY_TEST_PATH = re.compile(r"(?:^|/)stories/[^/]+\.test\.tsx?$")
@@ -70,6 +74,11 @@ def _check_exports_surface(res: CheckResult, manifest_path: str, manifest: dict[
         res.fail(f"{manifest_path}: {subject} exports must include the '.' root seam")
     for key in sorted(subpaths - _SEAM_EXPORT_KEYS):
         res.fail(f"{manifest_path}: {subject} exports expose more than the root seam — {key!r}")
+    if _CONTRACTS_EXPORT_KEY not in subpaths:
+        return
+    targets = _alias_targets(exports[_CONTRACTS_EXPORT_KEY])
+    if not targets or any(target != _CONTRACTS_TARGET for target in targets):
+        res.fail(f"{manifest_path}: {subject} '{_CONTRACTS_EXPORT_KEY}' seam must map to '{_CONTRACTS_TARGET}'")
 
 
 def _governing_manifest(story_file: str, path_set: frozenset[str]) -> str | None:

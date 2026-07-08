@@ -27,6 +27,17 @@ _SEAM_LIB_PRIVATE_LEAKY = (
 _SEAM_LIB_NO_ROOT = '{"name": "@demo/lib", "exports": {"./package.json": "./package.json"}}'
 _SEAM_LIB_CONDITIONS = '{"name": "@demo/lib", "exports": {"types": "./src/index.ts", "default": "./src/index.ts"}}'
 _SEAM_LIB_STRING_EXPORTS = '{"name": "@demo/lib", "exports": "./src/index.ts"}'
+_SEAM_LIB_CONTRACTS = (
+    '{"name": "@demo/lib", "exports": {".": "./src/index.ts",'
+    ' "./contracts": {"types": "./src/contracts.ts", "default": "./src/contracts.ts"}}}'
+)
+_SEAM_LIB_CONTRACTS_ASTRAY = (
+    '{"name": "@demo/lib", "exports": {".": "./src/index.ts", "./contracts": "./src/schemas.ts"}}'
+)
+_SEAM_LIB_CONTRACTS_LEAKY = (
+    '{"name": "@demo/lib", "exports": {".": "./src/index.ts",'
+    ' "./contracts": "./src/contracts.ts", "./helpers": "./src/helpers.ts"}}'
+)
 _SEAM_JSON_ONLY = '{"name": "@demo/tsconfig"}'
 _SEAM_CLI_LEAKY = (
     '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts",'
@@ -233,6 +244,49 @@ def test_21_2_7_accepts_a_string_exports_as_the_root_seam(
         "packages/lib/src/index.ts": "",
     })
     assert result.findings == [finding(status.PASS, _SEAM_OK)]
+
+
+def test_21_2_8_accepts_a_contracts_seam_conditions_object_mapping_to_the_contracts_module(
+    run_lib_ts_tests: RunLibTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_lib_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB_CONTRACTS,
+        "packages/lib/src/index.ts": "",
+    })
+    assert result.findings == [finding(status.PASS, _SEAM_OK)]
+
+
+def test_21_2_9_fails_a_contracts_seam_mapping_elsewhere(
+    run_lib_ts_tests: RunLibTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_lib_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB_CONTRACTS_ASTRAY,
+        "packages/lib/src/index.ts": "",
+    })
+    assert result.findings == [
+        finding(
+            status.FAIL,
+            "packages/lib/package.json: library './contracts' seam must map to './src/contracts.ts'",
+        )
+    ]
+
+
+def test_21_2_10_fails_an_extra_subpath_beside_a_valid_contracts_seam(
+    run_lib_ts_tests: RunLibTsTests, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_lib_ts_tests({
+        "package.json": _SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB_CONTRACTS_LEAKY,
+        "packages/lib/src/index.ts": "",
+    })
+    assert result.findings == [
+        finding(
+            status.FAIL,
+            "packages/lib/package.json: library exports expose more than the root seam — './helpers'",
+        )
+    ]
 
 
 def test_21_3_1_passes_story_tests_importing_only_fixture_aliases_and_node_builtins(
