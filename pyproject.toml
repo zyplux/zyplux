@@ -34,7 +34,7 @@ lint = [
 test = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "tomli-w>=1.1",
+    "tomli-w>=1.2.0",
 ]
 type = [
     "pyrefly>=1.1.1",
@@ -44,6 +44,6 @@ type = [
     # which carries its own inline `# dependencies` and runs via `uv run --script`. They live
     # here only so pyrefly can resolve ctop.py's imports; types-psutil supplies psutil's stubs.
     "psutil>=7.2.2",
-    "websockets>=14",
+    "websockets>=16.0",
     "types-psutil>=7.2.2.20260518",
 ]
