@@ -37,6 +37,13 @@ A `~/.config/totchef/cooks/<section>_cook.py` is still found by a real `totchef 
 which re-execs under `sudo` before scheduling any cook — the invoking user's config
 dir, not root's, is what gets scanned.
 
+### 9.2.4 unknown section error names every cooks dir actually searched
+
+An unregistered section's error names both places a `<section>_cook.py` would be
+picked up — the config dir always, and the recipe's sibling `totchef_cooks/` too
+when the recipe has one — so the operator isn't pointed at only one of the two
+valid fixes.
+
 ## 9.3 Choose the right cook shape for my domain
 
 > As a cook author, I want base classes that match common patterns, so that I only

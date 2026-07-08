@@ -177,6 +177,18 @@ def test_9_2_3_a_config_dir_cook_survives_the_sudo_re_exec_a_real_up_performs(
     assert run.owners["/home/tester/note.txt"] == "tester", run.transcript
 
 
+def test_9_2_4_unknown_section_error_names_every_cooks_dir_actually_searched(
+    recipe: RecipeBuilder, totchef: Totchef, custom_cooks: Path
+) -> None:
+    """An unregistered section's error names both the config dir and the recipe's sibling totchef_cooks/."""
+    recipe.declares("nosuchsection", "x")
+
+    report = totchef.lint()
+
+    report.assert_rejected("no cook registered")
+    assert str(custom_cooks) in report.message  # names the recipe-sibling dir too, not just the config dir
+
+
 # 8.3 Choose the right cook shape for my domain
 
 

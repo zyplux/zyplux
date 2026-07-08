@@ -107,8 +107,12 @@ def load_cook_class(section: str) -> type[CookBase]:
     entry = registry.get(section)
     if entry is None:
         known = ", ".join(sorted(registry)) or "none"
+        cooks_dirs = [config_cooks_dir()]
+        if _recipe_cooks_dir.path is not None:
+            cooks_dirs.append(_recipe_cooks_dir.path)
+        where = " or ".join(str(d) for d in cooks_dirs)
         sys.exit(
             f"ERROR: [{section}] -> no cook registered for this section. Known sections: {known}. "
-            f"Add a plugin or drop a {section}_cook.py in {config_cooks_dir()}."
+            f"Add a plugin or drop a {section}_cook.py in {where}."
         )
     return entry.cook
