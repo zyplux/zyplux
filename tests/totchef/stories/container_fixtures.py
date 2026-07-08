@@ -1,4 +1,7 @@
-"""Container fixtures for §7.3.2/§8.3.1: real OS state behind a real sudo, via `totchef up` in a throwaway container; skipped without podman."""
+(
+    """Container fixtures for §7.3.2/§8.3.1: real OS state behind a real sudo, via `totchef up` """
+    """in a throwaway container; skipped without podman."""
+)
 
 import base64
 import os
@@ -30,7 +33,10 @@ CLEAN_ENV = dict(os.environ)
 
 @dataclass
 class ContainerRun:
-    """What a `totchef up` inside the container produced: each probed artifact's owner (`stat -c %U`), the log file's owner, and the full transcript."""
+    (
+        """What a `totchef up` inside the container produced: each probed artifact's owner """
+        """(`stat -c %U`), the log file's owner, and the full transcript."""
+    )
 
     transcript: str
     owners: dict[str, str | None] = field(default_factory=dict)
@@ -55,7 +61,10 @@ def container_image() -> str:
 
 @pytest.fixture(scope="session")
 def apply_in_container(container_image: str) -> Callable[[str, list[str]], ContainerRun]:
-    """Run `totchef up` against `recipe` in a fresh container as the non-root `tester`, reporting the owner of each `artifacts` path and log file."""
+    (
+        """Run `totchef up` against `recipe` in a fresh container as the non-root `tester`, """
+        """reporting the owner of each `artifacts` path and log file."""
+    )
     assert podman is not None
     binary = podman
 

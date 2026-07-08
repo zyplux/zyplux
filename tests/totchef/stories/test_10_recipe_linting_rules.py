@@ -1,4 +1,7 @@
-"""User stories §10 — Recipe linting rules. One test per rule, driving `lint` through the chef or the real CLI; a rejected recipe never touches the system."""
+(
+    """User stories §10 — Recipe linting rules. One test per rule, driving `lint` through the """
+    """chef or the real CLI; a rejected recipe never touches the system."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -13,7 +16,10 @@ if TYPE_CHECKING:
 
 
 def test_10_1_1_lint_validates_and_prints_path_valid(cli: Cli, tmp_path: Path) -> None:
-    """`totchef lint` validates against every cook's schema and the graph, then prints `<path>: valid` or exits with a precise error."""
+    (
+        """`totchef lint` validates against every cook's schema and the graph, then prints """
+        """`<path>: valid` or exits with a precise error."""
+    )
     good = tmp_path / "recipe.toml"
     good.write_text('[bash.step]\napply = "true"\n')
 
@@ -42,7 +48,10 @@ def test_10_1_2_lint_needs_no_root_and_changes_nothing(
 def test_10_2_1_every_section_names_a_registered_cook_and_every_key_is_known(
     scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef]
 ) -> None:
-    """A section must name a registered cook; an unknown or misspelled key is rejected (`extra='forbid'`) rather than silently ignored."""
+    (
+        """A section must name a registered cook; an unknown or misspelled key is rejected """
+        """(`extra='forbid'`) rather than silently ignored."""
+    )
     chef(scenario().declares("nosuch", packages=[])).lint().assert_rejected()  # unregistered section
 
     chef(scenario().declares("file", "f", path="/x", content="a", typo=1)).lint().assert_rejected()  # unknown key
@@ -65,7 +74,10 @@ def test_10_2_2_dependencies_name_existing_nodes_with_no_cycles_or_self_dependen
 def test_10_2_3_needs_root_sits_on_a_leaf_entry_never_a_subtable_header(
     scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef]
 ) -> None:
-    """`needs_root` on a subtable header is forbidden (it would grant root wholesale); it must be per leaf entry, and the error says so."""
+    (
+        """`needs_root` on a subtable header is forbidden (it would grant root wholesale); it """
+        """must be per leaf entry, and the error says so."""
+    )
     wholesale = scenario()
     wholesale.declares("bash", needs_root=True)  # header-level grant
     wholesale.declares("bash", "step", apply="x")
@@ -90,7 +102,10 @@ def test_10_3_1_bin_commands_embed_a_version_or_offer_help(
     bundled_files: Path,
     tmp_path: Path,
 ) -> None:
-    """A command that doesn't embed `__version__` or offer `--version`/`--help` can't enter a bin cook — lint rejects it statically, never executing it."""
+    (
+        """A command that doesn't embed `__version__` or offer `--version`/`--help` can't enter """
+        """a bin cook — lint rejects it statically, never executing it."""
+    )
     recipe = totchef.recipe
     sentinel = tmp_path / "executed"
     (bundled_files / "naked.py").write_text(f'from pathlib import Path\n\nPath("{sentinel}").write_text("ran")\n')
@@ -130,7 +145,10 @@ def test_10_3_2_conf_entries_declare_exactly_one_of_line_or_lines(
 
 
 def test_10_3_3_cook_entry_model_violations_are_reported_per_node_and_location(cli: Cli, tmp_path: Path) -> None:
-    """A cook's `entry_model` (pydantic, extra='forbid') is validated by lint, which reports every violation as a precise `[node] location: message` line."""
+    (
+        """A cook's `entry_model` (pydantic, extra='forbid') is validated by lint, which reports """
+        """every violation as a precise `[node] location: message` line."""
+    )
     typoed = tmp_path / "typo.toml"
     typoed.write_text('[file.x]\npath = "/x"\ncontent = "a"\nmoed = "0644"\n')
 

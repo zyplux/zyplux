@@ -1,7 +1,10 @@
 (
-    """Meta-test: story tests assert behavior through fixtures only, zero *runtime* imports; a `TYPE_CHECKING`-guarded import (needed to annotate a fixture """
-    """parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3's timing/rendering assertions (needing threading/rich, not totchef """
-    """internals — those stay behind public seams too) and §7.3.2/§8.3.1's container fixture are pinned exceptions. The act/assert fixtures, in turn, """
+    """Meta-test: story tests assert behavior through fixtures only, zero *runtime* imports; """
+    """a `TYPE_CHECKING`-guarded import (needed to annotate a fixture """
+    """parameter's type) is erased before execution and doesn't count. §8.2/§8.3.2-3's """
+    """timing/rendering assertions (needing threading/rich, not totchef """
+    """internals — those stay behind public seams too) and §7.3.2/§8.3.1's container """
+    """fixture are pinned exceptions. The act/assert fixtures, in turn, """
     """reach totchef only through its public CLI — never its internals."""
 )
 

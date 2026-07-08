@@ -1,4 +1,7 @@
-"""Source and test hygiene: every docstring under `src` and `tests` — module, class, function, method — stays one line."""
+(
+    """Source and test hygiene: every docstring under `src` and `tests` — module, class, """
+    """function, method — stays one line."""
+)
 
 import ast
 

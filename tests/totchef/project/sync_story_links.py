@@ -1,4 +1,7 @@
-"""Derives story-doc header links from tests/stories: h1 links to its test file, h2/h3 stay plain; `just lint` runs this to refresh stale links."""
+(
+    """Derives story-doc header links from tests/stories: h1 links to its test file, h2/h3 stay plain; """
+    """`just lint` runs this to refresh stale links."""
+)
 
 import ast
 import re

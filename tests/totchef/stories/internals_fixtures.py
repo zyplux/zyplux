@@ -1,4 +1,7 @@
-"""White-box handles onto totchef internals, for scheduler/pump/terminal tests deliberately not black-box; keeps tests inside the CLI seam cerberus enforces."""
+(
+    """White-box handles onto totchef internals, for scheduler/pump/terminal tests deliberately """
+    """not black-box; keeps tests inside the CLI seam cerberus enforces."""
+)
 
 from typing import TYPE_CHECKING
 

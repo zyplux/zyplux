@@ -1,4 +1,7 @@
-"""Fixtures for the prose-style tests, by role (arrange/act/assert); only system boundaries (bash, network, `$HOME`, host) are mocked."""
+(
+    """Fixtures for the prose-style tests, by role (arrange/act/assert); only system boundaries """
+    """(bash, network, `$HOME`, host) are mocked."""
+)
 
 from act_fixtures import chef, cli, totchef
 from arrange_fixtures import (
