@@ -1,4 +1,7 @@
-"""User stories §7 — Safety and trust. One test per §7 criterion; most drive the chef, the escalation story runs `totchef up` via `cli` with exec faked."""
+(
+    """User stories §7 — Safety and trust. One test per §7 criterion; most drive the """
+    """chef, the escalation story runs `totchef up` via `cli` with exec faked."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -12,11 +15,17 @@ if TYPE_CHECKING:
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
     from container_fixtures import ContainerRun
 
-GIT_NEEDS_INSTALL = "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n        500 http://archive noble/main amd64 Packages\n"
+GIT_NEEDS_INSTALL = (
+    "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n"
+    "        500 http://archive noble/main amd64 Packages\n"
+)
 
 
 class _NullContext:
-    """contextlib.nullcontext without the import — this file is held to zero runtime imports (see test_story_imports.py)."""
+    (
+        """contextlib.nullcontext without the import — this file is held to zero runtime """
+        """imports (see test_story_imports.py)."""
+    )
 
     def __init__(self, value: Path) -> None:
         self._value = value
@@ -115,7 +124,10 @@ def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(
 def test_7_3_2_forked_child_drops_privilege_for_user_nodes(
     apply_in_container: Callable[[str, list[str]], ContainerRun],
 ) -> None:
-    """A forked child keeps root if needs_root, else drops to the invoking user — user files written as the user, root entries as root. In a container."""
+    (
+        """A forked child keeps root if needs_root, else drops to the invoking user — user """
+        """files written as the user, root entries as root. In a container."""
+    )
     run = apply_in_container(
         '[file.user_node]\npath = "/home/tester/by-user.txt"\ncontent = "u\\n"\n\n'
         '[file.root_node]\nneeds_root = true\npath = "/home/tester/by-root.txt"\ncontent = "r\\n"\n',
@@ -160,7 +172,10 @@ def test_7_3_3_plan_and_lint_never_escalate(
 def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(
     cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A frozen binary's bare argv[0] ("totchef") defeats sudo's secure_path; re-exec must use the absolute sys.executable and only argv[1:]."""
+    (
+        """A frozen binary's bare argv[0] ("totchef") defeats sudo's secure_path; re-exec """
+        """must use the absolute sys.executable and only argv[1:]."""
+    )
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text('[bash.step]\napply = "true"\n')
     binary = "/home/op/.local/bin/totchef"  # absolute, as PyInstaller resolves sys.executable
@@ -193,7 +208,10 @@ def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(
 def test_7_4_1_hard_failure_aborts_the_apply_and_exits_1(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """Hard failure aborts the apply and exits 1 (e.g. unavailable package, bash apply error, uv tool install failure)."""
+    (
+        """Hard failure aborts the apply and exits 1 (e.g. unavailable package, bash apply """
+        """error, uv tool install failure)."""
+    )
     recipe.declares("bash", "broken", apply="false-cmd")
     recipe.declares("bash", "after", apply="echo done", depends_on=["bash.broken"])
     terminal.arrange("false-cmd", exit_code=1)
@@ -238,7 +256,10 @@ def test_7_4_3_report_names_which_cooks_hard_or_soft_failed(
 def test_7_4_4_a_crash_outside_any_cook_still_reports_loudly(
     recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """An unexpected exception after logs are redirected — a totchef bug, not a recipe failure — still exits 1, traceback in view, never a silent death."""
+    (
+        """An unexpected exception after logs are redirected — a totchef bug, not a recipe """
+        """failure — still exits 1, traceback in view, never a silent death."""
+    )
     recipe.declares("bash", "step", apply="true")
 
     def explode(*_args: object, **_kwargs: object) -> NoReturn:
@@ -298,7 +319,10 @@ def test_7_5_2_cooks_compose_intrinsic_guards_with_pre_hook(
 def test_7_5_3_hooks_run_on_versioned_sections_too(
     recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """pre_hook/post_hook are valid on a versioned section too: the pre_hook gates the whole sync, the post_hook fires once after a change."""
+    (
+        """pre_hook/post_hook are valid on a versioned section too: the pre_hook gates the """
+        """whole sync, the post_hook fires once after a change."""
+    )
     recipe.declares("cargo", packages=["ripgrep"], pre_hook="test -e /run/build-ok", post_hook="rebuild-completions")
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
 

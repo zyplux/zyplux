@@ -1,4 +1,7 @@
-"""User stories §12 — Installing agent skills. One test per §12 criterion on the real chef in-process; system boundaries (bash, home) are faked."""
+(
+    """User stories §12 — Installing agent skills. One test per §12 criterion on the """
+    """real chef in-process; system boundaries (bash, home) are faked."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -13,9 +16,10 @@ if TYPE_CHECKING:
 
 def _write_skills(home: Path, *entries: tuple[str, str, str, str]) -> Callable[[], None]:
     (
-        """An effect simulating `skills add` writing the skills CLI's own lockfile — `entries` is the full (name, source, folder_hash, updated_at) """
-        """state it holds after this call. The real CLI rewrites updatedAt on every add whether or not content changed; only folder_hash tracks """
-        """the content."""
+        """An effect simulating `skills add` writing the skills CLI's own lockfile — """
+        """`entries` is the full (name, source, folder_hash, updated_at) state it holds """
+        """after this call. The real CLI rewrites updatedAt on every add whether or not """
+        """content changed; only folder_hash tracks the content."""
     )
     skills = ",".join(
         '"'
@@ -42,8 +46,9 @@ def _write_skills(home: Path, *entries: tuple[str, str, str, str]) -> Callable[[
 
 def _github_tree(*skill_folders: tuple[str, str]) -> str:
     (
-        """The GitHub trees API response for a repo — one (skill_name, folder_sha) tree entry per skill, at the `skills/<name>` path the lockfile's """
-        """skillPath points into."""
+        """The GitHub trees API response for a repo — one (skill_name, folder_sha) tree """
+        """entry per skill, at the `skills/<name>` path the lockfile's skillPath points """
+        """into."""
     )
     entries = ",".join(
         '{"path": "skills/' + name + '", "type": "tree", "sha": "' + sha + '"}' for name, sha in skill_folders
@@ -63,10 +68,13 @@ def _run(*effects: Callable[[], None]) -> Callable[[], None]:
 
 def _drop_skill_files(home: Path, name: str, **files: str) -> Callable[[], None]:
     (
-        """An effect simulating a symlink-mode `skills add` writing a skill's own files: they land in the canonical store `~/.agents/skills/<name>`, """
-        """and `~/.claude/skills/<name>` becomes a symlink to it (replacing whatever sat there, as the CLI's createSymlink does). Filenames given """
-        """with `_` for `.` (skill_md -> SKILL.md, package_json -> package.json, pyproject_toml -> pyproject.toml, any other name verbatim); every """
-        """file arrives non-executable, since git doesn't preserve that bit."""
+        """An effect simulating a symlink-mode `skills add` writing a skill's own files: """
+        """they land in the canonical store `~/.agents/skills/<name>`, and """
+        """`~/.claude/skills/<name>` becomes a symlink to it (replacing whatever sat there, """
+        """as the CLI's createSymlink does). Filenames given with `_` for `.` (skill_md -> """
+        """SKILL.md, package_json -> package.json, pyproject_toml -> pyproject.toml, any """
+        """other name verbatim); every file arrives non-executable, since git doesn't """
+        """preserve that bit."""
     )
     manifest_names = {"skill_md": "SKILL.md", "package_json": "package.json", "pyproject_toml": "pyproject.toml"}
 
@@ -125,8 +133,9 @@ def test_12_1_3_each_skill_gets_its_own_report_row_with_version_and_content_id(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
     (
-        """One report row per skill, valued by the skill's declared version — SKILL.md frontmatter first, then package.json, then pyproject.toml """
-        """— plus a short #hash content id, per skill from the very first install."""
+        """One report row per skill, valued by the skill's declared version — SKILL.md """
+        """frontmatter first, then package.json, then pyproject.toml — plus a short #hash """
+        """content id, per skill from the very first install."""
     )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
@@ -174,7 +183,10 @@ def test_12_1_3_each_skill_gets_its_own_report_row_with_version_and_content_id(
 def test_12_1_4_an_installed_skill_reports_unchanged_when_only_its_timestamp_moved(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
-    """The CLI rewrites every skill's updatedAt on each add; a skill whose folder hash held still reports unchanged, even though the repo was re-synced."""
+    (
+        """The CLI rewrites every skill's updatedAt on each add; a skill whose folder """
+        """hash held still reports unchanged, even though the repo was re-synced."""
+    )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
     terminal.arrange(
@@ -201,7 +213,10 @@ def test_12_1_4_an_installed_skill_reports_unchanged_when_only_its_timestamp_mov
 def test_12_1_5_an_installed_skill_reports_upgraded_when_its_content_hash_changed(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
-    """When a skill's skillFolderHash moves (its folder's content actually changed upstream), its row reports upgraded."""
+    (
+        """When a skill's skillFolderHash moves (its folder's content actually changed """
+        """upstream), its row reports upgraded."""
+    )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
     terminal.arrange(
@@ -226,7 +241,10 @@ def test_12_1_5_an_installed_skill_reports_upgraded_when_its_content_hash_change
 def test_12_1_6_the_run_log_breaks_down_which_skills_were_new_updated_or_unchanged(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
-    """Each repo's sync logs which of its skills were newly added, which had a changed content hash, and which were untouched."""
+    (
+        """Each repo's sync logs which of its skills were newly added, which had a """
+        """changed content hash, and which were untouched."""
+    )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
     terminal.arrange(
@@ -303,8 +321,9 @@ def test_12_1_9_a_cli_kind_skill_binary_is_chmod_and_linked_onto_path(
     terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path, http: FakeHttp
 ) -> None:
     (
-        """A cli-kind skill's package.json `bin` script is chmod'd executable and `bun link`ed from its own directory, so it resolves on PATH """
-        """— on every sync, even a converged one that skipped the CLI."""
+        """A cli-kind skill's package.json `bin` script is chmod'd executable and """
+        """`bun link`ed from its own directory, so it resolves on PATH — on every sync, """
+        """even a converged one that skipped the CLI."""
     )
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
@@ -340,7 +359,10 @@ def test_12_1_9_a_cli_kind_skill_binary_is_chmod_and_linked_onto_path(
 def test_12_1_10_a_plan_shows_one_repo_row_before_install_and_per_skill_rows_after(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
-    """A never-installed repo's skills are unknowable without the network, so a plan shows one `<repo>` row; once installed, a plan shows one row per skill."""
+    (
+        """A never-installed repo's skills are unknowable without the network, so a plan """
+        """shows one `<repo>` row; once installed, a plan shows one row per skill."""
+    )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
     terminal.arrange(
@@ -360,7 +382,10 @@ def test_12_1_10_a_plan_shows_one_repo_row_before_install_and_per_skill_rows_aft
 def test_12_1_11_an_up_run_skips_the_cli_when_upstream_content_matches(
     terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path, http: FakeHttp
 ) -> None:
-    """A repo whose skills' upstream folder SHAs all match the lockfile has nothing to do — `skills add` is not invoked, its skills report unchanged."""
+    (
+        """A repo whose skills' upstream folder SHAs all match the lockfile has nothing """
+        """to do — `skills add` is not invoked, its skills report unchanged."""
+    )
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
@@ -406,7 +431,10 @@ def test_12_1_12_a_plan_shows_up_to_date_when_upstream_matches(
 def test_12_1_13_a_plan_shows_would_upgrade_when_upstream_content_changed(
     terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path, http: FakeHttp
 ) -> None:
-    """When a skill's upstream folder SHA differs from the lockfile, a plan shows would upgrade with the upstream short content id in the latest column."""
+    (
+        """When a skill's upstream folder SHA differs from the lockfile, a plan shows """
+        """would upgrade with the upstream short content id in the latest column."""
+    )
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
@@ -429,7 +457,10 @@ def test_12_1_13_a_plan_shows_would_upgrade_when_upstream_content_changed(
 def test_12_1_14_when_github_is_unreachable_every_repo_re_syncs(
     terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path, http: FakeHttp
 ) -> None:
-    """The upstream check is best-effort and tokenless; when the trees call fails, the cook falls back to refresh-every-run."""
+    (
+        """The upstream check is best-effort and tokenless; when the trees call fails, """
+        """the cook falls back to refresh-every-run."""
+    )
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
@@ -453,8 +484,10 @@ def test_12_1_15_a_drifted_agent_entry_re_adds_to_restore_the_store_symlink(
     terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path, http: FakeHttp
 ) -> None:
     (
-        """An agent entry that isn't the symlink into the canonical store (a real-dir copy from an older install) is drift: the plan shows would sync """
-        """despite upstream matching, and up re-adds the repo so the CLI replaces the copy with the symlink."""
+        """An agent entry that isn't the symlink into the canonical store (a real-dir """
+        """copy from an older install) is drift: the plan shows would sync despite """
+        """upstream matching, and up re-adds the repo so the CLI replaces the copy """
+        """with the symlink."""
     )
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
@@ -488,7 +521,10 @@ def test_12_1_15_a_drifted_agent_entry_re_adds_to_restore_the_store_symlink(
 def test_12_1_16_a_re_add_reports_a_newly_landed_skill_as_its_own_installed_row(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem, home: Path
 ) -> None:
-    """A skill that first appears during a re-add of an already-installed repo gets its own report row, not just the sync-log mention."""
+    (
+        """A skill that first appears during a re-add of an already-installed repo gets """
+        """its own report row, not just the sync-log mention."""
+    )
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
     terminal.arrange(

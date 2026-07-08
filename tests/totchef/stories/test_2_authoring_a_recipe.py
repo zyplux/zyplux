@@ -1,4 +1,7 @@
-"""User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: fan-out, ordering, and defaults read off the plan and the run."""
+(
+    """User stories §2 — Authoring a recipe. One test per §2 criterion on the real chef: """
+    """fan-out, ordering, and defaults read off the plan and the run."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -55,7 +58,10 @@ def test_2_1_2_operator_declares_desired_state_not_steps(
 def test_2_1_3_package_sections_split_into_named_entries(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """A `packages = [...]` section can fan out like any subtable: each entry is its own node with its own packages and dependencies."""
+    (
+        """A `packages = [...]` section can fan out like any subtable: each entry is its own """
+        """node with its own packages and dependencies."""
+    )
     terminal.arrange("apt-cache policy", APT_CACHE_POLICY)
     recipe.declares("bash", "prereqs", apply="bootstrap-apt")
     recipe.declares("apt_pkg", "toolchain", packages=["git"], depends_on=["bash.prereqs"])
@@ -76,7 +82,10 @@ def test_2_1_3_package_sections_split_into_named_entries(
 def test_2_2_1_depends_on_names_entry_node_or_section(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """`depends_on` can name an entry, a single-node section, or a whole section — which fans out so the dependant waits for every one of its entries."""
+    (
+        """`depends_on` can name an entry, a single-node section, or a whole section — which """
+        """fans out so the dependant waits for every one of its entries."""
+    )
     terminal.arrange("apt-cache policy", APT_CACHE_POLICY)
     recipe.declares("apt_pkg", packages=["git"])
     recipe.declares("apt_repo", "vendor", key_url="https://x", uris="https://y")
@@ -113,7 +122,10 @@ def test_2_2_2_resources_run_in_topological_order(
 def test_2_3_1_section_defaults_fold_into_entries_lists_extend_others_override(
     recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
 ) -> None:
-    """Section-level scalar/list keys become defaults; a list entry **extends** the shared list, while a scalar entry **overrides** the default."""
+    (
+        """Section-level scalar/list keys become defaults; a list entry **extends** the """
+        """shared list, while a scalar entry **overrides** the default."""
+    )
     shared = tmp_path / "shared.desktop"
     shared.write_text("[Desktop Entry]\nExec=/usr/bin/shared %U\n")
     brave = tmp_path / "brave.desktop"
@@ -150,7 +162,10 @@ def test_2_3_2_shared_desktop_features_yield_union_per_entry(
 def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(
     recipe: RecipeBuilder, totchef: Totchef
 ) -> None:
-    """A cook's `needs_root` sets privilege, but an entry may set `needs_root = true` to escalate a privilege-agnostic cook (`bash`, `file`) per entry."""
+    (
+        """A cook's `needs_root` sets privilege, but an entry may set `needs_root = true` to """
+        """escalate a privilege-agnostic cook (`bash`, `file`) per entry."""
+    )
     recipe.declares("bash", "root_step", apply="x", needs_root=True)
     recipe.declares("bash", "user_step", apply="y")  # sibling entry, no grant
     recipe.declares("file", "root_file", path="/etc/x.conf", content="a", needs_root=True)
@@ -172,8 +187,12 @@ def test_2_4_1_needs_root_per_entry_escalates_a_privilege_agnostic_cook(
 def test_2_5_1_remove_when_satisfied_surfaces_remove_how_in_action_required(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) the run is silent about it; once it exits 0 the `remove_how` \
-instruction lands in the Action required block labeled with the node, on every run until the entry is deleted."""
+    (
+        """While `remove_when` exits non-zero (still waiting — a failing probe reads the same) """
+        """the run is silent about it; once it exits 0 the `remove_how` instruction lands in """
+        """the Action required block labeled with the node, on every run until the entry is """
+        """deleted."""
+    )
     recipe.declares(
         "bash",
         "vaapi_fix",
@@ -207,8 +226,11 @@ instruction lands in the Action required block labeled with the node, on every r
 
 
 def test_2_5_2_plan_also_evaluates_remove_when(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
-    """A dry run evaluates the probes too — `plan` doubles as "check everything I'm waiting on" — and a watch without `remove_how` carries the generic removal \
-notice."""
+    (
+        """A dry run evaluates the probes too — `plan` doubles as "check everything I'm """
+        """waiting on" — and a watch without `remove_how` carries the generic removal """
+        """notice."""
+    )
     recipe.declares("bash", "workaround", apply="install-it", remove_when="upstream-shipped-the-fix")
 
     plan = totchef.plan()
@@ -223,7 +245,10 @@ notice."""
 def test_2_5_3_any_entry_or_plain_section_can_carry_remove_when(
     recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, tmp_path: Path
 ) -> None:
-    """`remove_when`/`remove_how` sit on the base entry contract: a subtable entry and a plain-data section alike declare their expiry."""
+    (
+        """`remove_when`/`remove_how` sit on the base entry contract: a subtable entry and a """
+        """plain-data section alike declare their expiry."""
+    )
     recipe.declares(
         "file",
         "pin",

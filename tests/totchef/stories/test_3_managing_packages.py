@@ -1,4 +1,7 @@
-"""User stories §3 — Managing packages. One test per §3 criterion on the real chef in-process; only system boundaries (bash, network, host) are faked."""
+(
+    """User stories §3 — Managing packages. One test per §3 criterion on the real chef """
+    """in-process; only system boundaries (bash, network, host) are faked."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -48,7 +51,10 @@ def test_3_1_1_apt_pkg_installed_via_nala_full_transaction(
 def test_3_1_2_priority_zero_package_fails_fast_with_guidance(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """A package with apt-cache policy priority 0 fails fast with guidance (naming, component, or missing [apt_repo])."""
+    (
+        """A package with apt-cache policy priority 0 fails fast with guidance (naming, """
+        """component, or missing [apt_repo])."""
+    )
     recipe.declares("apt_pkg", packages=["totally-fake"])
     terminal.arrange("apt-cache policy totally-fake", "totally-fake:\n  Installed: (none)\n  Candidate: (none)\n")
 
@@ -79,8 +85,11 @@ def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(
 def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
-    """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the \
-`Action required` block."""
+    (
+        """A /var/run/reboot-required left by the transaction is carried — with the packages """
+        """named in its .pkgs companion, deduped — as a delayed message into the """
+        """`Action required` block."""
+    )
     recipe.declares("apt_pkg", packages=["git"])
     terminal.arrange("apt-cache policy git", POLICY_ABSENT)
 
@@ -217,7 +226,10 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     http: FakeHttp,
     system: FakeSystem,
 ) -> None:
-    """update_action: an arg list run against the binary, "rerun-installer", or absent; an empty arg list is none of these and fails the update."""
+    (
+        """update_action: an arg list run against the binary, "rerun-installer", or absent; """
+        """an empty arg list is none of these and fails the update."""
+    )
     system.has("bun")
     terminal.arrange("bun --version", "1.1.0")
     http.arrange("bun.sh/install", "#!/bin/bash")
@@ -341,8 +353,11 @@ def test_3_3_7_url_scheme_defaults_to_https(
 def test_3_3_8_installers_run_from_home_so_relative_bindirs_resolve(
     recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """A `curl | bash` installer runs with $HOME as its working directory, so one that defaults to a *relative* bin dir (chezmoi's `.local/bin`) lands under \
-$HOME where `find_binary` looks — not in whatever directory totchef was invoked from."""
+    (
+        """A `curl | bash` installer runs with $HOME as its working directory, so one that """
+        """defaults to a *relative* bin dir (chezmoi's `.local/bin`) lands under $HOME where """
+        """`find_binary` looks — not in whatever directory totchef was invoked from."""
+    )
     recipe.declares("url", "bun", url="https://bun.sh/install")
     http.arrange("bun.sh/install", "#!/bin/bash")
 

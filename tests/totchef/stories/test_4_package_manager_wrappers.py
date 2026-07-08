@@ -1,5 +1,8 @@
-"""User stories §4 — Language package-manager wrappers. One test per §4 criterion on the real chef in-process; system boundaries (bash, network, host) are \
-faked, except the §4.3.3 landing-path story which runs in a container."""
+(
+    """User stories §4 — Language package-manager wrappers. One test per §4 criterion on """
+    """the real chef in-process; system boundaries (bash, network, host) are faked, except """
+    """the §4.3.3 landing-path story which runs in a container."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -93,8 +96,11 @@ def test_4_1_4_latest_crate_versions_looked_up_concurrently(
 
 
 def test_4_1_5_latest_version_probes_are_time_bounded(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
-    """Every crates.io probe passes a timeout, so a stalled registry connection fails fast to 'unknown latest' rather than wedging the thread pool and hanging \
-the plan forever."""
+    (
+        """Every crates.io probe passes a timeout, so a stalled registry connection fails """
+        """fast to 'unknown latest' rather than wedging the thread pool and hanging the """
+        """plan forever."""
+    )
     recipe.declares("cargo", packages=["ripgrep"])
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
 
@@ -175,7 +181,10 @@ PI = "@earendil-works/pi-coding-agent"
 
 
 def _bun_global(home: Path, name: str, version: str) -> Callable[[], None]:
-    """An effect that simulates `bun add -g` landing `name` in bun's global tree at `version`, so the cook's filesystem re-probe sees it installed."""
+    (
+        """An effect that simulates `bun add -g` landing `name` in bun's global tree at """
+        """`version`, so the cook's filesystem re-probe sees it installed."""
+    )
     pkg_dir = home / ".bun/install/global/node_modules" / name
 
     def install() -> None:
@@ -188,7 +197,10 @@ def _bun_global(home: Path, name: str, version: str) -> Callable[[], None]:
 def test_4_3_1_bun_installs_and_upgrades_each_global_package(
     recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """`[bun]` installs missing globals and upgrades drifted ones via a single batched `bun add -g`; installed versions are read from bun's global tree."""
+    (
+        """`[bun]` installs missing globals and upgrades drifted ones via a single batched """
+        """`bun add -g`; installed versions are read from bun's global tree."""
+    )
     home = totchef.workdir / "home"
     recipe.declares("bun", packages=[PI, "left-pad"])
     system.has("bun")
@@ -213,7 +225,10 @@ def test_4_3_1_bun_installs_and_upgrades_each_global_package(
 def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(
     recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef
 ) -> None:
-    """Requires bun present (depends on the [url] bun installer); latest versions are looked up concurrently from the npm registry."""
+    (
+        """Requires bun present (depends on the [url] bun installer); latest versions are """
+        """looked up concurrently from the npm registry."""
+    )
     recipe.declares("bun", packages=[PI, "left-pad"])
     http.arrange("registry.npmjs.org/" + PI, '{"dist-tags": {"latest": "0.75.5"}}')
     http.arrange("registry.npmjs.org/left-pad", '{"dist-tags": {"latest": "1.3.0"}}')
@@ -234,8 +249,11 @@ def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(
 def test_4_3_3_bun_installs_globals_into_bun_home_not_the_cache_dir(
     apply_in_container: Callable[[str, list[str]], ContainerRun],
 ) -> None:
-    """The cook pins `BUN_INSTALL` to bun's home, so a global lands in `~/.bun` (on PATH) and never the `$XDG_CACHE_HOME/.bun` dir bun would otherwise pick \
-under the privilege drop. In a container."""
+    (
+        """The cook pins `BUN_INSTALL` to bun's home, so a global lands in `~/.bun` (on PATH) """
+        """and never the `$XDG_CACHE_HOME/.bun` dir bun would otherwise pick under the """
+        """privilege drop. In a container."""
+    )
     run = apply_in_container(
         '[bun]\npackages = ["left-pad"]\n',
         [
@@ -255,9 +273,13 @@ under the privilege drop. In a container."""
 def test_4_3_4_bun_links_node_to_its_runtime_so_node_shebang_globals_run(
     recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """A node CLI's `#!/usr/bin/env node` shebang (left intact by `bun add -g`) needs a `node` on PATH; the cook drops a `node` symlink to bun in bun's bin \
-dir so it resolves and runs node-compatibly. Best-effort and idempotent — it runs every sync, so a converged re-run with nothing to install still restores the \
-runtime if removed."""
+    (
+        """A node CLI's `#!/usr/bin/env node` shebang (left intact by `bun add -g`) needs a """
+        """`node` on PATH; the cook drops a `node` symlink to bun in bun's bin dir so it """
+        """resolves and runs node-compatibly. Best-effort and idempotent — it runs every """
+        """sync, so a converged re-run with nothing to install still restores the runtime """
+        """if removed."""
+    )
     home = totchef.workdir / "home"
     recipe.declares("bun", packages=[PI])
     system.has("bun")

@@ -1,6 +1,8 @@
 (
-    """User stories §8 — Observing a run. §8.1 report and §8.3.1 log ownership are observed end-to-end; §8.2 rendering and §8.3.2's pump logic go """
-    """through their own public seams (rich's Progress, log_pump's pump_lines/emit_terminal) rather than reaching into totchef's private helpers."""
+    """User stories §8 — Observing a run. §8.1 report and §8.3.1 log ownership are """
+    """observed end-to-end; §8.2 rendering and §8.3.2's pump logic go through their own """
+    """public seams (rich's Progress, log_pump's pump_lines/emit_terminal) rather than """
+    """reaching into totchef's private helpers."""
 )
 
 import io
@@ -30,7 +32,10 @@ def test_8_1_1_report_table_color_coded_on_terminal_plain_toon_otherwise(
     terminal: FakeTerminal,
     totchef: Totchef,
 ) -> None:
-    """A table with cook-node/before/current/latest/action; rich color-coded on a terminal, plain TOON text on a non-terminal."""
+    (
+        """A table with cook-node/before/current/latest/action; rich color-coded on a """
+        """terminal, plain TOON text on a non-terminal."""
+    )
     totchef.recipe.declares("file", "f", path=str(totchef.workdir / "f"), content="X\n")
 
     plan = totchef.plan()
@@ -67,7 +72,10 @@ def test_8_1_2_up_shows_changed_rows_plus_footer_plan_shows_all(
 def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(
     recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
 ) -> None:
-    """A hash equal to the rendered recipe content reads `matches`, a drifting one `differs`, a missing file `absent`; `latest` carries the short content id."""
+    (
+        """A hash equal to the rendered recipe content reads `matches`, a drifting one """
+        """`differs`, a missing file `absent`; `latest` carries the short content id."""
+    )
     drift = tmp_path / "drift"
     drift.write_text("OLD\n")  # exists but will be rewritten
     settled = tmp_path / "settled"
@@ -91,7 +99,10 @@ def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(
 def test_8_1_4_before_and_current_diverge_on_upgrade(
     recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
 ) -> None:
-    """After an upgrade, `before` shows the pre-sync version and `current` shows the post-sync version, so the row reads as a real diff."""
+    (
+        """After an upgrade, `before` shows the pre-sync version and `current` shows the """
+        """post-sync version, so the row reads as a real diff."""
+    )
     recipe.declares("url", "claude", url="https://claude.ai/install.sh", update_action=["update"])
     system.has("claude")
     terminal.arrange("claude --version", "2.1.152")  # pre-sync probe
@@ -140,7 +151,10 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(
     real_progress = terminal_internals.Progress
 
     def spy_progress(*args: object, **kwargs: object) -> Progress:
-        """Build the real rich Progress `progress_region` would, keeping a handle on it — rich's Progress is public even where totchef's wrapper isn't."""
+        (
+            """Build the real rich Progress `progress_region` would, keeping a handle on """
+            """it — rich's Progress is public even where totchef's wrapper isn't."""
+        )
         instance = real_progress(*args, **kwargs)
         live_progresses.append(instance)
         return instance
@@ -167,7 +181,10 @@ def test_8_2_2_log_lines_colorized_and_tagged_per_cook(
     """Each cook's log lines are tagged with its name in a stable per-cook color so concurrent output stays readable."""
 
     def render(line: str) -> str:
-        """Drive the line through `LINE_SINK`, the pump's real terminal sink, onto a captured console — the same path a pumped line takes."""
+        (
+            """Drive the line through `LINE_SINK`, the pump's real terminal sink, onto a """
+            """captured console — the same path a pumped line takes."""
+        )
         buffer = io.StringIO()
         monkeypatch.setattr(
             terminal_internals,
@@ -188,7 +205,10 @@ def test_8_2_2_log_lines_colorized_and_tagged_per_cook(
 
 
 def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks(cook_runner_internals: ModuleType) -> None:
-    """Start lines announce who is running and what they wait on/unblock; completion lines report timing and what just unlocked."""
+    (
+        """Start lines announce who is running and what they wait on/unblock; completion """
+        """lines report timing and what just unlocked."""
+    )
     queueing = cook_runner_internals.format_queueing(("apt_pkg",), {"apt_pkg": 5}, combined=5)
     assert "queueing" in queueing
     assert "apt_pkg" in queueing
@@ -204,14 +224,20 @@ def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks(cook_runne
 def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(
     apply_in_container: Callable[[str, list[str]], ContainerRun],
 ) -> None:
-    """A run's timestamped log under the user's state dir is chowned back, so the operator owns it though the apply ran as root. In a container."""
+    (
+        """A run's timestamped log under the user's state dir is chowned back, so the """
+        """operator owns it though the apply ran as root. In a container."""
+    )
     run = apply_in_container('[file.f]\npath = "/home/tester/f"\ncontent = "x\\n"\n', ["/home/tester/f"])
 
     assert run.log_owner == "tester", run.transcript
 
 
 def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path, log_pump: ModuleType) -> None:
-    """Parent and every forked cook's stdout/stderr funnel through one pump: every line reaches the file and the terminal, in order, except a drain marker."""
+    (
+        """Parent and every forked cook's stdout/stderr funnel through one pump: every """
+        """line reaches the file and the terminal, in order, except a drain marker."""
+    )
     log_file = tmp_path / "run.log"
     emitted: list[str] = []
     marker_event = threading.Event()
@@ -281,7 +307,10 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 def test_8_3_4_a_failed_run_names_its_log_file(
     scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal
 ) -> None:
-    """A failed run's final summary names the run's log file, so an operator who saw only the report knows which file to open for the captured error."""
+    (
+        """A failed run's final summary names the run's log file, so an operator who saw """
+        """only the report knows which file to open for the captured error."""
+    )
     boom = scenario().declares("bash", "boom", apply="explode")
     terminal.arrange("explode", exit_code=1)
 
@@ -309,7 +338,10 @@ def test_8_3_5_every_run_logs_the_totchef_version_up_front(
 def test_8_4_1_delayed_messages_print_after_the_report_labeled_by_cook_node(
     recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
 ) -> None:
-    """A cook's delayed_message is logged live, then repeated in an `Action required` block after the report, labeled by cook node; none for a dry run."""
+    (
+        """A cook's delayed_message is logged live, then repeated in an `Action required` """
+        """block after the report, labeled by cook node; none for a dry run."""
+    )
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
     recipe.declares("desktop", "brave", desktop=str(source), switches=["use-gl=egl"])
