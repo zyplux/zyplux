@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Idempotent file writer for [bash.*] snippets: read stdin, write to the dest path only if bytes differ. Installed verbatim to /usr/local/bin;
-standalone python3 + stdlib only. Usage: <producer> | write-if-changed <dest-path> [octal-mode]."""
+"""Idempotent file writer for [bash.*] snippets: read stdin, write to the dest path only if bytes
+differ. Installed verbatim to /usr/local/bin; standalone python3 + stdlib only.
+Usage: <producer> | write-if-changed <dest-path> [octal-mode]."""
 
 import argparse
 import sys
@@ -12,7 +13,9 @@ __version__ = "1.0.0"
 def parse_cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="write-if-changed",
-        description="Read stdin and write it to dest only when the bytes differ: <producer> | write-if-changed <dest> [mode]",
+        description=(
+            "Read stdin and write it to dest only when the bytes differ: <producer> | write-if-changed <dest> [mode]"
+        ),
     )
     parser.add_argument("dest", type=Path, help="file to write when stdin differs from its current bytes")
     parser.add_argument("mode", nargs="?", default="0644", help="octal file mode applied on write (default 0644)")

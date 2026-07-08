@@ -1,4 +1,4 @@
-"""Shared contract for totchef cooks: a cook probes and acts (chef owns the diff); VersionedCook covers packages, StateCook desired state."""
+"""Shared contract for totchef cooks: probes and acts (chef owns the diff); VersionedCook packages, StateCook state."""
 
 import hashlib
 from dataclasses import dataclass, field
@@ -19,7 +19,7 @@ class RemoveHowWithoutProbeError(ValueError):
 
 
 class EntrySpec(BaseModel):
-    """Base for every cook's recipe-entry schema (`extra='forbid'` rejects typos); carries `pre_hook`/`post_hook` and `remove_when`/`remove_how` expiry pair."""
+    """Base for every cook's entry schema (extra=forbid rejects typos); carries pre/post_hook, remove_when/-how."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -32,18 +32,21 @@ class EntrySpec(BaseModel):
     def validate_remove_how_has_a_condition(self) -> EntrySpec:
         """`remove_how` is the instruction `remove_when` unlocks; without the probe it would never surface."""
         if self.remove_how and not self.remove_when:
-            failure = "`remove_how` has no `remove_when` — declare the probe that makes this entry removable, or drop `remove_how`"
+            failure = (
+                "`remove_how` has no `remove_when` — declare the probe that makes this entry "
+                "removable, or drop `remove_how`"
+            )
             raise RemoveHowWithoutProbeError(failure)
         return self
 
 
 def get_entry_name(info: ValidationInfo) -> str | None:
-    """The recipe entry's name, handed to validation as context by StateCook/schema lint so a validator can default fields off it (e.g. an omitted `source`)."""
+    """The recipe entry's name, handed to validation as context so a validator can default fields off it."""
     return (info.context or {}).get("entry_name")
 
 
 def chain_hooks(*commands: str | None) -> str | None:
-    """Join present shell commands with `&&` (None if none) so an intrinsic hook composes with a recipe one; a non-zero link short-circuits the guard."""
+    """Join present shell commands with && (None if none), so hooks compose; a non-zero link short-circuits."""
     present = [command for command in commands if command]
     return " && ".join(present) if present else None
 
@@ -56,7 +59,7 @@ class PackagesConfig(EntrySpec):
 
 @dataclass(frozen=True)
 class SyncOutcome:
-    """Outcome of a VersionedCook.sync; expected failures land as a status, only bugs raise. `delayed_message` is an operator follow-up for after the report."""
+    """Outcome of VersionedCook.sync; expected failures land as a status, only bugs raise; delayed_message follows."""
 
     status: Status = "ok"
     message: str = ""
@@ -65,7 +68,7 @@ class SyncOutcome:
 
 @dataclass(frozen=True)
 class StateChangeOutcome:
-    """Outcome of a StateCook.apply_resource; `delayed_message` is an operator follow-up the runner logs live and repeats after the report table."""
+    """Outcome of StateCook.apply_resource; delayed_message is an operator follow-up repeated after the report."""
 
     changed: bool
     status: Status = "ok"
@@ -75,7 +78,7 @@ class StateChangeOutcome:
 
 @dataclass(frozen=True)
 class ReportRow:
-    """One end-of-run report row, assembled by chef. `before`/`current`/`latest` are past/present/future: pre-run state, state now, upgrade target."""
+    """One end-of-run report row, assembled by chef. before/current/latest: pre-run state, state now, upgrade target."""
 
     name: str
     before: str
@@ -88,7 +91,7 @@ class ReportRow:
 
 @dataclass
 class CookResult:
-    """Everything chef needs from one cook — status, rows, message, delayed follow-ups — JSON-encoded back from a forked child, so plain dataclasses only."""
+    """Everything chef needs from one cook — status, rows, message, delayed follow-ups — JSON-encoded from a child."""
 
     cook: str
     status: Status
@@ -98,7 +101,7 @@ class CookResult:
 
 
 class CookBase:
-    """Base for every cook; an always-root `<section>_root_cook.py` sets `needs_root=True`. `entry_keyed` picks the slice shape: by entry, or flat fields."""
+    """Base for every cook; an always-root `<section>_root_cook.py` sets needs_root=True; entry_keyed picks shape."""
 
     needs_root: bool = False
     entry_model: ClassVar[type[EntrySpec] | None] = None
@@ -109,7 +112,7 @@ class CookBase:
 
     @property
     def unit_count(self) -> int:
-        """Discrete units of work this cook represents — one by default, weighting its scheduler pull; a versioned cook overrides with its package count."""
+        """Discrete units of work this cook represents — one by default; versioned cooks override with package count."""
         return 1
 
 
@@ -121,7 +124,7 @@ class VersionedCook(CookBase):
 
     @staticmethod
     def get_hooks() -> tuple[str | None, str | None]:
-        """The section-level (pre_hook, post_hook); pre_hook gates the sync, post_hook fires after a change. None unless the cook reads them off entry_model."""
+        """The section-level (pre_hook, post_hook); pre_hook gates the sync, post_hook fires after a change."""
         return (None, None)
 
     def list_requested(self) -> list[str]:
@@ -135,7 +138,7 @@ class VersionedCook(CookBase):
 
     @staticmethod
     def list_reportable(requested: list[str], _installed_after: dict[str, str], /) -> list[str]:
-        """Row keys for the post-sync report — requested names by default. A cook discovering finer items (skills in a repo) overrides this to split them."""
+        """Row keys for the post-sync report — requested names by default; overridden by cooks splitting finer items."""
         return requested
 
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
@@ -143,7 +146,7 @@ class VersionedCook(CookBase):
 
 
 class PackageListCook(VersionedCook):
-    """VersionedCook over a plain `packages=[...]` section (cargo, uv, snap, apt_pkg); `find_latest` is a no-op unless a manager (apt) has a cheap candidate."""
+    """VersionedCook over a plain packages=[...] section (cargo, uv, snap, apt_pkg); find_latest is usually a no-op."""
 
     entry_model = PackagesConfig
 
@@ -171,7 +174,7 @@ class EntryModelNotSetError(TypeError):
 
 
 class StateCook[EntryModel: EntrySpec](CookBase):
-    """Desired-state cook over a subtable section; base serves `list_resources`/default `get_hooks`, subclasses implement get/desired_state, apply_resource."""
+    """Desired-state cook over a subtable section; subclasses implement get/desired_state and apply_resource."""
 
     entry_keyed = True
 
@@ -204,7 +207,7 @@ class StateCook[EntryModel: EntrySpec](CookBase):
 
 
 class FileStateCook[EntryModel: EntrySpec](StateCook[EntryModel]):
-    """A StateCook diffing by content hash — sha256 of the file vs rendered bytes; subclasses supply `_target_path`/`_render`, keep their `apply_resource`."""
+    """A StateCook diffing by content hash — sha256 of file vs rendered bytes; subclasses supply target/render."""
 
     _unrendered_label = "absent"
 

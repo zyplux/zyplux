@@ -15,7 +15,10 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "justfile"
-SUMMARY = "canonical baseline block, recipe names, aliases, check pipeline, local cerberus run, clean via cz clean, wrapped tool calls, no trailing whitespace"
+SUMMARY = (
+    "canonical baseline block, recipe names, aliases, check pipeline, local cerberus run, "
+    "clean via cz clean, wrapped tool calls, no trailing whitespace"
+)
 SCOPE = Scope.CONTENT
 
 BASELINE_MARKER = "# BASELINE"
@@ -125,7 +128,8 @@ def _rewrite_baseline_region(
         justfile.parse(fixed)
     except justfile.JustfileError as err:
         res.fail(
-            f"baseline region not rewritten: the fixed justfile does not parse ({err}); resolve the conflict in the `{CUSTOM_MARKER}` section first"
+            f"baseline region not rewritten: the fixed justfile does not parse ({err}); "
+            f"resolve the conflict in the `{CUSTOM_MARKER}` section first"
         )
         return
     ctx.write_file(repo, "justfile", fixed)
