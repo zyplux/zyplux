@@ -19,6 +19,7 @@ it exercises.
 
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -56,8 +57,8 @@ def ctx() -> Context:
 
 @pytest.fixture
 def make_context() -> MakeContext:
-    def _make(root: Path, *, fix: bool = False) -> Context:
-        return context.local_context(config.load(), root, fix=fix)
+    def _make(root: Path, *, fix: bool = False, config_path: Path | None = None) -> Context:
+        return context.local_context(config.load(config_path), root, fix=fix)
 
     return _make
 
@@ -172,6 +173,40 @@ def rumdl_canonical() -> str:
 @pytest.fixture
 def known_check_ids() -> tuple[str, ...]:
     return tuple(checks.BY_ID)
+
+
+@dataclass
+class FakeProc:
+    """An in-memory double for `cerberus.proc`'s single subprocess boundary.
+
+    Outcomes are served per tool — the program a `bunx <tool> ...` invocation
+    launches, or `argv[0]` itself for direct invocations.
+    """
+
+    outcomes: dict[str, subprocess.CompletedProcess[str]] = field(default_factory=dict)
+    calls: list[tuple[list[str], Path | None]] = field(default_factory=list)
+    missing: set[str] = field(default_factory=set)
+
+    def serve(self, tool: str, *, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.outcomes[tool] = subprocess.CompletedProcess([tool], returncode, stdout, stderr)
+
+    def serve_missing(self, tool: str) -> None:
+        self.missing.add(tool)
+
+    def run(self, argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        self.calls.append((list(argv), cwd))
+        if argv[0] in self.missing:
+            raise proc.ToolNotFoundError(argv[0])
+        tool = argv[1] if argv[0] == "bunx" and len(argv) > 1 else argv[0]
+        outcome = self.outcomes[tool]
+        return subprocess.CompletedProcess(argv, outcome.returncode, outcome.stdout, outcome.stderr)
+
+
+@pytest.fixture
+def fake_proc(monkeypatch: pytest.MonkeyPatch) -> FakeProc:
+    fake = FakeProc()
+    monkeypatch.setattr(proc, "run", fake.run)
+    return fake
 
 
 @dataclass

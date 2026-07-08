@@ -1,5 +1,8 @@
 default_recipe_marker = "just --list"
 
+[max_duplication]
+threshold = 2
+
 [aliases.required]
 i = "install"
 k = "knip"

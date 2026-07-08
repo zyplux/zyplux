@@ -16,6 +16,8 @@ from cerberus.checks import (
     lib_py_tests_check,
     lib_ts_tests_check,
     line_length_check,
+    max_duplication_check,
+    no_dead_code_check,
     pyrefly_config_check,
     pytest_coverage_check,
     release_bumps_check,
@@ -71,6 +73,8 @@ ALL: tuple[Check, ...] = tuple(
         codeowners_check,
         pytest_coverage_check,
         vitest_coverage_check,
+        max_duplication_check,
+        no_dead_code_check,
         zyplux_latest_check,
     )
 )
