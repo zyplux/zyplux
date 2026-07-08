@@ -1,4 +1,4 @@
-"""Recipe -> scheduling graph: turn recipe.toml into a DAG of Nodes and construct each node's cook (cook resolution in registry, validation in schema_lint)."""
+"""Recipe -> graph: build a DAG of Nodes, construct each cook (resolution in registry, validation in schema_lint)."""
 
 import sys
 from dataclasses import dataclass
@@ -15,7 +15,7 @@ META_KEYS = ("needs_root", "depends_on")
 
 
 def require_table(value: RecipeValue, name: str) -> RecipeConfig:
-    """Narrow a recipe value known to be a TOML table (every key, and entry in a section, is one by schema); a wiring bug otherwise, not a recipe error."""
+    """Narrow a value known to be a TOML table (every key/entry is one by schema); a wiring bug, not a recipe error."""
     if not isinstance(value, dict):
         msg = f"recipe.toml key '{name}' must be a table, got {type(value).__name__}"
         raise TypeError(msg)
@@ -27,7 +27,7 @@ def strip_meta(slice_: RecipeConfig) -> RecipeConfig:
 
 
 def merge_section_defaults(section_data: RecipeConfig, entry: str) -> RecipeConfig:
-    """Fold a subtable section's own scalar/list keys into an entry's slice as defaults: lists union (entry extends), everything else the entry overrides."""
+    """Fold a section's scalar/list keys into an entry's slice as defaults: lists union, else the entry overrides."""
     defaults = {k: v for k, v in section_data.items() if k not in META_KEYS and not isinstance(v, dict)}
     entry_data = strip_meta(require_table(section_data[entry], entry))
     merged = {**defaults, **entry_data}
@@ -54,7 +54,7 @@ class Node:
 
 
 def _str_list(value: RecipeValue | None, *, default: list[str]) -> list[str]:
-    """A `depends_on` value coerced to the list of strings it is by schema, falling back only when the key is absent (an empty list is a real choice)."""
+    """A `depends_on` value coerced to strings by schema; falls back only when absent — empty is a real choice."""
     if value is None:
         return default
     return [item for item in value if isinstance(item, str)] if isinstance(value, list) else default
@@ -88,7 +88,7 @@ def build_nodes(config: RecipeConfig) -> dict[str, Node]:
 
 
 def build_node_graph(nodes: dict[str, Node]) -> dict[str, set[str]]:
-    """Resolve each node's `depends_on` to node ids: a dependency names an entry, a single-node section, or a whole section (fanning out to all its nodes)."""
+    """Resolve each node's `depends_on` to node ids: an entry, a single-node section, or a whole section fanned out."""
     section_nodes: dict[str, set[str]] = {}
     for node_id, node in nodes.items():
         section_nodes.setdefault(node.section, set()).add(node_id)
@@ -120,7 +120,7 @@ def build_node_graph(nodes: dict[str, Node]) -> dict[str, set[str]]:
 
 
 def node_slice(config: RecipeConfig, node: Node) -> RecipeConfig:
-    """The dict a node's cook receives: an entry node gets its merged slice, a single-node section gets the section itself."""
+    """The dict a node's cook receives: an entry node gets its merged slice, a single-node section gets itself."""
     section_data = require_table(config[node.section], node.section)
     if node.entry is not None:
         return merge_section_defaults(section_data, node.entry)
@@ -128,7 +128,7 @@ def node_slice(config: RecipeConfig, node: Node) -> RecipeConfig:
 
 
 def build_cook(node: Node, config: RecipeConfig) -> CookBase:
-    """Construct a node's cook from its slice (validation only): an entry-keyed cook gets `{entry: slice}`, others the flat slice — lint shares this path."""
+    """Construct a node's cook from its slice: an entry-keyed cook gets `{entry: slice}`, others the flat slice."""
     cook_class = load_cook_class(node.section)
     slice_ = node_slice(config, node)
     if cook_class.entry_keyed and node.entry is not None:

@@ -1,4 +1,4 @@
-"""Shared cook scaffolding: privilege drop, idempotent file writes, binary discovery, URL fetch (bash execution lives in shell.py, logging in logs.py)."""
+"""Shared cook scaffolding: privilege drop, idempotent writes, find binary, URL fetch (bash: shell.py, log: logs.py)."""
 
 import os
 import pwd
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class _FilesDir:
-    """The pinned-for-this-run totchef_files/ dir, mutated in place so set_files_dir never needs a module-level rebind."""
+    """The pinned totchef_files/ dir for this run, mutated in place so set_files_dir never needs a rebind."""
 
     path: Path | None = None
 
@@ -25,12 +25,12 @@ _files_dir = _FilesDir()
 
 
 def set_files_dir(path: Path | None) -> None:
-    """Pin the recipe's sibling assets dir (totchef_files/) for this run, before any cook reads a bundled `source`. None clears it (between tests)."""
+    """Pin the recipe's sibling assets dir (totchef_files/) before any cook reads a bundled `source`; None clears it."""
     _files_dir.path = path
 
 
 def files_dir() -> Path:
-    """The recipe's sibling assets dir, resolved before cooks run; raises if `source` is used before a recipe pinned it (a wiring bug, not a recipe error)."""
+    """The recipe's sibling assets dir; raises if `source` is used before a recipe pinned it (a wiring bug)."""
     if _files_dir.path is None:
         msg = "totchef_files dir not resolved — a bundled `source` was referenced before the recipe was loaded"
         raise RuntimeError(msg)
@@ -38,7 +38,7 @@ def files_dir() -> Path:
 
 
 def resolve_bundled_source(entry_name: str | None) -> str:
-    """The bundled file an omitted `source` defaults to: the totchef_files/ file whose stem is the entry name; 0/2+ matches raise, needs `source` explicit."""
+    """The bundled file an omitted `source` defaults to: the totchef_files/ file stemmed by entry name; 0/2+ raises."""
     base = files_dir()
     candidates: list[str] = (
         sorted(path.name for path in base.iterdir() if path.is_file() and path.stem == entry_name)
@@ -61,7 +61,7 @@ SOFT_FAIL_EXIT = 75
 
 
 def become_user() -> None:
-    """The privilege-drop chokepoint per forked user cook: drop gid, rebuild groups, drop uid, repoint HOME/USER/PATH at SUDO_USER; a no-op unprivileged."""
+    """Privilege drop for a forked cook: drop gid, rebuild groups, uid, repoint HOME/USER/PATH; no-op if root-less."""
     if os.geteuid() != 0:
         return
     sudo_user = os.environ.get("SUDO_USER")
@@ -99,7 +99,7 @@ def write_if_changed(path: Path, content: bytes | str, mode: int = 0o644, note: 
 
 
 def bootstrap_bin_dirs() -> tuple[Path, ...]:
-    """Dirs rustup/bun/uv install into before they are on PATH, resolved from $HOME at call time so they follow become_user's drop in a forked child."""
+    """Dirs rustup/bun/uv install into before PATH, resolved from $HOME, following become_user in a forked child."""
     home = Path.home()
     return (
         home / ".cargo/bin",
@@ -110,7 +110,7 @@ def bootstrap_bin_dirs() -> tuple[Path, ...]:
 
 
 def find_binary(name: str) -> Path | None:
-    """Look up a binary on PATH, then the bootstrap dirs; user-scope only, since those dirs follow $HOME which become_user repoints in the child."""
+    """Look up a binary on PATH, then bootstrap dirs; user-scope, since those follow become_user's $HOME."""
     if found := shutil.which(name):
         return Path(found)
     for d in bootstrap_bin_dirs():
@@ -130,7 +130,7 @@ def assume_https(url: str) -> str:
 
 
 def fetch_url(url: str) -> bytes:
-    """Time-bounded HTTP GET (a stall raises, never hangs); rejects any scheme but http(s). Custom UA — Signal/herdr CDNs 403 the urllib default."""
+    """Time-bounded HTTP GET (stall raises, never hangs); rejects non-http(s); custom UA — CDNs 403 urllib's default."""
     if not url.startswith(("http://", "https://")):
         msg = f"refusing to fetch {url!r}: only http/https URLs are allowed"
         raise ValueError(msg)
@@ -140,7 +140,7 @@ def fetch_url(url: str) -> bytes:
 
 
 def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | None]) -> dict[str, str | None]:
-    """Map each name to its upstream latest via fetch_one, run concurrently for a probe pass; a fetch that raises yields None, not a failed run."""
+    """Map each name to its latest via fetch_one, run concurrently; a raising fetch yields None, not a failure."""
     if not names:
         return {}
     latest: dict[str, str | None] = {}

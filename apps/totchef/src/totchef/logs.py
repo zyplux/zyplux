@@ -1,4 +1,4 @@
-"""Logging core: the log pump (one thread owns file + terminal so a live region never interleaves with logs), the FIFO drain barrier, loguru config."""
+"""Logging core: log pump (one thread owns file+terminal, no live-region interleave), drain barrier, loguru config."""
 
 import os
 import pwd
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 def log_dir() -> Path:
-    """Per-run logs under the user's XDG state dir (~/.local/state/totchef/logs) — resolved from SUDO_USER so root re-exec writes to the user's home."""
+    """Per-run logs under XDG state dir, resolved from SUDO_USER so root re-exec writes to the user's home."""
     sudo_user = os.environ.get("SUDO_USER")
     home = Path(pwd.getpwnam(sudo_user).pw_dir) if sudo_user else Path.home()
     state = Path(os.environ["XDG_STATE_HOME"]) if os.environ.get("XDG_STATE_HOME") else home / ".local" / "state"
@@ -47,7 +47,7 @@ def inline_mode() -> bool:
 
 
 class _LogState:
-    """Pump state, mutated in place: terminal is stdout dup, pipe_write feeds drain_logs, log_handle the run log file, echo_to_terminal the mirror toggle."""
+    """Pump state, mutated in place: terminal is a stdout dup, pipe_write feeds drain_logs, log_handle the log file."""
 
     terminal: int | None = None
     pipe_write: int | None = None
@@ -77,7 +77,7 @@ logger.add(sys.stderr, format=LOG_FORMAT, level="INFO", colorize=False)
 
 @contextmanager
 def cook_context(runner: str) -> Generator[None]:
-    """Label log lines while a cook runs with its node id, then restore "chef"; logger.configure (not contextualize) reaches worker threads too."""
+    """Label log lines with the cook's node id, then restore "chef"; logger.configure reaches worker threads too."""
     logger.configure(extra={"runner": runner})
     try:
         yield
@@ -86,7 +86,7 @@ def cook_context(runner: str) -> Generator[None]:
 
 
 def write_log(text: str) -> None:
-    """Append text to the run's log file under a lock — the only writer, shared by the pump thread and terminal.py's TOON writer."""
+    """Append text to the run's log file under a lock — the only writer shared by the pump thread and TOON writer."""
     if log_state.log_handle is None:
         return
     with LOG_LOCK:
@@ -104,13 +104,13 @@ def _emit_terminal(line: str) -> None:
 
 
 def _pump(read_fd: int) -> None:
-    """Mirror each line of the merged log stream to the file and terminal; a line matching a registered drain marker is swallowed and signals its event."""
+    """Mirror each line to file and terminal; a line matching a drain marker is swallowed and signals its event."""
     with os.fdopen(read_fd, "r", errors="replace") as stream:
         pump_lines(stream, write_log=write_log, emit_terminal=_emit_terminal, drain_events=DRAIN_EVENTS)
 
 
 def drain_logs(timeout: float = 5.0) -> None:
-    """FIFO barrier: block until the pump drains everything written so far; call only once all forked cooks are reaped."""
+    """FIFO barrier: block until the pump drains what's written so far; call only once all forked cooks are reaped."""
     if log_state.pipe_write is None:
         return
     marker = uuid.uuid4().hex
@@ -120,7 +120,7 @@ def drain_logs(timeout: float = 5.0) -> None:
 
 
 def open_log_file() -> Path:
-    """Resolve the run's log file under the state dir (honoring SHARED_LOG_ENV), create it, chown it to SUDO_USER; shared by pumped and inline starts."""
+    """Resolve the run's log file (honors SHARED_LOG_ENV), create it, chown to SUDO_USER; shared by both start paths."""
     directory = log_dir()
     directory.mkdir(parents=True, exist_ok=True)
     if existing := os.environ.get(SHARED_LOG_ENV):
@@ -138,7 +138,7 @@ def open_log_file() -> Path:
 
 @contextmanager
 def start_inline_logging() -> Generator[Path]:
-    """Inline start: no fd redirect, no pump. Open the log file, re-point loguru at live stderr so logs scroll to the terminal (and get captured by callers)."""
+    """Inline start: no fd redirect, no pump; open the log file, point loguru at stderr so logs reach the terminal."""
     log_file = open_log_file()
     with Path(log_file).open("a", encoding="utf-8") as handle:
         log_state.log_handle = handle
@@ -151,7 +151,7 @@ def start_inline_logging() -> Generator[Path]:
 
 @contextmanager
 def start_logging(*, echo_to_terminal: bool = True) -> Generator[Path]:
-    """Open logs/<run>.log and start the pump (redirect fd 1/2 into a pipe a thread reads); honor SHARED_LOG_ENV or create a file, chowned to SUDO_USER."""
+    """Open logs/<run>.log, start the pump (redirect fd 1/2 to a pipe read by a thread); honors SHARED_LOG_ENV."""
     set_terminal_echo(enabled=echo_to_terminal)
     if inline_mode():
         with start_inline_logging() as log_file:

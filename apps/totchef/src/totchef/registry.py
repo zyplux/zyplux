@@ -1,4 +1,4 @@
-"""Resolve a recipe section to its cook class: built-ins/plugins register via `totchef.cooks`; loose `*_cook.py` in totchef_cooks/ shadow them."""
+"""Resolve a recipe section to its cook class: plugins register via `totchef.cooks`; loose `*_cook.py` shadow them."""
 
 import importlib.util
 import os
@@ -15,7 +15,7 @@ COOK_SUFFIXES = ("_root_cook", "_cook")
 
 
 class _RecipeCooksDir:
-    """The pinned-for-this-run totchef_cooks/ dir, mutated in place so set_recipe_cooks_dir never needs a module-level rebind."""
+    """The pinned totchef_cooks/ dir for this run, mutated in place so set_recipe_cooks_dir never needs a rebind."""
 
     path: Path | None = None
 
@@ -24,13 +24,13 @@ _recipe_cooks_dir = _RecipeCooksDir()
 
 
 def set_recipe_cooks_dir(path: Path | None) -> None:
-    """Pin the recipe's sibling custom-cooks dir (totchef_cooks/) for `*_cook.py` plugins; None clears it. Clears the registry cache."""
+    """Pin the sibling custom-cooks dir (totchef_cooks/) for `*_cook.py` plugins; None clears it and the cache."""
     _recipe_cooks_dir.path = path
     cook_registry.cache_clear()
 
 
 def config_cooks_dir() -> Path:
-    """The user config dir scanned for loose `<section>_cook.py` plugins, honoring XDG_CONFIG_HOME — a prototyping hatch beside totchef_cooks/."""
+    """The user config dir scanned for loose `<section>_cook.py` plugins, honoring XDG_CONFIG_HOME."""
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
     return Path(base) / "totchef" / "cooks"
 
@@ -94,7 +94,7 @@ def _dir_cooks(cooks_dir: Path | None) -> dict[str, CookEntry]:
 
 @cache
 def cook_registry() -> dict[str, CookEntry]:
-    """Every available cook keyed by section — entry points, then the config dir, then totchef_cooks/ shadowing both; a local cook overrides a built-in."""
+    """Every available cook by section — entry points, config dir, totchef_cooks/ shadowing both; local wins."""
     return {**_entry_point_cooks(), **_dir_cooks(config_cooks_dir()), **_dir_cooks(_recipe_cooks_dir.path)}
 
 
