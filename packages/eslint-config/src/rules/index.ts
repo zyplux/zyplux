@@ -6,6 +6,7 @@ import { noAnonymousParamType } from './syntactic/no-anonymous-param-type';
 import { noIdentityCast } from './syntactic/no-identity-cast';
 import { noTypePredicate } from './syntactic/no-type-predicate';
 import { preferDestructuredParams } from './syntactic/prefer-destructured-params';
+import { contractsOnlySchemas } from './type-aware/contracts-only-schemas';
 import { noReturnArrayPush } from './type-aware/no-return-array-push';
 import { noStrayPascalConst } from './type-aware/no-stray-pascal-const';
 import { noTypeAnnotations } from './type-aware/no-type-annotations';
@@ -18,6 +19,7 @@ if (!upstreamPreferArrowFunctions) {
 }
 
 export const rules: Record<string, EslintRule> = {
+  'contracts-only-schemas': contractsOnlySchemas,
   'no-anonymous-param-type': noAnonymousParamType,
   'no-identity-cast': noIdentityCast,
   'no-return-array-push': noReturnArrayPush,

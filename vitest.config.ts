@@ -14,7 +14,7 @@ export default defineConfig({
         statements: 90,
       },
     },
-    projects: ['packages/eslint-config', 'tests/eslint-config', 'tests/cz', 'tests/util-ts'],
+    projects: ['tests/eslint-config', 'tests/cz', 'tests/util-ts'],
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,

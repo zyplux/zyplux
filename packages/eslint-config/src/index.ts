@@ -2,6 +2,7 @@ import prettier from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 import { base } from './configs/base';
+import { contractsRules } from './configs/contracts';
 import { gitignore } from './configs/gitignore';
 import { perfectionistConfig } from './configs/perfectionist';
 import { reactPresets, type RendererGlobs } from './configs/react';
@@ -72,6 +73,7 @@ const create = (options: ZypluxOptions = {}) => {
     unicornConfig,
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
+    contractsRules,
     vitestConfig,
     prettier,
   );

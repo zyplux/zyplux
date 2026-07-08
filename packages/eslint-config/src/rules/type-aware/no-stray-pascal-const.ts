@@ -1,9 +1,10 @@
 import type { TSESTree } from '@typescript-eslint/utils';
-import type * as ts from 'typescript';
 
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
+
+import { hasZodBrand } from './zod-brand';
 
 type ExpressionPredicate = (node: TSESTree.Expression) => boolean;
 
@@ -94,13 +95,6 @@ const isComponentInit: ExpressionPredicate = node => {
     return isJsxProducing(node.body);
   }
   if (node.type === AST_NODE_TYPES.FunctionExpression) return node.body.body.some(statement => hasJsxReturn(statement));
-  return false;
-};
-
-const hasZodBrand = (type: ts.Type): boolean => {
-  if (type.getProperty('~standard') !== undefined) return true;
-  if (type.getProperty('_zod') !== undefined) return true;
-  if (type.isUnion()) return type.types.some(member => hasZodBrand(member));
   return false;
 };
 
