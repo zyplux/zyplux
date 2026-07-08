@@ -132,6 +132,37 @@ def test_29_3_1_fails_listing_each_function_fallow_health_flags_above_its_thresh
     ]
 
 
+def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_data_is_absent(
+    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+) -> None:
+    health_without_crap = json.dumps({
+        "findings": [
+            {
+                "path": "src/rules/params.ts",
+                "name": "planParameter",
+                "line": 144,
+                "cyclomatic": 25,
+                "cognitive": 30,
+            },
+        ],
+        "summary": {
+            "max_cyclomatic_threshold": 20,
+            "max_cognitive_threshold": 15,
+            "max_crap_threshold": 30.0,
+        },
+    })
+    fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
+    fake_proc.serve("fallow health", returncode=1, stdout=health_without_crap)
+    result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
+    assert result.findings == [
+        finding(
+            status.FAIL,
+            "fallow found 1 functions above its complexity thresholds\n"
+            "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15",
+        )
+    ]
+
+
 def test_29_4_1_reports_the_combined_fallow_issue_count(
     run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
 ) -> None:

@@ -38,14 +38,21 @@ def _parse_report(outcome: subprocess.CompletedProcess[str]) -> dict[str, Any] |
     return parsed
 
 
+_COMPLEXITY_METRICS = (
+    ("cyclomatic", "max_cyclomatic_threshold", "cyclomatic"),
+    ("cognitive", "max_cognitive_threshold", "cognitive"),
+    ("crap", "max_crap_threshold", "CRAP"),
+)
+
+
 def _complexity_lines(report: dict[str, Any]) -> list[str]:
     thresholds = report["summary"]
     lines = []
     for offender in report["findings"]:
-        metrics = (
-            f"cyclomatic {offender['cyclomatic']:g}/{thresholds['max_cyclomatic_threshold']:g}, "
-            f"cognitive {offender['cognitive']:g}/{thresholds['max_cognitive_threshold']:g}, "
-            f"CRAP {offender['crap']:g}/{thresholds['max_crap_threshold']:g}"
+        metrics = ", ".join(
+            f"{label} {offender[metric]:g}/{thresholds[threshold]:g}"
+            for metric, threshold, label in _COMPLEXITY_METRICS
+            if metric in offender and threshold in thresholds
         )
         lines.append(f"    {offender['path']}:{offender['line']} {offender['name']} — {metrics}")
     return lines
