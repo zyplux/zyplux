@@ -20,33 +20,31 @@ _HEALTH_ARGV = ["bunx", "fallow", "health", "--quiet", "--fail-on-issues", "--fo
 
 _CLEAN_DEAD_CODE = json.dumps({"total_issues": 0})
 _CLEAN_HEALTH = json.dumps({"findings": [], "summary": {}})
-_HEALTH_OVER_THRESHOLD = json.dumps(
-    {
-        "findings": [
-            {
-                "path": "src/rules/params.ts",
-                "name": "planParameter",
-                "line": 144,
-                "cyclomatic": 25,
-                "cognitive": 30,
-                "crap": 160.0,
-            },
-            {
-                "path": "src/rules/types.ts",
-                "name": "checkParams",
-                "line": 292,
-                "cyclomatic": 13,
-                "cognitive": 16,
-                "crap": 49.5,
-            },
-        ],
-        "summary": {
-            "max_cyclomatic_threshold": 20,
-            "max_cognitive_threshold": 15,
-            "max_crap_threshold": 30.0,
+_HEALTH_OVER_THRESHOLD = json.dumps({
+    "findings": [
+        {
+            "path": "src/rules/params.ts",
+            "name": "planParameter",
+            "line": 144,
+            "cyclomatic": 25,
+            "cognitive": 30,
+            "crap": 160.0,
         },
-    }
-)
+        {
+            "path": "src/rules/types.ts",
+            "name": "checkParams",
+            "line": 292,
+            "cyclomatic": 13,
+            "cognitive": 16,
+            "crap": 49.5,
+        },
+    ],
+    "summary": {
+        "max_cyclomatic_threshold": 20,
+        "max_cognitive_threshold": 15,
+        "max_crap_threshold": 30.0,
+    },
+})
 
 
 class ProcDouble(Protocol):
@@ -88,9 +86,7 @@ def test_29_2_1_passes_when_both_fallow_analyses_exit_clean(
 ) -> None:
     _serve_clean(fake_proc)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.findings == [
-        finding(status.PASS, "fallow found no dead code, cycles, or complexity offenders")
-    ]
+    assert result.findings == [finding(status.PASS, "fallow found no dead code, cycles, or complexity offenders")]
 
 
 def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_at_the_repo_root(
@@ -108,9 +104,7 @@ def test_29_2_3_fails_with_the_issue_count_when_fallow_dead_code_reports_issues(
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
-        finding(
-            status.FAIL, "fallow found 3 dead-code issues; run `bunx fallow dead-code` locally for details"
-        )
+        finding(status.FAIL, "fallow found 3 dead-code issues; run `bunx fallow dead-code` locally for details")
     ]
 
 

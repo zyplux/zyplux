@@ -98,8 +98,7 @@ def _clone_lines(report: dict[str, Any], repo_root: Path) -> list[str]:
         return f"{name} [{start['line']}:{start['column']} - {end['line']}:{end['column']}]"
 
     return [
-        f"    {_span(clone['firstFile'])} duplicates {_span(clone['secondFile'])}"
-        for clone in report["duplicates"]
+        f"    {_span(clone['firstFile'])} duplicates {_span(clone['secondFile'])}" for clone in report["duplicates"]
     ]
 
 
@@ -107,7 +106,7 @@ def _load_report(report_dir: Path) -> dict[str, Any] | None:
     report_path = report_dir / "jscpd-report.json"
     try:
         parsed: dict[str, Any] = json.loads(report_path.read_text())
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return None
     return parsed
 

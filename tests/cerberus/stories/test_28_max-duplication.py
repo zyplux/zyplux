@@ -21,10 +21,7 @@ CHECK_ID = "max-duplication"
 _CUSTOM_THRESHOLD_TOML = 'default_recipe_marker = "just --list"\n\n[max_duplication]\nthreshold = 5\n'
 _THRESHOLDLESS_TOML = 'default_recipe_marker = "just --list"\n\n[max_duplication]\npattern = "**/*.py"\n'
 _CUSTOM_SELECTION_TOML = (
-    'default_recipe_marker = "just --list"\n\n'
-    "[max_duplication]\n"
-    'pattern = "**/*.rs"\n'
-    'ignore = ["**/target/**"]\n'
+    'default_recipe_marker = "just --list"\n\n[max_duplication]\npattern = "**/*.rs"\nignore = ["**/target/**"]\n'
 )
 _DEFAULT_PATTERN = "**/*.{ts,tsx,py}"
 _DEFAULT_IGNORE = "**/dist/**,**/.venv/**,**/*.gen.*"
@@ -45,9 +42,7 @@ def _report(
         fmt: {"total": {"duplicatedTokens": tokens, "percentageTokens": percentage}}
         for fmt, (tokens, percentage) in percentages_by_format.items()
     }
-    return {
-        "jscpd-report.json": json.dumps({"duplicates": clones or [], "statistics": {"formats": formats}})
-    }
+    return {"jscpd-report.json": json.dumps({"duplicates": clones or [], "statistics": {"formats": formats}})}
 
 
 _UNDER_THRESHOLD_REPORT = _report(typescript=(1167, 1.9), python=(1623, 1.3))
@@ -263,6 +258,4 @@ def test_28_4_2_falls_back_to_the_repo_root_when_no_manifest_declares_workspaces
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_max_duplication(files={"package.json": json.dumps({"name": "demo"})})
-    assert _mask_report_dir(fake_proc.calls) == [
-        (_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
-    ]
+    assert _mask_report_dir(fake_proc.calls) == [(_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))]
