@@ -142,7 +142,7 @@ def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | N
             name = pending[future]
             try:
                 latest[name] = future.result()
-            except Exception as exc:  # noqa: BLE001 — fetch_one is a real plugin extension point (totchef.cooks entry points); narrowing would silently break "a fetch that raises yields None" for third-party fetchers
+            except Exception as exc:
                 logger.debug("latest lookup for {name} failed: {exc}", name=name, exc=exc)
                 latest[name] = None
     return latest
