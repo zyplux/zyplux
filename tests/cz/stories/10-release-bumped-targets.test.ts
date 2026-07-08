@@ -98,8 +98,9 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.2 rejects when the publish workflow finishes unsuccessfully', async ({
+    test('10.3.2 rejects when the publish workflow finishes unsuccessfully, rolling back the release', async ({
       cz,
+      findTarget,
       logs,
       registries,
       repo,
@@ -111,20 +112,30 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'completed\nfailure');
+      const cerberus = await findTarget('zyplux-cerberus');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
       expect(logs.warnLines).toHaveLength(0);
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.3 rejects when the publish workflow never starts', async ({ cz, logs, registries, repo, shell }) => {
+    test('10.3.3 rejects when the publish workflow never starts, rolling back the release', async ({
+      cz,
+      findTarget,
+      logs,
+      registries,
+      repo,
+      shell,
+    }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, '100\n101');
+      const cerberus = await findTarget('zyplux-cerberus');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
@@ -133,15 +144,24 @@ describe('10. Releasing every target whose version was bumped', () => {
         expect.stringContaining('publish workflow did not start; check the Actions tab'),
       );
       expect(shell.commandsMatching('gh run view')).toHaveLength(0);
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.4 rejects when the publish workflow never completes', async ({ cz, logs, registries, repo, shell }) => {
+    test('10.3.4 rejects when the publish workflow never completes, rolling back the release', async ({
+      cz,
+      findTarget,
+      logs,
+      registries,
+      repo,
+      shell,
+    }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'in_progress');
+      const cerberus = await findTarget('zyplux-cerberus');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
@@ -149,9 +169,10 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.errorLines).toContainEqual(
         expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'),
       );
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.5 warns instead of failing when the registry never shows the new version', async ({
+    test('10.3.5 warns instead of failing when the registry never shows the new version, without rolling back', async ({
       cz,
       findTarget,
       logs,
@@ -178,6 +199,7 @@ describe('10. Releasing every target whose version was bumped', () => {
         `zyplux-cerberus ${cerberus.version} published (workflow succeeded) but is not visible on its registry yet — likely propagation lag; it should appear shortly`,
       );
       expect(logs.logLines).not.toContainEqual(expect.stringContaining('Published zyplux-cerberus'));
+      expect(shell.commandsMatching('gh release delete')).toHaveLength(0);
     });
 
     test('10.3.6 keeps polling while the run list is still empty instead of watching a phantom run', async ({
@@ -202,8 +224,9 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.7 rejects when the workflow completes without reporting a conclusion', async ({
+    test('10.3.7 rejects when the workflow completes without reporting a conclusion, rolling back the release', async ({
       cz,
+      findTarget,
       logs,
       registries,
       repo,
@@ -215,11 +238,13 @@ describe('10. Releasing every target whose version was bumped', () => {
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
       shell.on('gh run view 999', 'completed');
+      const cerberus = await findTarget('zyplux-cerberus');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'unknown'"));
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
   });
 

@@ -21,10 +21,19 @@ class RegistryLookupError(RuntimeError):
     pass
 
 
+class RegistryNotFoundError(RegistryLookupError):
+    """The registry has no package/distribution/image at all under this name."""
+
+
+_HTTP_NOT_FOUND = 404
+
+
 def _parse_payload(url: str, response: http.client.HTTPResponse) -> object:
     body = response.read()
+    failure = f"{url}: HTTP {response.status}"
+    if response.status == _HTTP_NOT_FOUND:
+        raise RegistryNotFoundError(failure)
     if response.status != _HTTP_OK:
-        failure = f"{url}: HTTP {response.status}"
         raise RegistryLookupError(failure)
     return json.loads(body)
 

@@ -51,34 +51,40 @@ const publish = async (target: Target, remoteHead: string) => {
   const knownRuns = await listReleaseRunIds('.[].databaseId');
   await $.gh.release.create(target.tag, { generateNotes: true, target: remoteHead, title: target.tag });
 
-  console.log(`Watching the publish workflow for ${target.tag} ...`);
-  const tagRunsQuery = `[.[] | select(.headBranch=="${target.tag}")] | .[].databaseId`;
-  const runId = await poll(
-    async () => {
-      const ids = await listReleaseRunIds(tagRunsQuery, 'databaseId,headBranch');
-      return ids.find(id => !knownRuns.includes(id));
-    },
-    { attempts: 30, intervalMs: 2000 },
-  );
-  if (runId === undefined) {
-    throw new Error('publish workflow did not start; check the Actions tab');
-  }
+  try {
+    console.log(`Watching the publish workflow for ${target.tag} ...`);
+    const tagRunsQuery = `[.[] | select(.headBranch=="${target.tag}")] | .[].databaseId`;
+    const runId = await poll(
+      async () => {
+        const ids = await listReleaseRunIds(tagRunsQuery, 'databaseId,headBranch');
+        return ids.find(id => !knownRuns.includes(id));
+      },
+      { attempts: 30, intervalMs: 2000 },
+    );
+    if (runId === undefined) {
+      throw new Error('publish workflow did not start; check the Actions tab');
+    }
 
-  console.log(`Watching run ${runId} ...`);
-  const conclusion = await poll(
-    async () => {
-      const [status, result] = splitLines(
-        await readTrimmed($.gh.run.view(runId, { jq: '.status, .conclusion', json: 'status,conclusion' })),
-      );
-      return status === 'completed' ? (result ?? '') : undefined;
-    },
-    { attempts: 200, intervalMs: 3000 },
-  );
-  if (conclusion === undefined) {
-    throw new Error(`publish workflow ${runId} did not complete within the watch window; check the Actions tab`);
+    console.log(`Watching run ${runId} ...`);
+    const conclusion = await poll(
+      async () => {
+        const [status, result] = splitLines(
+          await readTrimmed($.gh.run.view(runId, { jq: '.status, .conclusion', json: 'status,conclusion' })),
+        );
+        return status === 'completed' ? (result ?? '') : undefined;
+      },
+      { attempts: 200, intervalMs: 3000 },
+    );
+    if (conclusion === undefined) {
+      throw new Error(`publish workflow ${runId} did not complete within the watch window; check the Actions tab`);
+    }
+    ensure(conclusion === 'success', `publish workflow ${runId} finished with '${conclusion || 'unknown'}'`);
+    console.log(`Run ${runId} succeeded`);
+  } catch (error) {
+    console.error(`Rolling back release ${target.tag} (publish did not succeed) ...`);
+    await $.gh.release.delete(target.tag, { cleanupTag: true, yes: true });
+    throw error;
   }
-  ensure(conclusion === 'success', `publish workflow ${runId} finished with '${conclusion || 'unknown'}'`);
-  console.log(`Run ${runId} succeeded`);
 
   console.log(`Verifying ${target.label} ${target.version} ...`);
   const visible = await poll(async () => ((await target.isPublished()) ? true : undefined), {

@@ -42,6 +42,24 @@ def version_json(version: str) -> str:
     return f'{{"version": "{version}"}}'
 
 
+class RegistryDouble(Protocol):
+    """The shape of the registry lookup test double `fake_registry` hands back.
+
+    A structural type, not a nominal import of the concrete class conftest.py
+    builds — keeps this file free of any dependency on where that class lives.
+    """
+
+    not_found: set[tuple[str, str]]
+
+    def serve_npm(self, package: str, latest: str) -> None: ...
+    def serve_pypi(self, distribution: str, latest: str) -> None: ...
+    def serve_npm_missing(self, package: str) -> None: ...
+    def serve_pypi_missing(self, distribution: str) -> None: ...
+
+
+UNREACHABLE = "unreachable"
+
+
 class RunReleaseBumps(Protocol):
     def __call__(
         self,
@@ -49,21 +67,25 @@ class RunReleaseBumps(Protocol):
         manifest: str | None = ...,
         version_file_content: str | None = ...,
         version_path: str = ...,
-        tags: Sequence[str] | Exception = ...,
+        published: str | None = ...,
         changed: Sequence[str] | Exception = ...,
     ) -> CheckResult: ...
 
 
 @pytest.fixture
 def run_release_bumps(
-    monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: Context, run_check: RunCheck
+    monkeypatch: pytest.MonkeyPatch,
+    repo: Repo,
+    ctx: Context,
+    run_check: RunCheck,
+    fake_registry: RegistryDouble,
 ) -> RunReleaseBumps:
     def run(
         *,
         manifest: str | None = MANIFEST,
         version_file_content: str | None = version_json("0.1.0"),
         version_path: str = VERSION_FILE,
-        tags: Sequence[str] | Exception = (),
+        published: str | None = None,
         changed: Sequence[str] | Exception = (),
     ) -> CheckResult:
         files: dict[str, str] = {}
@@ -73,17 +95,22 @@ def run_release_bumps(
             files[version_path] = version_file_content
         monkeypatch.setattr(ctx, "file", lambda _repo, path: files.get(path))
 
-        def read_tags(*_: object) -> list[str]:
-            if isinstance(tags, Exception):
-                raise tags
-            return list(tags)
+        is_pypi = "pypi" in (manifest or "")
+        package = "zyplux-widget" if is_pypi else "@zyplux/widget"
+        if published == UNREACHABLE:
+            pass
+        elif published is None:
+            fake_registry.serve_pypi_missing(package) if is_pypi else fake_registry.serve_npm_missing(package)
+        elif is_pypi:
+            fake_registry.serve_pypi(package, published)
+        else:
+            fake_registry.serve_npm(package, published)
 
         def read_changed(*_: object) -> list[str]:
             if isinstance(changed, Exception):
                 raise changed
             return list(changed)
 
-        monkeypatch.setattr(ctx, "tags", read_tags)
         monkeypatch.setattr(ctx, "changed_paths", read_changed)
         return run_check(CHECK_ID, repo, ctx)
 
@@ -171,7 +198,7 @@ def test_14_2_5_reads_the_version_via_the_target_regex(
         manifest=REGEX_MANIFEST,
         version_path="apps/widget/pyproject.toml",
         version_file_content='[project]\nname = "widget"\nversion = "0.2.0"\n',
-        tags=["widget-v0.1.0"],
+        published="0.1.0",
         changed=[],
     )
     assert result.findings == [
@@ -180,43 +207,52 @@ def test_14_2_5_reads_the_version_via_the_target_regex(
     ]
 
 
-def test_14_3_1_treats_a_target_with_no_published_tags_as_not_yet_released(
+def test_14_3_1_treats_a_target_with_nothing_published_as_not_yet_released(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(tags=[])
+    result = run_release_bumps(published=None)
     assert result.findings == [
         finding(status.PASS, f"{LABEL}: not yet released"),
         finding(status.PASS, DONE),
     ]
 
 
-def test_14_3_2_picks_the_highest_semver_tag_and_ignores_tags_that_are_not_semver(
+def test_14_3_2_fails_when_the_current_version_trails_the_published_one(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(
-        version_file_content=version_json("0.2.0"),
-        tags=["widget-v0.2.0", "widget-v0.10.0", "widget-vnext"],
-        changed=[],
-    )
+    result = run_release_bumps(version_file_content=version_json("0.2.0"), published="0.10.0", changed=[])
+    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.2.0 is below published 0.10.0")]
+
+
+def test_14_3_3_errors_when_the_published_version_is_not_semver(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_release_bumps(published="not-a-version")
     assert result.findings == [
-        finding(status.FAIL, f"{LABEL}: version 0.2.0 is below published 0.10.0 (widget-v0.10.0)")
+        finding(
+            status.ERROR,
+            f"{LABEL}: cannot determine the latest published version: published version 'not-a-version' is not semver",
+        )
     ]
 
 
-def test_14_3_3_errors_when_the_published_tags_cannot_be_read(
-    run_release_bumps: RunReleaseBumps,
-    finding: type[Finding],
-    status: type[Status],
-    git_history_unavailable_error: type[GitHistoryUnavailableError],
+def test_14_3_4_errors_when_the_published_version_cannot_be_determined(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(tags=git_history_unavailable_error("git tag failed"))
-    assert result.findings == [finding(status.ERROR, f"{LABEL}: cannot read git tags: git tag failed")]
+    result = run_release_bumps(published=UNREACHABLE)
+    assert result.findings == [
+        finding(
+            status.ERROR,
+            f"{LABEL}: cannot determine the latest published version: "
+            "https://registry.npmjs.org/@zyplux%2Fwidget: connection refused",
+        )
+    ]
 
 
 def test_14_4_1_passes_when_the_current_version_is_ahead_of_the_latest_published_release(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(version_file_content=version_json("0.2.0"), tags=["widget-v0.1.0"], changed=[])
+    result = run_release_bumps(version_file_content=version_json("0.2.0"), published="0.1.0", changed=[])
     assert result.findings == [
         finding(status.PASS, f"{LABEL}: 0.2.0 is ahead of published 0.1.0"),
         finding(status.PASS, DONE),
@@ -226,21 +262,21 @@ def test_14_4_1_passes_when_the_current_version_is_ahead_of_the_latest_published
 def test_14_4_2_fails_when_the_current_version_trails_the_latest_published_release(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(tags=["widget-v0.2.0"], changed=[])
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.1.0 is below published 0.2.0 (widget-v0.2.0)")]
+    result = run_release_bumps(published="0.2.0", changed=[])
+    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.1.0 is below published 0.2.0")]
 
 
 def test_14_5_1_passes_when_the_release_surface_is_unchanged_since_the_latest_release(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(tags=["widget-v0.1.0"], changed=[])
+    result = run_release_bumps(published="0.1.0", changed=[])
     assert result.findings == [finding(status.PASS, DONE)]
 
 
 def test_14_5_2_fails_and_names_the_required_bump_when_the_surface_changed_without_one(
     run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_release_bumps(tags=["widget-v0.1.0"], changed=["packages/widget/src/a.ts"])
+    result = run_release_bumps(published="0.1.0", changed=["packages/widget/src/a.ts"])
     assert result.findings == [
         finding(
             status.FAIL,
@@ -255,5 +291,5 @@ def test_14_5_3_errors_when_the_surface_diff_cannot_be_computed(
     status: type[Status],
     git_history_unavailable_error: type[GitHistoryUnavailableError],
 ) -> None:
-    result = run_release_bumps(tags=["widget-v0.1.0"], changed=git_history_unavailable_error("git diff failed"))
+    result = run_release_bumps(published="0.1.0", changed=git_history_unavailable_error("git diff failed"))
     assert result.findings == [finding(status.ERROR, f"{LABEL}: cannot diff against widget-v0.1.0: git diff failed")]

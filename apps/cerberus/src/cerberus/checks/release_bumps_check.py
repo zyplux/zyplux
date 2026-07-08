@@ -6,10 +6,13 @@ import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cerberus import registries
 from cerberus.model import CheckResult, Repo, Scope
 from cerberus.source import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from cerberus.context import Context
 
 ID = "release-bumps"
@@ -19,6 +22,13 @@ SCOPE = Scope.GIT_HISTORY
 _MANIFEST = "release-targets.toml"
 _TARGET_KEY = "target"
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
+_GHCR_HOST_PREFIX = "ghcr.io/"
+
+_FETCHERS: dict[str, Callable[[str], str]] = {
+    "npm": registries.fetch_latest_npm,
+    "pypi": registries.fetch_latest_pypi,
+    "ghcr": registries.fetch_latest_ghcr,
+}
 
 Semver = tuple[int, int, int]
 
@@ -26,11 +36,16 @@ Semver = tuple[int, int, int]
 @dataclass(frozen=True)
 class _Target:
     label: str
+    kind: str
     tag_prefix: str
     version_file: str
     version_json: str | None
     version_regex: str | None
     surface: tuple[str, ...]
+
+    @property
+    def registry_name(self) -> str:
+        return self.label.removeprefix(_GHCR_HOST_PREFIX) if self.kind == "ghcr" else self.label
 
 
 class _ManifestError(ValueError):
@@ -48,6 +63,7 @@ def _parse_targets(manifest: str) -> list[_Target]:
         targets.append(
             _Target(
                 label=entry["label"],
+                kind=entry["kind"],
                 tag_prefix=entry["tag_prefix"],
                 version_file=version["file"],
                 version_json=version.get("json"),
@@ -77,16 +93,6 @@ def _parse_semver(version: str) -> Semver | None:
     return (int(match[1]), int(match[2]), int(match[3])) if match else None
 
 
-def _latest_release(tags: list[str], prefix: str) -> tuple[Semver, str, str] | None:
-    latest: tuple[Semver, str, str] | None = None
-    for tag in tags:
-        version = tag[len(prefix) :]
-        semver = _parse_semver(version)
-        if semver is not None and (latest is None or semver > latest[0]):
-            latest = (semver, tag, version)
-    return latest
-
-
 def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> tuple[Semver, str] | None:
     content = ctx.file(repo, target.version_file)
     if content is None:
@@ -107,6 +113,16 @@ def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult)
     return current, version
 
 
+def _fetch_latest_published(target: _Target) -> tuple[Semver, str]:
+    """Raises RegistryNotFoundError if nothing is published yet, RegistryLookupError on other failures."""
+    version = _FETCHERS[target.kind](target.registry_name)
+    semver = _parse_semver(version)
+    if semver is None:
+        failure = f"published version {version!r} is not semver"
+        raise registries.RegistryLookupError(failure)
+    return semver, version
+
+
 def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None:
     resolved = _current_semver(repo, ctx, target, res)
     if resolved is None:
@@ -114,22 +130,23 @@ def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None
     current, version = resolved
 
     try:
-        latest = _latest_release(ctx.tags(repo, target.tag_prefix), target.tag_prefix)
-    except GitHistoryUnavailableError as exc:
-        res.error(f"{target.label}: cannot read git tags: {exc}")
-        return
-    if latest is None:
+        latest = _fetch_latest_published(target)
+    except registries.RegistryNotFoundError:
         res.ok(f"{target.label}: not yet released")
         return
+    except registries.RegistryLookupError as exc:
+        res.error(f"{target.label}: cannot determine the latest published version: {exc}")
+        return
 
-    latest_semver, latest_tag, latest_version = latest
+    latest_semver, latest_version = latest
     if current > latest_semver:
         res.ok(f"{target.label}: {version} is ahead of published {latest_version}")
         return
     if current < latest_semver:
-        res.fail(f"{target.label}: version {version} is below published {latest_version} ({latest_tag})")
+        res.fail(f"{target.label}: version {version} is below published {latest_version}")
         return
 
+    latest_tag = f"{target.tag_prefix}{latest_version}"
     try:
         changed = ctx.changed_paths(repo, latest_tag, target.surface)
     except GitHistoryUnavailableError as exc:

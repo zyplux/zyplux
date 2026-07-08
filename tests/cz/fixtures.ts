@@ -62,6 +62,7 @@ const BENIGN_WRITE_COMMANDS = [
   'gh pr merge',
   'gh pr ready',
   'gh release create',
+  'gh release delete',
   'git branch',
   'git checkout',
   'git fetch',

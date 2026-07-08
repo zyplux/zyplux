@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "bun",

@@ -22,11 +22,13 @@
 
 ## 14.3 finding a target's latest published release
 
-### 14.3.1 treats a target with no published tags as not yet released
+### 14.3.1 treats a target with nothing published as not yet released
 
-### 14.3.2 picks the highest semver tag and ignores tags that are not semver
+### 14.3.2 fails when the current version trails the published one
 
-### 14.3.3 errors when the published tags cannot be read
+### 14.3.3 errors when the published version is not semver
+
+### 14.3.4 errors when the published version cannot be determined
 
 ## 14.4 comparing the current version against the latest published release
 

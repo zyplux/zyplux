@@ -26,26 +26,22 @@
 
 ### 17.4.2 returns no workflows when there is no workflows directory
 
-## 17.5 listing tags by prefix
+## 17.5 diffing paths changed against a ref
 
-### 17.5.1 lists tags matching a given prefix
+### 17.5.1 lists surface paths changed since the ref
 
-### 17.5.2 returns no tags when none match the prefix
+### 17.5.2 excludes surface paths unchanged since the ref
 
-## 17.6 diffing paths changed against a ref
+### 17.5.3 counts uncommitted working-tree changes against the ref
 
-### 17.6.1 lists surface paths changed since the ref
+## 17.6 surfacing unavailable git history
 
-### 17.6.2 excludes surface paths unchanged since the ref
+### 17.6.1 errors when git history cannot be read outside a repo
 
-## 17.7 surfacing unavailable git history
+### 17.6.2 errors when the git binary is missing
 
-### 17.7.1 errors when git history cannot be read outside a repo
+## 17.7 caching reads through the run context
 
-### 17.7.2 errors when the git binary is missing
+### 17.7.1 serves freshly written content to later reads in the same run
 
-## 17.8 caching reads through the run context
-
-### 17.8.1 serves freshly written content to later reads in the same run
-
-### 17.8.2 keys cached history reads by their arguments
+### 17.7.2 keys cached history reads by their arguments
