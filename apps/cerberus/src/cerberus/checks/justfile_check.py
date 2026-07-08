@@ -116,13 +116,17 @@ def _first_drift(expected_region: tuple[str, ...], actual_region: list[str]) -> 
     return next(((n, expected, actual) for n, (expected, actual) in lines if expected != actual), None)
 
 
-def _rewrite_baseline_region(content: str, custom_marker_index: int, repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _rewrite_baseline_region(
+    content: str, custom_marker_index: int, repo: Repo, ctx: Context, res: CheckResult
+) -> None:
     custom_tail = content.split("\n")[custom_marker_index + 1 :]
     fixed = "\n".join([*_canonical_region_lines(), *custom_tail])
     try:
         justfile.parse(fixed)
     except justfile.JustfileError as err:
-        res.fail(f"baseline region not rewritten: the fixed justfile does not parse ({err}); resolve the conflict in the `{CUSTOM_MARKER}` section first")
+        res.fail(
+            f"baseline region not rewritten: the fixed justfile does not parse ({err}); resolve the conflict in the `{CUSTOM_MARKER}` section first"
+        )
         return
     ctx.write_file(repo, "justfile", fixed)
 
@@ -186,7 +190,10 @@ def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
     if "check" not in jf.recipes:
         return
     segments = (
-        segment for recipe in _calc_reachable_recipes(jf, "check") for line in jf.bodies.get(recipe, "").split("\n") for segment in _SEGMENT_SPLIT.split(line)
+        segment
+        for recipe in _calc_reachable_recipes(jf, "check")
+        for line in jf.bodies.get(recipe, "").split("\n")
+        for segment in _SEGMENT_SPLIT.split(line)
     )
     if not any(_invokes_cerberus(segment) for segment in segments):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")

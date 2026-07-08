@@ -40,7 +40,9 @@ OK_MESSAGE = "every story criterion has a matching, title-matched test"
 NO_MATCHING_TEST_HEADER_MESSAGE = "tests/stories: story-doc ### header(s) with no matching test: 1.1.2"
 PY_STALE_LINK_MESSAGE = "tests/stories/1_widget.md: story header links are stale; run with --fix"
 TS_STALE_LINK_MESSAGE = "tests/stories/1-widget.md: story header links are stale; run with --fix"
-TITLE_DRIFT_MESSAGE = "tests/stories: header/test title drift for 1.1.1 — header='shows the widget name' test='shows a different name'"
+TITLE_DRIFT_MESSAGE = (
+    "tests/stories: header/test title drift for 1.1.1 — header='shows the widget name' test='shows a different name'"
+)
 
 
 def _needs_story_tests_message(package: str) -> str:
@@ -54,17 +56,23 @@ def _linked(target: str) -> str:
     return DOC.replace("# 1. Configuring a widget\n", f"# 1. [Configuring a widget]({target})\n")
 
 
-def test_15_1_1_skips_a_repo_with_no_python_packages_at_all(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_1_1_skips_a_repo_with_no_python_packages_at_all(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_check_with_files(PY_CHECK_ID, {"README.md": "# demo\n"})
     assert result.findings == [finding(status.SKIP, "no Python packages")]
 
 
-def test_15_1_2_skips_a_repo_with_no_typescript_packages_at_all(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_1_2_skips_a_repo_with_no_typescript_packages_at_all(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_check_with_files(TS_CHECK_ID, {"README.md": "# demo\n"})
     assert result.findings == [finding(status.SKIP, "no TypeScript packages")]
 
 
-def test_15_1_3_ignores_a_directory_outside_the_workspace_glob(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_1_3_ignores_a_directory_outside_the_workspace_glob(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     files = {"pyproject.toml": _PY_UV_WORKSPACE_APPS, "libs/other/pyproject.toml": _PY_SCRIPTS_PYPROJECT}
     result = run_check_with_files(PY_CHECK_ID, files)
     assert result.findings == [finding(status.SKIP, "no Python packages")]
@@ -249,7 +257,9 @@ def test_15_4_1_flags_a_story_header_with_no_matching_test(
     ]
 
 
-def test_15_4_2_flags_a_test_with_no_matching_story_header(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_4_2_flags_a_test_with_no_matching_story_header(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     files = {
         "pyproject.toml": _PY_PLAIN_PYPROJECT,
         DOC_PATH: "# 1. Configuring a widget\n\n### 1.1.1 shows the widget name\n",
@@ -322,7 +332,9 @@ def test_15_4_5_does_not_flag_titles_that_differ_only_by_punctuation_or_case(
     assert result.findings == [finding(status.PASS, OK_MESSAGE)]
 
 
-def test_15_5_1_flags_a_stale_header_link(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_5_1_flags_a_stale_header_link(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     files = {
         "pyproject.toml": _PY_PLAIN_PYPROJECT,
         DOC_PATH: DOC.replace("# 1. Configuring a widget\n", "# 1. [Configuring a widget](test_wrong_file.py)\n"),
@@ -385,7 +397,9 @@ def test_15_5_2_rewrites_a_stale_header_link_and_passes_on_the_next_run(
     assert result.findings == [finding(status.PASS, OK_MESSAGE)]
 
 
-def test_15_5_3_flags_a_linked_criterion_header_for_unlinking(run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]) -> None:
+def test_15_5_3_flags_a_linked_criterion_header_for_unlinking(
+    run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
+) -> None:
     files = {
         "pyproject.toml": _PY_PLAIN_PYPROJECT,
         DOC_PATH: _linked("test_1_widget.py").replace(

@@ -24,7 +24,9 @@ def test_10_1_1_lint_validates_and_prints_path_valid(cli: Cli, tmp_path: Path) -
     cli.run("lint", "--recipe", str(bad)).assert_failed()
 
 
-def test_10_1_2_lint_needs_no_root_and_changes_nothing(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_10_1_2_lint_needs_no_root_and_changes_nothing(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """Linting needs no root and changes nothing — no file is written and no shell command runs."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
 
@@ -82,7 +84,11 @@ def test_10_2_4_remove_how_requires_remove_when(recipe: RecipeBuilder, totchef: 
 
 
 def test_10_3_1_bin_commands_embed_a_version_or_offer_help(
-    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], totchef: Totchef, bundled_files: Path, tmp_path: Path
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    totchef: Totchef,
+    bundled_files: Path,
+    tmp_path: Path,
 ) -> None:
     """A command that doesn't embed `__version__` or offer `--version`/`--help` can't enter a bin cook — lint rejects it statically, never executing it."""
     recipe = totchef.recipe

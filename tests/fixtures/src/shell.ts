@@ -109,7 +109,8 @@ export const createShellFake = (): ShellFake => {
     commands.push(command);
     const reply = resolveReply(command);
     const resolved = typeof reply === 'function' ? reply(command) : reply;
-    const output = typeof resolved === 'string' ? fakeShellOutput(resolved) : fakeShellOutput(resolved.stdout, resolved.exitCode);
+    const output =
+      typeof resolved === 'string' ? fakeShellOutput(resolved) : fakeShellOutput(resolved.stdout, resolved.exitCode);
     return fakeShellPromise(output);
   });
 

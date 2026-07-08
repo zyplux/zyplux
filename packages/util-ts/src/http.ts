@@ -43,7 +43,8 @@ const send = (input: string | URL, init?: RequestInit) => {
   };
 };
 
-const withMethod = (method: HttpMethod) => (input: string | URL, init?: RequestInit) => send(input, { ...init, method });
+const withMethod = (method: HttpMethod) => (input: string | URL, init?: RequestInit) =>
+  send(input, { ...init, method });
 
 export const http = Object.assign(send, {
   delete: withMethod('DELETE'),

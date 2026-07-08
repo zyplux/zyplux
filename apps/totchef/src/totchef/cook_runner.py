@@ -106,14 +106,20 @@ def _plan_row(name: str, installed_before: dict[str, str], latest: dict[str, str
     return ReportRow(name, installed or "(none)", installed or "(none)", format_version(available), action, changed)
 
 
-def _gated_row(name: str, installed_before: dict[str, str], latest: dict[str, str | None], pending: set[str]) -> ReportRow:
+def _gated_row(
+    name: str, installed_before: dict[str, str], latest: dict[str, str | None], pending: set[str]
+) -> ReportRow:
     """A row for a sync the section-level `pre_hook` blocked: `name` stays put, labeled `skipped` if it was due to move, else `unchanged`."""
     installed = installed_before.get(name)
     action = "skipped" if name in pending else "unchanged"
-    return ReportRow(name, installed or "(none)", installed or "(none)", format_version(latest.get(name)), action, changed=False)
+    return ReportRow(
+        name, installed or "(none)", installed or "(none)", format_version(latest.get(name)), action, changed=False
+    )
 
 
-def _synced_row(name: str, before: str | None, after: str | None, available: str | None, *, hard_failed: bool) -> ReportRow:
+def _synced_row(
+    name: str, before: str | None, after: str | None, available: str | None, *, hard_failed: bool
+) -> ReportRow:
     """One post-sync report row: how `name` moved (or didn't) from its pre-sync to post-sync installed version."""
     if before is None and after is not None:
         action, changed = "installed", True
@@ -136,7 +142,9 @@ def run_versioned(cook: VersionedCook, section: str, *, dry_run: bool) -> CookRe
         return CookResult(section, "ok", rows)
 
     to_install = [n for n in requested if n not in installed_before]
-    to_upgrade = [n for n in requested if n in installed_before and (latest.get(n) is None or latest[n] != installed_before[n])]
+    to_upgrade = [
+        n for n in requested if n in installed_before and (latest.get(n) is None or latest[n] != installed_before[n])
+    ]
     pending = set(to_install) | set(to_upgrade)
     pre_hook, post_hook = cook.get_hooks()
 
@@ -152,17 +160,31 @@ def run_versioned(cook: VersionedCook, section: str, *, dry_run: bool) -> CookRe
 
     installed_after = cook.list_installed()
     rows = [
-        _synced_row(name, installed_before.get(name), installed_after.get(name), latest.get(name), hard_failed=result.status == "hard_fail")
+        _synced_row(
+            name,
+            installed_before.get(name),
+            installed_after.get(name),
+            latest.get(name),
+            hard_failed=result.status == "hard_fail",
+        )
         for name in cook.list_reportable(requested, installed_after)
     ]
 
     status = result.status
     if status == "ok" and post_hook and any(row.changed for row in rows) and run_post_hook(post_hook) == "soft_fail":
         status = "soft_fail"
-    return CookResult(section, status, rows, result.message, delayed_messages=[result.delayed_message] if result.delayed_message else [])
+    return CookResult(
+        section,
+        status,
+        rows,
+        result.message,
+        delayed_messages=[result.delayed_message] if result.delayed_message else [],
+    )
 
 
-def apply_state_resource(cook: StateCook[EntrySpec], name: str, current_label: str, desired_label: str, applied_label: str) -> tuple[ReportRow, Status, str]:
+def apply_state_resource(
+    cook: StateCook[EntrySpec], name: str, current_label: str, desired_label: str, applied_label: str
+) -> tuple[ReportRow, Status, str]:
     """Apply one state-cook resource and build its row plus follow-up: pre_hook gates, apply mutates, post_hook fires on change; a gated skip is `ok`."""
     pre_hook, post_hook = cook.get_hooks(name)
     if pre_hook and not run_pre_hook(pre_hook):
@@ -185,7 +207,11 @@ def apply_state_resource(cook: StateCook[EntrySpec], name: str, current_label: s
         action, post_label = "applied", applied_label
     else:
         action, post_label = "unchanged", current_label
-    return ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status), status, outcome.delayed_message
+    return (
+        ReportRow(name, current_label, post_label, desired_label, action, outcome.changed, status),
+        status,
+        outcome.delayed_message,
+    )
 
 
 def run_state(cook: StateCook[EntrySpec], section: str, *, dry_run: bool) -> CookResult:
@@ -197,7 +223,11 @@ def run_state(cook: StateCook[EntrySpec], section: str, *, dry_run: bool) -> Coo
     def labels(name: str) -> tuple[str, str, str]:
         """Pre-state, target and post-apply labels: a digest reads matches/differs against the desired content; the target column shows its short content id."""
         current_token, desired_token = current.get(name, "?"), desired.get(name, "?")
-        current_label = ("matches" if current_token == desired_token else "differs") if CONTENT_DIGEST.fullmatch(current_token) else current_token
+        current_label = (
+            ("matches" if current_token == desired_token else "differs")
+            if CONTENT_DIGEST.fullmatch(current_token)
+            else current_token
+        )
         applied_label = "matches" if CONTENT_DIGEST.fullmatch(desired_token) else desired_token
         return current_label, format_state(desired_token), applied_label
 
@@ -373,12 +403,18 @@ def format_unlocked(
     return f"; unlocked: {', '.join(parts)}"
 
 
-def log_completion(node_id: str, result: CookResult, dependants: tuple[str, ...], progress: UnlockProgress, elapsed: float) -> None:
+def log_completion(
+    node_id: str, result: CookResult, dependants: tuple[str, ...], progress: UnlockProgress, elapsed: float
+) -> None:
     """Emit a cook's completion line parent-side, timed from fork to reap: success unlocks dependants, failure blocks them."""
     with cook_context(node_id):
         timing = f"({format_duration(elapsed)})"
         if result.status == "ok":
-            logger.info("completed {timing}{unlocked}", timing=timing, unlocked=format_unlocked(dependants, progress.satisfied, progress.blocker_count))
+            logger.info(
+                "completed {timing}{unlocked}",
+                timing=timing,
+                unlocked=format_unlocked(dependants, progress.satisfied, progress.blocker_count),
+            )
         else:
             blocked = f"; blocked: {', '.join(dependants)}" if dependants else ""
             message = result.message or "see log above"
@@ -394,7 +430,9 @@ def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookR
     weights = build_weights(config, nodes)
     reach = build_reach(dependents, weights)
     scheduling = Scheduling(dependents, reach, weights)
-    progress = UnlockProgress(blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0))
+    progress = UnlockProgress(
+        blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0)
+    )
     results: dict[str, CookResult] = {}
     for node_id in TopologicalSorter(graph).static_order():
         started = time.monotonic()
@@ -475,7 +513,9 @@ def run_recipe(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
     weights = build_weights(config, nodes)
     reach = build_reach(dependents, weights)
     scheduling = Scheduling(dependents, reach, weights)
-    progress = UnlockProgress(blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0))
+    progress = UnlockProgress(
+        blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0)
+    )
     sorter: TopologicalSorter[str] = TopologicalSorter(graph)
     sorter.prepare()
     scheduler = _Scheduler(nodes, config, scheduling, progress, dry_run, sorter)

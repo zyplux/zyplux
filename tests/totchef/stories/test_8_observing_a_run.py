@@ -44,7 +44,9 @@ def test_8_1_1_report_table_color_coded_on_terminal_plain_toon_otherwise(
     chef(boom).up().assert_colored("failed", "red bold")  # a failure → red
 
 
-def test_8_1_2_up_shows_changed_rows_plus_footer_plan_shows_all(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_8_1_2_up_shows_changed_rows_plus_footer_plan_shows_all(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """A real up shows only changed/failed rows plus a footer (unchanged count, elapsed); a plan shows every row."""
     settled = tmp_path / "settled"
     settled.write_text("X\n")
@@ -62,7 +64,9 @@ def test_8_1_2_up_shows_changed_rows_plus_footer_plan_shows_all(recipe: RecipeBu
     assert "1 unchanged" in report.report  # the footer summarizes what was left alone
 
 
-def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """A hash equal to the rendered recipe content reads `matches`, a drifting one `differs`, a missing file `absent`; `latest` carries the short content id."""
     drift = tmp_path / "drift"
     drift.write_text("OLD\n")  # exists but will be rewritten
@@ -84,7 +88,9 @@ def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(recipe: RecipeBui
     assert "file.fresh,absent,matches,#21998928,applied" in report.full_table
 
 
-def test_8_1_4_before_and_current_diverge_on_upgrade(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_8_1_4_before_and_current_diverge_on_upgrade(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """After an upgrade, `before` shows the pre-sync version and `current` shows the post-sync version, so the row reads as a real diff."""
     recipe.declares("url", "claude", url="https://claude.ai/install.sh", update_action=["update"])
     system.has("claude")
@@ -120,7 +126,9 @@ def test_8_1_5_failed_install_keeps_before_equal_current(
 # 7.2 Watch progress while a long run executes
 
 
-def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch: pytest.MonkeyPatch, terminal_internals: ModuleType) -> None:
+def test_8_2_1_transient_progress_bar_cleared_on_exit(
+    monkeypatch: pytest.MonkeyPatch, terminal_internals: ModuleType
+) -> None:
     """An interactive progress bar shows completed/total and elapsed, cleared on exit, leaving logs above it."""
     resource_count = 3
     assert terminal_internals.is_interactive() is False  # the test console is not a terminal
@@ -140,7 +148,9 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch: pytest.Monkey
     monkeypatch.setattr(terminal_internals, "Progress", spy_progress)
     monkeypatch.setattr("totchef.terminal.is_interactive", lambda: True)
     with terminal_internals.progress_region("Cooking", total=resource_count) as live:
-        assert type(live) is not terminal_internals.ProgressHandle  # on a terminal: a live transient bar, not the no-op handle
+        assert (
+            type(live) is not terminal_internals.ProgressHandle
+        )  # on a terminal: a live transient bar, not the no-op handle
         progress = live_progresses[-1]  # the real rich Progress progress_region built for this run
         column_types = {type(column) for column in progress.columns}
         assert MofNCompleteColumn in column_types  # the bar shows completed/total …
@@ -151,13 +161,19 @@ def test_8_2_1_transient_progress_bar_cleared_on_exit(monkeypatch: pytest.Monkey
         assert progress.live.transient is True  # transient ⇒ cleared on exit, leaving the logs above it
 
 
-def test_8_2_2_log_lines_colorized_and_tagged_per_cook(monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType, terminal_internals: ModuleType) -> None:
+def test_8_2_2_log_lines_colorized_and_tagged_per_cook(
+    monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType, terminal_internals: ModuleType
+) -> None:
     """Each cook's log lines are tagged with its name in a stable per-cook color so concurrent output stays readable."""
 
     def render(line: str) -> str:
         """Drive the line through `LINE_SINK`, the pump's real terminal sink, onto a captured console — the same path a pumped line takes."""
         buffer = io.StringIO()
-        monkeypatch.setattr(terminal_internals, "console", lambda: Console(file=buffer, force_terminal=True, color_system="standard", width=200))
+        monkeypatch.setattr(
+            terminal_internals,
+            "console",
+            lambda: Console(file=buffer, force_terminal=True, color_system="standard", width=200),
+        )
         log_internals.LINE_SINK(line)
         return buffer.getvalue()
 
@@ -185,7 +201,9 @@ def test_8_2_3_start_and_completion_lines_announce_waits_and_unblocks(cook_runne
 # 7.3 Keep a timestamped log of every run
 
 
-def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(apply_in_container: Callable[[str, list[str]], ContainerRun]) -> None:
+def test_8_3_1_timestamped_log_under_user_state_dir_chowned_back(
+    apply_in_container: Callable[[str, list[str]], ContainerRun],
+) -> None:
     """A run's timestamped log under the user's state dir is chowned back, so the operator owns it though the apply ran as root. In a container."""
     run = apply_in_container('[file.f]\npath = "/home/tester/f"\ncontent = "x\\n"\n', ["/home/tester/f"])
 
@@ -212,19 +230,28 @@ def test_8_3_2_all_output_funnels_through_a_single_pump(tmp_path: Path, log_pump
         )
 
     assert log_file.read_text() == "url.bun   installing\napt_pkg   updating\n"  # one ordered writer to the file
-    assert emitted == ["url.bun   installing\n", "apt_pkg   updating\n"]  # one ordered sink to the terminal — never interleaved
+    assert emitted == [
+        "url.bun   installing\n",
+        "apt_pkg   updating\n",
+    ]  # one ordered sink to the terminal — never interleaved
     assert marker_event.is_set()  # a line matching a registered marker signals its event …
     assert "marker" not in drain_events  # … and is popped once consumed, not written or mirrored like a real log line
 
 
-def test_8_3_2_2_write_log_is_a_safe_no_op_before_a_run_opens_a_handle(monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType) -> None:
+def test_8_3_2_2_write_log_is_a_safe_no_op_before_a_run_opens_a_handle(
+    monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType
+) -> None:
     """write_log tolerates being called before any run has opened a log handle, rather than raising."""
     monkeypatch.setattr(log_internals.log_state, "log_handle", None)
     log_internals.write_log("dropped")  # no handle yet ⇒ a safe no-op
 
 
 def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
-    recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch, log_internals: ModuleType, log_pump: ModuleType
+    recipe: RecipeBuilder,
+    totchef: Totchef,
+    monkeypatch: pytest.MonkeyPatch,
+    log_internals: ModuleType,
+    log_pump: ModuleType,
 ) -> None:
     """A dry run shows only the plan table on the terminal while still recording every line to the log file."""
     log_file = totchef.workdir / "run.log"
@@ -235,7 +262,9 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
 
     log_internals.set_terminal_echo(enabled=False)  # dry-run suppresses cook log echo to the terminal …
     assert not log_internals.log_state.echo_to_terminal
-    log_pump.emit_terminal("cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK)  # what the pump would mirror
+    log_pump.emit_terminal(
+        "cook chatter\n", enabled=log_internals.log_state.echo_to_terminal, sink=log_internals.LINE_SINK
+    )  # what the pump would mirror
     log_internals.write_log("cook chatter\n")
 
     assert emitted == []  # … nothing reached the terminal while echo was off …
@@ -249,7 +278,9 @@ def test_8_3_3_dry_run_shows_only_plan_on_terminal_but_logs_everything(
     assert '{"cook-node"' in plan.report  # and the plan table itself is still produced
 
 
-def test_8_3_4_a_failed_run_names_its_log_file(scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal) -> None:
+def test_8_3_4_a_failed_run_names_its_log_file(
+    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal
+) -> None:
     """A failed run's final summary names the run's log file, so an operator who saw only the report knows which file to open for the captured error."""
     boom = scenario().declares("bash", "boom", apply="explode")
     terminal.arrange("explode", exit_code=1)
@@ -261,7 +292,9 @@ def test_8_3_4_a_failed_run_names_its_log_file(scenario: Callable[[], RecipeBuil
     report.assert_logged(".log")
 
 
-def test_8_3_5_every_run_logs_the_totchef_version_up_front(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path, totchef_version: str) -> None:
+def test_8_3_5_every_run_logs_the_totchef_version_up_front(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path, totchef_version: str
+) -> None:
     """Every plan/up logs `totchef <version>` first, naming the exact build behind any log file or scrollback."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
 
@@ -273,7 +306,9 @@ def test_8_3_5_every_run_logs_the_totchef_version_up_front(recipe: RecipeBuilder
 # 8.4 See follow-up actions after the report
 
 
-def test_8_4_1_delayed_messages_print_after_the_report_labeled_by_cook_node(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_8_4_1_delayed_messages_print_after_the_report_labeled_by_cook_node(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """A cook's delayed_message is logged live, then repeated in an `Action required` block after the report, labeled by cook node; none for a dry run."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")

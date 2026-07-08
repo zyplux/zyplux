@@ -70,9 +70,15 @@ def _load_file_cook(path: Path) -> type[CookBase]:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    classes = [obj for obj in vars(module).values() if isinstance(obj, type) and issubclass(obj, CookBase) and obj.__module__ == spec.name]
+    classes = [
+        obj
+        for obj in vars(module).values()
+        if isinstance(obj, type) and issubclass(obj, CookBase) and obj.__module__ == spec.name
+    ]
     if len(classes) != 1:
-        sys.exit(f"ERROR: {path} must define exactly one cook class, found {len(classes)}: {[c.__name__ for c in classes]}.")
+        sys.exit(
+            f"ERROR: {path} must define exactly one cook class, found {len(classes)}: {[c.__name__ for c in classes]}."
+        )
     return classes[0]
 
 

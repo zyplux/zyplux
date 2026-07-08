@@ -317,7 +317,9 @@ def _check_title_drift(res: CheckResult, group: _Group, headers: dict[str, Heade
     for story_id in sorted(set(group.tests) & set(headers)):
         header_title, test_title = headers[story_id].title, group.tests[story_id].title
         if word_sequence(header_title) != word_sequence(test_title):
-            res.fail(f"{group.directory}: header/test title drift for {story_id} — header={header_title!r} test={test_title!r}")
+            res.fail(
+                f"{group.directory}: header/test title drift for {story_id} — header={header_title!r} test={test_title!r}"
+            )
 
 
 def _check_own_section(res: CheckResult, group: _Group) -> None:
@@ -368,7 +370,9 @@ def run_story_check(repo: Repo, ctx: Context, res: CheckResult, language: Langua
         owned = sorted(d for d in all_story_dirs if under_package(d, package))
         if not owned:
             if language.needs_story_tests(package, repo, ctx, paths):
-                res.fail(f"{package or '.'}: exposes a public interface but has no tests/**/stories/*.md user-story tests")
+                res.fail(
+                    f"{package or '.'}: exposes a public interface but has no tests/**/stories/*.md user-story tests"
+                )
                 did_something = True
             continue
 

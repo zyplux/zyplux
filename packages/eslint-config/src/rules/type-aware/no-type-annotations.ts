@@ -10,7 +10,8 @@ export type NoTypeAnnotationsOptions = [{ narrowing: boolean; redundant: boolean
 
 type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
 
-type MessageId = 'narrowReturnType' | 'narrowVarType' | 'removeAnnotation' | 'removeParamType' | 'removeReturnType' | 'removeVarType';
+type MessageId =
+  'narrowReturnType' | 'narrowVarType' | 'removeAnnotation' | 'removeParamType' | 'removeReturnType' | 'removeVarType';
 
 const ignoredKeys = new Set<string>(['loc', 'parent', 'range']);
 
@@ -30,7 +31,11 @@ const hasMatchingNode = (node: object, isMatch: (n: object) => boolean): boolean
   isMatch(node) || childNodes(node).some(child => hasMatchingNode(child, isMatch));
 
 const isIdentifierNamed = (node: object, isWanted: (name: string) => boolean) =>
-  'type' in node && node.type === AST_NODE_TYPES.Identifier && 'name' in node && typeof node.name === 'string' && isWanted(node.name);
+  'type' in node &&
+  node.type === AST_NODE_TYPES.Identifier &&
+  'name' in node &&
+  typeof node.name === 'string' &&
+  isWanted(node.name);
 
 const getFunctionName = (fn: FunctionNode) => {
   if ('id' in fn && fn.id) return fn.id.name;
@@ -86,7 +91,10 @@ const declarationContainers = new Set<TSESTree.Node['type']>([
 
 const hasExportedAncestor = ({ parent }: TSESTree.Node): boolean => {
   if (!parent) return false;
-  if (parent.type === AST_NODE_TYPES.ExportNamedDeclaration || parent.type === AST_NODE_TYPES.ExportDefaultDeclaration) {
+  if (
+    parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
+    parent.type === AST_NODE_TYPES.ExportDefaultDeclaration
+  ) {
     return true;
   }
   return declarationContainers.has(parent.type) && hasExportedAncestor(parent);
@@ -107,7 +115,11 @@ const isArrowAtModuleBoundary = (arrow: TSESTree.ArrowFunctionExpression, export
 
 const isDeclaratorAtModuleBoundary = (declarator: TSESTree.VariableDeclarator, exportedNames: ReadonlySet<string>) => {
   if (hasExportedAncestor(declarator)) return true;
-  return declarator.id.type === AST_NODE_TYPES.Identifier && isTopLevel(declarator.parent) && exportedNames.has(declarator.id.name);
+  return (
+    declarator.id.type === AST_NODE_TYPES.Identifier &&
+    isTopLevel(declarator.parent) &&
+    exportedNames.has(declarator.id.name)
+  );
 };
 
 const collectExportedNames = ({ body }: TSESTree.Program) => {
@@ -156,7 +168,8 @@ const collectReturnExpressions = (node: ts.Node, found: ts.Expression[]) => {
   });
 };
 
-const isCallableType = (type: ts.Type) => type.getCallSignatures().length > 0 || type.getConstructSignatures().length > 0;
+const isCallableType = (type: ts.Type) =>
+  type.getCallSignatures().length > 0 || type.getConstructSignatures().length > 0;
 
 const isClosedShape = (annotationType: ts.Type) =>
   (annotationType.getProperties().length > 0 || isCallableType(annotationType)) && !annotationType.getStringIndexType();
@@ -390,7 +403,8 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       if (!annotation || !declarator.init) return;
 
       const [variable] = context.sourceCode.getDeclaredVariables(declarator);
-      const wasReassigned = variable?.references.some(reference => reference.isWrite() && reference.identifier !== declarator.id) ?? false;
+      const wasReassigned =
+        variable?.references.some(reference => reference.isWrite() && reference.identifier !== declarator.id) ?? false;
       if (wasReassigned) return;
 
       reportNarrowing({

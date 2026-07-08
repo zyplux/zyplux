@@ -30,17 +30,29 @@ typeAwareRuleTester.run('no-stray-pascal-const', noStrayPascalConst, {
       name: 'z-rooted schema behind a `satisfies` annotation',
     },
     {
-      code: ["import { z } from 'zod';", 'const makeSchema = () => z.object({ id: z.string() });', 'const User = makeSchema();'].join('\n'),
+      code: [
+        "import { z } from 'zod';",
+        'const makeSchema = () => z.object({ id: z.string() });',
+        'const User = makeSchema();',
+      ].join('\n'),
       errors: [{ messageId: 'schemaName' }],
       name: 'schema from a custom factory — detected by type, not by `z.` syntax',
     },
     {
-      code: ["import { z } from 'zod';", 'const BaseSchema = z.object({ id: z.string() });', 'const Patch = BaseSchema.partial();'].join('\n'),
+      code: [
+        "import { z } from 'zod';",
+        'const BaseSchema = z.object({ id: z.string() });',
+        'const Patch = BaseSchema.partial();',
+      ].join('\n'),
       errors: [{ messageId: 'schemaName' }],
       name: 'schema composed off another schema (`.partial()`)',
     },
     {
-      code: ["import { z } from 'zod';", 'const registry = { User: z.object({ id: z.string() }) };', 'const { User } = registry;'].join('\n'),
+      code: [
+        "import { z } from 'zod';",
+        'const registry = { User: z.object({ id: z.string() }) };',
+        'const { User } = registry;',
+      ].join('\n'),
       errors: [{ messageId: 'schemaName' }],
       name: 'schema pulled out by destructuring',
     },
@@ -63,11 +75,19 @@ typeAwareRuleTester.run('no-stray-pascal-const', noStrayPascalConst, {
       name: 'chained schema with a valid name',
     },
     {
-      code: ["import { z } from 'zod';", 'const BaseSchema = z.object({ id: z.string() });', 'const PatchSchema = BaseSchema.partial();'].join('\n'),
+      code: [
+        "import { z } from 'zod';",
+        'const BaseSchema = z.object({ id: z.string() });',
+        'const PatchSchema = BaseSchema.partial();',
+      ].join('\n'),
       name: 'composed schema with a valid name',
     },
     {
-      code: ["import { z } from 'zod';", 'const registry = { User: z.object({ id: z.string() }) };', 'const { User: UserSchema } = registry;'].join('\n'),
+      code: [
+        "import { z } from 'zod';",
+        'const registry = { User: z.object({ id: z.string() }) };',
+        'const { User: UserSchema } = registry;',
+      ].join('\n'),
       name: 'destructured schema renamed to a valid name',
     },
     {

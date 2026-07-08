@@ -25,7 +25,8 @@ const outermostResult = (call: TSESTree.CallExpression) => {
   return node;
 };
 
-const isDiscarded = (call: TSESTree.CallExpression) => outermostResult(call).parent.type === AST_NODE_TYPES.ExpressionStatement;
+const isDiscarded = (call: TSESTree.CallExpression) =>
+  outermostResult(call).parent.type === AST_NODE_TYPES.ExpressionStatement;
 
 const directReturnOf = (call: TSESTree.CallExpression) => {
   const parent = call.parent;
@@ -52,7 +53,8 @@ export const noReturnArrayPush = createRule({
 
         const method = callee.property.name;
         const returnStatement = directReturnOf(node);
-        const blockReturn = returnStatement?.parent.type === AST_NODE_TYPES.BlockStatement ? returnStatement : undefined;
+        const blockReturn =
+          returnStatement?.parent.type === AST_NODE_TYPES.BlockStatement ? returnStatement : undefined;
 
         context.report({
           data: { method },

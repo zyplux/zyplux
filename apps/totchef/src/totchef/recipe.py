@@ -98,7 +98,10 @@ def try_find_recipe() -> Path | None:
 
 def _not_found_message() -> str:
     names = " / ".join(RECIPE_NAMES)
-    looked = "\n".join([*(f"  - {names} in {directory}" for directory in _cwd_chain()), f"  - a recipe pinned by `totchef init` ({config_path()})"])
+    looked = "\n".join([
+        *(f"  - {names} in {directory}" for directory in _cwd_chain()),
+        f"  - a recipe pinned by `totchef init` ({config_path()})",
+    ])
     return f"ERROR: no totchef recipe found. Looked in:\n{looked}\nWrite one (see the README), run `totchef init PATH`, or pass --recipe PATH."
 
 

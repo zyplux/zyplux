@@ -23,7 +23,9 @@ POLICY_PRESENT = (
 # 3.1 Install and upgrade apt packages
 
 
-def test_3_1_1_apt_pkg_installed_via_nala_full_transaction(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
+def test_3_1_1_apt_pkg_installed_via_nala_full_transaction(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """`[apt_pkg]` installs/upgrades via nala (update, full-upgrade, install, autoremove)."""
     recipe.declares("apt_pkg", packages=["git"])
     terminal.arrange("apt-cache policy git", POLICY_ABSENT)
@@ -43,7 +45,9 @@ def test_3_1_1_apt_pkg_installed_via_nala_full_transaction(recipe: RecipeBuilder
     terminal.expect_ran("nala autoremove")
 
 
-def test_3_1_2_priority_zero_package_fails_fast_with_guidance(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
+def test_3_1_2_priority_zero_package_fails_fast_with_guidance(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """A package with apt-cache policy priority 0 fails fast with guidance (naming, component, or missing [apt_repo])."""
     recipe.declares("apt_pkg", packages=["totally-fake"])
     terminal.arrange("apt-cache policy totally-fake", "totally-fake:\n  Installed: (none)\n  Candidate: (none)\n")
@@ -56,7 +60,9 @@ def test_3_1_2_priority_zero_package_fails_fast_with_guidance(recipe: RecipeBuil
     terminal.expect_not_ran("nala install")
 
 
-def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli) -> None:
+def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli
+) -> None:
     """Runs as root; depends on apt prereqs and repos being in place first."""
     recipe.declares("apt_pkg", packages=["git"], depends_on=["bash", "apt_repo"])
     recipe.declares("bash", "apt_prereqs", apply="true")
@@ -70,7 +76,9 @@ def test_3_1_3_apt_pkg_runs_as_root_after_prereqs_and_repos(recipe: RecipeBuilde
     plan.assert_ran_before("apt_repo.vendor", "apt_pkg.git")  # after the repos
 
 
-def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
+def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """A /var/run/reboot-required left by the transaction is carried — with the packages named in its .pkgs companion, deduped — as a delayed message into the \
 `Action required` block."""
     recipe.declares("apt_pkg", packages=["git"])
@@ -95,12 +103,19 @@ def test_3_1_4_reboot_required_notice_survives_to_the_end_of_the_run(recipe: Rec
 # 3.2 Install and refresh snaps
 
 
-def test_3_2_1_snap_installs_missing_and_refreshes_installed(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_3_2_1_snap_installs_missing_and_refreshes_installed(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """`[snap]` installs missing snaps and refreshes installed ones."""
     recipe.declares("snap", packages=["code", "firefox"])
     system.has("snap")
-    terminal.arrange("snap list", "Name     Version  Rev  Tracking  Publisher  Notes\nfirefox  120.0    100  latest    mozilla    -\n")
-    terminal.arrange("snap refresh --list", "Name     Version  Rev  Publisher  Notes\nfirefox  121.0    101  mozilla    -\n")
+    terminal.arrange(
+        "snap list",
+        "Name     Version  Rev  Tracking  Publisher  Notes\nfirefox  120.0    100  latest    mozilla    -\n",
+    )
+    terminal.arrange(
+        "snap refresh --list", "Name     Version  Rev  Publisher  Notes\nfirefox  121.0    101  mozilla    -\n"
+    )
 
     report = totchef.up()
 
@@ -112,7 +127,10 @@ def test_3_2_1_snap_installs_missing_and_refreshes_installed(recipe: RecipeBuild
 
 
 def test_3_2_2_snap_install_failure_hard_refresh_failure_soft(
-    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal, system: FakeSystem
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    terminal: FakeTerminal,
+    system: FakeSystem,
 ) -> None:
     """An install failure is hard; a refresh failure is soft (snap still usable)."""
     system.has("snap")
@@ -234,9 +252,13 @@ def test_3_3_3_update_action_arg_list_rerun_installer_or_absent(
     unrecognized.assert_logged("unrecognized update_action")
 
 
-def test_3_3_4_update_guard_runs_before_updating(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_3_3_4_update_guard_runs_before_updating(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """An optional update_guard shell snippet runs before updating."""
-    recipe.declares("url", "bun", url="https://bun.sh/install", update_action=["upgrade"], update_guard="pkill -f bun-server")
+    recipe.declares(
+        "url", "bun", url="https://bun.sh/install", update_action=["upgrade"], update_guard="pkill -f bun-server"
+    )
     system.has("bun")
     terminal.arrange("bun --version", "1.1.0")
 
@@ -280,7 +302,9 @@ def test_3_3_5_url_install_failure_hard_update_failure_soft(
     soft.assert_logged("update failed")
 
 
-def test_3_3_6_version_best_effort_parsed_falls_back_to_present(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_3_3_6_version_best_effort_parsed_falls_back_to_present(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """Version is best-effort parsed from --version; unparseable reports `present`."""
     recipe.declares("url", "bun", url="https://bun.sh/install")
     system.has("bun")
@@ -289,12 +313,16 @@ def test_3_3_6_version_best_effort_parsed_falls_back_to_present(recipe: RecipeBu
     plan = totchef.plan()
 
     plan.assert_shows("url.bun", "would sync")
-    assert "present" in next(line for line in plan.report.splitlines() if "url.bun" in line)  # version parsed best-effort
+    assert "present" in next(
+        line for line in plan.report.splitlines() if "url.bun" in line
+    )  # version parsed best-effort
 
     totchef.up().assert_shows("url.bun", "unchanged")  # and an actual run sees it's already present
 
 
-def test_3_3_7_url_scheme_defaults_to_https(recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
+def test_3_3_7_url_scheme_defaults_to_https(
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
+) -> None:
     """`url = "bun.sh/install"` fetches https://bun.sh/install; an explicit scheme passes through."""
     recipe.declares("url", "bun", url="bun.sh/install")
     http.arrange("https://bun.sh/install", "#!/bin/bash")

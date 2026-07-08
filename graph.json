@@ -12268,7 +12268,11 @@
       "apps_cerberus_src_cerberus_source__localsource",
       "apps_cerberus_src_cerberus_source__reposource"
     ],
-    ["apps_cerberus_src_cerberus_graph_ids", "apps_cerberus_src_cerberus_graph_ids__file_id", "apps_cerberus_src_cerberus_graph_ids__symbol_id"],
+    [
+      "apps_cerberus_src_cerberus_graph_ids",
+      "apps_cerberus_src_cerberus_graph_ids__file_id",
+      "apps_cerberus_src_cerberus_graph_ids__symbol_id"
+    ],
     [
       "apps_cerberus_src_cerberus_graph___init",
       "apps_cerberus_src_cerberus_graph_build",
@@ -12355,7 +12359,11 @@
       "tests_cerberus_stories_test_5_rumdl_config__test_5_2_3_rewrites_a_non_canonical_config_without_an_exclude_to_the_exact_canonical_text",
       "tests_cerberus_stories_test_5_rumdl_config__test_5_2_4_passes_when_re_checked_after_being_fixed"
     ],
-    ["apps_cerberus_src_cerberus_proc", "apps_cerberus_src_cerberus_proc__run", "apps_cerberus_src_cerberus_proc__toolnotfounderror"],
+    [
+      "apps_cerberus_src_cerberus_proc",
+      "apps_cerberus_src_cerberus_proc__run",
+      "apps_cerberus_src_cerberus_proc__toolnotfounderror"
+    ],
     [
       "apps_cerberus_src_cerberus_registries",
       "apps_cerberus_src_cerberus_registries__extract",

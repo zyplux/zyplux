@@ -43,21 +43,29 @@ def test_2_1_2_passes_when_the_codeowners_file_exists_in_an_alternate_recognized
     assert result.findings == [finding(status.PASS, "CODEOWNERS present, covers /.github/")]
 
 
-def test_2_1_3_fails_when_the_codeowners_file_has_no_ownership_rules(run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]) -> None:
+def test_2_1_3_fails_when_the_codeowners_file_has_no_ownership_rules(
+    run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_codeowners(NO_OWNERSHIP_RULES)
     assert result.findings == [finding(status.FAIL, "CODEOWNERS has no ownership rules")]
 
 
-def test_2_2_1_passes_when_a_rule_explicitly_owns_the_github_directory(run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]) -> None:
+def test_2_2_1_passes_when_a_rule_explicitly_owns_the_github_directory(
+    run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_codeowners(COVERS_GITHUB)
     assert result.findings == [finding(status.PASS, "CODEOWNERS present, covers /.github/")]
 
 
-def test_2_2_2_passes_when_a_wildcard_rule_owns_everything(run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]) -> None:
+def test_2_2_2_passes_when_a_wildcard_rule_owns_everything(
+    run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_codeowners(WILDCARD_COVERS_EVERYTHING)
     assert result.findings == [finding(status.PASS, "CODEOWNERS present, covers /.github/")]
 
 
-def test_2_2_3_fails_when_only_a_lookalike_github_path_is_owned(run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]) -> None:
+def test_2_2_3_fails_when_only_a_lookalike_github_path_is_owned(
+    run_codeowners: RunCodeowners, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_codeowners(LOOKALIKE_GITHUB_PATH)
     assert result.findings == [finding(status.FAIL, "CODEOWNERS does not cover `/.github/`")]

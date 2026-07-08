@@ -160,7 +160,9 @@ def list_inspector_addresses(pid: int) -> list[tuple[str, int]]:
     except psutil.Error:
         return []
     return [
-        (conn.laddr.ip, conn.laddr.port) for conn in connections if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.ip in INSPECTOR_LOCALHOSTS
+        (conn.laddr.ip, conn.laddr.port)
+        for conn in connections
+        if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.ip in INSPECTOR_LOCALHOSTS
     ]
 
 
@@ -168,7 +170,9 @@ def find_inspector_websocket(pid: int) -> str | None:
     for ip, port in list_inspector_addresses(pid):
         host = f"[{ip}]" if ":" in ip else ip
         try:
-            with urllib.request.urlopen(f"http://{host}:{port}/json/list", timeout=INSPECTOR_PROBE_TIMEOUT_SECONDS) as response:
+            with urllib.request.urlopen(
+                f"http://{host}:{port}/json/list", timeout=INSPECTOR_PROBE_TIMEOUT_SECONDS
+            ) as response:
                 targets = json.load(response)
         except OSError, ValueError:
             continue
@@ -288,7 +292,11 @@ def build_view(
         cpu_cell = Text(f"{row.cpu_percent:.1f}", style=row_style or get_cpu_style(row.cpu_percent))
         role_cell = Text(row.role, style=row_style or get_role_style(row.role))
         table.add_row(str(row.pid), cpu_cell, format_filesize(row.rss_bytes), row.variant, role_cell, style=row_style)
-        owners = [(owner, share) for owner, share in (attribution or {}).get(row.pid, []) if share >= PROFILE_MIN_SHARE_PERCENT]
+        owners = [
+            (owner, share)
+            for owner, share in (attribution or {}).get(row.pid, [])
+            if share >= PROFILE_MIN_SHARE_PERCENT
+        ]
         for owner, share in owners[:PROFILE_MAX_SUBROWS]:
             owner_style = get_role_style(owner) or "dim"
             contribution = Text(f"{row.cpu_percent * share / 100:.1f}", style=owner_style)
@@ -350,9 +358,14 @@ def run_interactive_loop(tracked: dict[int, psutil.Process], interval: float, *,
             rows = sample_processes(tracked)
             attribution = None
             if profiling:
-                live.update(build_view(rows, get_visible_row_capacity(), None, profiling=True, interactive=True), refresh=True)
+                live.update(
+                    build_view(rows, get_visible_row_capacity(), None, profiling=True, interactive=True), refresh=True
+                )
                 attribution = profile_busy_exthosts(rows)
-            live.update(build_view(rows, get_visible_row_capacity(), attribution, profiling=profiling, interactive=True), refresh=True)
+            live.update(
+                build_view(rows, get_visible_row_capacity(), attribution, profiling=profiling, interactive=True),
+                refresh=True,
+            )
             key = read_key(interval)
             if key in {"q", "Q"}:
                 break
@@ -376,7 +389,9 @@ def main(
     once: Annotated[bool, typer.Option("--once", help="print one snapshot and exit")] = False,
     profile_exthost: Annotated[
         bool,
-        typer.Option("--profile-exthost", help="attach to busy extension hosts and attribute their CPU to the owning extension"),
+        typer.Option(
+            "--profile-exthost", help="attach to busy extension hosts and attribute their CPU to the owning extension"
+        ),
     ] = False,
     version: Annotated[bool, typer.Option("--version", help="print version and exit")] = False,
 ) -> None:

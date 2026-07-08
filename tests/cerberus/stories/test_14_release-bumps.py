@@ -55,7 +55,9 @@ class RunReleaseBumps(Protocol):
 
 
 @pytest.fixture
-def run_release_bumps(monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: Context, run_check: RunCheck) -> RunReleaseBumps:
+def run_release_bumps(
+    monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: Context, run_check: RunCheck
+) -> RunReleaseBumps:
     def run(
         *,
         manifest: str | None = MANIFEST,
@@ -88,17 +90,25 @@ def run_release_bumps(monkeypatch: pytest.MonkeyPatch, repo: Repo, ctx: Context,
     return run
 
 
-def test_14_1_1_skips_repos_that_publish_nothing(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_1_1_skips_repos_that_publish_nothing(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(manifest=None)
     assert result.findings == [finding(status.SKIP, "no release-targets.toml — repo publishes nothing")]
 
 
-def test_14_1_2_errors_when_the_release_manifest_is_malformed(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_1_2_errors_when_the_release_manifest_is_malformed(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(manifest=MALFORMED_MANIFEST)
-    assert result.findings == [finding(status.ERROR, "release-targets.toml is malformed: Invalid value (at line 1, column 7)")]
+    assert result.findings == [
+        finding(status.ERROR, "release-targets.toml is malformed: Invalid value (at line 1, column 7)")
+    ]
 
 
-def test_14_1_3_errors_when_the_manifest_has_no_target_array(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_1_3_errors_when_the_manifest_has_no_target_array(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(manifest="")
     assert result.findings == [
         finding(
@@ -108,12 +118,16 @@ def test_14_1_3_errors_when_the_manifest_has_no_target_array(run_release_bumps: 
     ]
 
 
-def test_14_2_1_fails_when_the_version_file_is_missing(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_2_1_fails_when_the_version_file_is_missing(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(version_file_content=None)
     assert result.findings == [finding(status.FAIL, f"{LABEL}: version file {VERSION_FILE} is missing")]
 
 
-def test_14_2_2_fails_when_the_version_file_is_not_valid_json(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_2_2_fails_when_the_version_file_is_not_valid_json(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(version_file_content="not json")
     assert result.findings == [
         finding(
@@ -143,12 +157,16 @@ def test_14_2_3_fails_when_no_version_is_found_in_the_version_file(
     assert result.findings == [finding(status.FAIL, f"{LABEL}: no version found in {VERSION_FILE}")]
 
 
-def test_14_2_4_fails_when_the_declared_version_is_not_semver(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_2_4_fails_when_the_declared_version_is_not_semver(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(version_file_content=version_json("not-a-version"))
     assert result.findings == [finding(status.FAIL, f"{LABEL}: version 'not-a-version' is not semver")]
 
 
-def test_14_2_5_reads_the_version_via_the_target_regex(run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]) -> None:
+def test_14_2_5_reads_the_version_via_the_target_regex(
+    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+) -> None:
     result = run_release_bumps(
         manifest=REGEX_MANIFEST,
         version_path="apps/widget/pyproject.toml",
@@ -180,7 +198,9 @@ def test_14_3_2_picks_the_highest_semver_tag_and_ignores_tags_that_are_not_semve
         tags=["widget-v0.2.0", "widget-v0.10.0", "widget-vnext"],
         changed=[],
     )
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.2.0 is below published 0.10.0 (widget-v0.10.0)")]
+    assert result.findings == [
+        finding(status.FAIL, f"{LABEL}: version 0.2.0 is below published 0.10.0 (widget-v0.10.0)")
+    ]
 
 
 def test_14_3_3_errors_when_the_published_tags_cannot_be_read(

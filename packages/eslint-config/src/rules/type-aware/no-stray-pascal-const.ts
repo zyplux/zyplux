@@ -22,9 +22,21 @@ const schemaSuffix = 'Schema';
 
 const jsxTypes = new Set<TSESTree.Node['type']>([AST_NODE_TYPES.JSXElement, AST_NODE_TYPES.JSXFragment]);
 
-const schemaShapedTypes = new Set<TSESTree.Node['type']>([AST_NODE_TYPES.CallExpression, AST_NODE_TYPES.Identifier, AST_NODE_TYPES.MemberExpression]);
+const schemaShapedTypes = new Set<TSESTree.Node['type']>([
+  AST_NODE_TYPES.CallExpression,
+  AST_NODE_TYPES.Identifier,
+  AST_NODE_TYPES.MemberExpression,
+]);
 
-const defaultFactories = ['createContext', 'createFileRoute', 'createRootRoute', 'createServerFn', 'forwardRef', 'lazy', 'memo'];
+const defaultFactories = [
+  'createContext',
+  'createFileRoute',
+  'createRootRoute',
+  'createServerFn',
+  'forwardRef',
+  'lazy',
+  'memo',
+];
 
 const unwrapAssertion = (node: TSESTree.Expression): TSESTree.Expression => {
   if (node.type === AST_NODE_TYPES.TSAsExpression) return unwrapAssertion(node.expression);
@@ -58,7 +70,8 @@ const hasAllowedFactory: FactoryChainPredicate = (node, factories) => {
 
 const isJsxProducing: ExpressionPredicate = node => {
   if (jsxTypes.has(node.type)) return true;
-  if (node.type === AST_NODE_TYPES.ConditionalExpression) return isJsxProducing(node.consequent) || isJsxProducing(node.alternate);
+  if (node.type === AST_NODE_TYPES.ConditionalExpression)
+    return isJsxProducing(node.consequent) || isJsxProducing(node.alternate);
   if (node.type === AST_NODE_TYPES.LogicalExpression) return isJsxProducing(node.right);
   return false;
 };
@@ -76,7 +89,8 @@ const hasJsxReturn: StatementPredicate = statement => {
 
 const isComponentInit: ExpressionPredicate = node => {
   if (node.type === AST_NODE_TYPES.ArrowFunctionExpression) {
-    if (node.body.type === AST_NODE_TYPES.BlockStatement) return node.body.body.some(statement => hasJsxReturn(statement));
+    if (node.body.type === AST_NODE_TYPES.BlockStatement)
+      return node.body.body.some(statement => hasJsxReturn(statement));
     return isJsxProducing(node.body);
   }
   if (node.type === AST_NODE_TYPES.FunctionExpression) return node.body.body.some(statement => hasJsxReturn(statement));
@@ -153,7 +167,8 @@ export const noStrayPascalConst = createRule<NoStrayPascalConstOptions, MessageI
         if (node.id.type === AST_NODE_TYPES.ObjectPattern) {
           for (const property of node.id.properties) {
             if (property.type !== AST_NODE_TYPES.Property) continue;
-            const binding = property.value.type === AST_NODE_TYPES.AssignmentPattern ? property.value.left : property.value;
+            const binding =
+              property.value.type === AST_NODE_TYPES.AssignmentPattern ? property.value.left : property.value;
             if (binding.type === AST_NODE_TYPES.Identifier) checkDestructuredBinding(binding);
           }
         }

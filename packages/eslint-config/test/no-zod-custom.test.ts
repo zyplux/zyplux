@@ -25,7 +25,9 @@ typeAwareRuleTester.run('no-zod-custom', noZodCustom, {
       name: 'namespace import of zod',
     },
     {
-      code: ["import { z } from 'zod';", 'const result = z.custom<{ id: string }>(v => Boolean(v)).parse(input);'].join('\n'),
+      code: ["import { z } from 'zod';", 'const result = z.custom<{ id: string }>(v => Boolean(v)).parse(input);'].join(
+        '\n',
+      ),
       errors: [{ messageId: 'noZodCustom' }],
       name: 'z.custom chained with .parse',
     },

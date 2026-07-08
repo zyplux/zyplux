@@ -5,13 +5,18 @@ type FetchRoute = (url: string) => Response;
 const byLocale = (left: string, right: string) => left.localeCompare(right);
 
 const notFound = () => Response.error();
-const depsDevDefaultVersion = () => Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
-const depsDevSourceRepo = (id: string) => Response.json({ relatedProjects: [{ projectKey: { id }, relationType: 'SOURCE_REPO' }] });
+const depsDevDefaultVersion = () =>
+  Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
+const depsDevSourceRepo = (id: string) =>
+  Response.json({ relatedProjects: [{ projectKey: { id }, relationType: 'SOURCE_REPO' }] });
 
-const reactViaDepsDev: FetchRoute = url => (url.includes('/versions/') ? depsDevSourceRepo('github.com/facebook/react') : depsDevDefaultVersion());
+const reactViaDepsDev: FetchRoute = url =>
+  url.includes('/versions/') ? depsDevSourceRepo('github.com/facebook/react') : depsDevDefaultVersion();
 
 const zodViaDepsDevLinks: FetchRoute = url =>
-  url.includes('/versions/') ? Response.json({ links: [{ label: 'SOURCE_REPO', url: 'https://github.com/colinhacks/zod' }] }) : depsDevDefaultVersion();
+  url.includes('/versions/')
+    ? Response.json({ links: [{ label: 'SOURCE_REPO', url: 'https://github.com/colinhacks/zod' }] })
+    : depsDevDefaultVersion();
 
 const reactViaNpmRegistry: FetchRoute = url => {
   if (url.startsWith('https://api.deps.dev/')) {
@@ -63,15 +68,22 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
 
     await catalog.runOverWorkspace();
 
-    expect(catalog.unresolvedNames('npm')).toEqual(expect.arrayContaining(['@optique/core', '@optique/run', 'eslint', 'typescript', 'vitest', 'zod']));
+    expect(catalog.unresolvedNames('npm')).toEqual(
+      expect.arrayContaining(['@optique/core', '@optique/run', 'eslint', 'typescript', 'vitest', 'zod']),
+    );
   });
 
-  test('1.1.2 collects python dependency names from project dependencies and dependency groups', async ({ catalog, network }) => {
+  test('1.1.2 collects python dependency names from project dependencies and dependency groups', async ({
+    catalog,
+    network,
+  }) => {
     network.otherwise(nothingAnywhere);
 
     await catalog.runOverWorkspace();
 
-    expect(catalog.unresolvedNames('pypi')).toEqual(expect.arrayContaining(['pyrefly', 'pytest', 'pyyaml', 'ruff', 'rumdl', 'typer', 'vulture']));
+    expect(catalog.unresolvedNames('pypi')).toEqual(
+      expect.arrayContaining(['pyrefly', 'pytest', 'pyyaml', 'ruff', 'rumdl', 'typer', 'vulture']),
+    );
   });
 
   test('1.1.3 excludes internal workspace packages from both ecosystems', async ({ catalog, network }) => {
@@ -79,7 +91,9 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
 
     await catalog.runOverWorkspace();
 
-    expect(catalog.unresolvedNames('npm')).toEqual(expect.not.arrayContaining(['@zyplux/util', '@zyplux/cz', '@zyplux/tsconfig']));
+    expect(catalog.unresolvedNames('npm')).toEqual(
+      expect.not.arrayContaining(['@zyplux/util', '@zyplux/cz', '@zyplux/tsconfig']),
+    );
     expect(catalog.unresolvedNames('pypi')).toEqual(expect.not.arrayContaining(['zyplux', 'zyplux-cerberus']));
   });
 
@@ -123,7 +137,10 @@ describe('1.2 resolving a dependency name to its source repository', () => {
     await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/psf/requests']);
   });
 
-  test('1.2.4 reports the dependency as unresolved when no source repo is found anywhere', async ({ catalog, network }) => {
+  test('1.2.4 reports the dependency as unresolved when no source repo is found anywhere', async ({
+    catalog,
+    network,
+  }) => {
     await catalog.writeManifest('package.json', npmManifest('does-not-exist'));
     network.otherwise(nothingAnywhere);
 
@@ -151,7 +168,11 @@ describe('1.3 collecting the external repos a workspace depends on', () => {
 
     const repos = await catalog.loadRepos();
     expect(repos).toEqual(
-      expect.arrayContaining(['https://github.com/astral-sh/ruff', 'https://github.com/colinhacks/zod', 'https://github.com/dahlia/optique']),
+      expect.arrayContaining([
+        'https://github.com/astral-sh/ruff',
+        'https://github.com/colinhacks/zod',
+        'https://github.com/dahlia/optique',
+      ]),
     );
     expect(repos).toEqual([...new Set(repos)].toSorted(byLocale));
   });
@@ -175,11 +196,20 @@ describe('1.3 collecting the external repos a workspace depends on', () => {
 });
 
 describe('1.4 skipping manifest files that fail to parse', () => {
-  test('1.4.1 skips package.json and pyproject.toml files that fail to parse, keeping the rest', async ({ catalog, network }) => {
+  test('1.4.1 skips package.json and pyproject.toml files that fail to parse, keeping the rest', async ({
+    catalog,
+    network,
+  }) => {
     await catalog.writeManifest('bad-toml/pyproject.toml', '[project\nname = "should-not-parse"\n');
-    await catalog.writeManifest('empty-name/pyproject.toml', '[project]\nname = ""\n\n[project.urls]\nSource = "https://github.com/emptyname/repo"\n');
+    await catalog.writeManifest(
+      'empty-name/pyproject.toml',
+      '[project]\nname = ""\n\n[project.urls]\nSource = "https://github.com/emptyname/repo"\n',
+    );
     await catalog.writeManifest('good/package.json', npmManifest('depa', 'depb', 'depc'));
-    await catalog.writeManifest('no-name/pyproject.toml', '[project.urls]\nSource = "https://github.com/noname/repo"\n');
+    await catalog.writeManifest(
+      'no-name/pyproject.toml',
+      '[project.urls]\nSource = "https://github.com/noname/repo"\n',
+    );
     await catalog.writeManifest('package.json', '{ "name": "should-not-parse", ');
     network.otherwise(
       depsDevRouteFor(

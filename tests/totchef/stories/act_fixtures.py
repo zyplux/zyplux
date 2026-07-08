@@ -71,7 +71,9 @@ class Totchef:
         env = {"TOTCHEF_INLINE": "1", "TOTCHEF_LOG_FILE": str(log_file)}
         if color:
             env["FORCE_COLOR"] = "1"
-        outcome = self._runner.invoke(app, [command, "--recipe", str(recipe_path)], env=env, color=color, catch_exceptions=False)
+        outcome = self._runner.invoke(
+            app, [command, "--recipe", str(recipe_path)], env=env, color=color, catch_exceptions=False
+        )
         log_text = log_file.read_text() if log_file.exists() else ""
         return CliResult(outcome.stdout, outcome.exit_code, stderr=outcome.stderr), log_text
 

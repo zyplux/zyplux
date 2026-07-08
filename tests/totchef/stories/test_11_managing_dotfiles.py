@@ -89,7 +89,9 @@ def test_11_2_1_chezmoi_is_user_scoped_not_root(cli: Cli, chezmoi_repo: Path, mo
     cli.run("--list-cooks").assert_lists("chezmoi", scope="user", origin="local")
 
 
-def test_11_2_2_chezmoi_without_the_binary_fails_clearly(recipe: RecipeBuilder, totchef: Totchef, chezmoi_cook: Path) -> None:
+def test_11_2_2_chezmoi_without_the_binary_fails_clearly(
+    recipe: RecipeBuilder, totchef: Totchef, chezmoi_cook: Path
+) -> None:
     """With no chezmoi binary on PATH (the [url.chezmoi] installer hasn't run), the resource hard-fails naming the section that must run first."""
     del chezmoi_cook
     recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
@@ -171,7 +173,9 @@ def test_11_3_3_capture_is_idempotent_once_enabled(
     terminal.expect_not_ran("systemctl --user start")
 
 
-def test_11_3_4_timer_cadence_comes_from_timer_min(recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path) -> None:
+def test_11_3_4_timer_cadence_comes_from_timer_min(
+    recipe: RecipeBuilder, system: FakeSystem, totchef: Totchef, home: Path, chezmoi_cook: Path
+) -> None:
     """`timer_min` sets the timer's OnUnitActiveSec, so the operator tunes how often $HOME is captured."""
     del chezmoi_cook
     system.has("chezmoi")

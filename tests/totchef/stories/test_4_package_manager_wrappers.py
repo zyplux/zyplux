@@ -17,7 +17,9 @@ PAIRED_PARTIES = 2
 # 4.1 Install and update Rust crates
 
 
-def test_4_1_1_cargo_installs_via_binstall(recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
+def test_4_1_1_cargo_installs_via_binstall(
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
+) -> None:
     """`[cargo]` installs via `cargo binstall` (one batched command that skips already-current crates)."""
     recipe.declares("cargo", packages=["ripgrep"])
     system.has("cargo", "cargo-binstall")
@@ -59,7 +61,9 @@ def test_4_1_2_cargo_binstall_is_bootstrapped_once_if_missing(
     assert terminal.count("cargo install cargo-binstall") == 1
 
 
-def test_4_1_3_missing_cargo_fails_hard_pointing_at_url_rustup(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
+def test_4_1_3_missing_cargo_fails_hard_pointing_at_url_rustup(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef
+) -> None:
     """If cargo is missing the run fails hard, telling the operator the [url] rustup install must run first."""
     recipe.declares("cargo", packages=["ripgrep"])
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
@@ -70,7 +74,9 @@ def test_4_1_3_missing_cargo_fails_hard_pointing_at_url_rustup(recipe: RecipeBui
     report.assert_logged("rustup")
 
 
-def test_4_1_4_latest_crate_versions_looked_up_concurrently(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
+def test_4_1_4_latest_crate_versions_looked_up_concurrently(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef
+) -> None:
     """Latest versions are looked up concurrently from crates.io for the plan."""
     recipe.declares("cargo", packages=["ripgrep", "just"])
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')
@@ -110,14 +116,18 @@ def test_4_2_1_uv_installs_and_upgrades_each_tool_concurrently(
     http.arrange("pypi.org/pypi/ruff/json", '{"info": {"version": "0.6.0"}}')
     http.arrange("pypi.org/pypi/pyright/json", '{"info": {"version": "1.1.380"}}')
     terminal.arrange("uv tool list", "ruff v0.5.0\n")  # ruff present (upgrade), pyright absent (install)
-    terminal.expect_concurrent("uv tool upgrade", "uv tool install", parties=PAIRED_PARTIES)  # both tool actions run at once
+    terminal.expect_concurrent(
+        "uv tool upgrade", "uv tool install", parties=PAIRED_PARTIES
+    )  # both tool actions run at once
 
     report = totchef.up()
 
     report.assert_succeeded()
     terminal.expect_ran("uv tool upgrade ruff")
     terminal.expect_ran("uv tool install pyright")
-    assert terminal.max_concurrent_commands == PAIRED_PARTIES  # the upgrade and the install ran concurrently, not one after the other
+    assert (
+        terminal.max_concurrent_commands == PAIRED_PARTIES
+    )  # the upgrade and the install ran concurrently, not one after the other
 
 
 def test_4_2_2_uv_failure_reports_hard_naming_the_failed_tools(
@@ -137,7 +147,9 @@ def test_4_2_2_uv_failure_reports_hard_naming_the_failed_tools(
     report.assert_logged("brokentool")
 
 
-def test_4_2_3_uv_requires_uv_and_looks_up_latest_from_pypi(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
+def test_4_2_3_uv_requires_uv_and_looks_up_latest_from_pypi(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef
+) -> None:
     """Requires uv to be present; latest versions looked up concurrently from PyPI."""
     recipe.declares("uv", packages=["ruff", "pyright"])
     http.arrange("pypi.org/pypi/ruff/json", '{"info": {"version": "0.6.0"}}')
@@ -198,7 +210,9 @@ def test_4_3_1_bun_installs_and_upgrades_each_global_package(
     terminal.expect_ran("bun add -g --ignore-scripts " + PI + " left-pad")  # one batched command for both
 
 
-def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef) -> None:
+def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef
+) -> None:
     """Requires bun present (depends on the [url] bun installer); latest versions are looked up concurrently from the npm registry."""
     recipe.declares("bun", packages=[PI, "left-pad"])
     http.arrange("registry.npmjs.org/" + PI, '{"dist-tags": {"latest": "0.75.5"}}')
@@ -217,16 +231,25 @@ def test_4_3_2_bun_requires_bun_and_looks_up_latest_from_the_npm_registry(recipe
     report.assert_logged("[url]")
 
 
-def test_4_3_3_bun_installs_globals_into_bun_home_not_the_cache_dir(apply_in_container: Callable[[str, list[str]], ContainerRun]) -> None:
+def test_4_3_3_bun_installs_globals_into_bun_home_not_the_cache_dir(
+    apply_in_container: Callable[[str, list[str]], ContainerRun],
+) -> None:
     """The cook pins `BUN_INSTALL` to bun's home, so a global lands in `~/.bun` (on PATH) and never the `$XDG_CACHE_HOME/.bun` dir bun would otherwise pick \
 under the privilege drop. In a container."""
     run = apply_in_container(
         '[bun]\npackages = ["left-pad"]\n',
-        ["/home/tester/.bun/install/global/node_modules/left-pad", "/home/tester/.cache/.bun/install/global/node_modules/left-pad"],
+        [
+            "/home/tester/.bun/install/global/node_modules/left-pad",
+            "/home/tester/.cache/.bun/install/global/node_modules/left-pad",
+        ],
     )
 
-    assert run.owners["/home/tester/.bun/install/global/node_modules/left-pad"] == "tester", run.transcript  # landed where PATH sees it
-    assert run.owners["/home/tester/.cache/.bun/install/global/node_modules/left-pad"] is None, run.transcript  # never the cache dir
+    assert run.owners["/home/tester/.bun/install/global/node_modules/left-pad"] == "tester", (
+        run.transcript
+    )  # landed where PATH sees it
+    assert run.owners["/home/tester/.cache/.bun/install/global/node_modules/left-pad"] is None, (
+        run.transcript
+    )  # never the cache dir
 
 
 def test_4_3_4_bun_links_node_to_its_runtime_so_node_shebang_globals_run(

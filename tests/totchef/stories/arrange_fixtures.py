@@ -141,7 +141,9 @@ class FakeTerminal(TerminalAssertions):
             return self.concurrency.track()
         return nullcontext()
 
-    def arrange(self, match: str, output: str = "", *, exit_code: int = 0, effect: Callable[[], None] | None = None) -> FakeTerminal:
+    def arrange(
+        self, match: str, output: str = "", *, exit_code: int = 0, effect: Callable[[], None] | None = None
+    ) -> FakeTerminal:
         """Arrange the reply for commands matching `match`: stdout and exit code. `effect` runs after success, e.g. an installer dropping a binary."""
         self._responses.append(Response(match, output, exit_code, effect))
         return self
@@ -161,7 +163,9 @@ class FakeTerminal(TerminalAssertions):
         timeout = options.get("timeout")
         note = options.get("note", "")
         cwd = options.get("cwd")
-        self.commands.append(RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home(), timeout=timeout, note=note))
+        self.commands.append(
+            RanCommand(argv, stdin, cwd=cwd if cwd is not None else Path.home(), timeout=timeout, note=note)
+        )
         with self._concurrency_ctx(shlex.join(argv)):
             response = self._respond(argv)
             stdout: str | bytes = response.output if text else response.output.encode()
@@ -177,7 +181,9 @@ class FakeTerminal(TerminalAssertions):
         stdin = options.get("stdin")
         check = options.get("check", True)
         cwd = options.get("cwd")
-        self.commands.append(RanCommand(list(cmd), stdin, cwd=cwd if cwd is not None else Path.home(), tag=tag, note=note))
+        self.commands.append(
+            RanCommand(list(cmd), stdin, cwd=cwd if cwd is not None else Path.home(), tag=tag, note=note)
+        )
         with self._concurrency_ctx(shlex.join(cmd)):
             response = self._respond(list(cmd))
             if check and response.exit_code != 0:

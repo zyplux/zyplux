@@ -6,7 +6,10 @@ import * as z from 'zod';
 const GhcrTokenSchema = z.object({ token: z.string() });
 const JsonFieldsSchema = z.record(z.string(), z.unknown());
 
-const VersionSourceSchema = z.union([z.object({ file: z.string(), json: z.string() }), z.object({ file: z.string(), regex: z.string() })]);
+const VersionSourceSchema = z.union([
+  z.object({ file: z.string(), json: z.string() }),
+  z.object({ file: z.string(), regex: z.string() }),
+]);
 
 const TargetSchema = z.object({
   kind: z.enum(['ghcr', 'npm', 'pypi']),
@@ -50,7 +53,8 @@ const MANIFEST_MEDIA_TYPES = [
   'application/vnd.docker.distribution.manifest.v2+json',
 ].join(', ');
 
-const fetchGhcrAuth = (repo: string) => fetchJson(`https://ghcr.io/token?scope=repository:${repo}:pull`, GhcrTokenSchema);
+const fetchGhcrAuth = (repo: string) =>
+  fetchJson(`https://ghcr.io/token?scope=repository:${repo}:pull`, GhcrTokenSchema);
 
 const ghcrImagePublished = async (repo: string, tag: string) => {
   const auth = await fetchGhcrAuth(repo);

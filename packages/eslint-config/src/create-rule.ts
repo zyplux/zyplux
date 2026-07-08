@@ -33,7 +33,8 @@ const ruleCreator = ESLintUtils.RuleCreator<{ requiresTypeChecking?: boolean }>(
   () => 'https://github.com/zyplux/zyplux/tree/main/packages/eslint-config/src/rules',
 );
 
-export type CreatedRule<Options extends readonly unknown[], MessageIds extends string> = EslintRule & RuleModule<MessageIds, Options>;
+export type CreatedRule<Options extends readonly unknown[], MessageIds extends string> = EslintRule &
+  RuleModule<MessageIds, Options>;
 
 export const createRule = <Options extends readonly unknown[], MessageIds extends string>(
   config: Parameters<typeof ruleCreator<Options, MessageIds>>[0],

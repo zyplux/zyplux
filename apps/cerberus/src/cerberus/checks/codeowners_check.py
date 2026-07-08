@@ -29,7 +29,9 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.fail("no CODEOWNERS file")
         return res
 
-    owned_lines = [line for line in content.splitlines() if line.strip() and not line.lstrip().startswith("#") and "@" in line]
+    owned_lines = [
+        line for line in content.splitlines() if line.strip() and not line.lstrip().startswith("#") and "@" in line
+    ]
     if not owned_lines:
         res.fail("CODEOWNERS has no ownership rules")
     elif not any(_covers_github(line.split()[0]) for line in owned_lines):

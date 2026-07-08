@@ -31,7 +31,9 @@ class _NullContext:
 # 7.1 Trust that re-runs only change what drifted
 
 
-def test_7_1_1_cooks_probe_and_act_only_on_the_difference(terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
+def test_7_1_1_cooks_probe_and_act_only_on_the_difference(
+    terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
+) -> None:
     """Versioned cooks skip up-to-date packages; state cooks skip resources whose content hash already matches."""
     already = totchef.workdir / "already.conf"
     already.write_text("A\n")
@@ -48,7 +50,9 @@ def test_7_1_1_cooks_probe_and_act_only_on_the_difference(terminal: FakeTerminal
     terminal.expect_not_ran("binstall")
 
 
-def test_7_1_2_post_hooks_fire_only_on_actual_change(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_7_1_2_post_hooks_fire_only_on_actual_change(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """post_hooks fire only on actual change, so refreshes don't run on no-op passes."""
     target = tmp_path / "unit.service"
     recipe.declares("file", "unit", path=str(target), content="[Unit]\n", post_hook="systemctl daemon-reload")
@@ -64,7 +68,9 @@ def test_7_1_2_post_hooks_fire_only_on_actual_change(recipe: RecipeBuilder, term
 # 7.2 Understand that totchef creates and updates but never prunes
 
 
-def test_7_2_1_convergence_is_create_update_only_never_prunes(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_7_2_1_convergence_is_create_update_only_never_prunes(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """Dropping an entry leaves prior artifacts in place; teardown is manual."""
     artifact = tmp_path / "drop-in.conf"
     recipe.declares("file", "drop_in", path=str(artifact), content="X\n")
@@ -81,7 +87,9 @@ def test_7_2_1_convergence_is_create_update_only_never_prunes(recipe: RecipeBuil
 # 7.3 Escalate to root only for the apply, and drop privilege otherwise
 
 
-def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(
+    cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """`totchef up` re-execs under sudo, pinning the resolved recipe path and shared log file across the boundary."""
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text('[bash.step]\napply = "true"\n')
@@ -104,7 +112,9 @@ def test_7_3_1_up_re_execs_under_sudo_pinning_recipe_and_log(cli: Cli, monkeypat
     cli.run("where").assert_prints(str(recipe_path))  # the pinned recipe is what a fresh resolution now finds
 
 
-def test_7_3_2_forked_child_drops_privilege_for_user_nodes(apply_in_container: Callable[[str, list[str]], ContainerRun]) -> None:
+def test_7_3_2_forked_child_drops_privilege_for_user_nodes(
+    apply_in_container: Callable[[str, list[str]], ContainerRun],
+) -> None:
     """A forked child keeps root if needs_root, else drops to the invoking user — user files written as the user, root entries as root. In a container."""
     run = apply_in_container(
         '[file.user_node]\npath = "/home/tester/by-user.txt"\ncontent = "u\\n"\n\n'
@@ -116,7 +126,9 @@ def test_7_3_2_forked_child_drops_privilege_for_user_nodes(apply_in_container: C
     assert run.owners["/home/tester/by-root.txt"] == "root", run.transcript  # needs_root kept root
 
 
-def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_7_3_3_plan_and_lint_never_escalate(
+    terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """plan and lint never escalate."""
     totchef.recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook
     terminal.arrange("apt-cache policy git", GIT_NEEDS_INSTALL)
@@ -132,7 +144,9 @@ def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Tot
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
     monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})  # don't fork real cooks in-process
-    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log"))
+    monkeypatch.setattr(
+        "totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log")
+    )
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
     recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
@@ -143,7 +157,9 @@ def test_7_3_3_plan_and_lint_never_escalate(terminal: FakeTerminal, totchef: Tot
     assert escalations == []  # neither plan nor lint escalated, though apt_pkg is a root-scoped cook
 
 
-def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(
+    cli: Cli, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """A frozen binary's bare argv[0] ("totchef") defeats sudo's secure_path; re-exec must use the absolute sys.executable and only argv[1:]."""
     recipe_path = tmp_path / "recipe.toml"
     recipe_path.write_text('[bash.step]\napply = "true"\n')
@@ -158,7 +174,9 @@ def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(cli: Cli, 
     monkeypatch.setattr("os.execvp", capture_exec)
     monkeypatch.setattr("sys.frozen", True, raising=False)  # PyInstaller marks the onefile bundle frozen
     monkeypatch.setattr("sys.executable", binary)  # the bootloader resolves this to the absolute binary path
-    monkeypatch.setattr("sys.argv", ["totchef", "up", "--recipe", str(recipe_path)])  # bare name, as the shell passes it via PATH
+    monkeypatch.setattr(
+        "sys.argv", ["totchef", "up", "--recipe", str(recipe_path)]
+    )  # bare name, as the shell passes it via PATH
     monkeypatch.delenv("TOTCHEF_RECIPE", raising=False)
 
     cli.run("up", "--recipe", str(recipe_path))
@@ -172,7 +190,9 @@ def test_7_3_4_frozen_binary_re_execs_by_absolute_path_not_argv0_name(cli: Cli, 
 # 7.4 Distinguish recoverable failures from fatal ones
 
 
-def test_7_4_1_hard_failure_aborts_the_apply_and_exits_1(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
+def test_7_4_1_hard_failure_aborts_the_apply_and_exits_1(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """Hard failure aborts the apply and exits 1 (e.g. unavailable package, bash apply error, uv tool install failure)."""
     recipe.declares("bash", "broken", apply="false-cmd")
     recipe.declares("bash", "after", apply="echo done", depends_on=["bash.broken"])
@@ -185,7 +205,9 @@ def test_7_4_1_hard_failure_aborts_the_apply_and_exits_1(recipe: RecipeBuilder, 
     terminal.expect_not_ran("echo done")  # apply aborted: the dependent never ran
 
 
-def test_7_4_2_soft_failure_warns_finishes_and_exits_75(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_7_4_2_soft_failure_warns_finishes_and_exits_75(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """Soft failure warns, finishes the run, exits 75 (e.g. snap refresh, post_hook, invalid JSON in a target file)."""
     target = tmp_path / "grub.cfg"
     recipe.declares("file", "grub", path=str(target), content="X\n", post_hook="update-grub-fails")
@@ -199,7 +221,9 @@ def test_7_4_2_soft_failure_warns_finishes_and_exits_75(recipe: RecipeBuilder, t
     terminal.expect_ran("echo done")  # the run finished; the dependent still ran
 
 
-def test_7_4_3_report_names_which_cooks_hard_or_soft_failed(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef) -> None:
+def test_7_4_3_report_names_which_cooks_hard_or_soft_failed(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef
+) -> None:
     """The end-of-run report names which cooks hard- or soft-failed."""
     recipe.declares("bash", "broken_step", apply="false-cmd")
     terminal.arrange("false-cmd", exit_code=1)
@@ -211,7 +235,9 @@ def test_7_4_3_report_names_which_cooks_hard_or_soft_failed(recipe: RecipeBuilde
     assert "failed" in report.report
 
 
-def test_7_4_4_a_crash_outside_any_cook_still_reports_loudly(recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_7_4_4_a_crash_outside_any_cook_still_reports_loudly(
+    recipe: RecipeBuilder, totchef: Totchef, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """An unexpected exception after logs are redirected — a totchef bug, not a recipe failure — still exits 1, traceback in view, never a silent death."""
     recipe.declares("bash", "step", apply="true")
 
@@ -231,7 +257,9 @@ def test_7_4_4_a_crash_outside_any_cook_still_reports_loudly(recipe: RecipeBuild
 # 7.5 Skip steps that shouldn't run right now
 
 
-def test_7_5_1_pre_hook_nonzero_exit_skips_the_item(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_7_5_1_pre_hook_nonzero_exit_skips_the_item(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """A non-zero pre_hook exit skips the item (reported as `skipped`, not failed)."""
     target = tmp_path / "f.conf"
     recipe.declares("file", "f", path=str(target), content="X\n", pre_hook="test -e /run/should-apply")
@@ -244,12 +272,20 @@ def test_7_5_1_pre_hook_nonzero_exit_skips_the_item(recipe: RecipeBuilder, termi
     assert not target.exists()
 
 
-def test_7_5_2_cooks_compose_intrinsic_guards_with_pre_hook(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path) -> None:
+def test_7_5_2_cooks_compose_intrinsic_guards_with_pre_hook(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """Cooks chain their own guards with the operator's pre_hook (e.g. Chromium's "browser not running" check)."""
     local_state = home / ".config/chromium/Local State"
     local_state.parent.mkdir(parents=True)
     local_state.write_text('{"browser": {"enabled_labs_experiments": []}}')
-    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["x@1"], pre_hook="test -e /run/maintenance")
+    recipe.declares(
+        "chromium_flags",
+        "chromium",
+        local_state=".config/chromium/Local State",
+        local_state_flags=["x@1"],
+        pre_hook="test -e /run/maintenance",
+    )
     terminal.arrange("test -e /run/maintenance", exit_code=1)  # operator's own guard fails
 
     report = totchef.up()
@@ -259,7 +295,9 @@ def test_7_5_2_cooks_compose_intrinsic_guards_with_pre_hook(recipe: RecipeBuilde
     terminal.expect_ran("test -e /run/maintenance")  # ...operator guard chained into one
 
 
-def test_7_5_3_hooks_run_on_versioned_sections_too(recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem) -> None:
+def test_7_5_3_hooks_run_on_versioned_sections_too(
+    recipe: RecipeBuilder, terminal: FakeTerminal, http: FakeHttp, totchef: Totchef, system: FakeSystem
+) -> None:
     """pre_hook/post_hook are valid on a versioned section too: the pre_hook gates the whole sync, the post_hook fires once after a change."""
     recipe.declares("cargo", packages=["ripgrep"], pre_hook="test -e /run/build-ok", post_hook="rebuild-completions")
     http.arrange("crates.io/api/v1/crates/ripgrep", '{"crate": {"max_stable_version": "14.1.1"}}')

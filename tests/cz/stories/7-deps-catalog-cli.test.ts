@@ -15,7 +15,8 @@ const sourceRepoByName = new Map([
   ['zod', 'github.com/colinhacks/zod'],
 ]);
 
-const depsDevDefaultVersion = () => Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
+const depsDevDefaultVersion = () =>
+  Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
 
 const resolveViaDepsDev: FetchRoute = url => {
   const match = /api\.deps\.dev\/v3\/systems\/npm\/packages\/([^/]+)(\/versions\/.+)?$/.exec(url);
@@ -23,11 +24,18 @@ const resolveViaDepsDev: FetchRoute = url => {
   const [, encodedName, versionPath] = match;
   const repo = encodedName === undefined ? undefined : sourceRepoByName.get(decodeURIComponent(encodedName));
   if (repo === undefined) return notFoundResponse();
-  return versionPath === undefined ? depsDevDefaultVersion() : Response.json({ relatedProjects: [{ projectKey: { id: repo }, relationType: 'SOURCE_REPO' }] });
+  return versionPath === undefined
+    ? depsDevDefaultVersion()
+    : Response.json({ relatedProjects: [{ projectKey: { id: repo }, relationType: 'SOURCE_REPO' }] });
 };
 
 describe('7.1 writing the resolved repos to the output file', () => {
-  test('7.1.1 writes the sorted repos as indented json and reports the count', async ({ catalog, logs, network, tempDir }) => {
+  test('7.1.1 writes the sorted repos as indented json and reports the count', async ({
+    catalog,
+    logs,
+    network,
+    tempDir,
+  }) => {
     await catalog.writeManifest('package.json', TWO_DEPS_MANIFEST);
     network.otherwise(resolveViaDepsDev);
 

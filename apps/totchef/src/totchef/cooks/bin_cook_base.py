@@ -33,7 +33,9 @@ def find_contract_problems(command_path: Path) -> list[str]:
     file_text = command_path.read_text(encoding="utf-8", errors="replace")
     problems: list[str] = []
     if find_embedded_version(file_text) is None:
-        problems.append('command must embed __version__ = "<version>" (a constant in any language, or a string baked into a binary)')
+        problems.append(
+            'command must embed __version__ = "<version>" (a constant in any language, or a string baked into a binary)'
+        )
     if "--version" not in file_text:
         problems.append("command must offer --version")
     if not HELP_EVIDENCE_PATTERN.search(file_text):
@@ -75,14 +77,23 @@ class BinCommandCook(StateCook[BinEntry]):
         states: dict[str, str] = {}
         for name in self.entries:
             target = self._target_path(name)
-            states[name] = (find_embedded_version(target.read_text(encoding="utf-8", errors="replace")) or "unversioned") if target.is_file() else "absent"
+            states[name] = (
+                (find_embedded_version(target.read_text(encoding="utf-8", errors="replace")) or "unversioned")
+                if target.is_file()
+                else "absent"
+            )
         return states
 
     @override
     def get_desired_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, entry in self.entries.items():
-            states[name] = find_embedded_version((harness.files_dir() / entry.source).read_text(encoding="utf-8", errors="replace")) or "unversioned"
+            states[name] = (
+                find_embedded_version(
+                    (harness.files_dir() / entry.source).read_text(encoding="utf-8", errors="replace")
+                )
+                or "unversioned"
+            )
         return states
 
     @override

@@ -101,7 +101,10 @@
     "no-global-assign": [2, { "exceptions": [] }],
     "no-import-assign": [0],
     "no-invalid-regexp": [2, {}],
-    "no-irregular-whitespace": [2, { "skipComments": false, "skipJSXText": false, "skipRegExps": false, "skipStrings": true, "skipTemplates": false }],
+    "no-irregular-whitespace": [
+      2,
+      { "skipComments": false, "skipJSXText": false, "skipRegExps": false, "skipStrings": true, "skipTemplates": false }
+    ],
     "no-loss-of-precision": [2],
     "no-misleading-character-class": [2, { "allowEscape": false }],
     "no-new-native-nonconstructor": [0],
@@ -148,7 +151,10 @@
     "valid-typeof": [2, { "requireStringLiterals": false }],
     "no-restricted-syntax": [
       2,
-      { "message": "Use an arrow function. If `this`/`arguments`/`new.target` are needed, redesign.", "selector": "FunctionDeclaration[generator=false]" },
+      {
+        "message": "Use an arrow function. If `this`/`arguments`/`new.target` are needed, redesign.",
+        "selector": "FunctionDeclaration[generator=false]"
+      },
       {
         "message": "Use an arrow function. If `this`/`arguments`/`new.target` are needed, redesign.",
         "selector": ":not(MethodDefinition, Property[method=true]) > FunctionExpression[generator=false]"
@@ -210,9 +216,18 @@
     "@typescript-eslint/no-unsafe-unary-minus": [2],
     "no-unused-expressions": [
       0,
-      { "allowShortCircuit": false, "allowTernary": false, "allowTaggedTemplates": false, "enforceForJSX": false, "ignoreDirectives": false }
+      {
+        "allowShortCircuit": false,
+        "allowTernary": false,
+        "allowTaggedTemplates": false,
+        "enforceForJSX": false,
+        "ignoreDirectives": false
+      }
     ],
-    "@typescript-eslint/no-unused-expressions": [2, { "allowShortCircuit": false, "allowTaggedTemplates": false, "allowTernary": false }],
+    "@typescript-eslint/no-unused-expressions": [
+      2,
+      { "allowShortCircuit": false, "allowTaggedTemplates": false, "allowTernary": false }
+    ],
     "@typescript-eslint/no-unused-vars": [2],
     "no-useless-constructor": [0],
     "@typescript-eslint/no-useless-constructor": [2],
@@ -232,7 +247,13 @@
     "@typescript-eslint/require-await": [2],
     "@typescript-eslint/restrict-plus-operands": [
       2,
-      { "allowAny": false, "allowBoolean": false, "allowNullish": false, "allowNumberAndString": false, "allowRegExp": false }
+      {
+        "allowAny": false,
+        "allowBoolean": false,
+        "allowNullish": false,
+        "allowNumberAndString": false,
+        "allowRegExp": false
+      }
     ],
     "@typescript-eslint/restrict-template-expressions": [2, { "allowNumber": true }],
     "no-return-await": [0],
@@ -303,7 +324,14 @@
     "@typescript-eslint/prefer-readonly-parameter-types": [0],
     "@typescript-eslint/no-restricted-imports": [
       2,
-      { "patterns": [{ "message": "No parent-relative (../) imports — route through a tsconfig \"paths\" alias (e.g. @/foo) instead.", "regex": "^\\.\\." }] }
+      {
+        "patterns": [
+          {
+            "message": "No parent-relative (../) imports — route through a tsconfig \"paths\" alias (e.g. @/foo) instead.",
+            "regex": "^\\.\\."
+          }
+        ]
+      }
     ],
     "@typescript-eslint/prefer-destructuring": [0],
     "perfectionist/sort-variable-declarations": [2, { "type": "natural", "order": "asc" }],
@@ -340,7 +368,18 @@
     "unicorn/consistent-boolean-name": [2, { "ignore": [] }],
     "unicorn/consistent-class-member-order": [
       2,
-      { "order": ["static-field", "static-block", "static-method", "private-field", "public-field", "constructor", "private-method", "public-method"] }
+      {
+        "order": [
+          "static-field",
+          "static-block",
+          "static-method",
+          "private-field",
+          "public-field",
+          "constructor",
+          "private-method",
+          "public-method"
+        ]
+      }
     ],
     "unicorn/consistent-compound-words": [2, {}],
     "unicorn/consistent-conditional-object-spread": [2, "logical"],
@@ -374,7 +413,13 @@
     "unicorn/escape-case": [2, "uppercase"],
     "unicorn/expiring-todo-comments": [
       2,
-      { "terms": ["todo", "fixme", "xxx"], "ignore": [], "checkDates": false, "checkDatesOnPullRequests": false, "allowWarningComments": true }
+      {
+        "terms": ["todo", "fixme", "xxx"],
+        "ignore": [],
+        "checkDates": false,
+        "checkDatesOnPullRequests": false,
+        "allowWarningComments": true
+      }
     ],
     "unicorn/explicit-length-check": [2, { "non-zero": "greater-than" }],
     "unicorn/explicit-timer-delay": [2, "always"],
@@ -382,10 +427,24 @@
     "unicorn/id-match": [
       0,
       "^.+$",
-      { "classFields": false, "ignoreDestructuring": false, "onlyDeclarations": false, "properties": false, "checkNamedSpecifiers": true }
+      {
+        "classFields": false,
+        "ignoreDestructuring": false,
+        "onlyDeclarations": false,
+        "properties": false,
+        "checkNamedSpecifiers": true
+      }
     ],
     "unicorn/import-style": [2, {}],
-    "unicorn/isolated-functions": [2, { "functions": ["makeSynchronous", "workerize"], "selectors": [], "comments": ["@isolated"], "overrideGlobals": {} }],
+    "unicorn/isolated-functions": [
+      2,
+      {
+        "functions": ["makeSynchronous", "workerize"],
+        "selectors": [],
+        "comments": ["@isolated"],
+        "overrideGlobals": {}
+      }
+    ],
     "unicorn/logical-assignment-operators": [2, "always"],
     "unicorn/max-nested-calls": [2, { "max": 3 }],
     "unicorn/name-replacements": [0, {}],
@@ -437,7 +496,10 @@
     "unicorn/no-impossible-length-comparison": [2],
     "unicorn/no-incorrect-query-selector": [2],
     "unicorn/no-incorrect-template-string-interpolation": [2],
-    "unicorn/no-instanceof-builtins": [2, { "useErrorIsError": false, "strategy": "loose", "include": [], "exclude": [] }],
+    "unicorn/no-instanceof-builtins": [
+      2,
+      { "useErrorIsError": false, "strategy": "loose", "include": [], "exclude": [] }
+    ],
     "unicorn/no-invalid-argument-count": [2, {}],
     "unicorn/no-invalid-character-comparison": [2],
     "unicorn/no-invalid-fetch-options": [2],
@@ -461,7 +523,10 @@
     "unicorn/no-nested-ternary": [0],
     "unicorn/no-new-array": [2],
     "unicorn/no-new-buffer": [2],
-    "unicorn/no-non-function-verb-prefix": [2, { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"], "ignore": [] }],
+    "unicorn/no-non-function-verb-prefix": [
+      2,
+      { "verbs": ["get", "set", "unset", "delete", "add", "remove", "destroy", "create"], "ignore": [] }
+    ],
     "unicorn/no-nonstandard-builtin-properties": [2],
     "unicorn/no-null": [2, { "checkArguments": true, "checkStrictEquality": false }],
     "unicorn/no-object-as-default-parameter": [2],
@@ -684,7 +749,12 @@
     "unicorn/switch-case-break-position": [2],
     "unicorn/template-indent": [
       0,
-      { "tags": ["outdent", "dedent", "gql", "sql", "html", "styled"], "functions": ["dedent", "stripIndent"], "selectors": [], "comments": ["HTML", "indent"] }
+      {
+        "tags": ["outdent", "dedent", "gql", "sql", "html", "styled"],
+        "functions": ["dedent", "stripIndent"],
+        "selectors": [],
+        "comments": ["HTML", "indent"]
+      }
     ],
     "unicorn/text-encoding-identifier-case": [2, { "withDash": false }],
     "unicorn/throw-new-error": [2],

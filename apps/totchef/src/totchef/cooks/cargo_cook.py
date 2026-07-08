@@ -65,7 +65,9 @@ class CargoCook(PackageListCook):
         cargo = find_binary("cargo")
         if not cargo:
             return None
-        logger.info("cargo-binstall missing — bootstrapping via `cargo install` (slow source compile; happens once per fresh system)")
+        logger.info(
+            "cargo-binstall missing — bootstrapping via `cargo install` (slow source compile; happens once per fresh system)"
+        )
         shell.stream([str(cargo), "install", "cargo-binstall"])
         return find_binary("cargo-binstall")
 

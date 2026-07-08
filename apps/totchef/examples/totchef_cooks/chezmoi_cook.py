@@ -26,9 +26,7 @@ CAPTURE_TIMER = "chezmoi-capture.timer"
 # sudo context (umask 022); without it the same source applies different modes each way.
 CONFIG_UMASK = "0o022"
 
-SERVICE_UNIT = (
-    b"[Unit]\nDescription=Capture $HOME edits into the chezmoi dotfiles source repo\n\n[Service]\nType=oneshot\nExecStart=%h/.local/bin/chezmoi re-add\n"
-)
+SERVICE_UNIT = b"[Unit]\nDescription=Capture $HOME edits into the chezmoi dotfiles source repo\n\n[Service]\nType=oneshot\nExecStart=%h/.local/bin/chezmoi re-add\n"
 
 
 class ChezmoiEntry(EntrySpec):
@@ -102,7 +100,9 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
     def _units_installed(self) -> bool:
         unit_dir = self._user_unit_dir()
         wanted = {CAPTURE_SERVICE: SERVICE_UNIT, CAPTURE_TIMER: self._timer_bytes()}
-        return all((unit_dir / unit).exists() and (unit_dir / unit).read_bytes() == content for unit, content in wanted.items())
+        return all(
+            (unit_dir / unit).exists() and (unit_dir / unit).read_bytes() == content for unit, content in wanted.items()
+        )
 
     def _timer_enabled(self) -> bool:
         return (self._user_unit_dir() / "timers.target.wants" / CAPTURE_TIMER).is_symlink()
@@ -142,7 +142,11 @@ class ChezmoiCook(StateCook[ChezmoiEntry]):
         spec = self.entries[name]
         chezmoi = harness.find_binary("chezmoi")
         if chezmoi is None:
-            return StateChangeOutcome(changed=False, status="hard_fail", message="chezmoi not found — the [url.chezmoi] section must run before [chezmoi].")
+            return StateChangeOutcome(
+                changed=False,
+                status="hard_fail",
+                message="chezmoi not found — the [url.chezmoi] section must run before [chezmoi].",
+            )
         source = self._source_path()
         harness.write_if_changed(self._config_path(), self._config_bytes(), note="chezmoi config")
         try:

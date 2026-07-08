@@ -1,4 +1,8 @@
-export const mapWithConcurrency = async <T, R>(items: readonly T[], limit: number, task: (item: T, index: number) => Promise<R>): Promise<R[]> => {
+export const mapWithConcurrency = async <T, R>(
+  items: readonly T[],
+  limit: number,
+  task: (item: T, index: number) => Promise<R>,
+): Promise<R[]> => {
   if (!Number.isSafeInteger(limit) || limit < 1) {
     throw new RangeError(`limit must be a positive integer, got ${limit}`);
   }

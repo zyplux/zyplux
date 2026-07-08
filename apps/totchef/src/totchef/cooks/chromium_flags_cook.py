@@ -114,4 +114,6 @@ class ChromiumFlagsCook(FileStateCook[ChromiumFlagsEntry]):
                 message=f"{target} not found; launch the app once, then re-run.",
             )
         changed = write_if_changed(self._target_path(name), content, note=name)
-        return StateChangeOutcome(changed=changed, delayed_message=f"{name}: restart the app to apply the new flags." if changed else "")
+        return StateChangeOutcome(
+            changed=changed, delayed_message=f"{name}: restart the app to apply the new flags." if changed else ""
+        )

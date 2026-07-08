@@ -45,7 +45,9 @@ def _github_tree(*skill_folders: tuple[str, str]) -> str:
         """The GitHub trees API response for a repo — one (skill_name, folder_sha) tree entry per skill, at the `skills/<name>` path the lockfile's """
         """skillPath points into."""
     )
-    entries = ",".join('{"path": "skills/' + name + '", "type": "tree", "sha": "' + sha + '"}' for name, sha in skill_folders)
+    entries = ",".join(
+        '{"path": "skills/' + name + '", "type": "tree", "sha": "' + sha + '"}' for name, sha in skill_folders
+    )
     return '{"sha": "root0000root0000root0000root0000root0000", "tree": [' + entries + "]}"
 
 
@@ -96,7 +98,9 @@ def test_12_1_1_skills_installs_each_declared_repo_via_the_skills_cli(
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
 
     report = totchef.up()
@@ -105,7 +109,9 @@ def test_12_1_1_skills_installs_each_declared_repo_via_the_skills_cli(
     terminal.expect_ran("bunx skills add zyplux/zyp-skills -g --agent claude-code universal --skill '*' -y")
 
 
-def test_12_1_2_skills_requires_bun_and_bunx_and_fails_hard_pointing_at_url_bun(recipe: RecipeBuilder, totchef: Totchef) -> None:
+def test_12_1_2_skills_requires_bun_and_bunx_and_fails_hard_pointing_at_url_bun(
+    recipe: RecipeBuilder, totchef: Totchef
+) -> None:
     """If bun or bunx is missing the run fails hard, telling the operator the [url] bun install must run first."""
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
 
@@ -156,7 +162,9 @@ def test_12_1_3_each_skill_gets_its_own_report_row_with_version_and_content_id(
 
     report = totchef.up()
 
-    assert "skills.zyplux/zyp-skills/totchef,(none),#aaaa1111,—,installed" in report.full_table  # no manifest states a version; the decoy stays a decoy
+    assert (
+        "skills.zyplux/zyp-skills/totchef,(none),#aaaa1111,—,installed" in report.full_table
+    )  # no manifest states a version; the decoy stays a decoy
     assert "skills.zyplux/zyp-skills/peek,(none),0.7.1 #ffff6666,—,installed" in report.full_table
     assert "skills.zyplux/zyp-skills/h2md,(none),0.3.0 #dddd4444,—,installed" in report.full_table
     assert "skills.zyplux/zyp-skills/last30days,(none),3.8.3 #eeee5555,—,installed" in report.full_table
@@ -171,13 +179,17 @@ def test_12_1_4_an_installed_skill_reports_unchanged_when_only_its_timestamp_mov
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
     totchef.up().assert_shows("skills.zyplux/zyp-skills/totchef", "installed")
 
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-02T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-02T00:00:00Z")
+        ),
     )
     report = totchef.up()
 
@@ -194,13 +206,17 @@ def test_12_1_5_an_installed_skill_reports_upgraded_when_its_content_hash_change
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
     totchef.up().assert_shows("skills.zyplux/zyp-skills/totchef", "installed")
 
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "bbbb2222cccc3333dddd4444eeee5555ffff6666", "2026-01-02T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "bbbb2222cccc3333dddd4444eeee5555ffff6666", "2026-01-02T00:00:00Z")
+        ),
     )
     report = totchef.up()
 
@@ -227,9 +243,24 @@ def test_12_1_6_the_run_log_breaks_down_which_skills_were_new_updated_or_unchang
         "skills add zyplux/zyp-skills",
         effect=_write_skills(
             home,
-            ("totchef", "zyplux/zyp-skills", "bbbb2222cccc3333dddd4444eeee5555ffff6666", "2026-01-02T00:00:00Z"),  # hash moved -> updated
-            ("peek", "zyplux/zyp-skills", "ffff6666aaaa7777bbbb8888cccc9999dddd0000", "2026-01-02T00:00:00Z"),  # hash held -> unchanged
-            ("mermaid", "zyplux/zyp-skills", "cccc3333dddd4444eeee5555ffff6666aaaa7777", "2026-01-02T00:00:00Z"),  # new key -> new
+            (
+                "totchef",
+                "zyplux/zyp-skills",
+                "bbbb2222cccc3333dddd4444eeee5555ffff6666",
+                "2026-01-02T00:00:00Z",
+            ),  # hash moved -> updated
+            (
+                "peek",
+                "zyplux/zyp-skills",
+                "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+                "2026-01-02T00:00:00Z",
+            ),  # hash held -> unchanged
+            (
+                "mermaid",
+                "zyplux/zyp-skills",
+                "cccc3333dddd4444eeee5555ffff6666aaaa7777",
+                "2026-01-02T00:00:00Z",
+            ),  # new key -> new
         ),
     )
     report = totchef.up()
@@ -239,7 +270,9 @@ def test_12_1_6_the_run_log_breaks_down_which_skills_were_new_updated_or_unchang
     report.assert_logged("unchanged: peek")
 
 
-def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """If `skills add` fails for a repo, the run reports a hard failure naming it."""
     recipe.declares("skills", repos=["realSergiy/does-not-exist"])
     system.has("bunx", "bun")
@@ -251,7 +284,9 @@ def test_12_1_7_a_failed_repo_reports_hard_naming_the_failed_repo(recipe: Recipe
     report.assert_logged("realSergiy/does-not-exist")
 
 
-def test_12_1_8_multiple_repos_install_concurrently(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem) -> None:
+def test_12_1_8_multiple_repos_install_concurrently(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, system: FakeSystem
+) -> None:
     """Multiple declared repos install concurrently, each via its own `skills add` invocation."""
     repos: list[RecipeValue] = ["zyplux/zyp-skills", "vercel-labs/agent-skills"]
     recipe.declares("skills", repos=repos)
@@ -274,18 +309,27 @@ def test_12_1_9_a_cli_kind_skill_binary_is_chmod_and_linked_onto_path(
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
-    lockfile = _write_skills(home, ("peek", "zyplux/zyp-skills", "ffff6666aaaa7777bbbb8888cccc9999dddd0000", "2026-01-01T00:00:00Z"))
-    files = _drop_skill_files(home, "peek", package_json='{"bin": "peek.py"}', **{"peek.py": "#!/usr/bin/env python3\n"})
+    lockfile = _write_skills(
+        home, ("peek", "zyplux/zyp-skills", "ffff6666aaaa7777bbbb8888cccc9999dddd0000", "2026-01-01T00:00:00Z")
+    )
+    files = _drop_skill_files(
+        home, "peek", package_json='{"bin": "peek.py"}', **{"peek.py": "#!/usr/bin/env python3\n"}
+    )
     terminal.arrange("skills add zyplux/zyp-skills", effect=_run(lockfile, files))
     terminal.arrange("bun link")
-    http.arrange("api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD", _github_tree(("peek", "ffff6666aaaa7777bbbb8888cccc9999dddd0000")))
+    http.arrange(
+        "api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD",
+        _github_tree(("peek", "ffff6666aaaa7777bbbb8888cccc9999dddd0000")),
+    )
 
     skill_dir = home / ".agents" / "skills" / "peek"
 
     totchef.up().assert_succeeded()  # installed; the binary is chmod'd and linked alongside
     terminal.expect_ran("bun link")
     assert terminal.cwd_for("bun link") == skill_dir
-    assert (skill_dir / "peek.py").stat().st_mode & 0o111  # git doesn't preserve the executable bit; the cook restores it
+    assert (
+        skill_dir / "peek.py"
+    ).stat().st_mode & 0o111  # git doesn't preserve the executable bit; the cook restores it
 
     (skill_dir / "peek.py").chmod(0o644)  # bit dropped out of band
     totchef.up().assert_succeeded()  # converged: upstream matches, so no reinstall — yet the link is restored
@@ -301,7 +345,9 @@ def test_12_1_10_a_plan_shows_one_repo_row_before_install_and_per_skill_rows_aft
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
 
     totchef.plan().assert_shows("skills.zyplux/zyp-skills", "would install")
@@ -318,12 +364,17 @@ def test_12_1_11_an_up_run_skips_the_cli_when_upstream_content_matches(
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
-    lockfile = _write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z"))
+    lockfile = _write_skills(
+        home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+    )
     files = _drop_skill_files(home, "totchef", skill_md="---\nname: totchef\n---\n")
     terminal.arrange("skills add zyplux/zyp-skills", effect=_run(lockfile, files))
     totchef.up().assert_shows("skills.zyplux/zyp-skills/totchef", "installed")
 
-    http.arrange("api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD", _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")))
+    http.arrange(
+        "api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD",
+        _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")),
+    )
     report = totchef.up()
 
     report.assert_shows("skills.zyplux/zyp-skills/totchef", "unchanged")
@@ -337,12 +388,17 @@ def test_12_1_12_a_plan_shows_up_to_date_when_upstream_matches(
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
-    lockfile = _write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z"))
+    lockfile = _write_skills(
+        home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+    )
     files = _drop_skill_files(home, "totchef", skill_md="---\nname: totchef\n---\n")
     terminal.arrange("skills add zyplux/zyp-skills", effect=_run(lockfile, files))
     totchef.up()
 
-    http.arrange("api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD", _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")))
+    http.arrange(
+        "api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD",
+        _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")),
+    )
 
     totchef.plan().assert_shows("skills.zyplux/zyp-skills/totchef", "up-to-date")
 
@@ -354,12 +410,17 @@ def test_12_1_13_a_plan_shows_would_upgrade_when_upstream_content_changed(
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
-    lockfile = _write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z"))
+    lockfile = _write_skills(
+        home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+    )
     files = _drop_skill_files(home, "totchef", skill_md="---\nname: totchef\n---\n")
     terminal.arrange("skills add zyplux/zyp-skills", effect=_run(lockfile, files))
     totchef.up()
 
-    http.arrange("api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD", _github_tree(("totchef", "bbbb2222cccc3333dddd4444eeee5555ffff6666")))
+    http.arrange(
+        "api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD",
+        _github_tree(("totchef", "bbbb2222cccc3333dddd4444eeee5555ffff6666")),
+    )
     report = totchef.plan()
 
     assert "skills.zyplux/zyp-skills/totchef,#aaaa1111,#aaaa1111,#bbbb2222,would upgrade" in report.full_table
@@ -374,7 +435,9 @@ def test_12_1_14_when_github_is_unreachable_every_repo_re_syncs(
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
     totchef.up()
 
@@ -396,16 +459,23 @@ def test_12_1_15_a_drifted_agent_entry_re_adds_to_restore_the_store_symlink(
     recipe = totchef.recipe
     recipe.declares("skills", repos=["zyplux/zyp-skills"])
     system.has("bunx", "bun")
-    lockfile = _write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z"))
+    lockfile = _write_skills(
+        home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+    )
     files = _drop_skill_files(home, "totchef", skill_md="---\nname: totchef\n---\n")
     terminal.arrange("skills add zyplux/zyp-skills", effect=_run(lockfile, files))
     totchef.up()
-    http.arrange("api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD", _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")))
+    http.arrange(
+        "api.github.com/repos/zyplux/zyp-skills/git/trees/HEAD",
+        _github_tree(("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555")),
+    )
 
     agent_entry = home / ".claude" / "skills" / "totchef"
     agent_entry.unlink()
     agent_entry.mkdir()
-    (agent_entry / "SKILL.md").write_text("---\nname: totchef\n---\n")  # a real-dir copy, as an old copy-mode install left it
+    (agent_entry / "SKILL.md").write_text(
+        "---\nname: totchef\n---\n"
+    )  # a real-dir copy, as an old copy-mode install left it
 
     totchef.plan().assert_shows("skills.zyplux/zyp-skills/totchef", "would sync")
 
@@ -423,7 +493,9 @@ def test_12_1_16_a_re_add_reports_a_newly_landed_skill_as_its_own_installed_row(
     system.has("bunx", "bun")
     terminal.arrange(
         "skills add zyplux/zyp-skills",
-        effect=_write_skills(home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")),
+        effect=_write_skills(
+            home, ("totchef", "zyplux/zyp-skills", "aaaa1111bbbb2222cccc3333dddd4444eeee5555", "2026-01-01T00:00:00Z")
+        ),
     )
     totchef.up()
 

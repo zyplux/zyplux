@@ -98,7 +98,11 @@ def is_agent_linked(name: str) -> bool:
         """an old copy-mode install, a dangling or foreign link) is drift, repaired by re-adding the repo."""
     )
     agent_entry = agent_skills_dir() / name
-    return agent_entry.is_symlink() and agent_entry.exists() and agent_entry.resolve() == (canonical_skills_dir() / name).resolve()
+    return (
+        agent_entry.is_symlink()
+        and agent_entry.exists()
+        and agent_entry.resolve() == (canonical_skills_dir() / name).resolve()
+    )
 
 
 def lockfile_skills() -> dict[str, LockfileSkillInfo]:
@@ -142,7 +146,9 @@ def read_package_json_version(skill_dir: Path) -> str | None:
 
 def read_pyproject_version(skill_dir: Path) -> str | None:
     try:
-        return tomllib.loads((skill_dir / "pyproject.toml").read_text(encoding="utf-8")).get("project", {}).get("version")
+        return (
+            tomllib.loads((skill_dir / "pyproject.toml").read_text(encoding="utf-8")).get("project", {}).get("version")
+        )
     except OSError, tomllib.TOMLDecodeError:
         return None
 
@@ -189,7 +195,14 @@ def find_folder_sha(tree: GithubTree, skill_path: str) -> str | None:
     folder = folder.rstrip("/")
     if not folder:
         return tree.get("sha")
-    return next((entry.get("sha") for entry in tree.get("tree", []) if entry.get("type") == "tree" and entry.get("path") == folder), None)
+    return next(
+        (
+            entry.get("sha")
+            for entry in tree.get("tree", [])
+            if entry.get("type") == "tree" and entry.get("path") == folder
+        ),
+        None,
+    )
 
 
 def fetch_repo_trees(repos: list[str], skills: dict[str, LockfileSkillInfo]) -> dict[str, GithubTree | None]:
@@ -229,7 +242,11 @@ def describe_skill_changes(before: dict[str, str], after: dict[str, str]) -> str
     new = sorted(set(after) - set(before))
     updated = sorted(name for name in after.keys() & before.keys() if after[name] != before[name])
     unchanged = sorted(name for name in after.keys() & before.keys() if after[name] == before[name])
-    parts = [f"{label}: {', '.join(names)}" for label, names in (("new", new), ("updated", updated), ("unchanged", unchanged)) if names]
+    parts = [
+        f"{label}: {', '.join(names)}"
+        for label, names in (("new", new), ("updated", updated), ("unchanged", unchanged))
+        if names
+    ]
     return "; ".join(parts) if parts else "no skills found"
 
 
@@ -348,7 +365,9 @@ class SkillsCook(VersionedCook):
         failures: list[str] = []
         changes: dict[str, str] = {}
         if repos:
-            logger.info("Installing/refreshing skills from {count} repo(s): {repos}", count=len(repos), repos=", ".join(repos))
+            logger.info(
+                "Installing/refreshing skills from {count} repo(s): {repos}", count=len(repos), repos=", ".join(repos)
+            )
             tag_width = max(len(repo) for repo in repos)
             with ThreadPoolExecutor(max_workers=len(repos)) as pool:
                 pending = {pool.submit(self._add_one, bunx, repo, tag_width): repo for repo in repos}

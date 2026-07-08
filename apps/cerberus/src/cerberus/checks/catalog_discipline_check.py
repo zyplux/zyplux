@@ -29,7 +29,9 @@ def _manifest(content: str) -> dict[str, Any]:
 
 
 def _manifest_paths(paths: list[str]) -> list[str]:
-    return [path for path in paths if (path == "package.json" or path.endswith("/package.json")) and not _is_vendored(path)]
+    return [
+        path for path in paths if (path == "package.json" or path.endswith("/package.json")) and not _is_vendored(path)
+    ]
 
 
 def _uncataloged(label: str, manifest: dict[str, Any]) -> list[str]:

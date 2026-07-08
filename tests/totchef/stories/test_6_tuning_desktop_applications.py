@@ -18,11 +18,20 @@ def _exec_line(desktop_file: Path) -> str:
 # 5.1 Override an app's desktop launcher
 
 
-def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
+def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
+) -> None:
     """`[desktop.<app>]` rewrites a system .desktop Exec= line (env prefix, switches, --enable-features) into ~/.local/share/applications/."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nName=Brave\nExec=/usr/bin/brave %U\n")
-    recipe.declares("desktop", "brave", desktop=str(source), env={"LIBVA_DRIVER_NAME": "nvidia"}, switches=["use-gl=angle"], features=["VaapiVideoDecoder"])
+    recipe.declares(
+        "desktop",
+        "brave",
+        desktop=str(source),
+        env={"LIBVA_DRIVER_NAME": "nvidia"},
+        switches=["use-gl=angle"],
+        features=["VaapiVideoDecoder"],
+    )
 
     totchef.up().assert_shows("desktop.brave", "applied")
 
@@ -34,7 +43,9 @@ def test_6_1_1_desktop_rewrites_exec_line_into_a_user_override(recipe: RecipeBui
     assert line.split()[-1] == "%U"
 
 
-def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
+def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
+) -> None:
     """Re-applying doesn't stack duplicate flags; a changed switch value is replaced; new args go before trailing field codes."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=env OLD=1 /usr/bin/brave --use-gl=angle %U\n")
@@ -51,7 +62,9 @@ def test_6_1_2_desktop_rewrite_is_idempotent_and_deduplicating(recipe: RecipeBui
     totchef.up().assert_shows("desktop.brave", "unchanged")
 
 
-def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """On change it refreshes KDE's ksycoca (tolerant of non-KDE) and reminds the operator to restart the app."""
     source = tmp_path / "brave.desktop"
     source.write_text("[Desktop Entry]\nExec=/usr/bin/brave %U\n")
@@ -68,7 +81,9 @@ def test_6_1_3_desktop_on_change_refreshes_ksycoca_and_reminds_restart(recipe: R
     terminal.expect_not_ran("kbuildsycoca6")
 
 
-def test_6_1_4_desktop_missing_source_reports_install_package_first(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_6_1_4_desktop_missing_source_reports_install_package_first(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """If the source .desktop doesn't exist, it reports the package must be installed first rather than failing the run."""
     recipe.declares("desktop", "ghost", desktop=str(tmp_path / "ghost.desktop"), switches=["use-gl=egl"])
 
@@ -89,7 +104,12 @@ def test_6_2_1_1_local_state_merges_into_enabled_labs_experiments(
     local_state = home / ".config/chromium/Local State"
     local_state.parent.mkdir(parents=True)
     local_state.write_text('{"browser": {"enabled_labs_experiments": ["existing-flag@1"]}}')
-    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["enable-gpu-rasterization@1"])
+    recipe.declares(
+        "chromium_flags",
+        "chromium",
+        local_state=".config/chromium/Local State",
+        local_state_flags=["enable-gpu-rasterization@1"],
+    )
 
     totchef.up().assert_shows("chromium_flags.chromium", "applied")
 
@@ -127,7 +147,9 @@ def test_6_2_1_3_chromium_flags_require_exactly_one_target(recipe: RecipeBuilder
 
     totchef.lint().assert_rejected("set exactly one of")
 
-    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", argv_json=".config/Code/argv.json")  # both targets set
+    recipe.declares(
+        "chromium_flags", "chromium", local_state=".config/chromium/Local State", argv_json=".config/Code/argv.json"
+    )  # both targets set
 
     totchef.lint().assert_rejected("set exactly one of")
 
@@ -137,19 +159,30 @@ def test_6_2_2_chromium_flags_diffed_by_rendered_json_hash(recipe: RecipeBuilder
     local_state = home / ".config/chromium/Local State"
     local_state.parent.mkdir(parents=True)
     local_state.write_text('{"browser": {"enabled_labs_experiments": []}}')
-    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["enable-gpu-rasterization@1"])
+    recipe.declares(
+        "chromium_flags",
+        "chromium",
+        local_state=".config/chromium/Local State",
+        local_state_flags=["enable-gpu-rasterization@1"],
+    )
 
     totchef.up().assert_shows("chromium_flags.chromium", "applied")
     totchef.up().assert_shows("chromium_flags.chromium", "unchanged")
 
 
-def test_6_2_3_local_state_skipped_while_browser_running(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path) -> None:
+def test_6_2_3_local_state_skipped_while_browser_running(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """For Local State it won't write while the browser runs (a pgrep guard skips the entry), naming the process via process_name if it differs."""
     local_state = home / ".config/BraveSoftware/Brave-Browser/Local State"
     local_state.parent.mkdir(parents=True)
     local_state.write_text('{"browser": {"enabled_labs_experiments": []}}')
     recipe.declares(
-        "chromium_flags", "brave", local_state=".config/BraveSoftware/Brave-Browser/Local State", local_state_flags=["x@1"], process_name="brave-browser"
+        "chromium_flags",
+        "brave",
+        local_state=".config/BraveSoftware/Brave-Browser/Local State",
+        local_state_flags=["x@1"],
+        process_name="brave-browser",
     )
     terminal.arrange("pgrep -x brave-browser", exit_code=1)  # `! pgrep` is non-zero ⇒ browser is running ⇒ skip
 
@@ -159,12 +192,16 @@ def test_6_2_3_local_state_skipped_while_browser_running(recipe: RecipeBuilder, 
     terminal.expect_ran("pgrep -x brave-browser")
 
 
-def test_6_2_4_missing_base_file_advises_launch_once_invalid_json_soft_fails(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
+def test_6_2_4_missing_base_file_advises_launch_once_invalid_json_soft_fails(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path
+) -> None:
     """A missing base file tells the operator to launch the app once and re-run; invalid JSON is left untouched and soft-fails."""
     broken = home / ".config/electron/argv.json"
     broken.parent.mkdir(parents=True)
     broken.write_text("{ not valid json")
-    recipe.declares("chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["x@1"])  # base file absent
+    recipe.declares(
+        "chromium_flags", "chromium", local_state=".config/chromium/Local State", local_state_flags=["x@1"]
+    )  # base file absent
     recipe.declares("chromium_flags", "electron", argv_json=".config/electron/argv.json", features=["UseOzonePlatform"])
 
     report = totchef.up()
@@ -198,7 +235,9 @@ def test_6_3_1_settings_merges_settings_env_into_env_preserving_other_keys(
     settings = home / ".claude/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_text('{"theme": "dark", "env": {"EXISTING": "1"}}')
-    recipe.declares("settings", "claude", settings_json=".claude/settings.json", settings_env={"DISABLE_TELEMETRY": "1"})
+    recipe.declares(
+        "settings", "claude", settings_json=".claude/settings.json", settings_env={"DISABLE_TELEMETRY": "1"}
+    )
 
     totchef.up().assert_shows("settings.claude", "applied")
 
@@ -207,12 +246,16 @@ def test_6_3_1_settings_merges_settings_env_into_env_preserving_other_keys(
     assert data["env"] == {"EXISTING": "1", "DISABLE_TELEMETRY": "1"}
 
 
-def test_6_3_2_settings_diffed_by_merged_json_hash_invalid_json_soft_fails(recipe: RecipeBuilder, totchef: Totchef, home: Path) -> None:
+def test_6_3_2_settings_diffed_by_merged_json_hash_invalid_json_soft_fails(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path
+) -> None:
     """Diffed by merged-JSON hash; invalid JSON is left as-is and soft-fails."""
     settings = home / ".claude/settings.json"
     settings.parent.mkdir(parents=True)
     settings.write_text('{"env": {}}')
-    recipe.declares("settings", "claude", settings_json=".claude/settings.json", settings_env={"DISABLE_TELEMETRY": "1"})
+    recipe.declares(
+        "settings", "claude", settings_json=".claude/settings.json", settings_env={"DISABLE_TELEMETRY": "1"}
+    )
 
     totchef.up().assert_shows("settings.claude", "applied")
     totchef.up().assert_shows("settings.claude", "unchanged")

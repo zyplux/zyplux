@@ -10,10 +10,10 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "line-length"
-SUMMARY = "ruff line-length and prettier printWidth are both 160"
+SUMMARY = "ruff line-length and prettier printWidth are both 120"
 SCOPE = Scope.CONTENT
 
-REQUIRED_WIDTH = 160
+REQUIRED_WIDTH = 120
 RUFF_PATH = "ruff.toml"
 
 _PRETTIER_PATHS = (

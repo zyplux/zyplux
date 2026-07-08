@@ -149,7 +149,9 @@ def lint(
 @app.command()
 def graph(
     path: Annotated[Path, typer.Argument(help="Repo checkout to graph (default: current directory).")] = Path(),
-    out: Annotated[Path | None, typer.Option("--out", help="Directory to write graph.json into (default: repo root).")] = None,
+    out: Annotated[
+        Path | None, typer.Option("--out", help="Directory to write graph.json into (default: repo root).")
+    ] = None,
 ) -> None:
     """Build a dependency graph of a repo's own Python and TypeScript source."""
     ctx = context.local_context(config.load(), path)

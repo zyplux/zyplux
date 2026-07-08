@@ -39,11 +39,18 @@ def rewrite_exec_line(
     # by key so a value change in recipe.toml replaces the old token instead of duplicating.
     managed_keys = {f"--{switch.split('=', 1)[0]}" for switch in switches}
     tokens = [
-        token for token in tokens if not token.startswith("--enable-features=") and not any(token == key or token.startswith(key + "=") for key in managed_keys)
+        token
+        for token in tokens
+        if not token.startswith("--enable-features=")
+        and not any(token == key or token.startswith(key + "=") for key in managed_keys)
     ]
 
     insert_at = next(
-        (index for index, token in enumerate(tokens) if len(token) == FIELD_CODE_TOKEN_LENGTH and token.startswith("%")),
+        (
+            index
+            for index, token in enumerate(tokens)
+            if len(token) == FIELD_CODE_TOKEN_LENGTH and token.startswith("%")
+        ),
         len(tokens),
     )
     for switch in switches:
@@ -105,4 +112,6 @@ class DesktopCook(FileStateCook[DesktopEntry]):
                 message=f"{self.entries[name].desktop} not found; install the package first.",
             )
         changed = write_if_changed(self._target_path(name), content, note=name)
-        return StateChangeOutcome(changed=changed, delayed_message="Restart the app to apply the new Exec= line." if changed else "")
+        return StateChangeOutcome(
+            changed=changed, delayed_message="Restart the app to apply the new Exec= line." if changed else ""
+        )

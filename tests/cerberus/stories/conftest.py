@@ -71,7 +71,9 @@ def run_check() -> RunCheck:
 
 
 @pytest.fixture
-def run_check_with_files(repo: Repo, ctx: Context, run_check: RunCheck, monkeypatch: pytest.MonkeyPatch) -> RunCheckWithFiles:
+def run_check_with_files(
+    repo: Repo, ctx: Context, run_check: RunCheck, monkeypatch: pytest.MonkeyPatch
+) -> RunCheckWithFiles:
     """Run a check by id against virtual file content, keyed by repo-relative path.
 
     A path absent from `files` reads as "file does not exist" (`None`), same as

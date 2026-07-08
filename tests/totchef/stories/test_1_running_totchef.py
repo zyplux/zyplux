@@ -65,7 +65,9 @@ def test_1_1_1_up_resolves_validates_escalates_previews_then_executes(
     rejected.assert_prints("no cook registered")  # … with the schema error on the real stderr
 
 
-def test_1_1_2_up_is_idempotent_rerun_reports_nothing_changed(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_1_1_2_up_is_idempotent_rerun_reports_nothing_changed(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """Re-running when nothing has drifted reports "nothing changed" and makes no modifications; the second run only touches what genuinely differs."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
 
@@ -77,7 +79,10 @@ def test_1_1_2_up_is_idempotent_rerun_reports_nothing_changed(recipe: RecipeBuil
 
 
 def test_1_1_3_exit_code_communicates_outcome(
-    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef], terminal: FakeTerminal, tmp_path: Path
+    scenario: Callable[[], RecipeBuilder],
+    chef: Callable[[RecipeBuilder], Totchef],
+    terminal: FakeTerminal,
+    tmp_path: Path,
 ) -> None:
     """Exit code: 0 success, 75 soft failure (recoverable), 1 hard failure (aborted)."""
     chef(scenario().declares("file", "ok", path=str(tmp_path / "ok"), content="X\n")).up().assert_succeeded()
@@ -91,7 +96,9 @@ def test_1_1_3_exit_code_communicates_outcome(
     chef(hard).up().assert_hard_failed()
 
 
-def test_1_1_4_invalid_recipe_rejects_the_run_before_any_apply(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_1_1_4_invalid_recipe_rejects_the_run_before_any_apply(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """Every run lints the recipe first: one invalid entry rejects the whole `up` before any cook applies, so even the valid entries' targets stay untouched."""
     valid_target = tmp_path / "ok.conf"
     recipe.declares("file", "ok", path=str(valid_target), content="X=1\n")
@@ -106,7 +113,9 @@ def test_1_1_4_invalid_recipe_rejects_the_run_before_any_apply(recipe: RecipeBui
 # 1.2 Preview changes without touching the system
 
 
-def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path) -> None:
+def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, tmp_path: Path
+) -> None:
     """`totchef plan` probes state and prints the plan table (would install / upgrade / apply, up-to-date, ok) but makes no changes."""
     recipe.declares("file", "f", path=str(tmp_path / "f"), content="X\n")
     recipe.declares("bash", "step", current_state="probe", desired_state="ok", apply="make-it-ok")
@@ -120,7 +129,9 @@ def test_1_2_1_plan_dry_run_prints_table_makes_no_changes(recipe: RecipeBuilder,
     assert not (tmp_path / "f").exists()
 
 
-def test_1_2_2_plan_requires_no_root(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_2_2_plan_requires_no_root(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A dry run never escalates privileges."""
     recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook, planned without root
     terminal.arrange("apt-cache policy git", GIT_NEEDS_INSTALL)
@@ -133,7 +144,9 @@ def test_1_2_2_plan_requires_no_root(recipe: RecipeBuilder, terminal: FakeTermin
     monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
     monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
     monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})  # don't fork real cooks in-process
-    monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log"))
+    monkeypatch.setattr(
+        "totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log")
+    )
     monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
     recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
@@ -143,7 +156,9 @@ def test_1_2_2_plan_requires_no_root(recipe: RecipeBuilder, terminal: FakeTermin
     assert escalations == []  # plan ran to completion without ever escalating
 
 
-def test_1_2_3_plan_shows_all_resources_including_unchanged(recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path) -> None:
+def test_1_2_3_plan_shows_all_resources_including_unchanged(
+    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+) -> None:
     """The plan shows every resource, not just the diff, so the full intended end state is visible."""
     settled = tmp_path / "settled"
     settled.write_text("X\n")  # already matches the desired content
@@ -181,7 +196,9 @@ def test_1_3_1_where_prints_resolved_recipe_path(cli: Cli, tmp_path: Path) -> No
     cli.run("where", "--recipe", str(recipe_path)).assert_prints(str(recipe_path))
 
 
-def test_1_3_2_recipe_discovery_follows_fixed_precedence(cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_2_recipe_discovery_follows_fixed_precedence(
+    cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Precedence: --recipe/-r (file or dir), then a recognized recipe name walking up from the cwd, then a recipe pinned by `totchef init`."""
     explicit = tmp_path / "explicit.toml"
     explicit.write_text("")
@@ -201,10 +218,14 @@ def test_1_3_2_recipe_discovery_follows_fixed_precedence(cli: Cli, tmp_path: Pat
     nowhere.mkdir()
     monkeypatch.chdir(nowhere)
     cli.run("init", str(pinned)).assert_succeeded()
-    cli.run("where").assert_prints(str(pinned))  # then the recipe pinned by `totchef init`, when nothing nearer is found
+    cli.run("where").assert_prints(
+        str(pinned)
+    )  # then the recipe pinned by `totchef init`, when nothing nearer is found
 
 
-def test_1_3_3_no_recipe_found_lists_searched_locations(cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_3_no_recipe_found_lists_searched_locations(
+    cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """When no recipe is found, the error lists every location searched."""
     empty = tmp_path / "empty"
     empty.mkdir()
@@ -227,7 +248,9 @@ def test_1_3_4_recipe_flag_accepts_a_directory(cli: Cli, tmp_path: Path) -> None
     cli.run("where", "--recipe", str(repo)).assert_prints(str(repo / "totchef_recipe.toml"))
 
 
-def test_1_3_5_init_pins_a_default_recipe(cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_5_init_pins_a_default_recipe(
+    cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """`totchef init PATH` saves the recipe location so a later run with nothing nearer resolves to it."""
     recipe_path = tmp_path / "dots" / "totchef_recipe.toml"
     recipe_path.parent.mkdir(parents=True)
@@ -244,7 +267,9 @@ def test_1_3_5_init_pins_a_default_recipe(cli: Cli, home: Path, tmp_path: Path, 
     cli.run("where").assert_prints(str(recipe_path))  # the pinned recipe is the fallback
 
 
-def test_1_3_6_init_offers_the_discovered_recipe(cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_6_init_offers_the_discovered_recipe(
+    cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Run with no path, `totchef init` offers the recipe discovered in the current directory and pins it on confirmation."""
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -260,7 +285,9 @@ def test_1_3_6_init_offers_the_discovered_recipe(cli: Cli, home: Path, tmp_path:
     assert str(recipe_path) in (home / ".config/totchef/config.toml").read_text()  # and it was pinned
 
 
-def test_1_3_7_init_pins_a_symlink_as_given(cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_7_init_pins_a_symlink_as_given(
+    cli: Cli, home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """`totchef init PATH` pins a symlinked PATH as given rather than dereferencing it, so repointing the symlink later moves the pin without rerunning init."""
     real = tmp_path / "real" / "totchef_recipe.toml"
     real.parent.mkdir(parents=True)
@@ -285,7 +312,9 @@ def test_1_3_7_init_pins_a_symlink_as_given(cli: Cli, home: Path, tmp_path: Path
     cli.run("where").assert_prints(str(moved))  # repointing the symlink moved the pin without touching init
 
 
-def test_1_3_8_init_errors_when_no_recipe_is_found_and_none_pinned(cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_8_init_errors_when_no_recipe_is_found_and_none_pinned(
+    cli: Cli, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """With no path, nothing discoverable, and nothing pinned yet, `init` rejects instead of pinning nothing."""
     empty = tmp_path / "empty"
     empty.mkdir()

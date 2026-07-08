@@ -40,10 +40,18 @@ def files_dir() -> Path:
 def resolve_bundled_source(entry_name: str | None) -> str:
     """The bundled file an omitted `source` defaults to: the totchef_files/ file whose stem is the entry name; 0/2+ matches raise, needs `source` explicit."""
     base = files_dir()
-    candidates: list[str] = sorted(path.name for path in base.iterdir() if path.is_file() and path.stem == entry_name) if base.is_dir() else []
+    candidates: list[str] = (
+        sorted(path.name for path in base.iterdir() if path.is_file() and path.stem == entry_name)
+        if base.is_dir()
+        else []
+    )
     if len(candidates) == 1:
         return candidates[0]
-    problem = f"several bundled files match '{entry_name}': {', '.join(candidates)}" if candidates else f"no bundled file named '{entry_name}.*' under {base}"
+    problem = (
+        f"several bundled files match '{entry_name}': {', '.join(candidates)}"
+        if candidates
+        else f"no bundled file named '{entry_name}.*' under {base}"
+    )
     msg = f"{problem} — set `source` explicitly"
     raise ValueError(msg)
 

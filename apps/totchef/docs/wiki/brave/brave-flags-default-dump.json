@@ -3163,7 +3163,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Enables the exploratory Prompt API, allowing you to send natural language instructions to a built-in large language model (Gemini Nano in Chrome). Exploratory APIs are designed for local prototyping to help discover potential use cases, and may never launch. These explorations will inform the built-in AI roadmap [1]. This API is primarily intended for natural language processing tasks such as summarizing, classifying, or rephrasing text. It is NOT suitable for use cases that require factual accuracy (e.g. answering knowledge questions). You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "Prompt API for Gemini Nano with Multimodal Input",
@@ -3171,7 +3174,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Extends the exploratory Prompt API with image and audio input types. Allows you to supplement natural language instructions for a built-in large language model (Gemini Nano in Chrome) with image and audio inputs. Exploratory APIs are designed for local prototyping to help discover potential use cases, and may never launch. These explorations will inform the built-in AI roadmap [1]. This API enhancement is primarily intended for natural language processing tasks associated with visual and auditory data, such as generating rough descriptions of pictures and sounds. It is NOT suitable for use cases that require factual accuracy (e.g. answering knowledge questions). You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "Writer API for Gemini Nano",
@@ -3179,7 +3185,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Enables the Writer API, allowing you to write a piece of text with a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "Rewriter API for Gemini Nano",
@@ -3187,7 +3196,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Enables the Rewriter API, allowing you to rewrite a piece of text with a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "Proofreader API for Gemini Nano",
@@ -3195,7 +3207,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Enables the Proofreader API, allowing you to proofread a piece of textwith a built-in large language model (Gemini Nano in Chrome).The API may be subject to changes including the supported options.Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "Summarizer API with Performance Preference",
@@ -3211,7 +3226,10 @@
     "type": "feature",
     "default": "Disabled",
     "description": "Enables the Summarizer API, allowing you to summarize a piece of text with a built-in large language model (Gemini Nano in Chrome). The API may be subject to changes including the supported options. Please refer to the built-in AI article [1] for details. You must comply with our Prohibited Use Policy [2] which provides additional details about appropriate use of Generative AI.",
-    "references": ["https://goo.gle/chrome-ai-dev-preview", "https://policies.google.com/terms/generative-ai/use-policy"]
+    "references": [
+      "https://goo.gle/chrome-ai-dev-preview",
+      "https://policies.google.com/terms/generative-ai/use-policy"
+    ]
   },
   {
     "title": "LiteRT-LM for On-Device AI",

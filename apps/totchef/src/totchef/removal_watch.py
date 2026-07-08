@@ -50,7 +50,13 @@ def is_removable(watch: RemovalWatch) -> bool:
     """Probe one watch: exit 0 fires it; non-zero or any probe failure reads as still waiting, so an outage never fabricates a removal notice."""
     with cook_context(watch.node_id):
         try:
-            completed = shell.run("bash", "-c", watch.condition, timeout=REMOVE_WHEN_TIMEOUT_SECONDS, note=f"remove_when: {watch.condition}")
+            completed = shell.run(
+                "bash",
+                "-c",
+                watch.condition,
+                timeout=REMOVE_WHEN_TIMEOUT_SECONDS,
+                note=f"remove_when: {watch.condition}",
+            )
         except (OSError, subprocess.TimeoutExpired) as exc:
             logger.debug("remove_when probe failed: {exc}", exc=exc)
             return False

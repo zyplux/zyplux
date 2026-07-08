@@ -67,7 +67,11 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
   });
 
   describe('9.4 flipping an already-ready PR to draft before pushing', () => {
-    test('9.4.1 rejects the flip when nothing new to push and Copilot has not reviewed HEAD', async ({ cz, repo, shell }) => {
+    test('9.4.1 rejects the flip when nothing new to push and Copilot has not reviewed HEAD', async ({
+      cz,
+      repo,
+      shell,
+    }) => {
       repo.setCurrentBranch('feat-x');
       repo.setHeadSha('sha-local');
       repo.setPrListState('OPEN');
@@ -99,7 +103,9 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready --undo', 'gh pr ready']);
       expect(logs.logLines).toContain('flip: GitHub confirms PR is draft (was ready, HEAD sha-loc)');
       expect(shell.commands).toContain('git push --set-upstream origin feat-x');
-      expect(logs.logLines).toContain('flip: GitHub confirms PR is ready (draft→push→ready done; Copilot re-review triggered)');
+      expect(logs.logLines).toContain(
+        'flip: GitHub confirms PR is ready (draft→push→ready done; Copilot re-review triggered)',
+      );
       expect(shell.commands).toContain('gh pr merge --delete-branch --squash');
     });
 
@@ -171,7 +177,9 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.queuePrField('url', PR_URL);
       repo.setRemoteBranchSha('feat-x', 'sha-local');
 
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow('PR did not return to ready state; check the PR on GitHub');
+      await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
+        'PR did not return to ready state; check the PR on GitHub',
+      );
       expect(shell.commandsMatching('gh pr merge')).toHaveLength(0);
     });
   });
@@ -229,7 +237,9 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.queuePrField('mergeStateStatus', 'UNKNOWN');
       repo.setRemoteBranchSha('feat-x', 'sha-local');
 
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow('merge state stayed UNKNOWN; check the PR on GitHub');
+      await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
+        'merge state stayed UNKNOWN; check the PR on GitHub',
+      );
       expect(shell.commandsMatching('gh pr merge')).toHaveLength(0);
     });
   });

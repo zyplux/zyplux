@@ -56,7 +56,9 @@ def rule_root_only_on_leaves(config: RecipeConfig, nodes: dict[str, Node]) -> No
     for node in nodes.values():
         sections.setdefault(node.section, []).append(node)
     offenders = sorted(
-        section for section, entries in sections.items() if _section_needs_root(config, section) and any(entry.entry is not None for entry in entries)
+        section
+        for section, entries in sections.items()
+        if _section_needs_root(config, section) and any(entry.entry is not None for entry in entries)
     )
     if offenders:
         named = ", ".join(f"[{section}]" for section in offenders)

@@ -69,7 +69,10 @@ def is_nvidia_on_pci() -> bool:
 
 
 def is_nvidia_drm_node_ready() -> bool:
-    return any(read_pci_attr(pci_address, "vendor") == NVIDIA_PCI_VENDOR_ID and link.exists() for pci_address, link in iter_dri_cards())
+    return any(
+        read_pci_attr(pci_address, "vendor") == NVIDIA_PCI_VENDOR_ID and link.exists()
+        for pci_address, link in iter_dri_cards()
+    )
 
 
 def bind_boot_vga_override(boot_vga_value: str, target: Path) -> bool:
@@ -188,7 +191,10 @@ def main() -> int:
         # appears on the bus; the env file resolves those paths, so skipping the wait loses
         # the race and KWIN_DRM_DEVICES is silently never written.
         if not poll_until(is_nvidia_drm_node_ready, retries=15):
-            log("nvidia DRM node did not appear in time; recomputing compositor hint (cleared if still unresolved)", syslog.LOG_WARNING)
+            log(
+                "nvidia DRM node did not appear in time; recomputing compositor hint (cleared if still unresolved)",
+                syslog.LOG_WARNING,
+            )
         write_compositor_primary()
     else:
         remove_env_file("eGPU not present")

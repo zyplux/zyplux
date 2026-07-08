@@ -36,7 +36,9 @@ class RunOptions(TypedDict, total=False):
 def run(*cmd: str, text: Literal[True] = True, **options: Unpack[RunOptions]) -> subprocess.CompletedProcess[str]: ...
 @overload
 def run(*cmd: str, text: Literal[False], **options: Unpack[RunOptions]) -> subprocess.CompletedProcess[bytes]: ...
-def run(*cmd: str, text: bool = True, **options: Unpack[RunOptions]) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
+def run(
+    *cmd: str, text: bool = True, **options: Unpack[RunOptions]
+) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
     """Run a command to completion, capturing stdout+stderr; the one-shot half of the bash boundary. `text=False` keeps bytes (a GPG de-armor)."""
     note = options.get("note", "")
     if note:

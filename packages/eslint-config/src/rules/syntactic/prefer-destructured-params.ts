@@ -79,12 +79,16 @@ const reservedBindingNames = new Set<string>([
 
 const isPlainPropertyRead = (member: TSESTree.MemberExpression) => {
   const parent = member.parent;
-  const isCallee = (parent.type === AST_NODE_TYPES.CallExpression || parent.type === AST_NODE_TYPES.NewExpression) && parent.callee === member;
+  const isCallee =
+    (parent.type === AST_NODE_TYPES.CallExpression || parent.type === AST_NODE_TYPES.NewExpression) &&
+    parent.callee === member;
   const isTaggedTemplate = parent.type === AST_NODE_TYPES.TaggedTemplateExpression && parent.tag === member;
   const isAssignmentTarget = parent.type === AST_NODE_TYPES.AssignmentExpression && parent.left === member;
   const isUpdateTarget = parent.type === AST_NODE_TYPES.UpdateExpression;
   const isDeleteTarget = parent.type === AST_NODE_TYPES.UnaryExpression && parent.operator === 'delete';
-  const isLoopTarget = (parent.type === AST_NODE_TYPES.ForInStatement || parent.type === AST_NODE_TYPES.ForOfStatement) && parent.left === member;
+  const isLoopTarget =
+    (parent.type === AST_NODE_TYPES.ForInStatement || parent.type === AST_NODE_TYPES.ForOfStatement) &&
+    parent.left === member;
   return !(isCallee || isTaggedTemplate || isAssignmentTarget || isUpdateTarget || isDeleteTarget || isLoopTarget);
 };
 
@@ -172,7 +176,9 @@ export const preferDestructuredParams = createRule({
           declarator.parent.declarations.length === 1
         ) {
           const local = declarator.id;
-          const localVariable = sourceCode.getDeclaredVariables(declarator.parent).find(variable => variable.defs.some(def => def.name === local));
+          const localVariable = sourceCode
+            .getDeclaredVariables(declarator.parent)
+            .find(variable => variable.defs.some(def => def.name === local));
           if (!localVariable) return;
           aliasAbsorptions.push({ declaration: declarator.parent, local, localVariable, property: read.property });
         } else {

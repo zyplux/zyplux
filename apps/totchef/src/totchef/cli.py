@@ -42,7 +42,11 @@ app = typer.Typer(
 
 RecipeOption = Annotated[
     Path | None,
-    typer.Option("--recipe", "-r", help="Recipe file or repo dir (default: a recognized name from the cwd up, then a recipe pinned by `totchef init`)."),
+    typer.Option(
+        "--recipe",
+        "-r",
+        help="Recipe file or repo dir (default: a recognized name from the cwd up, then a recipe pinned by `totchef init`).",
+    ),
 ]
 
 
@@ -90,17 +94,31 @@ def summary_rows(unchanged: int, elapsed: float | None) -> list[dict[str, str]]:
 
 def report_row(node_id: str, row: ReportRow) -> dict[str, str]:
     """One report row as the flat dict the table/TOON render from: cook-node identity plus before/current/latest/action cells (past, present, target, verb)."""
-    return {"cook-node": cook_node(node_id, row.name), "before": row.before, "current": row.current, "latest": row.latest, "action": row.action}
+    return {
+        "cook-node": cook_node(node_id, row.name),
+        "before": row.before,
+        "current": row.current,
+        "latest": row.latest,
+        "action": row.action,
+    }
 
 
-def log_report_block(all_rows: list[dict[str, str]], shown_rows: list[dict[str, str]], summary: list[dict[str, str]], title: str, nothing_changed: str) -> None:
+def log_report_block(
+    all_rows: list[dict[str, str]],
+    shown_rows: list[dict[str, str]],
+    summary: list[dict[str, str]],
+    title: str,
+    nothing_changed: str,
+) -> None:
     """Inline mode logs the report as a structured block: the full node table and the terse operator view, between sentinels for clean machine readback."""
     full = encode(all_rows) if all_rows else ""
     terse = encode(shown_rows + summary) if shown_rows else nothing_changed
     write_log(f"##totchef-report##\ntitle={title}\n##full##\n{full}\n##shown##\n{terse}\n##end##\n")
 
 
-def print_report(results: dict[str, CookResult], *, dry_run: bool, title: str = "Report", elapsed: float | None = None) -> None:
+def print_report(
+    results: dict[str, CookResult], *, dry_run: bool, title: str = "Report", elapsed: float | None = None
+) -> None:
     rows = [(result.cook, row) for result in results.values() for row in result.rows]
     shown = rows if dry_run else [(node_id, row) for node_id, row in rows if row.changed or row.status != "ok"]
     summary = summary_rows(len(rows) - len(shown), elapsed)
@@ -116,7 +134,11 @@ def print_report(results: dict[str, CookResult], *, dry_run: bool, title: str = 
     else:
         logger.info(nothing_changed)
 
-    delayed_rows = [{"cook-node": result.cook, "message": message} for result in results.values() for message in result.delayed_messages]
+    delayed_rows = [
+        {"cook-node": result.cook, "message": message}
+        for result in results.values()
+        for message in result.delayed_messages
+    ]
     if delayed_rows:
         show_table(delayed_rows, title="Action required")
 
@@ -144,11 +166,19 @@ def _run_and_report(config: RecipeConfig, log_file: Path, start: float, *, dry_r
         if result.status == "hard_fail" and result.message:
             logger.error("[{cook}] {message}", cook=result.cook, message=result.message)
     if hard:
-        logger.error("=== Hard failures: {cooks} — apply aborted; full log: {log_file} ===", cooks=", ".join(hard), log_file=log_file)
+        logger.error(
+            "=== Hard failures: {cooks} — apply aborted; full log: {log_file} ===",
+            cooks=", ".join(hard),
+            log_file=log_file,
+        )
         drain_logs()
         return 1
     if soft:
-        logger.warning("=== Soft failures: {cooks} (scroll back; full log: {log_file}) ===", cooks=", ".join(soft), log_file=log_file)
+        logger.warning(
+            "=== Soft failures: {cooks} (scroll back; full log: {log_file}) ===",
+            cooks=", ".join(soft),
+            log_file=log_file,
+        )
         drain_logs()
         return SOFT_FAIL_EXIT
     drain_logs()
@@ -210,7 +240,9 @@ def where(recipe: RecipeOption = None) -> None:
 
 @app.command()
 def init(
-    recipe: Annotated[Path | None, typer.Argument(help="Recipe file or repo directory to pin; omit to use the one discovered here.")] = None,
+    recipe: Annotated[
+        Path | None, typer.Argument(help="Recipe file or repo directory to pin; omit to use the one discovered here.")
+    ] = None,
 ) -> None:
     """Pin a recipe so `totchef up` finds it anywhere — saves its path to ~/.config/totchef/config.toml. A symlink is pinned as given, not dereferenced."""
     if recipe is not None:
@@ -248,11 +280,16 @@ def list_cooks_callback(*, value: bool) -> None:
 @app.callback()
 def root(
     *,
-    _version: Annotated[bool, typer.Option("--version", callback=version_callback, is_eager=True, help="Show the version and exit.")] = False,
+    _version: Annotated[
+        bool, typer.Option("--version", callback=version_callback, is_eager=True, help="Show the version and exit.")
+    ] = False,
     _list_cooks: Annotated[
         bool,
         typer.Option(
-            "--list-cooks", callback=list_cooks_callback, is_eager=True, help="List every resolvable cook and the recipe section it serves, then exit."
+            "--list-cooks",
+            callback=list_cooks_callback,
+            is_eager=True,
+            help="List every resolvable cook and the recipe section it serves, then exit.",
         ),
     ] = False,
 ) -> None:

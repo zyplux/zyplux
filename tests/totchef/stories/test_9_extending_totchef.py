@@ -110,13 +110,17 @@ def _drop_local_cook(home: Path, filename: str, source: str) -> None:
 # 8.1 Add a new configuration domain as a plugin
 
 
-def test_9_1_1_cook_registered_under_entry_point_group_serves_its_section(cli: Cli, register_plugin: Callable[[str, str], None]) -> None:
+def test_9_1_1_cook_registered_under_entry_point_group_serves_its_section(
+    cli: Cli, register_plugin: Callable[[str, str], None]
+) -> None:
     """A CookBase subclass registered in the `totchef.cooks` entry-point group serves the section named by its entry-point; origin shows in `--list-cooks`."""
     cli.run("--list-cooks").assert_lists("apt_pkg", scope="root", origin="built-in")
 
     register_plugin("gadget", "acme-totchef-plugin")  # a third-party dist registers the same way as a built-in
 
-    cli.run("--list-cooks").assert_lists("gadget", origin="plugin:acme-totchef-plugin")  # serves its section, origin reads plugin:<dist>
+    cli.run("--list-cooks").assert_lists(
+        "gadget", origin="plugin:acme-totchef-plugin"
+    )  # serves its section, origin reads plugin:<dist>
 
 
 # 8.2 Prototype a cook without packaging it
@@ -149,7 +153,9 @@ def test_9_2_2_custom_cook_loads_from_totchef_cooks_beside_the_recipe(
 # 8.3 Choose the right cook shape for my domain
 
 
-def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path) -> None:
+def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """VersionedCook: implement list_requested/list_installed/find_latest/sync; PackageListCook covers plain `packages = [...]` sections."""
     _drop_local_cook(home, "gadget_cook.py", VERSIONED_COOK)
     recipe.declares("gadget", packages=["alpha", "beta"])
@@ -163,7 +169,9 @@ def test_9_3_1_versioned_cook_implements_requested_installed_latest_sync(recipe:
     terminal.expect_ran("install-gadget beta")
 
 
-def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path) -> None:
+def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(
+    recipe: RecipeBuilder, totchef: Totchef, home: Path, tmp_path: Path
+) -> None:
     """StateCook: implement get_current_state/get_desired_state/apply_resource; FileStateCook already diffs by sha256."""
     _drop_local_cook(home, "note_cook.py", FILE_STATE_COOK)
     target = tmp_path / "note.txt"
@@ -175,7 +183,9 @@ def test_9_3_2_state_cook_implements_current_desired_apply_filestate_diffs(recip
     totchef.up().assert_shows("note.n", "unchanged")  # sha256 matches ⇒ no rewrite, for free
 
 
-def test_9_3_3_cook_only_probes_and_acts_orchestrator_owns_the_diff(recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path) -> None:
+def test_9_3_3_cook_only_probes_and_acts_orchestrator_owns_the_diff(
+    recipe: RecipeBuilder, terminal: FakeTerminal, totchef: Totchef, home: Path
+) -> None:
     """The cook only probes and acts; the orchestrator owns every diff and idempotency decision."""
     _drop_local_cook(home, "switch_cook.py", PROBE_ONLY_COOK)
     recipe.declares("switch", "matched", current="on", desired="on")  # cook reports states …

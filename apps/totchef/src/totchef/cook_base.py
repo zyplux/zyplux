@@ -182,7 +182,8 @@ class StateCook[EntryModel: EntrySpec](CookBase):
             failure = f"{type(self).__name__} must set entry_model"
             raise EntryModelNotSetError(failure)
         self.entries: dict[str, EntryModel] = {
-            name: cast("EntryModel", model.model_validate(raw, context={"entry_name": name})) for name, raw in section.items()
+            name: cast("EntryModel", model.model_validate(raw, context={"entry_name": name}))
+            for name, raw in section.items()
         }
 
     def list_resources(self) -> list[str]:

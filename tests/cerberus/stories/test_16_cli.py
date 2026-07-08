@@ -79,14 +79,18 @@ def test_16_1_1_passes_a_fully_conforming_checkout_given_an_explicit_path(invoke
 
 
 @requires_just
-def test_16_1_2_defaults_to_the_current_directory_when_no_path_argument_is_given(conforming_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_16_1_2_defaults_to_the_current_directory_when_no_path_argument_is_given(
+    conforming_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(conforming_repo)
     result = runner.invoke(app, [])
     assert result.exit_code == 0, result.output
 
 
 @requires_just
-def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / ".github" / "workflows" / "ci.yml").unlink()
     result = invoke_lint()
     assert result.exit_code == 1
@@ -94,7 +98,9 @@ def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(conforming_repo: Path
 
 
 @requires_just
-def test_16_2_2_fails_on_trailing_whitespace_in_the_justfile(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_2_2_fails_on_trailing_whitespace_in_the_justfile(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / "justfile").write_text(JUSTFILE_WITH_TRAILING_WS)
     result = invoke_lint()
     assert result.exit_code == 1
@@ -102,7 +108,9 @@ def test_16_2_2_fails_on_trailing_whitespace_in_the_justfile(conforming_repo: Pa
 
 
 @requires_just
-def test_16_3_1_strips_trailing_whitespace_in_place_so_the_rerun_then_passes(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_3_1_strips_trailing_whitespace_in_place_so_the_rerun_then_passes(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     justfile = conforming_repo / "justfile"
     justfile.write_text(JUSTFILE_WITH_TRAILING_WS)
 
@@ -113,7 +121,9 @@ def test_16_3_1_strips_trailing_whitespace_in_place_so_the_rerun_then_passes(con
     assert invoke_lint().exit_code == 0
 
 
-def test_16_4_1_runs_only_the_checks_named_on_the_command_line(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_4_1_runs_only_the_checks_named_on_the_command_line(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / ".github" / "workflows" / "ci.yml").unlink()
     result = invoke_lint("--check", "codeowners")
     assert result.exit_code == 0, result.output
@@ -141,7 +151,9 @@ def test_16_5_1_uses_the_recipe_requirements_from_the_given_config_file_instead_
     assert "`default` recipe should run `just --menu`" in result.output
 
 
-def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / ".github" / "CODEOWNERS").unlink()
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["codeowners"]\n')
 
@@ -153,14 +165,18 @@ def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(conforming
     assert "[tool.cerberus]" in result.output
 
 
-def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unknown_check(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unknown_check(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["no-such-check"]\n')
     result = invoke_lint("--check", "codeowners")
     assert result.exit_code == 0, result.output
     assert "unknown disabled checks ignored: no-such-check" in result.output
 
 
-def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(conforming_repo: Path, invoke_lint: Callable[..., Result]) -> None:
+def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = "codeowners"\n')
     result = invoke_lint("--check", "codeowners")
     assert isinstance(result.exception, TypeError)

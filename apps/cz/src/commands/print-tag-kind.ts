@@ -11,10 +11,14 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to classify (e.g. eslint-config-v1.2.3).`,
 });
 
-export const printTagKindCommand = command('print-tag-kind', object({ command: constant('print-tag-kind' as const), tag: tagArgument }), {
-  aliases: ['pk'],
-  brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.`,
-});
+export const printTagKindCommand = command(
+  'print-tag-kind',
+  object({ command: constant('print-tag-kind' as const), tag: tagArgument }),
+  {
+    aliases: ['pk'],
+    brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.`,
+  },
+);
 
 type PrintTagKindConfig = InferValue<typeof printTagKindCommand>;
 

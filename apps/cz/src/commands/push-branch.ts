@@ -48,7 +48,9 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');
 
-  const existing = await readTrimmed($.gh.pr.list({ head: branch, jq: '.[0].state // ""', json: 'state', state: 'all' }));
+  const existing = await readTrimmed(
+    $.gh.pr.list({ head: branch, jq: '.[0].state // ""', json: 'state', state: 'all' }),
+  );
   if (existing === 'MERGED') {
     console.log(`PR merged; switching to main and deleting local branch '${branch}'`);
     await $.git.checkout('main');
@@ -71,14 +73,23 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
       );
     }
     await $.gh.pr.ready({ undo: true });
-    const draftApplied = await poll(async () => ((await readPrField('isDraft', '.isDraft')) === 'true' ? true : undefined), { attempts: 10, intervalMs: 500 });
-    ensure(draftApplied === true, 'PR did not enter draft state before push; aborting so the push is not seen on a ready PR (Copilot needs flip→push→flip)');
+    const draftApplied = await poll(
+      async () => ((await readPrField('isDraft', '.isDraft')) === 'true' ? true : undefined),
+      { attempts: 10, intervalMs: 500 },
+    );
+    ensure(
+      draftApplied === true,
+      'PR did not enter draft state before push; aborting so the push is not seen on a ready PR (Copilot needs flip→push→flip)',
+    );
     console.log(`flip: GitHub confirms PR is draft (was ready, HEAD ${shortSha(localHead)})`);
   }
 
   await $.git.push('origin', branch, { setUpstream: true });
   const pushedHead = await readRemoteHead(branch);
-  ensure(pushedHead === localHead, `push did not land: origin/${branch} is at ${shortSha(pushedHead)}, not ${shortSha(localHead)}`);
+  ensure(
+    pushedHead === localHead,
+    `push did not land: origin/${branch} is at ${shortSha(pushedHead)}, not ${shortSha(localHead)}`,
+  );
   console.log(`push: GitHub confirms origin/${branch} is at ${shortSha(pushedHead)}`);
 
   if (existing !== 'OPEN') {
@@ -92,9 +103,14 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   }
 
   await $.gh.pr.ready();
-  const readyApplied = await poll(async () => ((await readPrField('isDraft', '.isDraft')) === 'false' ? true : undefined), { attempts: 10, intervalMs: 500 });
+  const readyApplied = await poll(
+    async () => ((await readPrField('isDraft', '.isDraft')) === 'false' ? true : undefined),
+    { attempts: 10, intervalMs: 500 },
+  );
   ensure(readyApplied === true, 'PR did not return to ready state; check the PR on GitHub');
-  console.log(`flip: GitHub confirms PR is ready${willFlipToDraft ? ' (draft→push→ready done; Copilot re-review triggered)' : ''}`);
+  console.log(
+    `flip: GitHub confirms PR is ready${willFlipToDraft ? ' (draft→push→ready done; Copilot re-review triggered)' : ''}`,
+  );
 
   if (hold) {
     await $.gh.pr.disableAutoMerge();

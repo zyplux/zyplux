@@ -33,14 +33,20 @@ def test_header_titles_match_test_names() -> None:
     tests = collect_story_tests()
     headers = collect_headers()
     drifted = {
-        sid: (headers[sid].title, tests[sid].title) for sid in set(tests) & set(headers) if word_sequence(headers[sid].title) != word_sequence(tests[sid].title)
+        sid: (headers[sid].title, tests[sid].title)
+        for sid in set(tests) & set(headers)
+        if word_sequence(headers[sid].title) != word_sequence(tests[sid].title)
     }
     assert not drifted, f"header title vs test-name drift (id: header, test): {drifted}"
 
 
 def test_each_doc_holds_only_its_own_section() -> None:
     strays = {
-        doc_path.name: sorted({header for header in parse_headers(doc_path.read_text(encoding="utf-8")) if header.split(".")[0] != doc_path.name.split("_")[0]})
+        doc_path.name: sorted({
+            header
+            for header in parse_headers(doc_path.read_text(encoding="utf-8"))
+            if header.split(".")[0] != doc_path.name.split("_")[0]
+        })
         for doc_path in list_story_docs()
     }
     strays = {name: ids for name, ids in strays.items() if ids}
@@ -58,4 +64,6 @@ def test_render_linked_doc_is_a_fixed_point() -> None:
     tests = collect_story_tests()
     for doc_path in list_story_docs():
         linked = render_linked_doc(doc_path.read_text(encoding="utf-8"), tests)
-        assert linked == render_linked_doc(linked, tests), f"render_linked_doc keeps rewriting its own output for {doc_path.name}"
+        assert linked == render_linked_doc(linked, tests), (
+            f"render_linked_doc keeps rewriting its own output for {doc_path.name}"
+        )

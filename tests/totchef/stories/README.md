@@ -90,7 +90,13 @@ snapshot can't pin — a `local:<path>` origin, a temp path, a timestamp.
 
 ```python
 def test_up_runs_the_apply_when_state_differs(recipe, terminal, totchef):
-    recipe.declares("bash", "deep_sleep", current_state="cat /sys/power/mem_sleep", desired_state="deep", apply="echo deep > /sys/power/mem_sleep")
+    recipe.declares(
+        "bash",
+        "deep_sleep",
+        current_state="cat /sys/power/mem_sleep",
+        desired_state="deep",
+        apply="echo deep > /sys/power/mem_sleep",
+    )
     terminal.arrange("cat /sys/power/mem_sleep", "s2idle [deep]")
 
     report = totchef.up()

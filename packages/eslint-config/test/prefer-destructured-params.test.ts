@@ -35,13 +35,20 @@ ruleTester.run('prefer-destructured-params', preferDestructuredParams, {
       output: 'const obj = { read({ value }: Foo) { return value; } };',
     },
     {
-      code: ['const getName = (node: Foo) => {', '  const parent = node.parent;', '  return parent.id;', '};'].join('\n'),
+      code: ['const getName = (node: Foo) => {', '  const parent = node.parent;', '  return parent.id;', '};'].join(
+        '\n',
+      ),
       errors: [{ messageId: 'destructureParameter' }],
       name: 'const alias whose name already matches the property is absorbed',
       output: ['const getName = ({ parent }: Foo) => {', '  return parent.id;', '};'].join('\n'),
     },
     {
-      code: ['const check = (node: Foo) => {', '  const decl = node.parent;', '  return decl.type && decl.id;', '};'].join('\n'),
+      code: [
+        'const check = (node: Foo) => {',
+        '  const decl = node.parent;',
+        '  return decl.type && decl.id;',
+        '};',
+      ].join('\n'),
       errors: [{ messageId: 'destructureParameter' }],
       name: 'const alias under a different name is absorbed and its references are renamed to the property',
       output: ['const check = ({ parent }: Foo) => {', '  return parent.type && parent.id;', '};'].join('\n'),
@@ -76,7 +83,9 @@ ruleTester.run('prefer-destructured-params', preferDestructuredParams, {
       ].join('\n'),
     },
     {
-      code: ['const collide = (node: Foo) => {', '  const parent = 1;', '  return node.parent + parent;', '};'].join('\n'),
+      code: ['const collide = (node: Foo) => {', '  const parent = 1;', '  return node.parent + parent;', '};'].join(
+        '\n',
+      ),
       errors: [{ messageId: 'destructureParameterNoFix' }],
       name: 'a property-only parameter still reports when destructuring would collide with a function-scoped local, but offers no autofix',
     },

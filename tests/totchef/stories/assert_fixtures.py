@@ -18,7 +18,9 @@ if TYPE_CHECKING:
     type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 
 SOFT_FAIL_EXIT = 75  # totchef's public soft-failure exit code (stories §1.1.3) — asserted as a contract, not imported
-MIN_NODE_ROW_FIELDS = 2  # a data row is `node,before,current,latest,action`; identity + outcome need at least this many comma-fields
+MIN_NODE_ROW_FIELDS = (
+    2  # a data row is `node,before,current,latest,action`; identity + outcome need at least this many comma-fields
+)
 
 
 class TerminalAssertions:
@@ -27,11 +29,15 @@ class TerminalAssertions:
     commands: list[RanCommand]
 
     def expect_ran(self, match: str) -> None:
-        assert any(match in command.line for command in self.commands), f"expected a command matching {match!r}, but only ran:\n{self._ran_lines()}"
+        assert any(match in command.line for command in self.commands), (
+            f"expected a command matching {match!r}, but only ran:\n{self._ran_lines()}"
+        )
 
     def expect_not_ran(self, match: str) -> None:
         offenders = [command.line for command in self.commands if match in command.line]
-        assert not offenders, f"expected no command matching {match!r}, but ran:\n" + "\n".join(f"  {line}" for line in offenders)
+        assert not offenders, f"expected no command matching {match!r}, but ran:\n" + "\n".join(
+            f"  {line}" for line in offenders
+        )
 
     def count(self, match: str) -> int:
         """How many run/stream commands matched `match` — for asserting a step ran exactly once (a bootstrap) or fanned out per package."""
@@ -56,7 +62,9 @@ class HttpAssertions:
     timeouts: list[object]
 
     def expect_fetched(self, match: str) -> None:
-        assert any(match in url for url in self.requests), f"expected a fetch matching {match!r}, but only fetched: {self.requests or '(nothing)'}"
+        assert any(match in url for url in self.requests), (
+            f"expected a fetch matching {match!r}, but only fetched: {self.requests or '(nothing)'}"
+        )
 
     def expect_bounded_timeouts(self) -> None:
         """Every fetch must carry a positive timeout, so a stalled upstream raises instead of hanging the probe/run forever."""
@@ -78,7 +86,9 @@ class LintReport:
     def assert_rejected(self, snippet: str = "") -> None:
         """Assert the operator's recipe is refused at lint, optionally carrying `snippet` in the message that tells them how to fix it."""
         assert self.rejected, "expected the recipe to be rejected at lint, but it validated"
-        assert snippet in self.message, f"recipe was rejected, but the message {self.message!r} did not mention {snippet!r}"
+        assert snippet in self.message, (
+            f"recipe was rejected, but the message {self.message!r} did not mention {snippet!r}"
+        )
 
 
 SGR_CODES = {
@@ -126,16 +136,22 @@ class RunReport:
         order = list(self.rows)
         assert earlier in order, f"no report row for {earlier!r}; saw {order}"
         assert later in order, f"no report row for {later!r}; saw {order}"
-        assert order.index(earlier) < order.index(later), f"expected {earlier!r} to run before {later!r}, but the report ordered them {order}"
+        assert order.index(earlier) < order.index(later), (
+            f"expected {earlier!r} to run before {later!r}, but the report ordered them {order}"
+        )
 
     def assert_colored(self, text: str, color: str) -> None:
         """Assert that on a terminal the report renders `text` in `color` (the operator sees a color-coded table, not the plain TOON in `report`)."""
         needle = f"\x1b[{SGR_CODES[color]}m{text}"
-        assert needle in self.terminal_report, f"expected {text!r} colored {color!r} in the terminal report, but got:\n{self.terminal_report!r}"
+        assert needle in self.terminal_report, (
+            f"expected {text!r} colored {color!r} in the terminal report, but got:\n{self.terminal_report!r}"
+        )
 
     def assert_logged(self, snippet: str) -> None:
         """Assert a line the operator would see scrolled past — guidance, a failure reason, or a "Writing" notice — was logged during the run."""
-        assert snippet in self.logs, f"expected a log line containing {snippet!r}, but the run logged:\n{self.logs or '(nothing)'}"
+        assert snippet in self.logs, (
+            f"expected a log line containing {snippet!r}, but the run logged:\n{self.logs or '(nothing)'}"
+        )
 
     def assert_succeeded(self) -> None:
         assert self.exit_code == 0, f"expected success (exit 0), got exit {self.exit_code}"
@@ -147,7 +163,9 @@ class RunReport:
         assert snippet in refusal, f"run was rejected, but the message {refusal!r} did not mention {snippet!r}"
 
     def assert_soft_failed(self) -> None:
-        assert self.exit_code == SOFT_FAIL_EXIT, f"expected soft failure (exit {SOFT_FAIL_EXIT}), got exit {self.exit_code}"
+        assert self.exit_code == SOFT_FAIL_EXIT, (
+            f"expected soft failure (exit {SOFT_FAIL_EXIT}), got exit {self.exit_code}"
+        )
 
     def assert_hard_failed(self) -> None:
         assert self.exit_code == 1, f"expected hard failure (exit 1), got exit {self.exit_code}"
@@ -172,7 +190,9 @@ class CliResult:
         assert self.exit_code != 0, f"expected the command to fail, but it exited 0:\n{self.output}"
 
     def assert_prints(self, snippet: str) -> None:
-        assert snippet in self.output, f"expected the output to contain {snippet!r}, but it printed:\n{self.output or '(nothing)'}"
+        assert snippet in self.output, (
+            f"expected the output to contain {snippet!r}, but it printed:\n{self.output or '(nothing)'}"
+        )
 
     def assert_output(self, expected: str) -> None:
         """Assert the whole output matches `expected`, a full snapshot. Ignores blank lines/indentation so it can sit flush under the call."""

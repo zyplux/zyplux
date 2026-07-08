@@ -23,17 +23,24 @@ const parsePrintedConfig = (printedConfig: string) => parseJson(printedConfig, P
 describe('2. Dumping the fully resolved eslint config to a committed rules snapshot', () => {
   describe('2.1 keeping the committed snapshot in sync with the live resolved config', () => {
     test('2.1.1 matches the resolved config', { timeout: printConfigTimeoutMs }, ({ printedConfig }) => {
-      expect(applyRootDirPlaceholder(parsePrintedConfig(printedConfig))).toStrictEqual(readJsonSync(rulesUrl, PrintedConfigSchema));
+      expect(applyRootDirPlaceholder(parsePrintedConfig(printedConfig))).toStrictEqual(
+        readJsonSync(rulesUrl, PrintedConfigSchema),
+      );
     });
   });
 
   describe('2.2 keeping the snapshot portable across checkouts', () => {
-    test('2.2.1 replaces the absolute tsconfig root path with a stable placeholder', { timeout: printConfigTimeoutMs }, ({ printedConfig }) => {
-      const liveTsconfigRootDir = parsePrintedConfig(printedConfig).languageOptions.parserOptions.tsconfigRootDir;
-      const snapshotTsconfigRootDir = readJsonSync(rulesUrl, PrintedConfigSchema).languageOptions.parserOptions.tsconfigRootDir;
+    test(
+      '2.2.1 replaces the absolute tsconfig root path with a stable placeholder',
+      { timeout: printConfigTimeoutMs },
+      ({ printedConfig }) => {
+        const liveTsconfigRootDir = parsePrintedConfig(printedConfig).languageOptions.parserOptions.tsconfigRootDir;
+        const snapshotTsconfigRootDir = readJsonSync(rulesUrl, PrintedConfigSchema).languageOptions.parserOptions
+          .tsconfigRootDir;
 
-      expect(path.isAbsolute(liveTsconfigRootDir)).toBe(true);
-      expect(snapshotTsconfigRootDir).toBe(rootDirPlaceholder);
-    });
+        expect(path.isAbsolute(liveTsconfigRootDir)).toBe(true);
+        expect(snapshotTsconfigRootDir).toBe(rootDirPlaceholder);
+      },
+    );
   });
 });

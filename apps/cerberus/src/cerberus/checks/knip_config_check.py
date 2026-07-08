@@ -123,7 +123,9 @@ def _check_workspace_exemptions(repo: Repo, ctx: Context, parsed: dict[str, Any]
         res.fail(f'{PROD_CONFIG} "workspaces" must be a JSON object')
     exempted, malformed = _workspace_exemptions(workspaces)
     if malformed:
-        res.fail(f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: {", ".join(sorted(malformed))}')
+        res.fail(
+            f'{PROD_CONFIG} workspaces entries must be exactly {{"includeEntryExports": false}}: {", ".join(sorted(malformed))}'
+        )
     missing = sorted(published - exempted)
     if missing:
         res.fail(f"{PROD_CONFIG} workspaces must exempt published target(s): {', '.join(missing)}")

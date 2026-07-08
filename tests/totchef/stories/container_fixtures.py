@@ -61,7 +61,9 @@ def apply_in_container(container_image: str) -> Callable[[str, list[str]], Conta
 
     def apply(recipe: str, artifacts: list[str]) -> ContainerRun:
         recipe_b64 = base64.b64encode(recipe.encode()).decode()
-        probes = "\n".join(f'stat -c "OWNER %U {path}" "{path}" 2>/dev/null || echo "MISSING {path}"' for path in artifacts)
+        probes = "\n".join(
+            f'stat -c "OWNER %U {path}" "{path}" 2>/dev/null || echo "MISSING {path}"' for path in artifacts
+        )
         script = (
             "set -e\n"
             f"echo {recipe_b64} | base64 -d > ~/recipe.toml\n"
@@ -70,7 +72,13 @@ def apply_in_container(container_image: str) -> Callable[[str, list[str]], Conta
             f"{probes}\n"
             'for log in ~/.local/state/totchef/logs/*.log; do stat -c "LOG %U" "$log"; done 2>/dev/null || true\n'
         )
-        proc = subprocess.run([binary, "run", "--rm", container_image, "bash", "-lc", script], capture_output=True, text=True, env=CLEAN_ENV, check=False)
+        proc = subprocess.run(
+            [binary, "run", "--rm", container_image, "bash", "-lc", script],
+            capture_output=True,
+            text=True,
+            env=CLEAN_ENV,
+            check=False,
+        )
         return _parse(proc.stdout + proc.stderr)
 
     return apply
