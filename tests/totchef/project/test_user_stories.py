@@ -1,4 +1,7 @@
-"""Meta-test: numbered story docs' h3 headers and tests/stories test functions stay in lockstep; each h1 doc title links to its section's test file."""
+(
+    """Meta-test: numbered story docs' h3 headers and tests/stories test functions stay """
+    """in lockstep; each h1 doc title links to its section's test file."""
+)
 
 from project_paths import list_story_docs
 from sync_story_links import Header, collect_story_tests, parse_headers, render_linked_doc
@@ -23,8 +26,10 @@ def test_every_header_has_a_story_test() -> None:
 
 def word_sequence(title: str) -> list[str]:
     (
-        """A title's comparable words. A header's prose may join words with a hyphen ("non-interactive") that the test name can only spell as separate """
-        """underscore tokens ("non interactive"), so treat a hyphen as the same word break — without it the two spellings read as drift."""
+        """A title's comparable words. A header's prose may join words with a hyphen"""
+        """ ("non-interactive") that the test name can only spell as separate """
+        """underscore tokens ("non interactive"), so treat a hyphen as the same word"""
+        """ break — without it the two spellings read as drift."""
     )
     return title.replace("-", " ").split()
 

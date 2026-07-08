@@ -14,7 +14,11 @@ type RunPyrefly = Callable[..., CheckResult]
 
 CHECK_ID = "pyrefly-config"
 
-_PYREFLY_STRICT = 'preset = "strict"\n\nproject-includes = ["apps/cerberus/src", "tests/cerberus"]\nsearch-path = ["apps/cerberus/src"]\n'
+_PYREFLY_STRICT = (
+    'preset = "strict"\n\n'
+    'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
+    'search-path = ["apps/cerberus/src"]\n'
+)
 
 _PYREFLY_TESTS_RELAXED = (
     _PYREFLY_STRICT + '\n[[sub-config]]\nmatches = "tests/cerberus/**"\n\n[sub-config.errors]\nimplicit-any = false\n'

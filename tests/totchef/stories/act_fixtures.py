@@ -1,4 +1,7 @@
-"""Act half of the prose framework: drives totchef via the real CLI, in-process, so arrange_fixtures' doubles apply; reads back the log."""
+(
+    """Act half of the prose framework: drives totchef via the real CLI, in-process, so """
+    """arrange_fixtures' doubles apply; reads back the log."""
+)
 
 from typing import TYPE_CHECKING
 
@@ -22,7 +25,10 @@ def _section(text: str, start: str, end: str) -> str:
 
 
 def _last_report(log_text: str) -> tuple[str, str]:
-    """The full node table and terse view from the last report block (`up` logs a preview, then the converging report that ran)."""
+    (
+        """The full node table and terse view from the last report block (`up` logs a preview, """
+        """then the converging report that ran)."""
+    )
     if REPORT_MARKER not in log_text:
         return "", ""
     block = log_text.rsplit(REPORT_MARKER, 1)[-1]
@@ -30,7 +36,10 @@ def _last_report(log_text: str) -> tuple[str, str]:
 
 
 class Totchef:
-    """The user action: runs a real `totchef <command>`. `plan`/`up` hand back a RunReport; `lint` reports whether the recipe was accepted."""
+    (
+        """The user action: runs a real `totchef <command>`. `plan`/`up` hand back a RunReport; """
+        """`lint` reports whether the recipe was accepted."""
+    )
 
     def __init__(self, recipe: RecipeBuilder, workdir: Path) -> None:
         self.recipe = recipe
@@ -47,7 +56,10 @@ class Totchef:
         return self._report(result, log_text)
 
     def lint(self) -> LintReport:
-        """Drive `totchef lint` and hand back what it decided: validated, or rejected with the operator-facing message."""
+        (
+            """Drive `totchef lint` and hand back what it decided: validated, or rejected with """
+            """the operator-facing message."""
+        )
         result, _ = self._invoke("lint")
         return LintReport(rejected=result.exit_code != 0, message=result.output)
 
@@ -63,7 +75,10 @@ class Totchef:
         )
 
     def _invoke(self, command: str, *, color: bool = False) -> tuple[CliResult, str]:
-        """Write the recipe to a TOML file and run `totchef <command>` inline, capturing stdout, stderr, exit code, and the log file."""
+        (
+            """Write the recipe to a TOML file and run `totchef <command>` inline, capturing """
+            """stdout, stderr, exit code, and the log file."""
+        )
         self._runs += 1
         recipe_path = self.workdir / f"recipe-{self._runs}.toml"
         recipe_path.write_text(tomli_w.dumps(self.recipe.config))
@@ -84,7 +99,10 @@ def totchef(recipe: RecipeBuilder, tmp_path: Path) -> Totchef:
 
 
 class Cli:
-    """The operator's command line: invokes `totchef <command>` (`where`, `lint`, `--version`, `--list-cooks`), capturing output and exit code."""
+    (
+        """The operator's command line: invokes `totchef <command>` (`where`, `lint`, """
+        """`--version`, `--list-cooks`), capturing output and exit code."""
+    )
 
     def __init__(self) -> None:
         self._runner = CliRunner()
@@ -101,7 +119,10 @@ def cli() -> Cli:
 
 @pytest.fixture
 def chef(tmp_path: Path) -> Callable[[RecipeBuilder], Totchef]:
-    """Run totchef against an independently arranged recipe, for a test exercising several recipes malformed differently. Pairs with `scenario`."""
+    (
+        """Run totchef against an independently arranged recipe, for a test exercising several """
+        """recipes malformed differently. Pairs with `scenario`."""
+    )
 
     def run(recipe: RecipeBuilder) -> Totchef:
         return Totchef(recipe, tmp_path)

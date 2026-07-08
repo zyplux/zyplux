@@ -1,4 +1,7 @@
-"""Assert half of the prose framework: the run report, plus assertion mixins for the system-boundary doubles. No production imports."""
+(
+    """Assert half of the prose framework: the run report, plus assertion mixins for the """
+    """system-boundary doubles. No production imports."""
+)
 
 import json
 import textwrap
@@ -24,7 +27,10 @@ MIN_NODE_ROW_FIELDS = (
 
 
 class TerminalAssertions:
-    """Assertion half of the bash double: verifies what the system handed to the shell. The arrange half (FakeTerminal) records each command into `commands`."""
+    (
+        """Assertion half of the bash double: verifies what the system handed to the shell. The """
+        """arrange half (FakeTerminal) records each command into `commands`."""
+    )
 
     commands: list[RanCommand]
 
@@ -40,15 +46,24 @@ class TerminalAssertions:
         )
 
     def count(self, match: str) -> int:
-        """How many run/stream commands matched `match` — for asserting a step ran exactly once (a bootstrap) or fanned out per package."""
+        (
+            """How many run/stream commands matched `match` — for asserting a step ran exactly """
+            """once (a bootstrap) or fanned out per package."""
+        )
         return sum(match in command.line for command in self.commands)
 
     def stdin_for(self, match: str) -> bytes | str | None:
-        """The stdin piped to the first command matching `match` — e.g. an installer script piped into `bash -s`, or key bytes piped into `gpg --dearmor`."""
+        (
+            """The stdin piped to the first command matching `match` — e.g. an installer script """
+            """piped into `bash -s`, or key bytes piped into `gpg --dearmor`."""
+        )
         return next((command.stdin for command in self.commands if match in command.line), None)
 
     def cwd_for(self, match: str) -> Path | None:
-        """The working dir the first command matching `match` ran in — e.g. piped to `bash` from `$HOME` so a relative bin dir resolves under `~`."""
+        (
+            """The working dir the first command matching `match` ran in — e.g. piped to `bash` """
+            """from `$HOME` so a relative bin dir resolves under `~`."""
+        )
         return next((command.cwd for command in self.commands if match in command.line), None)
 
     def _ran_lines(self) -> str:
@@ -56,7 +71,10 @@ class TerminalAssertions:
 
 
 class HttpAssertions:
-    """Assertion half of the network double: verifies what was fetched. The arrange half (FakeHttp) records URLs and each timeout."""
+    (
+        """Assertion half of the network double: verifies what was fetched. The arrange half """
+        """(FakeHttp) records URLs and each timeout."""
+    )
 
     requests: list[str]
     timeouts: list[object]
@@ -67,7 +85,10 @@ class HttpAssertions:
         )
 
     def expect_bounded_timeouts(self) -> None:
-        """Every fetch must carry a positive timeout, so a stalled upstream raises instead of hanging the probe/run forever."""
+        (
+            """Every fetch must carry a positive timeout, so a stalled upstream raises instead of """
+            """hanging the probe/run forever."""
+        )
         message = f"every fetch must pass a positive timeout; got: {self.timeouts or '(no fetches)'}"
         assert self.timeouts, message
         assert all(isinstance(t, (int, float)) and t > 0 for t in self.timeouts), message
@@ -75,7 +96,10 @@ class HttpAssertions:
 
 @dataclass
 class LintReport:
-    """What `lint` produced: whether the recipe validated, and the message an operator would see. Mirrors how `plan`/`up` return a RunReport."""
+    (
+        """What `lint` produced: whether the recipe validated, and the message an operator would """
+        """see. Mirrors how `plan`/`up` return a RunReport."""
+    )
 
     rejected: bool
     message: str = ""
@@ -84,7 +108,10 @@ class LintReport:
         assert not self.rejected, f"expected the recipe to validate, but lint rejected it:\n{self.message}"
 
     def assert_rejected(self, snippet: str = "") -> None:
-        """Assert the operator's recipe is refused at lint, optionally carrying `snippet` in the message that tells them how to fix it."""
+        (
+            """Assert the operator's recipe is refused at lint, optionally carrying `snippet` in """
+            """the message that tells them how to fix it."""
+        )
         assert self.rejected, "expected the recipe to be rejected at lint, but it validated"
         assert snippet in self.message, (
             f"recipe was rejected, but the message {self.message!r} did not mention {snippet!r}"
@@ -101,7 +128,10 @@ SGR_CODES = {
 
 
 def _parse_node_rows(full_table: str) -> dict[str, str]:
-    """Map cook-node -> action from the log's full TOON table. Skips the header and blank lines; a row is `node,before,current,latest,action`."""
+    (
+        """Map cook-node -> action from the log's full TOON table. Skips the header and blank """
+        """lines; a row is `node,before,current,latest,action`."""
+    )
     rows: dict[str, str] = {}
     for line in full_table.splitlines():
         stripped = line.strip()
@@ -115,7 +145,10 @@ def _parse_node_rows(full_table: str) -> dict[str, str]:
 
 @dataclass
 class RunReport:
-    """What `plan`/`up` showed: the terse `report`, the scrolled `logs`, the colored `terminal_report`, and the log file's `full_table`."""
+    (
+        """What `plan`/`up` showed: the terse `report`, the scrolled `logs`, the colored """
+        """`terminal_report`, and the log file's `full_table`."""
+    )
 
     exit_code: int
     report: str = ""
@@ -132,7 +165,10 @@ class RunReport:
         assert self.rows[node] == action, f"expected {node!r} to show {action!r}, but it showed {self.rows[node]!r}"
 
     def assert_ran_before(self, earlier: str, later: str) -> None:
-        """Assert the report lists `earlier` above `later`: the applied order, so a dependency shows resolved before the resource needing it."""
+        (
+            """Assert the report lists `earlier` above `later`: the applied order, so a """
+            """dependency shows resolved before the resource needing it."""
+        )
         order = list(self.rows)
         assert earlier in order, f"no report row for {earlier!r}; saw {order}"
         assert later in order, f"no report row for {later!r}; saw {order}"
@@ -141,14 +177,20 @@ class RunReport:
         )
 
     def assert_colored(self, text: str, color: str) -> None:
-        """Assert that on a terminal the report renders `text` in `color` (the operator sees a color-coded table, not the plain TOON in `report`)."""
+        (
+            """Assert that on a terminal the report renders `text` in `color` (the operator sees """
+            """a color-coded table, not the plain TOON in `report`)."""
+        )
         needle = f"\x1b[{SGR_CODES[color]}m{text}"
         assert needle in self.terminal_report, (
             f"expected {text!r} colored {color!r} in the terminal report, but got:\n{self.terminal_report!r}"
         )
 
     def assert_logged(self, snippet: str) -> None:
-        """Assert a line the operator would see scrolled past — guidance, a failure reason, or a "Writing" notice — was logged during the run."""
+        (
+            """Assert a line the operator would see scrolled past — guidance, a failure reason, """
+            """or a "Writing" notice — was logged during the run."""
+        )
         assert snippet in self.logs, (
             f"expected a log line containing {snippet!r}, but the run logged:\n{self.logs or '(nothing)'}"
         )
@@ -157,7 +199,10 @@ class RunReport:
         assert self.exit_code == 0, f"expected success (exit 0), got exit {self.exit_code}"
 
     def assert_rejected(self, snippet: str = "") -> None:
-        """Assert the run was refused at validation — nonzero exit carrying `snippet` in the lint message, mirroring LintReport.assert_rejected."""
+        (
+            """Assert the run was refused at validation — nonzero exit carrying `snippet` in the """
+            """lint message, mirroring LintReport.assert_rejected."""
+        )
         refusal = self.terminal_report + self.logs
         assert self.exit_code != 0, "expected the run to be rejected at validation, but it exited 0"
         assert snippet in refusal, f"run was rejected, but the message {refusal!r} did not mention {snippet!r}"
@@ -173,7 +218,10 @@ class RunReport:
 
 @dataclass
 class CliResult:
-    """What a `totchef <command>` showed: stdout, stderr, exit code. `output` is both together, as a terminal would scroll them."""
+    (
+        """What a `totchef <command>` showed: stdout, stderr, exit code. `output` is both """
+        """together, as a terminal would scroll them."""
+    )
 
     stdout: str
     exit_code: int
@@ -195,13 +243,19 @@ class CliResult:
         )
 
     def assert_output(self, expected: str) -> None:
-        """Assert the whole output matches `expected`, a full snapshot. Ignores blank lines/indentation so it can sit flush under the call."""
+        (
+            """Assert the whole output matches `expected`, a full snapshot. Ignores blank """
+            """lines/indentation so it can sit flush under the call."""
+        )
         actual = self.output.strip("\n")
         wanted = textwrap.dedent(expected).strip("\n")
         assert actual == wanted, f"output mismatch:\n--- expected ---\n{wanted}\n--- actual ---\n{actual}"
 
     def assert_lists(self, section: str, *, scope: str = "", origin: str = "") -> None:
-        """Assert the listing has a row for `section` with scope/origin — for text with a run-varying value a full snapshot can't pin."""
+        (
+            """Assert the listing has a row for `section` with scope/origin — for text with a """
+            """run-varying value a full snapshot can't pin."""
+        )
         line = next((line for line in self.output.splitlines() if section in line), None)
         assert line is not None, f"expected a row for {section!r}, but it listed:\n{self.output}"
         assert scope in line, f"expected {section!r} to list scope {scope!r}, but its row was {line!r}"
@@ -210,7 +264,10 @@ class CliResult:
 
 @pytest.fixture
 def read_json() -> Callable[[Path], JsonValue]:
-    """Read a config file a cook produced and parse it as data, so a test asserts on the resulting values, not the exact formatting an implementation emits."""
+    (
+        """Read a config file a cook produced and parse it as data, so a test asserts on the """
+        """resulting values, not the exact formatting an implementation emits."""
+    )
 
     def read(path: Path) -> JsonValue:
         return json.loads(Path(path).read_text(encoding="utf-8"))
