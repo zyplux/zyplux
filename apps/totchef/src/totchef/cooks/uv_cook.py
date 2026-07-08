@@ -74,7 +74,7 @@ class UvCook(PackageListCook):
         logger.info("Running {count} uv tool action(s) in parallel", count=len(work))
         tag_width = max(len(name) for _, name in work)
         failures: list[str] = []
-        with ThreadPoolExecutor(max_workers=len(work)) as pool:
+        with ThreadPoolExecutor() as pool:
             pending = {pool.submit(self._run_one, uv, verb, name, tag_width): name for verb, name in work}
             for future in as_completed(pending):
                 name = pending[future]

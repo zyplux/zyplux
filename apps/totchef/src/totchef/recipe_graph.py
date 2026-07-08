@@ -53,24 +53,32 @@ class Node:
     depends_on: tuple[str, ...]
 
 
-def _str_list(value: RecipeValue | None, *, default: list[str]) -> list[str]:
-    """A `depends_on` value coerced to strings by schema; falls back only when absent — empty is a real choice."""
+def _str_list(value: RecipeValue | None, *, name: str, default: list[str]) -> list[str]:
+    """A `depends_on` value, which must be a list of strings; falls back only when absent — empty is a real choice."""
     if value is None:
         return default
-    return [item for item in value if isinstance(item, str)] if isinstance(value, list) else default
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        sys.exit(f"ERROR: recipe.toml key '{name}' must be a list of strings, got {value!r}")
+    return [item for item in value if isinstance(item, str)]
 
 
-def _bool(value: RecipeValue | None, *, default: bool) -> bool:
-    """A `needs_root` value coerced to the bool it always is by schema, same rationale as `_str_list`."""
-    return value if isinstance(value, bool) else default
+def _bool(value: RecipeValue | None, *, name: str, default: bool) -> bool:
+    """A `needs_root` value, which must be a bool; falls back only when absent, same rationale as `_str_list`."""
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        sys.exit(f"ERROR: recipe.toml key '{name}' must be true or false, got {value!r}")
+    return value
 
 
 def build_nodes(config: RecipeConfig) -> dict[str, Node]:
     nodes: dict[str, Node] = {}
     for section, value in config.items():
         data = require_table(value, section)
-        sec_root = _bool(data.get("needs_root"), default=load_cook_class(section).needs_root)
-        sec_deps = _str_list(data.get("depends_on"), default=[])
+        sec_root = _bool(
+            data.get("needs_root"), name=f"[{section}].needs_root", default=load_cook_class(section).needs_root
+        )
+        sec_deps = _str_list(data.get("depends_on"), name=f"[{section}].depends_on", default=[])
         children = {k: v for k, v in data.items() if k not in META_KEYS and isinstance(v, dict)}
         if children:
             for entry, entry_data in children.items():
@@ -79,8 +87,8 @@ def build_nodes(config: RecipeConfig) -> dict[str, Node]:
                     node_id,
                     section,
                     entry,
-                    _bool(entry_data.get("needs_root"), default=sec_root),
-                    tuple(_str_list(entry_data.get("depends_on"), default=sec_deps)),
+                    _bool(entry_data.get("needs_root"), name=f"[{node_id}].needs_root", default=sec_root),
+                    tuple(_str_list(entry_data.get("depends_on"), name=f"[{node_id}].depends_on", default=sec_deps)),
                 )
         else:
             nodes[section] = Node(section, section, None, sec_root, tuple(sec_deps))

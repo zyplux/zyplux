@@ -144,7 +144,7 @@ def fetch_latest_concurrent(names: list[str], fetch_one: Callable[[str], str | N
     if not names:
         return {}
     latest: dict[str, str | None] = {}
-    with ThreadPoolExecutor(max_workers=len(names)) as pool:
+    with ThreadPoolExecutor() as pool:
         pending = {pool.submit(fetch_one, name): name for name in names}
         for future in as_completed(pending):
             name = pending[future]

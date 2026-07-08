@@ -92,6 +92,17 @@ def test_10_2_4_remove_how_requires_remove_when(recipe: RecipeBuilder, totchef: 
     totchef.lint().assert_rejected("remove_when")
 
 
+def test_10_2_5_needs_root_and_depends_on_reject_the_wrong_type(
+    scenario: Callable[[], RecipeBuilder], chef: Callable[[RecipeBuilder], Totchef]
+) -> None:
+    """A `needs_root`/`depends_on` of the wrong type is rejected up front, not silently defaulted."""
+    chef(scenario().declares("bash", "a", apply="x", needs_root="true")).lint().assert_rejected("needs_root")
+
+    chef(scenario().declares("bash", "a", apply="x", depends_on="bash.b")).lint().assert_rejected("depends_on")
+
+    chef(scenario().declares("bash", "a", apply="x", depends_on=[1])).lint().assert_rejected("depends_on")
+
+
 # 10.3 Have cook contracts enforced statically
 
 

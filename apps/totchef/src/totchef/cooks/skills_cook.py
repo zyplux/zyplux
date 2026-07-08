@@ -399,7 +399,7 @@ class SkillsCook(VersionedCook):
                 "Installing/refreshing skills from {count} repo(s): {repos}", count=len(repos), repos=", ".join(repos)
             )
             tag_width = max(len(repo) for repo in repos)
-            with ThreadPoolExecutor(max_workers=len(repos)) as pool:
+            with ThreadPoolExecutor() as pool:
                 pending = {pool.submit(self._add_one, bunx, repo, tag_width): repo for repo in repos}
                 for future in as_completed(pending):
                     repo = pending[future]

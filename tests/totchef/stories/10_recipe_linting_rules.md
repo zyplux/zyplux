@@ -52,6 +52,12 @@ privilege), and the error says so.
 `remove_how` without `remove_when` is an orphan instruction; lint rejects it
 naming the missing condition.
 
+### 10.2.5 needs root and depends on reject the wrong type
+
+A `needs_root`/`depends_on` of the wrong type — a string where a bool
+belongs, a bare string or a non-string element where a list of strings
+belongs — is rejected up front, not silently defaulted.
+
 ## 10.3 Have cook contracts enforced statically
 
 > As an operator, I want each cook's own entry rules enforced at lint time —
