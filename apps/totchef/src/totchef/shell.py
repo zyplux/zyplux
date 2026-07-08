@@ -1,5 +1,7 @@
-"""The single bash-execution chokepoint: every command goes through `run` (capture) or `stream`
-(live-logged); call module-qualified so tests can mock it."""
+(
+    """The single bash-execution chokepoint: every command goes through `run` (capture) or `stream` """
+    """(live-logged); call module-qualified so tests can mock it."""
+)
 
 import os
 import subprocess
@@ -11,8 +13,10 @@ from loguru import logger
 
 
 def _require_pipe[T](pipe: T | None, what: str) -> T:
-    """Narrow a Popen pipe attribute the call itself guaranteed (stdin=/stdout=PIPE); its absence is a
-    wiring bug, never a runtime condition."""
+    (
+        """Narrow a Popen pipe attribute the call itself guaranteed (stdin=/stdout=PIPE); its absence is a """
+        """wiring bug, never a runtime condition."""
+    )
     if pipe is None:
         msg = f"Popen did not provide a {what} stream despite requesting PIPE"
         raise RuntimeError(msg)
@@ -20,14 +24,18 @@ def _require_pipe[T](pipe: T | None, what: str) -> T:
 
 
 def resolve_workdir(cwd: Path | None) -> Path:
-    """Where a command runs: $HOME unless overridden, independent of totchef's invocation dir.
-    become_user repoints $HOME per forked cook."""
+    (
+        """Where a command runs: $HOME unless overridden, independent of totchef's invocation dir. """
+        """become_user repoints $HOME per forked cook."""
+    )
     return cwd if cwd is not None else Path.home()
 
 
 class RunOptions(TypedDict, total=False):
-    """Knobs `run` takes beyond the command and `text` (plain, so Literal overloads discriminate the
-    return type); bundled to stay under the arg limit."""
+    (
+        """Knobs `run` takes beyond the command and `text` (plain, so Literal overloads discriminate the """
+        """return type); bundled to stay under the arg limit."""
+    )
 
     stdin: bytes | str | None
     check: bool
@@ -43,8 +51,10 @@ def run(*cmd: str, text: Literal[False], **options: Unpack[RunOptions]) -> subpr
 def run(
     *cmd: str, text: bool = True, **options: Unpack[RunOptions]
 ) -> subprocess.CompletedProcess[str] | subprocess.CompletedProcess[bytes]:
-    """Run a command to completion, capturing stdout+stderr; the one-shot half of the bash boundary.
-    `text=False` keeps bytes (a GPG de-armor)."""
+    (
+        """Run a command to completion, capturing stdout+stderr; the one-shot half of the bash boundary. """
+        """`text=False` keeps bytes (a GPG de-armor)."""
+    )
     note = options.get("note", "")
     if note:
         logger.info(note)
@@ -60,8 +70,10 @@ def run(
 
 
 class StreamOptions(TypedDict, total=False):
-    """The independent knobs `stream` takes beyond `cmd`/`tag`; bundled here so the function signature
-    itself stays within the positional-argument limit."""
+    (
+        """The independent knobs `stream` takes beyond `cmd`/`tag`; bundled here so the function signature """
+        """itself stays within the positional-argument limit."""
+    )
 
     note: str
     stdin: bytes | None
@@ -70,8 +82,10 @@ class StreamOptions(TypedDict, total=False):
 
 
 def stream(cmd: list[str], tag: str = "", **options: Unpack[StreamOptions]) -> None:
-    """Run `cmd`, streaming merged stdout/stderr through logger.info; raises CalledProcessError on
-    non-zero unless check=False. $HOME unless `cwd` overrides."""
+    (
+        """Run `cmd`, streaming merged stdout/stderr through logger.info; raises CalledProcessError on """
+        """non-zero unless check=False. $HOME unless `cwd` overrides."""
+    )
     prefix = f"{tag} " if tag else ""
     note = options.get("note", "")
     if note:

@@ -1,5 +1,7 @@
-"""Lint recipe.toml before chef runs it: every section resolves to a cook, the depends_on graph is
-acyclic, and every slice builds its cook."""
+(
+    """Lint recipe.toml before chef runs it: every section resolves to a cook, the depends_on graph is """
+    """acyclic, and every slice builds its cook."""
+)
 
 import sys
 from graphlib import CycleError, TopologicalSorter
@@ -21,8 +23,10 @@ if TYPE_CHECKING:
 
 
 def find_schema_problems(config: RecipeConfig, nodes: dict[str, Node]) -> list[str]:
-    """Validate each node via `build_cook` — the exact path a run takes — collecting Pydantic errors as
-    `[node] loc: message` lines (empty == valid)."""
+    (
+        """Validate each node via `build_cook` — the exact path a run takes — collecting Pydantic errors as """
+        """`[node] loc: message` lines (empty == valid)."""
+    )
     problems: list[str] = []
     for node_id, node in nodes.items():
         try:
@@ -35,15 +39,19 @@ def find_schema_problems(config: RecipeConfig, nodes: dict[str, Node]) -> list[s
 
 
 def rule_sections_resolve_to_cooks(nodes: dict[str, Node]) -> None:
-    """Every section names a cook module that imports to exactly one cook class (load_cook_class exits on
-    a missing or ambiguous one)."""
+    (
+        """Every section names a cook module that imports to exactly one cook class (load_cook_class exits on """
+        """a missing or ambiguous one)."""
+    )
     for section in {node.section for node in nodes.values()}:
         load_cook_class(section)
 
 
 def rule_dependencies_acyclic(nodes: dict[str, Node]) -> None:
-    """The depends_on graph resolves and topo-sorts (build_node_graph exits on an unknown or self
-    dependency; a cycle would deadlock the schedule)."""
+    (
+        """The depends_on graph resolves and topo-sorts (build_node_graph exits on an unknown or self """
+        """dependency; a cycle would deadlock the schedule)."""
+    )
     try:
         list(TopologicalSorter(build_node_graph(nodes)).static_order())
     except CycleError as exc:
@@ -55,8 +63,10 @@ def _section_needs_root(config: RecipeConfig, section: str) -> bool:
 
 
 def rule_root_only_on_leaves(config: RecipeConfig, nodes: dict[str, Node]) -> None:
-    """needs_root must be granted per leaf, never on a subtable header — build_nodes folds a header's
-    needs_root onto every entry, granting root wholesale."""
+    (
+        """needs_root must be granted per leaf, never on a subtable header — build_nodes folds a header's """
+        """needs_root onto every entry, granting root wholesale."""
+    )
     sections: dict[str, list[Node]] = {}
     for node in nodes.values():
         sections.setdefault(node.section, []).append(node)
