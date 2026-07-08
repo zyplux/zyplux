@@ -1,6 +1,6 @@
 import type { CliRunner, ConsoleCapture, FetchFake, ShellFake, TempDir } from '@zyplux/tests-fixtures';
 
-import { runCz } from '@zyplux/cz';
+import { readVersion, runCz, VersionSourceSchema } from '@zyplux/cz';
 import { cliTest, createCliRunner, notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
 import { parseJson, parseToml } from '@zyplux/util';
 import { execFileSync } from 'node:child_process';
@@ -70,26 +70,8 @@ const BENIGN_WRITE_COMMANDS = [
   'git push',
 ];
 
-const VersionSourceSchema = z.union([
-  z.object({ file: z.string(), json: z.string() }),
-  z.object({ file: z.string(), regex: z.string() }),
-]);
-
 const TargetEntrySchema = z.object({ label: z.string(), version: VersionSourceSchema });
 const TargetManifestSchema = z.object({ target: z.array(TargetEntrySchema) });
-
-type VersionSource = z.infer<typeof VersionSourceSchema>;
-
-const readTargetVersion = async (source: VersionSource) => {
-  const text = await readFile(path.join(workspaceRoot, source.file), 'utf8');
-  if ('json' in source) {
-    const fields = parseJson(text, z.record(z.string(), z.unknown()));
-    return z.string().parse(fields[source.json]);
-  }
-  const version = new RegExp(source.regex, 'm').exec(text)?.[1];
-  if (version === undefined) throw new Error(`version regex matched nothing in ${source.file}`);
-  return version;
-};
 
 const CatalogSchema = z.array(z.string());
 
@@ -126,7 +108,7 @@ const findTargetFacts = async (label: string) => {
   if (target === undefined) throw new Error(`${label} target missing from release-targets.toml`);
   return {
     dir: path.join(workspaceRoot, path.dirname(target.version.file)),
-    version: await readTargetVersion(target.version),
+    version: await readVersion(workspaceRoot, target.version),
   };
 };
 

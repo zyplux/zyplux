@@ -6,7 +6,7 @@ import * as z from 'zod';
 const GhcrTokenSchema = z.object({ token: z.string() });
 const JsonFieldsSchema = z.record(z.string(), z.unknown());
 
-const VersionSourceSchema = z.union([
+export const VersionSourceSchema = z.union([
   z.object({ file: z.string(), json: z.string() }),
   z.object({ file: z.string(), regex: z.string() }),
 ]);
@@ -30,10 +30,10 @@ export type ReleaseTarget = {
   tagPrefix: string;
 };
 
+export type VersionSource = z.infer<typeof VersionSourceSchema>;
 type TargetSpec = z.infer<typeof TargetSchema>;
-type VersionSource = z.infer<typeof VersionSourceSchema>;
 
-const readVersion = async (repoRoot: string, source: VersionSource) => {
+export const readVersion = async (repoRoot: string, source: VersionSource) => {
   const text = await readFile(path.join(repoRoot, source.file), 'utf8');
   if ('json' in source) {
     const fields = parseJson(text, JsonFieldsSchema);
