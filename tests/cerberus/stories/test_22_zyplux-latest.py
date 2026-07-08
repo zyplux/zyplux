@@ -14,7 +14,10 @@ type RunCheckOnDisk = Callable[..., CheckResult]
 CHECK_ID = "zyplux-latest"
 
 NPM_UTIL_LOCK = '{"packages": {"@zyplux/util": ["@zyplux/util@0.2.0", {}, "sha512-x"]}}'
-NPM_WORKSPACE_LOCK = '{"workspaces": {"packages/util-ts": {"name": "@zyplux/util", "dependencies": {"@zyplux/tsconfig": "workspace:*"}}}}'
+NPM_WORKSPACE_LOCK = (
+    '{"workspaces": {"packages/util-ts": {"name": "@zyplux/util",'
+    ' "dependencies": {"@zyplux/tsconfig": "workspace:*"}}}}'
+)
 UV_CERBERUS_LOCK = """
 version = 1
 

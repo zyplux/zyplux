@@ -21,13 +21,22 @@ _SEAM_CLI = (
     ' "exports": {".": {"types": "./src/cli.ts", "default": "./src/cli.ts"}, "./package.json": "./package.json"}}'
 )
 _SEAM_CLI_NO_EXPORTS = '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}}'
-_SEAM_CLI_LEAKY = '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts", "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+_SEAM_CLI_LEAKY = (
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts",'
+    ' "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+)
 _SEAM_CLI_NO_ROOT = (
     '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {"./package.json": "./package.json"}}'
 )
-_SEAM_CLI_CONDITIONS = '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {"types": "./src/cli.ts", "default": "./src/cli.ts"}}'
+_SEAM_CLI_CONDITIONS = (
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, '
+    '"exports": {"types": "./src/cli.ts", "default": "./src/cli.ts"}}'
+)
 _SEAM_TESTS_PKG = '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts"}}'
-_SEAM_TESTS_PKG_SNEAKY = '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts", "#sneaky": "../../apps/cli/src/internal.ts"}}'
+_SEAM_TESTS_PKG_SNEAKY = (
+    '{"name": "@demo/tests-cli", "imports": {"#fixtures": "./fixtures.ts",'
+    ' "#sneaky": "../../apps/cli/src/internal.ts"}}'
+)
 _SEAM_CLEAN_STORY = "import path from 'node:path';\n\nimport { describe, expect, test } from '#fixtures';\n"
 _SEAM_APP_IMPORT_STORY = "import { runCli } from '@demo/cli';\n\nimport { test } from '#fixtures';\n"
 _SEAM_RELATIVE_ESCAPE_STORY = (
@@ -165,7 +174,8 @@ def test_20_3_3_fails_a_story_test_reaching_into_app_internals_via_a_relative_pa
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/cli/stories/1-first.test.ts: story test imports outside the fixtures seam — '../../../apps/cli/src/internal.ts'",
+            "tests/cli/stories/1-first.test.ts: story test imports outside the fixtures seam — "
+            "'../../../apps/cli/src/internal.ts'",
         )
     ]
 
@@ -182,6 +192,7 @@ def test_20_4_1_fails_an_imports_alias_that_escapes_the_test_package(
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/cli/package.json: imports alias escapes the test package — '#sneaky' -> '../../apps/cli/src/internal.ts'",
+            "tests/cli/package.json: imports alias escapes the test package — "
+            "'#sneaky' -> '../../apps/cli/src/internal.ts'",
         )
     ]

@@ -97,7 +97,8 @@ def test_19_3_2_fails_when_the_coverage_block_has_no_thresholds(
     assert result.findings == [
         finding(
             status.FAIL,
-            "vitest.config.ts `coverage` has no `thresholds`; must set branches/functions/lines/statements to at least 90",
+            "vitest.config.ts `coverage` has no `thresholds`; "
+            "must set branches/functions/lines/statements to at least 90",
         )
     ]
 

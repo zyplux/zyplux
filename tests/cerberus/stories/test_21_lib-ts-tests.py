@@ -15,7 +15,10 @@ type RunLibTsTests = Callable[[dict[str, str]], CheckResult]
 CHECK_ID = "lib-ts-tests"
 
 _SEAM_ROOT_WS = '{"workspaces": ["apps/*", "packages/*", "tests/*"]}'
-_SEAM_LIB = '{"name": "@demo/lib", "exports": {".": {"types": "./src/index.ts", "default": "./src/index.ts"}, "./package.json": "./package.json"}}'
+_SEAM_LIB = (
+    '{"name": "@demo/lib", "exports": {".": {"types": "./src/index.ts", "default": "./src/index.ts"},'
+    ' "./package.json": "./package.json"}}'
+)
 _SEAM_LIB_NO_EXPORTS = '{"name": "@demo/lib"}'
 _SEAM_LIB_LEAKY = '{"name": "@demo/lib", "exports": {".": "./src/index.ts", "./helpers": "./src/helpers.ts"}}'
 _SEAM_LIB_PRIVATE_LEAKY = (
@@ -25,12 +28,18 @@ _SEAM_LIB_NO_ROOT = '{"name": "@demo/lib", "exports": {"./package.json": "./pack
 _SEAM_LIB_CONDITIONS = '{"name": "@demo/lib", "exports": {"types": "./src/index.ts", "default": "./src/index.ts"}}'
 _SEAM_LIB_STRING_EXPORTS = '{"name": "@demo/lib", "exports": "./src/index.ts"}'
 _SEAM_JSON_ONLY = '{"name": "@demo/tsconfig"}'
-_SEAM_CLI_LEAKY = '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts", "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+_SEAM_CLI_LEAKY = (
+    '{"name": "@demo/cli", "bin": {"cli": "./src/index.ts"}, "exports": {".": "./src/cli.ts",'
+    ' "./commands/deps-catalog": "./src/commands/deps-catalog.ts"}}'
+)
 _SEAM_FIXTURES_LIB_LEAKY = (
     '{"name": "@demo/tests-fixtures", "exports": {".": "./src/index.ts", "./story": "./src/story.ts"}}'
 )
 _SEAM_TESTS_PKG = '{"name": "@demo/tests-lib", "private": true, "imports": {"#fixtures": "./fixtures.ts"}}'
-_SEAM_TESTS_PKG_LEAKY_EXPORTS = '{"name": "@demo/tests-lib", "private": true, "exports": {"./internal": "./internal.ts"}, "imports": {"#fixtures": "./fixtures.ts"}}'
+_SEAM_TESTS_PKG_LEAKY_EXPORTS = (
+    '{"name": "@demo/tests-lib", "private": true, "exports": {"./internal": "./internal.ts"},'
+    ' "imports": {"#fixtures": "./fixtures.ts"}}'
+)
 _SEAM_TESTS_PKG_SNEAKY = (
     '{"name": "@demo/tests-lib", "private": true,'
     ' "imports": {"#fixtures": "./fixtures.ts", "#sneaky": "../../packages/lib/src/internal.ts",'
@@ -270,7 +279,8 @@ def test_21_3_3_fails_a_story_test_reaching_into_library_internals_via_a_relativ
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/lib/stories/1-first.test.ts: story test imports outside the fixtures seam — '../../../packages/lib/src/internal.ts'",
+            "tests/lib/stories/1-first.test.ts: story test imports outside the fixtures seam — "
+            "'../../../packages/lib/src/internal.ts'",
         )
     ]
 
@@ -321,7 +331,8 @@ def test_21_3_6_fails_a_story_test_pulling_in_library_internals_via_a_side_effec
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/lib/stories/1-first.test.ts: story test imports outside the fixtures seam — '../../../packages/lib/src/register.ts'",
+            "tests/lib/stories/1-first.test.ts: story test imports outside the fixtures seam — "
+            "'../../../packages/lib/src/register.ts'",
         )
     ]
 
@@ -339,10 +350,12 @@ def test_21_4_1_fails_an_imports_alias_that_escapes_the_test_package(
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/lib/package.json: imports alias escapes the test package — '#sneaky' -> '../../packages/lib/src/internal.ts'",
+            "tests/lib/package.json: imports alias escapes the test package — "
+            "'#sneaky' -> '../../packages/lib/src/internal.ts'",
         ),
         finding(
             status.FAIL,
-            "tests/lib/package.json: imports alias escapes the test package — '#tunnel' -> '../../packages/lib/src/other.ts'",
+            "tests/lib/package.json: imports alias escapes the test package — "
+            "'#tunnel' -> '../../packages/lib/src/other.ts'",
         ),
     ]

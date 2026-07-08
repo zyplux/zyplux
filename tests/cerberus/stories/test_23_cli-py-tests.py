@@ -17,14 +17,23 @@ CHECK_ID = "cli-py-tests"
 _ROOT_WS = '[tool.uv.workspace]\nmembers = ["apps/cli"]\n'
 _ROOT_WS_LIB_ONLY = '[tool.uv.workspace]\nmembers = ["packages/lib"]\n'
 
-_CLI_MANIFEST = '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n[tool.uv.build-backend]\nmodule-name = "demo"\n'
+_CLI_MANIFEST = (
+    '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n\n'
+    '[tool.uv.build-backend]\nmodule-name = "demo"\n'
+)
 _CLI_MANIFEST_NO_BUILD_BACKEND = '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.cli:app"\n'
 _LIB_MANIFEST = '[project]\nname = "demo-lib"\n\n[tool.uv.build-backend]\nmodule-name = "demolib"\n'
 
-_ROOT_INIT = '"""Demo package."""\n\nfrom __future__ import annotations\n\n\ndef greet() -> str:\n    return "hi"\n\n\ndef _internal() -> None:\n    return None\n'
+_ROOT_INIT = (
+    '"""Demo package."""\n\nfrom __future__ import annotations\n\n\ndef greet() -> str:\n    return "hi"\n\n\n'
+    "def _internal() -> None:\n    return None\n"
+)
 _CLI_MODULE = "from __future__ import annotations\n\nimport typer\n\napp = typer.Typer()\n"
 
-_CLI_MANIFEST_NESTED_ENTRY = '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.sub.cli:app"\n\n[tool.uv.build-backend]\nmodule-name = "demo"\n'
+_CLI_MANIFEST_NESTED_ENTRY = (
+    '[project]\nname = "demo-cli"\n\n[project.scripts]\ncli = "demo.sub.cli:app"\n\n'
+    '[tool.uv.build-backend]\nmodule-name = "demo"\n'
+)
 _NESTED_CLI_MODULE = "from __future__ import annotations\n\nimport typer\n\napp = typer.Typer()\n"
 _DECOY_CLI_MODULE = "from __future__ import annotations\n\n\ndef unrelated() -> None:\n    return None\n"
 
@@ -156,7 +165,10 @@ def test_23_3_6_allows_a_story_test_to_import_a_third_party_module_directly(
 def test_23_3_7_passes_a_disallowed_import_guarded_under_type_checking(
     run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded = "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    from demo.internal import Thing\n"
+    guarded = (
+        "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n    from demo.internal import Thing\n"
+    )
     result = run_cli_py_tests(_with_story(guarded))
     assert result.findings == [finding(status.PASS, _OK_MESSAGE)]
 
@@ -164,7 +176,10 @@ def test_23_3_7_passes_a_disallowed_import_guarded_under_type_checking(
 def test_23_3_8_does_not_exempt_an_import_in_the_else_branch_of_a_type_checking_guard(
     run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded_else = "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    pass\nelse:\n    from demo.internal import Thing\n"
+    guarded_else = (
+        "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n    pass\nelse:\n    from demo.internal import Thing\n"
+    )
     result = run_cli_py_tests(_with_story(guarded_else))
     assert result.findings == [
         finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demo.internal'")
@@ -191,7 +206,10 @@ def test_23_3_9_restricts_the_public_surface_to_a_declared_all_list(
 def test_23_3_10_does_not_exempt_a_guard_on_a_custom_non_typing_type_checking_attribute(
     run_cli_py_tests: RunCliPyTests, finding: type[Finding], status: type[Status]
 ) -> None:
-    guarded = "from __future__ import annotations\n\n\nclass Fake:\n    TYPE_CHECKING = True\n\n\nif Fake.TYPE_CHECKING:\n    from demo.internal import Thing\n"
+    guarded = (
+        "from __future__ import annotations\n\n\nclass Fake:\n    TYPE_CHECKING = True\n\n\n"
+        "if Fake.TYPE_CHECKING:\n    from demo.internal import Thing\n"
+    )
     result = run_cli_py_tests(_with_story(guarded))
     assert result.findings == [
         finding(status.FAIL, f"{_STORY_FILE}: story test imports outside the seam — 'demo.internal'")

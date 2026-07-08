@@ -16,7 +16,10 @@ type RunCheckOnDisk = Callable[..., CheckResult]
 PY_CHECK_ID = "story-tests-py"
 TS_CHECK_ID = "story-tests-ts"
 
-DOC = "# 1. Configuring a widget\n\n## 1.1 Widget setup\n\n### 1.1.1 shows the widget name\n\n### 1.1.2 accepts a custom color\n"
+DOC = (
+    "# 1. Configuring a widget\n\n## 1.1 Widget setup\n\n"
+    "### 1.1.1 shows the widget name\n\n### 1.1.2 accepts a custom color\n"
+)
 DOC_PATH = "tests/stories/1_widget.md"
 
 PY_TEST_PATH = "tests/stories/test_1_widget.py"
@@ -415,7 +418,10 @@ def test_15_5_3_flags_a_linked_criterion_header_for_unlinking(
 def test_15_6_1_recognizes_test_calls_written_with_chained_modifiers(
     run_check_with_files: RunCheckWithFiles, finding: type[Finding], status: type[Status]
 ) -> None:
-    test_content = "it.concurrent('1.1.1 shows the widget name', async () => {});\ntest.skip('1.1.2 accepts a custom color', () => {});\n"
+    test_content = (
+        "it.concurrent('1.1.1 shows the widget name', async () => {});\n"
+        "test.skip('1.1.2 accepts a custom color', () => {});\n"
+    )
     files = {"package.json": _TS_PLAIN_PKG, TS_DOC_PATH: _linked("1-widget.test.ts"), TS_TEST_PATH: test_content}
     result = run_check_with_files(TS_CHECK_ID, files)
     assert result.findings == [finding(status.PASS, OK_MESSAGE)]
@@ -447,7 +453,8 @@ def test_15_6_3_recognizes_a_title_that_contains_a_different_quote_character_tha
     assert result.findings == [
         finding(
             status.FAIL,
-            "tests/stories: header/test title drift for 1.1.1 — header='shows the widget name' test=\"shows the widget's name\"",
+            "tests/stories: header/test title drift for 1.1.1 — "
+            "header='shows the widget name' test=\"shows the widget's name\"",
         )
     ]
 
