@@ -1,8 +1,7 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { message } from '@optique/core/message';
+import type { InferValue } from '#optique';
 
 import { makeReleaseTagCommand } from '#commands/release-tag-command';
+import { message } from '#optique';
 import { resolveReleaseTag } from '#release-targets';
 
 export const assertTagVersionCommand = makeReleaseTagCommand('assert-tag-version', {

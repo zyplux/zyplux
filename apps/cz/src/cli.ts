@@ -1,8 +1,3 @@
-import { or } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { defineProgram } from '@optique/core/program';
-import { run } from '@optique/run';
-
 import { assertTagVersionCommand, runAssertTagVersion } from '#commands/assert-tag-version';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from '#commands/bootstrap-npm-target';
 import { cleanCommand, runClean } from '#commands/clean';
@@ -13,6 +8,7 @@ import { publishTaggedTargetCommand, runPublishTaggedTarget } from '#commands/pu
 import { pushBranchCommand, runPushBranch } from '#commands/push-branch';
 import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from '#commands/release-bumped-targets';
 import { runTest, testCommand } from '#commands/test';
+import { defineProgram, message, or, run } from '#optique';
 import pkg from '#package.json' with { type: 'json' };
 
 const VERSION = pkg.version;

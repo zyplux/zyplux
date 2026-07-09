@@ -1,12 +1,9 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { merge, object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { optional } from '@optique/core/modifiers';
-import { argument, command, constant } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
 import { captureMerged, ensure } from '@zyplux/util';
 import { existsSync } from 'node:fs';
+
+import type { InferValue } from '#optique';
+
+import { argument, command, constant, merge, message, object, optional, string } from '#optique';
 
 const PYTEST_NO_TESTS_COLLECTED = 5;
 

@@ -59,11 +59,24 @@ def _from_dict(data: dict[str, Any]) -> Config:
     )
 
 
-def load(path: Path | None = None) -> Config:
+def _overlay(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _overlay(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     if path is not None:
         return _from_dict(tomllib.loads(path.read_text()))
-    bundled = resources.files("cerberus").joinpath("cerberus.toml").read_text()
-    return _from_dict(tomllib.loads(bundled))
+    data = tomllib.loads(resources.files("cerberus").joinpath("cerberus.toml").read_text())
+    repo_toml = repo_root / "cerberus.toml" if repo_root is not None else None
+    if repo_toml is not None and repo_toml.is_file():
+        data = _overlay(data, tomllib.loads(repo_toml.read_text()))
+    return _from_dict(data)
 
 
 def repo_disabled_checks(root: Path) -> frozenset[str]:

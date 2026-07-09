@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from cerberus.model import CheckResult, Repo, Status
-    from seam_fixtures import FakeProc, MakeContext, MakeFinding, RunCheck
+    from seam_fixtures import FakeProc, MakeContext, MakeFinding, NpmToolSpec, RunCheck
 
 type RunJscpdDupes = Callable[..., CheckResult]
 
@@ -49,10 +49,12 @@ _LANGUAGE_OVER_THRESHOLD_REPORT = _report(
 )
 
 
-def _argv(scan_roots: list[str], pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE) -> list[str]:
+def _argv(
+    spec: str, scan_roots: list[str], pattern: str = _DEFAULT_PATTERN, ignore: str = _DEFAULT_IGNORE
+) -> list[str]:
     return [
         "bunx",
-        "jscpd",
+        spec,
         "--pattern",
         pattern,
         "--ignore",
@@ -90,7 +92,9 @@ def repo_root(tmp_path: Path) -> Path:
 def run_jscpd_dupes(
     repo: Repo, run_check: RunCheck, make_context: MakeContext, tmp_path: Path, repo_root: Path
 ) -> RunJscpdDupes:
-    def _run(*, config_toml: str | None = None, files: dict[str, str] | None = None) -> CheckResult:
+    def _run(
+        *, config_toml: str | None = None, files: dict[str, str] | None = None, verbose: bool = False
+    ) -> CheckResult:
         for path, content in (files or {}).items():
             target = repo_root / path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -99,7 +103,7 @@ def run_jscpd_dupes(
         if config_toml is not None:
             config_path = tmp_path / "cerberus.toml"
             config_path.write_text(config_toml)
-        return run_check(CHECK_ID, repo, make_context(repo_root, config_path=config_path))
+        return run_check(CHECK_ID, repo, make_context(repo_root, config_path=config_path, verbose=verbose))
 
     return _run
 
@@ -125,14 +129,14 @@ def test_28_1_2_fails_when_one_language_exceeds_the_threshold_even_though_the_to
 
 
 def test_28_1_3_fails_with_the_exit_code_when_jscpd_itself_exits_non_zero(
-    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, fail: MakeFinding
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec, fail: MakeFinding
 ) -> None:
     fake_proc.serve("jscpd", returncode=3)
     result = run_jscpd_dupes()
     assert result.findings == [
         fail(
-            f"jscpd exited 3; run `bunx jscpd --pattern {_DEFAULT_PATTERN} --ignore {_DEFAULT_IGNORE}"
-            f" {repo_root.resolve()}` locally for details",
+            f"jscpd exited 3; run `bunx {npm_tool_spec('jscpd')} --pattern {_DEFAULT_PATTERN}"
+            f" --ignore {_DEFAULT_IGNORE} {repo_root.resolve()}` locally for details",
         )
     ]
 
@@ -178,11 +182,11 @@ def test_28_2_3_leaves_the_detail_unset_on_failure_so_the_stats_appear_only_in_t
 
 
 def test_28_3_1_scans_the_repo_root_with_the_default_selection_and_cwd_shielded_from_repo_config(
-    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_jscpd_dupes()
-    expected = (_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
+    expected = (_argv(npm_tool_spec("jscpd"), [str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
     assert _mask_report_dir(fake_proc.calls) == [expected]
 
 
@@ -204,16 +208,16 @@ def test_28_3_3_defaults_the_threshold_to_zero_point_one_percent_when_the_config
 
 
 def test_28_3_4_passes_a_configured_pattern_and_ignore_through_to_jscpd(
-    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_jscpd_dupes(config_toml=_CUSTOM_SELECTION_TOML)
-    expected = _argv([str(repo_root.resolve())], pattern="**/*.rs", ignore="**/target/**")
+    expected = _argv(npm_tool_spec("jscpd"), [str(repo_root.resolve())], pattern="**/*.rs", ignore="**/target/**")
     assert _mask_report_dir(fake_proc.calls) == [(expected, Path(_REPORT_DIR_PLACEHOLDER))]
 
 
 def test_28_4_1_scans_only_the_directories_the_workspace_manifests_register(
-    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     (repo_root / "apps" / "web").mkdir(parents=True)
@@ -227,15 +231,17 @@ def test_28_4_1_scans_only_the_directories_the_workspace_manifests_register(
     )
     root = repo_root.resolve()
     expected_roots = [str(root / "apps" / "web"), str(root / "libs" / "py")]
-    assert _mask_report_dir(fake_proc.calls) == [(_argv(expected_roots), Path(_REPORT_DIR_PLACEHOLDER))]
+    expected = (_argv(npm_tool_spec("jscpd"), expected_roots), Path(_REPORT_DIR_PLACEHOLDER))
+    assert _mask_report_dir(fake_proc.calls) == [expected]
 
 
 def test_28_4_2_falls_back_to_the_repo_root_when_no_manifest_declares_workspaces(
-    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_jscpd_dupes(files={"package.json": json.dumps({"name": "demo"})})
-    assert _mask_report_dir(fake_proc.calls) == [(_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))]
+    expected = (_argv(npm_tool_spec("jscpd"), [str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))
+    assert _mask_report_dir(fake_proc.calls) == [expected]
 
 
 def test_28_4_3_errors_when_package_json_is_not_valid_json_instead_of_crashing(
@@ -254,3 +260,32 @@ def test_28_4_4_errors_when_pyproject_toml_is_not_valid_toml_instead_of_crashing
     assert result.findings[0].status == status.ERROR
     assert result.findings[0].message.startswith("pyproject.toml is not valid TOML:")
     assert fake_proc.calls == []
+
+
+_UNDER_THRESHOLD_WITH_CLONE_REPORT = _report(clones=[_clone("src/a.ts", "src/b.ts")], typescript=(40, 0.05))
+
+
+def test_28_5_1_lists_every_clone_as_verbose_lines_when_a_verbose_run_passes(
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, ok: MakeFinding
+) -> None:
+    fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_WITH_CLONE_REPORT)
+    result = run_jscpd_dupes(verbose=True)
+    assert result.findings == [ok("duplication is under the 0.1% threshold in every language")]
+    assert result.verbose_lines == ["    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]"]
+
+
+def test_28_5_2_leaves_the_verbose_lines_empty_without_verbose(
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc
+) -> None:
+    fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_WITH_CLONE_REPORT)
+    result = run_jscpd_dupes()
+    assert result.verbose_lines == []
+
+
+def test_28_6_1_invokes_jscpd_at_the_pinned_version(
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, npm_tool_pins: dict[str, str], npm_tool_spec: NpmToolSpec
+) -> None:
+    fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
+    run_jscpd_dupes()
+    assert fake_proc.calls[0][0][:2] == ["bunx", f"jscpd@{npm_tool_pins['jscpd']}"]
+    assert fake_proc.calls[0][0][1] == npm_tool_spec("jscpd")

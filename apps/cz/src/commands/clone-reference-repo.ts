@@ -1,14 +1,11 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { merge, object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { optional } from '@optique/core/modifiers';
-import { argument, command, constant } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
 import { $ } from '@zyplux/util';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
+
+import type { InferValue } from '#optique';
+
+import { argument, command, constant, merge, message, object, optional, string } from '#optique';
 
 const refArgument = argument(string({ metavar: 'REF' }), {
   description: message`Branch or tag to clone (defaults to the remote's default branch).`,

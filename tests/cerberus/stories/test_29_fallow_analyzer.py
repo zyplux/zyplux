@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from cerberus.model import CheckResult, Repo, Status
-    from seam_fixtures import FakeProc, MakeContext, MakeFinding, RunCheck, RunCheckWithFiles
+    from seam_fixtures import FakeProc, MakeContext, MakeFinding, NpmToolSpec, RunCheck, RunCheckWithFiles
 
 type RunFallow = Callable[..., CheckResult]
 
@@ -68,10 +68,10 @@ def _serve_clean(fake_proc: FakeProc) -> None:
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
 
 
-def _argv(analysis: str, repo_root: Path) -> list[str]:
+def _argv(spec: str, analysis: str, repo_root: Path) -> list[str]:
     return [
         "bunx",
-        "fallow",
+        spec,
         analysis,
         *_SHARED_FLAGS,
         "--root",
@@ -102,12 +102,12 @@ def repo_root(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def run_fallow(repo: Repo, run_check: RunCheck, make_context: MakeContext, repo_root: Path) -> RunFallow:
-    def _run(files: dict[str, str]) -> CheckResult:
+    def _run(files: dict[str, str], *, verbose: bool = False) -> CheckResult:
         for path, content in files.items():
             target = repo_root / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
-        return run_check(CHECK_ID, repo, make_context(repo_root))
+        return run_check(CHECK_ID, repo, make_context(repo_root, verbose=verbose))
 
     return _run
 
@@ -129,23 +129,25 @@ def test_29_2_1_passes_when_both_fallow_analyses_exit_clean(
 
 
 def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_from_a_shielded_cwd_against_the_repo_root(
-    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path, npm_tool_spec: NpmToolSpec
 ) -> None:
     _serve_clean(fake_proc)
     run_fallow({"package.json": _PACKAGE_JSON})
     assert _mask_shield_dir(fake_proc.calls) == [
-        (_argv("dead-code", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
-        (_argv("health", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
+        (_argv(npm_tool_spec("fallow"), "dead-code", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
+        (_argv(npm_tool_spec("fallow"), "health", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
     ]
 
 
 def test_29_2_3_fails_with_the_issue_count_when_fallow_dead_code_reports_issues(
-    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, fail: MakeFinding
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, npm_tool_spec: NpmToolSpec, fail: MakeFinding
 ) -> None:
     fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.findings == [fail("fallow found 3 dead-code issues; run `bunx fallow dead-code` locally for details")]
+    assert result.findings == [
+        fail(f"fallow found 3 dead-code issues; run `bunx {npm_tool_spec('fallow')} dead-code` locally for details")
+    ]
 
 
 def test_29_2_4_errors_when_bunx_is_not_on_path(
@@ -232,10 +234,8 @@ def test_29_5_1_shields_fallow_behind_a_cerberus_owned_config_ignoring_workspace
 
     run_fallow({"package.json": json.dumps({"name": "demo", "workspaces": ["apps/*", "tests/*"]})})
 
-    assert [json.loads(snapshot) for snapshot in fake_proc.config_snapshots] == [
-        {"ignorePatterns": ["apps/py", "tests/py"]},
-        {"ignorePatterns": ["apps/py", "tests/py"]},
-    ]
+    expected_config = {"ignorePatterns": ["apps/py", "tests/py"], "duplicates": {"ignoreDefaults": False}}
+    assert [json.loads(snapshot) for snapshot in fake_proc.config_snapshots] == [expected_config, expected_config]
     assert all(not cwd.is_relative_to(repo_root) for _, cwd in fake_proc.calls if cwd is not None)
 
 
@@ -246,3 +246,60 @@ def test_29_5_2_errors_when_package_json_is_not_valid_json_instead_of_crashing(
     assert result.findings[0].status == status.ERROR
     assert result.findings[0].message.startswith("package.json is not valid JSON:")
     assert fake_proc.calls == []
+
+
+_DEAD_CODE_WITH_ISSUES = json.dumps({
+    "total_issues": 2,
+    "unused_files": [{"path": "src/orphan.ts"}],
+    "unused_exports": [{"path": "src/lib.ts", "export_name": "unusedThing", "line": 2, "col": 13}],
+})
+
+
+def test_29_5_3_switches_off_fallows_default_duplicate_ignores_so_test_files_count(
+    run_fallow: RunFallow, fake_proc: FakeProc
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({"package.json": _PACKAGE_JSON})
+    snapshots = [json.loads(snapshot) for snapshot in fake_proc.config_snapshots]
+    assert all(snapshot["duplicates"] == {"ignoreDefaults": False} for snapshot in snapshots)
+
+
+def _run_dead_code_with_issues(run_fallow: RunFallow, fake_proc: FakeProc, *, verbose: bool) -> CheckResult:
+    fake_proc.serve("fallow dead-code", returncode=1, stdout=_DEAD_CODE_WITH_ISSUES)
+    fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
+    return run_fallow({"package.json": _PACKAGE_JSON}, verbose=verbose)
+
+
+def test_29_6_1_fails_itemizing_each_dead_code_issue_with_its_category_and_location_in_verbose_mode(
+    run_fallow: RunFallow, fake_proc: FakeProc, fail: MakeFinding
+) -> None:
+    result = _run_dead_code_with_issues(run_fallow, fake_proc, verbose=True)
+    assert result.findings == [
+        fail(
+            "fallow found 2 dead-code issues\n"
+            "    unused_files: src/orphan.ts\n"
+            "    unused_exports: src/lib.ts:2 unusedThing",
+        )
+    ]
+
+
+def test_29_6_2_keeps_the_count_and_rerun_hint_failure_without_verbose(
+    run_fallow: RunFallow, fake_proc: FakeProc, npm_tool_spec: NpmToolSpec, fail: MakeFinding
+) -> None:
+    result = _run_dead_code_with_issues(run_fallow, fake_proc, verbose=False)
+    assert result.findings == [
+        fail(f"fallow found 2 dead-code issues; run `bunx {npm_tool_spec('fallow')} dead-code` locally for details")
+    ]
+
+
+def test_29_7_1_invokes_fallow_at_the_pinned_version(
+    run_check_with_files: RunCheckWithFiles,
+    fake_proc: FakeProc,
+    npm_tool_pins: dict[str, str],
+    npm_tool_spec: NpmToolSpec,
+) -> None:
+    _serve_clean(fake_proc)
+    run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
+    launched_specs = {argv[1] for argv, _ in fake_proc.calls}
+    assert launched_specs == {f"fallow@{npm_tool_pins['fallow']}"}
+    assert launched_specs == {npm_tool_spec("fallow")}

@@ -121,15 +121,19 @@ def lint(
     check: CheckOpt = None,
     *,
     fix: Annotated[bool, typer.Option("--fix", help="Auto-fix fixable problems in place.")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Itemize what each bite measured (clones, dead-code issues).")
+    ] = False,
 ) -> None:
     """Lint a repository checkout against org invariants.
 
     Exits non-zero on any FAIL or ERROR, so it drops straight into CI like any
     linter. `--fix` rewrites what it can (trailing whitespace) and leaves the
     rest to report. A repo opts out of bites via `[tool.cerberus] disable` in
-    its pyproject.toml.
+    its pyproject.toml, and tightens org defaults via a `cerberus.toml` at its
+    root, overlaid key by key onto the bundled configuration.
     """
-    ctx = context.local_context(config.load(config_path), path, fix=fix)
+    ctx = context.local_context(config.load(config_path, repo_root=path), path, fix=fix, verbose=verbose)
     repo = ctx.repos()[0]
     selected = _select_checks(check)
 
@@ -213,12 +217,14 @@ def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) ->
                 console.print(f"  {_GLYPH[Status.SKIP]} {result.check}: {reason}{detail}")
             else:
                 console.print(f"  {_GLYPH[Status.PASS]} {result.check}{detail}")
-            continue
-        for finding in result.problems:
-            headline, _, rest = finding.message.partition("\n")
-            console.print(f"  {_GLYPH[finding.status]} {result.check}: {headline}{detail}")
-            if rest:
-                console.print(rest)
+        else:
+            for finding in result.problems:
+                headline, _, rest = finding.message.partition("\n")
+                console.print(f"  {_GLYPH[finding.status]} {result.check}: {headline}{detail}")
+                if rest:
+                    console.print(rest)
+        for line in result.verbose_lines:
+            console.print(line, markup=False)
 
     if not problems:
         console.print("  [green]🐾 all bites pass[/green]")

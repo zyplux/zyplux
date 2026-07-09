@@ -1,8 +1,6 @@
-import type { Message } from '@optique/core/message';
+import type { Message } from '#optique';
 
-import { object } from '@optique/core/constructs';
-import { argument, command, constant } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
+import { argument, command, constant, object, string } from '#optique';
 
 type ReleaseTagCommandSpec = {
   alias: string;

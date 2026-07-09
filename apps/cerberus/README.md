@@ -6,7 +6,7 @@ Verifies repository invariants — CI workflow structure, justfile and dependenc
 
 - [`uv`](https://docs.astral.sh/uv/) and Python 3.14
 
-The `justfile_baseline` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install.
+The `justfile_baseline` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd_dupes_threshold` and `fallow_analyzer` bites run their tools via `bunx` at exact versions pinned in [`tool_pins.py`](src/cerberus/tool_pins.py), so every cerberus release measures with the same tools everywhere; `bunx` (bun) must be on PATH.
 
 ## Lint a repo
 
@@ -17,11 +17,12 @@ uv run cerberus PATH       # lint a checkout at PATH
 
 Runs every bite and exits non-zero on any failure or error, so it drops into CI like any linter. Run `cerberus list` to see every bite, its scope, and what it verifies.
 
-| Option          | Description                                          |
-| --------------- | ---------------------------------------------------- |
-| `--check NAME`  | Limit to named bite(s); repeatable                   |
-| `--config PATH` | Use a `cerberus.toml` other than the bundled         |
-| `--fix`         | Auto-fix fixable problems (e.g. trailing whitespace) |
+| Option           | Description                                                       |
+| ---------------- | ----------------------------------------------------------------- |
+| `--check NAME`   | Limit to named bite(s); repeatable                                |
+| `--config PATH`  | Use a `cerberus.toml` other than the bundled                      |
+| `--fix`          | Auto-fix fixable problems (e.g. trailing whitespace)              |
+| `--verbose`/`-v` | Itemize what each bite measured (clones, dead-code issues)        |
 
 A repo opts out of specific bites with `[tool.cerberus] disable = ["bite_id", ...]` in its `pyproject.toml`.
 
@@ -55,6 +56,7 @@ A repo opts out of specific bites with `[tool.cerberus] disable = ["bite_id", ..
 | `vitest_coverage_floor`        | content     | The root `vitest.config.*` `coverage.thresholds` are all set to at least 90%         |
 | `jscpd_dupes_threshold`        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |
 | `fallow_analyzer`              | content     | fallow finds no unused code, circular imports, or functions above its complexity thresholds |
+| `tool_pins_latest`             | content     | The npm tool versions pinned in cerberus source are the latest npm releases (skips repos not carrying the pin source) |
 
 ## The justfile baseline
 
@@ -62,6 +64,8 @@ Every repo's `justfile` must start with the line `# BASELINE`, carry the canonic
 
 ## Config
 
-Policy — required recipes and aliases, the canonical CI sequence — lives in [`cerberus.toml`](src/cerberus/cerberus.toml). Override it with `--config PATH`.
+Policy — required recipes and aliases, the canonical CI sequence — lives in [`cerberus.toml`](src/cerberus/cerberus.toml). A repo tightens the defaults by shipping a `cerberus.toml` at its root: it overlays the bundled configuration key by key, so it only names what it overrides (e.g. a stricter `[jscpd_dupes_threshold] threshold`). An explicit `--config PATH` replaces the configuration wholesale instead.
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
+
+`tool_pins_latest` guards the jscpd/fallow pins the same way, but only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos skip it and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.

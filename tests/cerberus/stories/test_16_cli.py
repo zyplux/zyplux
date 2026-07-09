@@ -276,3 +276,68 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
     assert result.exit_code == 0, result.output
     assert "○ codeowners_coverage: no release-targets.toml — repo publishes nothing" in result.output
     assert "🐾 codeowners_coverage" not in result.output
+
+
+_REPO_OVERRIDE_TOML = "[jscpd_dupes_threshold]\nthreshold = 7\n"
+
+
+def _register_config_probe(register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]) -> None:
+    def probe(repo: Repo, ctx: Context) -> CheckResult:
+        result = check_result("codeowners_coverage", repo.name)
+        result.detail = f"threshold {ctx.config.jscpd_dupes_threshold:g} marker `{ctx.config.default_recipe_marker}`"
+        return result
+
+    register_fake_check("codeowners_coverage", probe)
+
+
+def test_16_12_1_overlays_a_repo_root_cerberus_toml_onto_the_bundled_defaults(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    register_fake_check: RegisterFakeCheck,
+    check_result: type[CheckResult],
+) -> None:
+    _register_config_probe(register_fake_check, check_result)
+    (conforming_repo / "cerberus.toml").write_text(_REPO_OVERRIDE_TOML)
+
+    result = invoke_lint("--check", "codeowners_coverage")
+
+    assert result.exit_code == 0, result.output
+    assert "threshold 7 marker `just --list`" in result.output
+
+
+def test_16_12_2_replaces_the_configuration_wholesale_when_an_explicit_config_file_is_given(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    register_fake_check: RegisterFakeCheck,
+    check_result: type[CheckResult],
+) -> None:
+    _register_config_probe(register_fake_check, check_result)
+    (conforming_repo / "cerberus.toml").write_text(_REPO_OVERRIDE_TOML)
+    explicit = conforming_repo / "explicit.toml"
+    explicit.write_text('default_recipe_marker = "just --menu"\n')
+
+    result = invoke_lint("--check", "codeowners_coverage", "--config", str(explicit))
+
+    assert result.exit_code == 0, result.output
+    assert "threshold 0.1 marker `just --menu`" in result.output
+
+
+def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
+    invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
+) -> None:
+    def measured_clones(repo: Repo, ctx: Context) -> CheckResult:
+        result = check_result("codeowners_coverage", repo.name)
+        result.ok("duplication is under the threshold in every language")
+        if ctx.verbose:
+            result.verbose_lines = ["    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]"]
+        return result
+
+    register_fake_check("codeowners_coverage", measured_clones)
+
+    plain = invoke_lint("--check", "codeowners_coverage")
+    assert plain.exit_code == 0, plain.output
+    assert "duplicates" not in plain.output
+
+    verbose = invoke_lint("--check", "codeowners_coverage", "--verbose")
+    assert verbose.exit_code == 0, verbose.output
+    assert "src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]" in verbose.output

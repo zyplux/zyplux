@@ -48,6 +48,7 @@
     "#commands/release-tag-command": "./src/commands/release-tag-command.ts",
     "#commands/test": "./src/commands/test.ts",
     "#deps-catalog": "./src/deps-catalog.ts",
+    "#optique": "./src/optique.ts",
     "#package.json": "./package.json",
     "#release-targets": "./src/release-targets.ts"
   },

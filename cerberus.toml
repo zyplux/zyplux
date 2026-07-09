@@ -1,0 +1,5 @@
+# Overlays the bundled cerberus defaults for this repo only (key by key; everything else stays org-default).
+
+# This repo leads the org by example: zero tolerated duplication — nothing above 0 shall be expected here.
+[jscpd_dupes_threshold]
+threshold = 0

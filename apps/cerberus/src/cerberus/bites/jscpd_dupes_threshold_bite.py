@@ -5,9 +5,11 @@ language's duplicated-token percentage from jscpd's json report — not just
 the aggregate total. Cerberus owns the whole jscpd invocation: the file
 selection pattern and ignore globs come from `[jscpd_dupes_threshold] pattern` and
 `ignore` in cerberus.toml, scan roots come from the repo's own workspace
-manifests (bun `workspaces`, uv `[tool.uv.workspace] members`), and the
+manifests (bun `workspaces`, uv `[tool.uv.workspace] members`), the
 subprocess runs with its cwd outside the repo so repo-local jscpd config
-(`.jscpd.json`, package.json `jscpd`) can never leak in.
+(`.jscpd.json`, package.json `jscpd`) can never leak in, and jscpd itself
+runs at the exact version pinned in `cerberus.tool_pins` so every run
+measures with the same tool.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cerberus import proc, workspaces
+from cerberus import proc, tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -50,7 +52,7 @@ def _scan_roots(repo: Repo, ctx: Context) -> list[Path]:
 def _selection_argv(ctx: Context) -> list[str]:
     return [
         "bunx",
-        "jscpd",
+        tool_pins.format_spec("jscpd"),
         "--pattern",
         ctx.config.jscpd_dupes_pattern,
         "--ignore",
@@ -136,5 +138,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     else:
         if stats_line:
             res.detail = stats_line
+        if ctx.verbose:
+            res.verbose_lines = _clone_lines(report, ctx.source.root.resolve())
         res.ok(f"duplication is under the {threshold:g}% threshold in every language")
     return res

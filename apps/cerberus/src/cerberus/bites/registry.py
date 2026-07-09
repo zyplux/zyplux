@@ -25,6 +25,7 @@ from cerberus.bites import (
     rumdl_canonical_config_bite,
     story_tests_lockstep_py_bite,
     story_tests_lockstep_ts_bite,
+    tool_pins_latest_bite,
     tsc_project_references_bite,
     vitest_coverage_floor_bite,
     vitest_only_runner_bite,
@@ -76,6 +77,7 @@ ALL: tuple[Check, ...] = tuple(
         jscpd_dupes_threshold_bite,
         fallow_analyzer_bite,
         zyplux_deps_latest_bite,
+        tool_pins_latest_bite,
     )
 )
 

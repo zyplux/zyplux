@@ -39,3 +39,17 @@
 ### 28.4.3 errors when package.json is not valid JSON instead of crashing
 
 ### 28.4.4 errors when pyproject.toml is not valid TOML instead of crashing
+
+## 28.5 itemizing clones in verbose runs
+
+A passing run can still hide clones sitting under the threshold; in verbose mode the check lists every clone with both spans, the same lines a failure prints.
+
+### 28.5.1 lists every clone as verbose lines when a verbose run passes
+
+### 28.5.2 leaves the verbose lines empty without verbose
+
+## 28.6 running jscpd at the version pinned in cerberus source
+
+A bare `bunx jscpd` floats to npm's latest and drifts per machine; the check invokes the exact version pinned in cerberus's `tool_pins` module, so every run — local or CI, any repo — measures with the same tool.
+
+### 28.6.1 invokes jscpd at the pinned version

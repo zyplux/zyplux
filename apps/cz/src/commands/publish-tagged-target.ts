@@ -1,11 +1,8 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { argument, command, constant } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
 import { $, ensure } from '@zyplux/util';
 
+import type { InferValue } from '#optique';
+
+import { argument, command, constant, message, object, string } from '#optique';
 import { resolveReleaseTag } from '#release-targets';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {

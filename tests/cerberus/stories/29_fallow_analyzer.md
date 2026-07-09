@@ -28,6 +28,24 @@
 
 ## 29.5 owning fallow's configuration
 
+Tests are as load-bearing as production code, so the cerberus-owned config also switches off fallow's default duplicate ignores (`**/*.test.*` and friends) — no fallow analysis run under cerberus ever skips test files.
+
 ### 29.5.1 shields fallow behind a cerberus-owned config ignoring workspace dirs without a package.json
 
 ### 29.5.2 errors when package.json is not valid JSON instead of crashing
+
+### 29.5.3 switches off fallow's default duplicate ignores so test files count
+
+## 29.6 itemizing dead-code issues in verbose runs
+
+By default a dead-code failure reports only the issue count and defers to a local rerun; in verbose mode the check itemizes each issue from fallow's own report — its category, location, and name — so the rerun is unnecessary.
+
+### 29.6.1 fails itemizing each dead-code issue with its category and location in verbose mode
+
+### 29.6.2 keeps the count-and-rerun-hint failure without verbose
+
+## 29.7 running fallow at the version pinned in cerberus source
+
+A bare `bunx fallow` floats to npm's latest and drifts per machine; the check invokes the exact version pinned in cerberus's `tool_pins` module, so every run — local or CI, any repo — analyzes with the same tool.
+
+### 29.7.1 invokes fallow at the pinned version

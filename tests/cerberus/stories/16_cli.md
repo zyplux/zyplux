@@ -59,3 +59,17 @@
 ## 16.11 rendering a skipped bite distinctly
 
 ### 16.11.1 renders a skipped bite with its skip glyph and reason
+
+## 16.12 overriding configuration from a repo-root cerberus.toml
+
+A repo tightens org defaults without forking them: a `cerberus.toml` at the repo root overlays the bundled configuration key by key, so the file only names what it overrides. An explicit `--config` still replaces the configuration wholesale.
+
+### 16.12.1 overlays a repo root cerberus.toml onto the bundled defaults
+
+### 16.12.2 replaces the configuration wholesale when an explicit config file is given
+
+## 16.13 printing verbose diagnostics on demand
+
+Bites keep their one-line verdicts by default; `--verbose` asks them to also itemize what they measured (each clone, each dead-code issue), so nobody has to re-run the underlying tool locally to see what's bad.
+
+### 16.13.1 prints a bite's verbose lines only when run with verbose

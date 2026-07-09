@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import bites, config, context, proc, registries
+from cerberus import bites, config, context, proc, registries, tool_pins
 from cerberus.bites.rumdl_canonical_config_bite import CANONICAL as _RUMDL_CANONICAL
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
@@ -49,6 +49,7 @@ type RunCheckOnDisk = Callable[..., CheckResult]
 type MakeContext = Callable[..., Context]
 type RegisterFakeCheck = Callable[[str, Callable[[Repo, Context], CheckResult]], None]
 type MakeFinding = Callable[[str], Finding]
+type NpmToolSpec = Callable[[str], str]
 
 
 @pytest.fixture
@@ -63,8 +64,8 @@ def ctx() -> Context:
 
 @pytest.fixture
 def make_context() -> MakeContext:
-    def _make(root: Path, *, fix: bool = False, config_path: Path | None = None) -> Context:
-        return context.local_context(config.load(config_path), root, fix=fix)
+    def _make(root: Path, *, fix: bool = False, verbose: bool = False, config_path: Path | None = None) -> Context:
+        return context.local_context(config.load(config_path), root, fix=fix, verbose=verbose)
 
     return _make
 
@@ -209,12 +210,28 @@ def known_check_ids() -> tuple[str, ...]:
     return tuple(bites.BY_ID)
 
 
+@pytest.fixture
+def npm_tool_pins() -> dict[str, str]:
+    return dict(tool_pins.NPM_TOOL_PINS)
+
+
+@pytest.fixture
+def npm_tool_spec() -> NpmToolSpec:
+    return tool_pins.format_spec
+
+
+def _strip_pin(spec: str) -> str:
+    name = spec.rpartition("@")[0]
+    return name or spec
+
+
 @dataclass
 class FakeProc:
     """An in-memory double for `cerberus.proc`'s single subprocess boundary.
 
     Outcomes are served per tool — the program a `bunx <tool> ...` invocation
-    launches, or `argv[0]` itself for direct invocations. A tool that runs
+    launches, or `argv[0]` itself for direct invocations; a version-pinned
+    spec (`tool@1.2.3`) is served under the bare tool name. A tool that runs
     distinct subcommands can be served per subcommand via a `"tool subcommand"`
     key. `output_files` are written into the directory the invocation names
     after `--output`, mimicking tools that emit report files there.
@@ -264,8 +281,9 @@ class FakeProc:
             raise proc.ToolNotFoundError(argv[0])
         self._snapshot_config_file(argv)
         launched = argv[1:] if argv[0] == "bunx" and len(argv) > 1 else argv
-        subcommand_key = " ".join(launched[:2])
-        tool = subcommand_key if subcommand_key in self.outcomes else launched[0]
+        launched_tool = _strip_pin(launched[0])
+        subcommand_key = " ".join([launched_tool, *launched[1:2]])
+        tool = subcommand_key if subcommand_key in self.outcomes else launched_tool
         self._write_output_files(tool, argv)
         outcome = self.outcomes[tool]
         return subprocess.CompletedProcess(argv, outcome.returncode, outcome.stdout, outcome.stderr)
