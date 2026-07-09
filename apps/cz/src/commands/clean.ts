@@ -1,12 +1,9 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { multiple } from '@optique/core/modifiers';
-import { command, constant, option } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
 import { $, checkInsideWorkTree, ensure, findGitRepos, readTrimmed } from '@zyplux/util';
 import path from 'node:path';
+
+import type { InferValue } from '#optique';
+
+import { command, constant, message, multiple, object, option, string } from '#optique';
 
 // Ignored files are the authoritative "generated/cache" list per repo (its own .gitignore),
 // so cleaning stays in sync automatically instead of drifting from a hardcoded dir-name list.

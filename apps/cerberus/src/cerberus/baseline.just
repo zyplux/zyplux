@@ -31,7 +31,7 @@ typecheck:
     bun run typecheck
     uv run pyrefly check
 
-# Lint and format both workspaces with autofix, then verify org invariants with cerberus.
+# Lint and format both workspaces with autofix.
 lint:
     bun run lint:fix
     bun run format
@@ -39,15 +39,17 @@ lint:
     uv run rumdl fmt
     uv run ruff check --fix
     uv run ruff format
+
+# Run tests for both workspaces, JS and Python in parallel. Optional arg filters by test name, skipping coverage; never fails when nothing matches.
+test name='':
+    bun run --silent cz test {{ if name == '' { '' } else { quote(name) } }}
+
+# Verify org invariants with cerberus, over the coverage report `test` regenerates.
+cerberus:
     uv run cerberus --fix
 
-# Run tests for both workspaces. Optional arg filters by test name; never fails when nothing matches.
-test name='':
-    bun run test {{ if name == '' { '' } else { '-t ' + quote(name) + ' --passWithNoTests' } }}
-    uv run pytest {{ if name == '' { '' } else { '-k ' + quote(name) } }} || [ "$?" -eq 5 ]
-
-# Full gate across both workspaces: install, knip, typecheck, lint, test — autofix throughout.
-check: install knip typecheck lint test
+# Full gate across both workspaces: install, knip, typecheck, lint, test, cerberus — autofix throughout.
+check: install knip typecheck lint test cerberus
 
 # Upgrade deps across both workspaces: ncu bumps JS ranges; uv lock --upgrade + uv-bump raise Python >= floors. Forwards extra args to ncu.
 upgrade *args='':

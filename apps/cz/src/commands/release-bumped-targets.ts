@@ -1,8 +1,6 @@
-import { object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { command, constant } from '@optique/core/primitives';
 import { $, ensure, poll, readTrimmed } from '@zyplux/util';
 
+import { command, constant, message, object } from '#optique';
 import { loadReleaseTargets } from '#release-targets';
 
 export const releaseBumpedTargetsCommand = command(

@@ -1,0 +1,9 @@
+# Overlays the bundled cerberus defaults for this repo only (key by key; everything else stays org-default).
+
+# This repo leads the org by example: zero tolerated duplication — nothing above 0 shall be expected here.
+[jscpd]
+threshold = 0
+
+# Bundled default is off; this repo carries the pin source, so the freshness guard runs here.
+[tool_pins_latest]
+off = false

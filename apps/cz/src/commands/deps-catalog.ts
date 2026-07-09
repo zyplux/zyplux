@@ -1,13 +1,9 @@
-import type { InferValue } from '@optique/core/parser';
-
-import { object } from '@optique/core/constructs';
-import { message } from '@optique/core/message';
-import { withDefault } from '@optique/core/modifiers';
-import { command, constant, option } from '@optique/core/primitives';
-import { string } from '@optique/core/valueparser';
 import path from 'node:path';
 
+import type { InferValue } from '#optique';
+
 import { collectDepRepos } from '#deps-catalog';
+import { command, constant, message, object, option, string, withDefault } from '#optique';
 
 const JSON_INDENT = 2;
 
