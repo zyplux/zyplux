@@ -1,10 +1,25 @@
 (
     """Meta-test: numbered story docs' h3 headers and tests/stories test functions stay """
-    """in lockstep; each h1 doc title links to its section's test file."""
+    """in lockstep; each h1 doc title links to its section's test file. The lockstep """
+    """machinery is cerberus's own (`cerberus --fix` in `just lint` refreshes the links)."""
 )
 
-from project_paths import list_story_docs
-from sync_story_links import Header, collect_story_tests, parse_headers, render_linked_doc
+from pathlib import Path
+
+from cerberus.checks.story_docs import (
+    Header,
+    StoryTest,
+    collect_py_tests,
+    parse_headers,
+    render_linked_doc,
+    word_sequence,
+)
+from project_paths import STORIES_DIR, list_story_docs
+
+
+def collect_story_tests() -> dict[str, StoryTest]:
+    test_paths = [str(path) for path in STORIES_DIR.glob("test_[0-9]*.py")]
+    return collect_py_tests(test_paths, lambda path: Path(path).read_text(encoding="utf-8"))
 
 
 def collect_headers() -> dict[str, Header]:
@@ -22,16 +37,6 @@ def test_every_story_test_has_a_header() -> None:
 def test_every_header_has_a_story_test() -> None:
     orphans = sorted(set(collect_headers()) - set(collect_story_tests()))
     assert not orphans, "### story-doc headers with no matching story test: " + ", ".join(orphans)
-
-
-def word_sequence(title: str) -> list[str]:
-    (
-        """A title's comparable words. A header's prose may join words with a hyphen"""
-        """ ("non-interactive") that the test name can only spell as separate """
-        """underscore tokens ("non interactive"), so treat a hyphen as the same word"""
-        """ break — without it the two spellings read as drift."""
-    )
-    return title.replace("-", " ").split()
 
 
 def test_header_titles_match_test_names() -> None:

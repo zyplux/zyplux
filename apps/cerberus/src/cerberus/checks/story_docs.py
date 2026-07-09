@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
@@ -153,12 +153,16 @@ def split_id_and_title(func_name: str) -> tuple[str, str]:
     return ".".join(tokens[:cut]), " ".join(tokens[cut:])
 
 
-def collect_py_tests(test_paths: list[str], read: Callable[[str], str | None]) -> dict[str, StoryTest]:
-    tests: dict[str, StoryTest] = {}
+def _read_sources(test_paths: list[str], read: Callable[[str], str | None]) -> Iterator[tuple[str, str]]:
     for path in sorted(test_paths):
         content = read(path)
-        if content is None:
-            continue
+        if content is not None:
+            yield path, content
+
+
+def collect_py_tests(test_paths: list[str], read: Callable[[str], str | None]) -> dict[str, StoryTest]:
+    tests: dict[str, StoryTest] = {}
+    for path, content in _read_sources(test_paths, read):
         try:
             tree = ast.parse(content)
         except SyntaxError:
@@ -173,10 +177,7 @@ def collect_py_tests(test_paths: list[str], read: Callable[[str], str | None]) -
 
 def collect_ts_tests(test_paths: list[str], read: Callable[[str], str | None]) -> dict[str, StoryTest]:
     tests: dict[str, StoryTest] = {}
-    for path in sorted(test_paths):
-        content = read(path)
-        if content is None:
-            continue
+    for path, content in _read_sources(test_paths, read):
         for match in _TS_TEST_CALL.finditer(content):
             story_id = match.group("id")
             title = match.group("title").strip()
