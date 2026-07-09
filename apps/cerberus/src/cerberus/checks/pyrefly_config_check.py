@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import tomllib
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+from cerberus.checks import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -13,7 +13,6 @@ ID = "pyrefly-config"
 SUMMARY = "all code, tests included, type-checks under strict pyrefly with no relaxations"
 SCOPE = Scope.CONTENT
 
-PYPROJECT = "pyproject.toml"
 PATH = "pyrefly.toml"
 REQUIRED_PRESET = "strict"
 
@@ -34,20 +33,6 @@ _ERROR_KINDS = frozenset({
     "potential-bad-keyword-argument",
     "unused-ignore",
 })
-
-
-def _config(content: str) -> dict[str, Any] | None:
-    try:
-        parsed = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _has_pyproject_pyrefly(pyproject: str) -> bool:
-    config = _config(pyproject) or {}
-    tool = config.get("tool")
-    return isinstance(tool, dict) and "pyrefly" in tool
 
 
 def _python_roots(paths: list[str]) -> tuple[set[str], set[str]]:
@@ -122,7 +107,7 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
     if content is None:
         res.fail(f'no {PATH} at repo root (org requires `preset = "{REQUIRED_PRESET}"`)')
         return None
-    config = _config(content)
+    config = py_tool_config.parse_toml(content)
     if config is None:
         res.error(f"could not parse {PATH}")
         return None
@@ -135,9 +120,8 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = ctx.file(repo, PYPROJECT)
+    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
     if pyproject is None:
-        res.skip("no pyproject.toml (not a Python repo)")
         return res
 
     production_roots, test_roots = _python_roots(ctx.paths(repo))
@@ -145,8 +129,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.skip("no Python source")
         return res
 
-    if _has_pyproject_pyrefly(pyproject):
-        res.fail("pyrefly config lives in pyproject.toml; move it to a standalone pyrefly.toml")
+    if py_tool_config.fail_when_embedded(pyproject, "pyrefly", res):
         return res
 
     config = _load_strict_config(repo, ctx, res)

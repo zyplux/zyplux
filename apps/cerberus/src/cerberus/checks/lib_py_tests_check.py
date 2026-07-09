@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cerberus.checks import py_test_seam, story_docs
+from cerberus.checks import py_test_seam
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -22,26 +22,8 @@ ID = "lib-py-tests"
 SUMMARY = "libraries' story tests import only their root module (never other internals)"
 SCOPE = Scope.CONTENT
 
-_OK_MESSAGE = "every library's story tests import only their root module"
-
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    paths = ctx.paths(repo)
-    packages = story_docs.PY.package_dirs(repo, ctx, paths)
-    if not packages:
-        res.skip("no Python packages")
-        return res
-
-    seam = py_test_seam.Seam.from_paths(repo, ctx, paths)
-    libraries = [package for package in packages if not py_test_seam.is_cli_app(seam.load_manifest(package))]
-    if not libraries:
-        res.skip("no libraries")
-        return res
-
-    for package in sorted(libraries):
-        seam.check_package(res, package)
-
-    if not res.problems:
-        res.ok(_OK_MESSAGE)
+    py_test_seam.run_seam_check(repo, ctx, res, py_test_seam.LIBRARIES)
     return res

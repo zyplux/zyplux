@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import tomllib
 from typing import TYPE_CHECKING, Any
 
+from cerberus.checks import py_tool_config
+from cerberus.checks.py_tool_config import PYPROJECT
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -12,16 +13,7 @@ ID = "pytest-coverage"
 SUMMARY = "pytest enforces a coverage floor of at least 90% via [tool.coverage.report] fail_under"
 SCOPE = Scope.CONTENT
 
-PYPROJECT = "pyproject.toml"
 MIN_COVERAGE = 90
-
-
-def _config(content: str) -> dict[str, Any] | None:
-    try:
-        parsed = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else {}
 
 
 def _fail_under(config: dict[str, Any]) -> object:
@@ -33,12 +25,11 @@ def _fail_under(config: dict[str, Any]) -> object:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = ctx.file(repo, PYPROJECT)
+    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
     if pyproject is None:
-        res.skip("no pyproject.toml (not a Python repo)")
         return res
 
-    config = _config(pyproject)
+    config = py_tool_config.parse_toml(pyproject)
     if config is None:
         res.error(f"could not parse {PYPROJECT}")
         return res

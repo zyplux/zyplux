@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import tomllib
 from typing import TYPE_CHECKING, Any
 
+from cerberus.checks import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -12,26 +12,11 @@ ID = "ruff-config"
 SUMMARY = 'ruff runs standalone in preview with `select = ["ALL"]`; relaxations stay within the sanctioned set'
 SCOPE = Scope.CONTENT
 
-PYPROJECT = "pyproject.toml"
 PATH = "ruff.toml"
 
 REQUIRED_SELECT = ["ALL"]
 SANCTIONED_IGNORE = frozenset({"COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S606", "S607"})
 SANCTIONED_TEST_IGNORE = frozenset({"ANN001", "INP001", "S101"})
-
-
-def _config(content: str) -> dict[str, Any] | None:
-    try:
-        parsed = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else {}
-
-
-def _has_pyproject_ruff(pyproject: str) -> bool:
-    config = _config(pyproject) or {}
-    tool = config.get("tool")
-    return isinstance(tool, dict) and "ruff" in tool
 
 
 def _lint_table(config: dict[str, Any]) -> dict[str, Any]:
@@ -75,7 +60,7 @@ def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] |
     if content is None:
         res.fail(f"no {PATH} at repo root (ruff config must be standalone)")
         return None
-    config = _config(content)
+    config = py_tool_config.parse_toml(content)
     if config is None:
         res.error(f"could not parse {PATH}")
     return config
@@ -83,13 +68,11 @@ def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] |
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = ctx.file(repo, PYPROJECT)
+    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
     if pyproject is None:
-        res.skip("no pyproject.toml (not a Python repo)")
         return res
 
-    if _has_pyproject_ruff(pyproject):
-        res.fail("ruff config lives in pyproject.toml; move it to a standalone ruff.toml")
+    if py_tool_config.fail_when_embedded(pyproject, "ruff", res):
         return res
 
     config = _load_config(repo, ctx, res)

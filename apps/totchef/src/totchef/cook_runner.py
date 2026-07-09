@@ -470,28 +470,46 @@ def log_completion(
             emit(f"completed with failure {timing}: {message}{blocked}")
 
 
-def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
+@dataclass(frozen=True)
+class _RunState:
     (
-        """Run the DAG in-process, no fork or privilege drop, one node at a time in topo order: the """
-        """foreground/debug path the seam tests drive."""
+        """One recipe pass's derived DAG artifacts — nodes, dependency graph, scheduling data, """
+        """blocker tallies — shared by the inline and forking runners."""
     )
+
+    nodes: dict[str, Node]
+    graph: dict[str, set[str]]
+    scheduling: Scheduling
+    progress: UnlockProgress
+
+
+def build_run_state(config: RecipeConfig) -> _RunState:
     nodes = build_nodes(config)
     graph = build_node_graph(nodes)
     dependents = build_dependents(graph)
     weights = build_weights(config, nodes)
     reach = build_reach(dependents, weights)
-    scheduling = Scheduling(dependents, reach, weights)
     progress = UnlockProgress(
         blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0)
     )
+    return _RunState(nodes, graph, Scheduling(dependents, reach, weights), progress)
+
+
+def run_recipe_inline(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
+    (
+        """Run the DAG in-process, no fork or privilege drop, one node at a time in topo order: the """
+        """foreground/debug path the seam tests drive."""
+    )
+    state = build_run_state(config)
+    dependents = state.scheduling.dependents
     results: dict[str, CookResult] = {}
-    for node_id in TopologicalSorter(graph).static_order():
+    for node_id in TopologicalSorter(state.graph).static_order():
         started = time.monotonic()
-        result = run_cook_guarded(nodes[node_id], config, dry_run=dry_run, scheduling=scheduling)
+        result = run_cook_guarded(state.nodes[node_id], config, dry_run=dry_run, scheduling=state.scheduling)
         results[node_id] = result
         for dependant in dependents[node_id]:
-            progress.satisfied[dependant] += 1
-        log_completion(node_id, result, dependents[node_id], progress, time.monotonic() - started)
+            state.progress.satisfied[dependant] += 1
+        log_completion(node_id, result, dependents[node_id], state.progress, time.monotonic() - started)
         if result.status == "hard_fail":
             break
     return results
@@ -564,20 +582,12 @@ def run_recipe(config: RecipeConfig, *, dry_run: bool) -> dict[str, CookResult]:
     )
     if inline_mode():
         return run_recipe_inline(config, dry_run=dry_run)
-    nodes = build_nodes(config)
-    graph = build_node_graph(nodes)
-    dependents = build_dependents(graph)
-    weights = build_weights(config, nodes)
-    reach = build_reach(dependents, weights)
-    scheduling = Scheduling(dependents, reach, weights)
-    progress = UnlockProgress(
-        blocker_count={node_id: len(deps) for node_id, deps in graph.items()}, satisfied=dict.fromkeys(graph, 0)
-    )
-    sorter: TopologicalSorter[str] = TopologicalSorter(graph)
+    state = build_run_state(config)
+    sorter: TopologicalSorter[str] = TopologicalSorter(state.graph)
     sorter.prepare()
-    scheduler = _Scheduler(nodes, config, scheduling, progress, dry_run, sorter)
+    scheduler = _Scheduler(state.nodes, config, state.scheduling, state.progress, dry_run, sorter)
 
-    with progress_region("Cooking", total=len(nodes)) as bar:
+    with progress_region("Cooking", total=len(state.nodes)) as bar:
         abort = False
         while sorter.is_active() and not abort:
             scheduler.launch_ready()

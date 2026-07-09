@@ -68,6 +68,8 @@ from typing import TYPE_CHECKING, Any
 from cerberus.checks import story_docs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
 
@@ -333,3 +335,48 @@ class Seam:
         for alias in aliases:
             if alias.name != "*" and alias.name not in public:
                 res.fail(f"{story_file}: story test imports non-public name {alias.name!r} from seam module {module!r}")
+
+
+@dataclass(frozen=True)
+class SeamGroup:
+    """One side of the cli-app/library split: how to select its packages and word its verdicts."""
+
+    label: str
+    ok_message: str
+    includes: Callable[[dict[str, Any]], bool]
+
+
+def _is_library(manifest: dict[str, Any]) -> bool:
+    return not is_cli_app(manifest)
+
+
+CLI_APPS = SeamGroup(
+    "cli apps",
+    "every cli app's story tests import only the root module or their cli entry module",
+    is_cli_app,
+)
+LIBRARIES = SeamGroup(
+    "libraries",
+    "every library's story tests import only their root module",
+    _is_library,
+)
+
+
+def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup) -> None:
+    paths = ctx.paths(repo)
+    packages = story_docs.PY.package_dirs(repo, ctx, paths)
+    if not packages:
+        res.skip("no Python packages")
+        return
+
+    seam = Seam.from_paths(repo, ctx, paths)
+    members = [package for package in packages if group.includes(seam.load_manifest(package))]
+    if not members:
+        res.skip(f"no {group.label}")
+        return
+
+    for package in sorted(members):
+        seam.check_package(res, package)
+
+    if not res.problems:
+        res.ok(group.ok_message)
