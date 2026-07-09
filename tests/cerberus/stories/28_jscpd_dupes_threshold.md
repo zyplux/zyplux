@@ -35,3 +35,7 @@
 ### 28.4.1 scans only the directories the workspace manifests register
 
 ### 28.4.2 falls back to the repo root when no manifest declares workspaces
+
+### 28.4.3 errors when package.json is not valid JSON instead of crashing
+
+### 28.4.4 errors when pyproject.toml is not valid TOML instead of crashing

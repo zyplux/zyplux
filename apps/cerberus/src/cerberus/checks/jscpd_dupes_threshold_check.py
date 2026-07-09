@@ -114,7 +114,14 @@ def _load_report(report_dir: Path) -> dict[str, Any] | None:
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     threshold = ctx.config.jscpd_dupes_threshold
-    scan_roots = [str(root) for root in _scan_roots(repo, ctx)]
+    try:
+        scan_roots = [str(root) for root in _scan_roots(repo, ctx)]
+    except json.JSONDecodeError as exc:
+        res.error(f"package.json is not valid JSON: {exc}")
+        return res
+    except tomllib.TOMLDecodeError as exc:
+        res.error(f"pyproject.toml is not valid TOML: {exc}")
+        return res
     with tempfile.TemporaryDirectory(prefix="cerberus-jscpd-") as report_dir:
         argv = [
             *_selection_argv(ctx),

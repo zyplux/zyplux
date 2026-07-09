@@ -97,7 +97,8 @@ def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
 
     assert result.exit_code == 1
     for check_id in known_check_ids:
-        assert f"🐾 {check_id}" in result.output or f"💢 {check_id}:" in result.output
+        rendered = (f"🐾 {check_id}", f"💢 {check_id}:", f"○ {check_id}:")
+        assert any(line in result.output for line in rendered)
     assert "💢 codeowners:" in result.output
     assert "🐾 justfile" in result.output
 
@@ -246,3 +247,20 @@ def test_16_10_1_reports_a_crashing_check_as_an_error_instead_of_aborting_the_ru
 
     assert result.exit_code == 1
     assert "codeowners: bite crashed: boom" in result.output
+
+
+def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
+    invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
+) -> None:
+    def skipping(repo: Repo, _ctx: Context) -> CheckResult:
+        result = check_result("codeowners", repo.name)
+        result.skip("no release-targets.toml — repo publishes nothing")
+        return result
+
+    register_fake_check("codeowners", skipping)
+
+    result = invoke_lint("--check", "codeowners")
+
+    assert result.exit_code == 0, result.output
+    assert "○ codeowners: no release-targets.toml — repo publishes nothing" in result.output
+    assert "🐾 codeowners" not in result.output

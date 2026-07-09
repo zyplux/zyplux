@@ -208,7 +208,11 @@ def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) ->
     for result in results:
         detail = f" {result.detail}" if result.detail else ""
         if not result.problems:
-            console.print(f"  {_GLYPH[Status.PASS]} {result.check}{detail}")
+            if result.status is Status.SKIP:
+                reason = "; ".join(f.message for f in result.findings if f.status is Status.SKIP)
+                console.print(f"  {_GLYPH[Status.SKIP]} {result.check}: {reason}{detail}")
+            else:
+                console.print(f"  {_GLYPH[Status.PASS]} {result.check}{detail}")
             continue
         for finding in result.problems:
             headline, _, rest = finding.message.partition("\n")

@@ -53,3 +53,7 @@
 ## 16.10 isolating a crashing check
 
 ### 16.10.1 reports a crashing check as an error instead of aborting the run
+
+## 16.11 rendering a skipped bite distinctly
+
+### 16.11.1 renders a skipped bite with its skip glyph and reason

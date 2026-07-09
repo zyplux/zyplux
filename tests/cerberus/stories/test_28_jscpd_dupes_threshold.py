@@ -236,3 +236,21 @@ def test_28_4_2_falls_back_to_the_repo_root_when_no_manifest_declares_workspaces
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_jscpd_dupes(files={"package.json": json.dumps({"name": "demo"})})
     assert _mask_report_dir(fake_proc.calls) == [(_argv([str(repo_root.resolve())]), Path(_REPORT_DIR_PLACEHOLDER))]
+
+
+def test_28_4_3_errors_when_package_json_is_not_valid_json_instead_of_crashing(
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    result = run_jscpd_dupes(files={"package.json": "{not json"})
+    assert result.findings[0].status == status.ERROR
+    assert result.findings[0].message.startswith("package.json is not valid JSON:")
+    assert fake_proc.calls == []
+
+
+def test_28_4_4_errors_when_pyproject_toml_is_not_valid_toml_instead_of_crashing(
+    run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    result = run_jscpd_dupes(files={"pyproject.toml": "members = ["})
+    assert result.findings[0].status == status.ERROR
+    assert result.findings[0].message.startswith("pyproject.toml is not valid TOML:")
+    assert fake_proc.calls == []
