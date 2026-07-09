@@ -1,10 +1,5 @@
 default_recipe_marker = "just --list"
 
-[jscpd_dupes_threshold]
-threshold = 2
-pattern = "**/*.{ts,tsx,py}"
-ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
-
 [aliases.required]
 i = "install"
 k = "knip"
