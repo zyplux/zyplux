@@ -99,24 +99,24 @@ def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
     for check_id in known_check_ids:
         rendered = (f"🐾 {check_id}", f"💢 {check_id}:", f"○ {check_id}:")
         assert any(line in result.output for line in rendered)
-    assert "💢 codeowners:" in result.output
-    assert "🐾 justfile" in result.output
+    assert "💢 codeowners_coverage:" in result.output
+    assert "🐾 justfile_baseline" in result.output
 
 
 def test_16_1_4_appends_a_bites_measured_detail_to_its_line(
     invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
 ) -> None:
     def measured(repo: Repo, _ctx: Context) -> CheckResult:
-        result = check_result("codeowners", repo.name)
+        result = check_result("codeowners_coverage", repo.name)
         result.detail = "ts: 1167 (2.20%); py: 1623 (1.30%)"
         return result
 
-    register_fake_check("codeowners", measured)
+    register_fake_check("codeowners_coverage", measured)
 
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 0, result.output
-    assert "🐾 codeowners ts: 1167 (2.20%); py: 1623 (1.30%)" in result.output
+    assert "🐾 codeowners_coverage ts: 1167 (2.20%); py: 1623 (1.30%)" in result.output
 
 
 @requires_just
@@ -157,7 +157,7 @@ def test_16_4_1_runs_only_the_checks_named_on_the_command_line(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     (conforming_repo / ".github" / "workflows" / "ci.yml").unlink()
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output
 
 
@@ -172,12 +172,12 @@ def test_16_4_2_rejects_an_unknown_check_name_given_on_the_command_line(invoke_l
 def test_16_5_1_uses_the_recipe_requirements_from_the_given_config_file_instead_of_the_bundled_defaults(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
-    baseline = invoke_lint("--check", "justfile")
+    baseline = invoke_lint("--check", "justfile_baseline")
     assert baseline.exit_code == 0, baseline.output
 
     config_path = conforming_repo / "cerberus.toml"
     config_path.write_text('default_recipe_marker = "just --menu"\n')
-    result = invoke_lint("--check", "justfile", "--config", str(config_path))
+    result = invoke_lint("--check", "justfile_baseline", "--config", str(config_path))
 
     assert result.exit_code == 1
     assert "`default` recipe should run `just --menu`" in result.output
@@ -187,12 +187,12 @@ def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     (conforming_repo / ".github" / "CODEOWNERS").unlink()
-    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["codeowners"]\n')
+    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["codeowners_coverage"]\n')
 
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 0, result.output
-    assert "codeowners" in result.output
+    assert "codeowners_coverage" in result.output
     assert "disabled" in result.output.lower()
     assert "[tool.cerberus]" in result.output
 
@@ -201,7 +201,7 @@ def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unkn
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["no-such-check"]\n')
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output
     assert "unknown disabled bites ignored: no-such-check" in result.output
 
@@ -209,8 +209,8 @@ def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unkn
 def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
-    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = "codeowners"\n')
-    result = invoke_lint("--check", "codeowners")
+    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = "codeowners_coverage"\n')
+    result = invoke_lint("--check", "codeowners_coverage")
     assert isinstance(result.exception, TypeError)
     assert "list of bite id strings" in str(result.exception)
 
@@ -241,26 +241,26 @@ def test_16_10_1_reports_a_crashing_check_as_an_error_instead_of_aborting_the_ru
         msg = "boom"
         raise RuntimeError(msg)
 
-    register_fake_check("codeowners", explode)
+    register_fake_check("codeowners_coverage", explode)
 
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 1
-    assert "codeowners: bite crashed: boom" in result.output
+    assert "codeowners_coverage: bite crashed: boom" in result.output
 
 
 def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
     invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
 ) -> None:
     def skipping(repo: Repo, _ctx: Context) -> CheckResult:
-        result = check_result("codeowners", repo.name)
+        result = check_result("codeowners_coverage", repo.name)
         result.skip("no release-targets.toml — repo publishes nothing")
         return result
 
-    register_fake_check("codeowners", skipping)
+    register_fake_check("codeowners_coverage", skipping)
 
-    result = invoke_lint("--check", "codeowners")
+    result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 0, result.output
-    assert "○ codeowners: no release-targets.toml — repo publishes nothing" in result.output
-    assert "🐾 codeowners" not in result.output
+    assert "○ codeowners_coverage: no release-targets.toml — repo publishes nothing" in result.output
+    assert "🐾 codeowners_coverage" not in result.output

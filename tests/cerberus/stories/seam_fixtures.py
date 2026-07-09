@@ -1,6 +1,6 @@
 """Trusted seam boundary for cerberus's own story tests.
 
-`cerberus.checks.py_test_seam` forbids a story test file from importing
+`cerberus.bites.py_test_seam` forbids a story test file from importing
 `cerberus` internals beyond the root package's public surface (`__version__`)
 and, for cli apps, `cerberus.cli`'s public surface — see that module's
 docstring for the exact rule. Only `test_*.py` story files are scanned, and
@@ -16,7 +16,7 @@ Every fixture below hands back either a ready-made value (a `Repo`, a built
 (`ok`/`fail`/`skip`/`error` build a `Finding` of that status), or an internal
 class/enum itself (`Status`, `Scope`) as a fixture return value — never as
 something a story test would need a runtime `import` statement to reach.
-Checks are always selected by their id STRING (`checks.BY_ID[check_id]`), so
+Checks are always selected by their id STRING (`bites.BY_ID[check_id]`), so
 a story test never names — and therefore never imports — the check submodule
 it exercises.
 """
@@ -30,8 +30,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import checks, config, context, proc, registries
-from cerberus.checks.rumdl_config_check import CANONICAL as _RUMDL_CANONICAL
+from cerberus import bites, config, context, proc, registries
+from cerberus.bites.rumdl_canonical_config_bite import CANONICAL as _RUMDL_CANONICAL
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
@@ -72,7 +72,7 @@ def make_context() -> MakeContext:
 @pytest.fixture
 def run_check() -> RunCheck:
     def _run(check_id: str, repo: Repo, ctx: Context) -> CheckResult:
-        return checks.BY_ID[check_id].run(repo, ctx)
+        return bites.BY_ID[check_id].run(repo, ctx)
 
     return _run
 
@@ -136,9 +136,9 @@ def register_fake_check(monkeypatch: pytest.MonkeyPatch) -> RegisterFakeCheck:
     """Swap a registered check's `run` callable for a fake, keeping its id/summary/scope."""
 
     def _register(check_id: str, run: Callable[[Repo, Context], CheckResult]) -> None:
-        original = checks.BY_ID[check_id]
-        fake = checks.Check(original.id, original.summary, original.scope, run)
-        monkeypatch.setitem(checks.BY_ID, check_id, fake)
+        original = bites.BY_ID[check_id]
+        fake = bites.Check(original.id, original.summary, original.scope, run)
+        monkeypatch.setitem(bites.BY_ID, check_id, fake)
 
     return _register
 
@@ -206,7 +206,7 @@ def rumdl_canonical() -> str:
 
 @pytest.fixture
 def known_check_ids() -> tuple[str, ...]:
-    return tuple(checks.BY_ID)
+    return tuple(bites.BY_ID)
 
 
 @dataclass

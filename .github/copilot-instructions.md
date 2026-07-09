@@ -20,3 +20,5 @@ Don't suggest guards for exceptions an API can't raise. Non-strict pathlib calls
 
 - **Cooks that front an external CLI replicate that CLI's exact path semantics** — no extra `~`-expansion, normalization, or fallbacks the CLI doesn't do. Drift detection must see byte-for-byte the paths the CLI writes; "hardening" that diverges creates false drift. Check the fronted tool's source before suggesting path handling changes.
 - **`apps/totchef/examples/totchef_files/*.py` are standalone `uv` scripts**, deployed verbatim and run via their own inline `# /// script` dependencies. Their imports are not library dependencies and belong out of `[project.dependencies]`.
+
+Cerberus bite ids are deliberately snake_case (`justfile_baseline`, `jscpd_dupes_threshold`) — the org convention, matching Python identifiers. Do not suggest renaming them to kebab-case or flag the convention as inconsistent.

@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
 
-from cerberus import __version__, checks, config, context
+from cerberus import __version__, bites, config, context
 from cerberus.graph import build as build_graph
 from cerberus.graph import explain_text, query_text
 from cerberus.graph import load as load_graph
@@ -64,21 +64,21 @@ CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to na
 
 class _UnknownCheckError(typer.BadParameter):
     def __init__(self, check_id: str) -> None:
-        super().__init__(f"unknown bite `{check_id}` (known: {', '.join(checks.BY_ID)})")
+        super().__init__(f"unknown bite `{check_id}` (known: {', '.join(bites.BY_ID)})")
 
 
-def _select_checks(only: list[str] | None) -> list[checks.Check]:
+def _select_checks(only: list[str] | None) -> list[bites.Check]:
     if not only:
-        return list(checks.ALL)
+        return list(bites.ALL)
     selected = []
     for cid in only:
-        if cid not in checks.BY_ID:
+        if cid not in bites.BY_ID:
             raise _UnknownCheckError(cid)
-        selected.append(checks.BY_ID[cid])
+        selected.append(bites.BY_ID[cid])
     return selected
 
 
-def _run_check(check: checks.Check, repo: Repo, ctx: Context) -> CheckResult:
+def _run_check(check: bites.Check, repo: Repo, ctx: Context) -> CheckResult:
     try:
         return check.run(repo, ctx)
     except Exception as exc:
@@ -109,7 +109,7 @@ def list_checks() -> None:
         Scope.CONTENT: "content",
         Scope.GIT_HISTORY: "git-history",
     }
-    for chk in checks.ALL:
+    for chk in bites.ALL:
         table.add_row(chk.id, scope_label[chk.scope], chk.summary)
     console.print(table)
 
@@ -134,14 +134,14 @@ def lint(
     selected = _select_checks(check)
 
     disabled = config.repo_disabled_checks(path)
-    unknown = disabled - set(checks.BY_ID)
+    unknown = disabled - set(bites.BY_ID)
     if unknown:
         err.print(f"[yellow]unknown disabled bites ignored: {', '.join(sorted(unknown))}[/yellow]")
     active = [chk for chk in selected if chk.id not in disabled]
 
     results = [_run_check(chk, repo, ctx) for chk in active]
 
-    _render_lint(repo, results, sorted(disabled & set(checks.BY_ID)))
+    _render_lint(repo, results, sorted(disabled & set(bites.BY_ID)))
     if _failed(results):
         raise typer.Exit(code=1)
 
