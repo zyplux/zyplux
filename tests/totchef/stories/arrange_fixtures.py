@@ -3,6 +3,7 @@
     """bash/network/host/home boundaries; assertions live in assert_fixtures."""
 )
 
+import json
 import platform
 import shlex
 import subprocess
@@ -27,9 +28,15 @@ if TYPE_CHECKING:
     from contextlib import AbstractContextManager
     from typing import Self
 
+    from act_fixtures import Totchef
     from totchef.recipe_types import RecipeConfig, RecipeValue
 
 CHEZMOI_COOK = (Path(__file__).resolve().parents[3] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
+
+GIT_NEEDS_INSTALL = (
+    "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n"
+    "        500 http://archive noble/main amd64 Packages\n"
+)
 
 
 class RecipeBuilder:
@@ -316,6 +323,96 @@ class FakeSystem:
         return self
 
 
+GITHUB_TREE_ROOT_SHA = "root0000root0000root0000root0000root0000"
+
+
+class FakeSkillsRepo:
+    (
+        """One skills repo behind the bash and network boundaries. `delivers` programs what the """
+        """next `skills add <repo>` writes; `upstream_holds`/`upstream_matches` program the """
+        """repo's GitHub tree the cook probes before re-syncing."""
+    )
+
+    def __init__(self, repo: str, home: Path, terminal: FakeTerminal, http: FakeHttp) -> None:
+        self.repo = repo
+        self._home = home
+        self._terminal = terminal
+        self._http = http
+        self._delivered: dict[str, str] = {}
+
+    def delivers(
+        self,
+        *skills: tuple[str, str],
+        files: dict[str, dict[str, str]] | None = None,
+        synced_at: str = "2026-01-01T00:00:00Z",
+    ) -> FakeSkillsRepo:
+        (
+            """Program the next `skills add <repo>`: `skills` is the full (name, folder_sha) """
+            """lockfile state it leaves behind, `files` each skill's own dropped files. The real """
+            """CLI rewrites updatedAt (`synced_at`) on every add whether or not content changed; """
+            """only the folder sha tracks content."""
+        )
+        self._delivered = dict(skills)
+
+        def sync() -> None:
+            self._write_lockfile(skills, synced_at)
+            for name, dropped in (files or {}).items():
+                self._drop_files(name, dropped)
+
+        self._terminal.arrange(f"skills add {self.repo}", effect=sync)
+        return self
+
+    def upstream_holds(self, *skill_shas: tuple[str, str]) -> FakeSkillsRepo:
+        """Program the repo's GitHub trees response: one `skills/<name>` tree entry per (name, folder_sha)."""
+        tree = [{"path": f"skills/{name}", "type": "tree", "sha": sha} for name, sha in skill_shas]
+        self._http.arrange(
+            f"api.github.com/repos/{self.repo}/git/trees/HEAD",
+            json.dumps({"sha": GITHUB_TREE_ROOT_SHA, "tree": tree}),
+        )
+        return self
+
+    def upstream_matches(self) -> FakeSkillsRepo:
+        """Program upstream to hold exactly what the last programmed sync delivered — nothing changed on GitHub."""
+        return self.upstream_holds(*self._delivered.items())
+
+    def _write_lockfile(self, skills: tuple[tuple[str, str], ...], synced_at: str) -> None:
+        entries = {
+            name: {
+                "source": self.repo,
+                "skillFolderHash": folder_sha,
+                "updatedAt": synced_at,
+                "skillPath": f"skills/{name}/SKILL.md",
+            }
+            for name, folder_sha in skills
+        }
+        lock_dir = self._home / ".agents"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        (lock_dir / ".skill-lock.json").write_text(json.dumps({"version": 3, "skills": entries}))
+
+    def _drop_files(self, name: str, files: dict[str, str]) -> None:
+        (
+            """Write a skill's own files the way a symlink-mode `skills add` does: into the """
+            """canonical store `~/.agents/skills/<name>`, with `~/.claude/skills/<name>` becoming """
+            """a symlink to it (replacing whatever sat there, as the CLI's createSymlink does); """
+            """every file arrives non-executable, since git doesn't preserve that bit."""
+        )
+        skill_dir = self._home / ".agents" / "skills" / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        for filename, content in files.items():
+            dropped = skill_dir / filename
+            dropped.write_text(content)
+            dropped.chmod(0o644)
+        agent_entry = self._home / ".claude" / "skills" / name
+        agent_entry.parent.mkdir(parents=True, exist_ok=True)
+        if agent_entry.is_symlink():
+            agent_entry.unlink()
+        elif agent_entry.is_dir():
+            for stale in sorted(agent_entry.rglob("*"), reverse=True):
+                stale.rmdir() if stale.is_dir() else stale.unlink()
+            agent_entry.rmdir()
+        agent_entry.symlink_to(skill_dir)
+
+
 @pytest.fixture(autouse=True)
 def terminal(monkeypatch: pytest.MonkeyPatch) -> FakeTerminal:
     (
@@ -477,6 +574,80 @@ def chezmoi_repo(tmp_path: Path) -> Path:
     (repo / "totchef_recipe.toml").write_text("")
     (cooks / "chezmoi_cook.py").write_text(CHEZMOI_COOK)
     return repo
+
+
+@pytest.fixture
+def chezmoi_provisioned(
+    system: FakeSystem,
+    terminal: FakeTerminal,
+    home: Path,
+    chezmoi_cook: Path,
+    totchef: Totchef,
+) -> None:
+    (
+        """A [chezmoi] recipe already converged — source cloned, config written, capture timer """
+        """enabled — with the terminal wiped, so the test's own `up()` is the re-run."""
+    )
+    del chezmoi_cook
+    system.has("chezmoi")
+    (home / ".local/share/chezmoi/.git").mkdir(parents=True)
+    totchef.recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
+    totchef.up().assert_shows("chezmoi.dotfiles", "applied")
+    terminal.reset()
+
+
+@pytest.fixture
+def git_needs_install() -> str:
+    """`apt-cache policy git` output for a git that's absent but installable — arranges apt_pkg to plan an install."""
+    return GIT_NEEDS_INSTALL
+
+
+@pytest.fixture
+def escalation_probe(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Callable[[], list[tuple[str, list[str]]]]:
+    (
+        """Arm the real no-escalation gate for `cli` runs: calling the probe makes the process """
+        """non-root with recipe execution and logging stubbed, and returns the list where any """
+        """`os.execvp` re-exec a command attempts would land — it must stay empty."""
+    )
+
+    def arm() -> list[tuple[str, list[str]]]:
+        escalations: list[tuple[str, list[str]]] = []
+        monkeypatch.setattr("os.geteuid", lambda: 1000)
+        monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
+        monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})
+        monkeypatch.setattr("totchef.cli.start_logging", lambda _echo_to_terminal=True: nullcontext(tmp_path / "log"))
+        monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
+        return escalations
+
+    return arm
+
+
+@pytest.fixture
+def zyp_skills(
+    recipe: RecipeBuilder, system: FakeSystem, terminal: FakeTerminal, http: FakeHttp, home: Path
+) -> FakeSkillsRepo:
+    (
+        """The §12 baseline: `[skills]` declares zyplux/zyp-skills and bun/bunx sit on PATH. """
+        """Program the repo's boundary behavior on the returned FakeSkillsRepo."""
+    )
+    recipe.declares("skills", repos=["zyplux/zyp-skills"])
+    system.has("bunx", "bun")
+    return FakeSkillsRepo("zyplux/zyp-skills", home, terminal, http)
+
+
+@pytest.fixture
+def installed_totchef_skill(zyp_skills: FakeSkillsRepo, totchef: Totchef, home: Path) -> Path:
+    (
+        """The totchef skill (content id #aaaa1111) already installed from zyplux/zyp-skills by """
+        """a converged first `up`. Holds the agent entry `~/.claude/skills/totchef`, a symlink """
+        """into the canonical store."""
+    )
+    zyp_skills.delivers(
+        ("totchef", "aaaa1111bbbb2222cccc3333dddd4444eeee5555"),
+        files={"totchef": {"SKILL.md": "---\nname: totchef\n---\n"}},
+    )
+    totchef.up().assert_shows("skills.zyplux/zyp-skills/totchef", "installed")
+    return home / ".claude" / "skills" / "totchef"
 
 
 @pytest.fixture

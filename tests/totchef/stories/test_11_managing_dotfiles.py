@@ -59,25 +59,13 @@ def test_11_1_2_source_dir_is_configurable_and_written_to_chezmoi_config(
 
 
 def test_11_1_3_chezmoi_is_idempotent_once_provisioned(
-    system: FakeSystem,
-    terminal: FakeTerminal,
-    totchef: Totchef,
-    home: Path,
-    chezmoi_cook: Path,
+    chezmoi_provisioned: None, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
     (
         """A re-run is a no-op once the source is cloned, the config matches, and the capture """
         """timer is enabled: unchanged, no init or capture setup."""
     )
-    del chezmoi_cook
-    recipe = totchef.recipe
-    system.has("chezmoi")
-    (home / ".local/share/chezmoi/.git").mkdir(parents=True)
-    recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
-
-    totchef.up().assert_shows("chezmoi.dotfiles", "applied")
-
-    terminal.reset()
+    del chezmoi_provisioned
 
     report = totchef.up()
 
@@ -166,25 +154,13 @@ def test_11_3_2_capture_units_install_and_the_timer_is_enabled(
 
 
 def test_11_3_3_capture_is_idempotent_once_enabled(
-    system: FakeSystem,
-    terminal: FakeTerminal,
-    totchef: Totchef,
-    home: Path,
-    chezmoi_cook: Path,
+    chezmoi_provisioned: None, terminal: FakeTerminal, totchef: Totchef
 ) -> None:
     (
         """With the units installed and the timer enabled, a re-run shows unchanged: it neither """
         """rewrites the units nor re-runs `systemctl start`."""
     )
-    del chezmoi_cook
-    recipe = totchef.recipe
-    system.has("chezmoi")
-    (home / ".local/share/chezmoi/.git").mkdir(parents=True)
-    recipe.declares("chezmoi", repo="https://github.test/operator/dotfiles.git")
-
-    totchef.up().assert_shows("chezmoi.dotfiles", "applied")
-
-    terminal.reset()
+    del chezmoi_provisioned
 
     report = totchef.up()
 
