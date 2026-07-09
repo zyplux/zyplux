@@ -16,6 +16,12 @@ export type EnvStub = {
   set: (name: string, value: string) => void;
 };
 
+export const makeFixture =
+  <Subject>(subject: Subject) =>
+  async ({}: object, use: (subject: Subject) => Promise<void>) => {
+    await use(subject);
+  };
+
 export type LibraryFixtures = {
   shell: ShellFake;
   tempDir: TempDir;

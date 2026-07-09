@@ -1,4 +1,4 @@
-import { describe, expect, test, zyplux } from '#fixtures';
+import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleName: 'contracts-only-schemas' });
 
@@ -120,7 +120,7 @@ describe('15.4 rejecting non-declarative statements', () => {
 });
 
 describe('15.5 scoping the rule to contracts files in the shipped config', () => {
-  test('15.5.1 enables the rule only for src contracts files', () => {
+  test('15.5.1 enables the rule only for src contracts files', ({ zyplux }) => {
     const config = zyplux();
     const contractEntries = config.filter(entry => entry.rules?.['@zyplux/contracts-only-schemas'] !== undefined);
     expect(contractEntries.map(entry => entry.files)).toEqual([['**/src/contracts.ts']]);

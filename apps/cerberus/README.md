@@ -47,6 +47,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `story_tests_lockstep_ts`      | content     | `tests/**/stories/*.md` criteria have a matching, title-matched vitest test          |
 | `cli_ts_test_seam`             | content     | CLI apps export only the root seam; story tests reach workspace code via fixture aliases |
 | `lib_ts_test_seam`             | content     | Libraries export only the root seam; story tests reach workspace code via fixture aliases |
+| `fixture_roles_ts`             | content     | Torn-out TS test suites compose fixtures from role modules: `#fixtures` targets `fixtures/index.ts` and only `act.ts` imports the subject package (its `./contracts` seam excepted) |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
 | `lib_py_test_seam`             | content     | Libraries' story tests import only their root module                                |
 | `release_surface_version_bump` | git-history | A published target's version is bumped whenever its release surface changes          |

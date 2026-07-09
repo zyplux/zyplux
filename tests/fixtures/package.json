@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/tests-fixtures",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Story-test fixtures for zyplux workspaces: Bun.$ shell fake, console capture, fetch routing, temp dirs, and vitest test.extend bases per app type",
   "keywords": [
     "bun",

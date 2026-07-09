@@ -34,7 +34,7 @@ _STATIC_IMPORT = re.compile(r"^(?:import|export)\b[^;]*?\bfrom\s+'([^']+)'", re.
 _SIDE_EFFECT_IMPORT = re.compile(r"^import\s+'([^']+)'", re.MULTILINE)
 
 
-def _parse_manifest(content: str | None) -> dict[str, Any]:
+def parse_manifest(content: str | None) -> dict[str, Any]:
     if content is None:
         return {}
     try:
@@ -48,7 +48,7 @@ def _manifest_path(package: str) -> str:
     return f"{package}/package.json" if package else "package.json"
 
 
-def _import_specifiers(content: str) -> list[str]:
+def import_specifiers(content: str) -> list[str]:
     return [*_STATIC_IMPORT.findall(content), *_SIDE_EFFECT_IMPORT.findall(content)]
 
 
@@ -107,12 +107,12 @@ class Seam:
         names = frozenset(
             name
             for member in members
-            if isinstance(name := _parse_manifest(ctx.file(repo, _manifest_path(member))).get("name"), str)
+            if isinstance(name := parse_manifest(ctx.file(repo, _manifest_path(member))).get("name"), str)
         )
         return cls(repo, ctx, subject, story_files, frozenset(paths), names)
 
     def load_manifest(self, package: str) -> dict[str, Any]:
-        return _parse_manifest(self.ctx.file(self.repo, _manifest_path(package)))
+        return parse_manifest(self.ctx.file(self.repo, _manifest_path(package)))
 
     def check_package(self, res: CheckResult, package: str) -> None:
         manifest_path = _manifest_path(package)
@@ -130,7 +130,7 @@ class Seam:
         content = self.ctx.file(self.repo, story_file)
         if content is None:
             return
-        for specifier in _import_specifiers(content):
+        for specifier in import_specifiers(content):
             if self._is_outside_seam(specifier):
                 res.fail(f"{story_file}: story test imports outside the fixtures seam — {specifier!r}")
 
@@ -142,7 +142,7 @@ class Seam:
         return any(specifier == name or specifier.startswith(f"{name}/") for name in self.workspace_names)
 
     def _check_alias_escapes(self, res: CheckResult, manifest_path: str) -> None:
-        imports = _parse_manifest(self.ctx.file(self.repo, manifest_path)).get("imports")
+        imports = parse_manifest(self.ctx.file(self.repo, manifest_path)).get("imports")
         if not isinstance(imports, dict):
             return
         for alias, value in sorted(imports.items()):

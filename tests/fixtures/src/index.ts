@@ -12,4 +12,4 @@ export {
   type ShellReply,
   toArgv,
 } from './shell';
-export { type CliFixtures, cliTest, type EnvStub, type LibraryFixtures, libraryTest } from './story';
+export { type CliFixtures, cliTest, type EnvStub, type LibraryFixtures, libraryTest, makeFixture } from './story';

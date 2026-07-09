@@ -1,4 +1,4 @@
-import { applySuggestion, describe, expect, test } from '#fixtures';
+import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleName: 'no-return-array-push' });
 
@@ -42,7 +42,7 @@ describe('9.1 flagging consumed push and unshift return values', () => {
     );
   });
 
-  test('9.1.7 offers a split-into-statement suggestion when the push length is returned', ({ lintRule }) => {
+  test('9.1.7 offers a split-into-statement suggestion when the push length is returned', ({ applySuggestion, lintRule }) => {
     const code = 'function run() { const items: number[] = []; return items.push(1); }';
     const messages = lintRule(code);
     expect(messages).toMatchObject([
