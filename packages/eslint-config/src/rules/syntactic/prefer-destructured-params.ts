@@ -235,10 +235,7 @@ export const preferDestructuredParams = createRule({
       const functionScope = paramVariable.scope;
       if (hasFreeVariableCapture(functionScope, introducedNames)) return;
 
-      const exemptVariables = new Set([
-        paramVariable,
-        ...aliasAbsorptions.map(absorption => absorption.localVariable),
-      ]);
+      const exemptVariables = new Set([paramVariable, ...aliasAbsorptions.map(absorption => absorption.localVariable)]);
       const localCollisions = findLocalCollisions(functionScope, introducedNames, exemptVariables);
       return { aliasAbsorptions, directReads, localCollisions, param, propertyNames };
     };

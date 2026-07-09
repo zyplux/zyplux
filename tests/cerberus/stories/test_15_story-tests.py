@@ -402,6 +402,23 @@ def test_15_5_3_flags_a_linked_criterion_header_for_unlinking(
     assert result.findings == [fail(PY_STALE_LINK_MESSAGE)]
 
 
+def test_15_5_4_leaves_a_freshly_linked_doc_unchanged_on_a_fix_rerun(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, ok: MakeFinding
+) -> None:
+    files = {
+        "pyproject.toml": _PY_PLAIN_PYPROJECT,
+        DOC_PATH: DOC,
+        PY_TEST_PATH: PY_TEST,
+    }
+    run_check_on_disk(PY_CHECK_ID, files, fix=True)
+    doc_path = tmp_path / "tests" / "stories" / "1_widget.md"
+    linked_doc = doc_path.read_text()
+
+    result = run_check_on_disk(PY_CHECK_ID, {}, fix=True)
+    assert doc_path.read_text() == linked_doc
+    assert result.findings == [ok(OK_MESSAGE)]
+
+
 def test_15_6_1_recognizes_test_calls_written_with_chained_modifiers(
     run_check_with_files: RunCheckWithFiles, ok: MakeFinding
 ) -> None:

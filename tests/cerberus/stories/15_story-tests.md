@@ -56,6 +56,8 @@
 
 ### 15.5.3 flags a linked criterion header for unlinking
 
+### 15.5.4 leaves a freshly linked doc unchanged on a fix rerun
+
 ## 15.6 recognizing typescript test call syntax
 
 ### 15.6.1 recognizes test calls written with chained modifiers
