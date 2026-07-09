@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
 
-CHECK_ID = "no-dead-code"
+CHECK_ID = "fallow_analyzer"
 
 _PACKAGE_JSON = '{"name": "demo"}'
 
@@ -19,8 +19,18 @@ _DEAD_CODE_ARGV = ["bunx", "fallow", "dead-code", "--quiet", "--fail-on-issues",
 _HEALTH_ARGV = ["bunx", "fallow", "health", "--quiet", "--fail-on-issues", "--format", "json"]
 
 _CLEAN_DEAD_CODE = json.dumps({"total_issues": 0})
-_CLEAN_HEALTH = json.dumps({"findings": [], "summary": {}})
+_CLEAN_HEALTH = json.dumps({
+    "elapsed_ms": 9,
+    "findings": [],
+    "summary": {
+        "functions_analyzed": 941,
+        "functions_above_threshold": 0,
+        "average_maintainability": 92.1,
+    },
+})
+_CLEAN_HEALTH_STATUS = "✓ 0 above threshold · 941 analyzed · maintainability 92.1 (good) (0.01s)"
 _HEALTH_OVER_THRESHOLD = json.dumps({
+    "elapsed_ms": 9,
     "findings": [
         {
             "path": "src/rules/params.ts",
@@ -40,6 +50,9 @@ _HEALTH_OVER_THRESHOLD = json.dumps({
         },
     ],
     "summary": {
+        "functions_analyzed": 941,
+        "functions_above_threshold": 2,
+        "average_maintainability": 92.1,
         "max_cyclomatic_threshold": 20,
         "max_cognitive_threshold": 15,
         "max_crap_threshold": 30.0,
@@ -125,7 +138,7 @@ def test_29_3_1_fails_listing_each_function_fallow_health_flags_above_its_thresh
     assert result.findings == [
         finding(
             status.FAIL,
-            "fallow found 2 functions above its complexity thresholds\n"
+            "✗ 2 above threshold · 941 analyzed · maintainability 92.1 (good) (0.01s)\n"
             "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15, CRAP 160/30\n"
             "    src/rules/types.ts:292 checkParams — cyclomatic 13/20, cognitive 16/15, CRAP 49.5/30",
         )
@@ -146,6 +159,9 @@ def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_dat
             },
         ],
         "summary": {
+            "functions_analyzed": 500,
+            "functions_above_threshold": 1,
+            "average_maintainability": 70.0,
             "max_cyclomatic_threshold": 20,
             "max_cognitive_threshold": 15,
             "max_crap_threshold": 30.0,
@@ -157,16 +173,24 @@ def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_dat
     assert result.findings == [
         finding(
             status.FAIL,
-            "fallow found 1 functions above its complexity thresholds\n"
+            "✗ 1 above threshold · 500 analyzed · maintainability 70.0 (moderate)\n"
             "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15",
         )
     ]
 
 
-def test_29_4_1_reports_the_combined_fallow_issue_count(
+def test_29_4_1_reports_fallows_health_status_line_on_a_clean_run(
+    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
+) -> None:
+    _serve_clean(fake_proc)
+    result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
+    assert result.detail == _CLEAN_HEALTH_STATUS
+
+
+def test_29_4_2_leaves_the_detail_unset_on_failure_so_the_status_line_appears_only_in_the_fail_line(
     run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
 ) -> None:
     fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
     fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.detail == "ts: 5"
+    assert result.detail is None

@@ -1,0 +1,3 @@
+{
+  "ignorePatterns": ["apps/cerberus", "apps/totchef", "packages/util_py", "tests/cerberus", "tests/totchef"]
+}

@@ -1,4 +1,4 @@
-# 28. [Capping copy-paste duplication via jscpd](test_28_max-duplication.py)
+# 28. [Capping copy-paste duplication via jscpd](test_28_jscpd_dupes_threshold.py)
 
 ## 28.1 enforcing the duplication threshold per language from jscpd's json report
 
@@ -17,6 +17,8 @@
 ### 28.2.1 reports duplicated tokens and percentage per language
 
 ### 28.2.2 reads reports with flat per-language stats
+
+### 28.2.3 leaves the detail unset on failure so the stats appear only in the fail line
 
 ## 28.3 sourcing the threshold and file selection from cerberus configuration
 

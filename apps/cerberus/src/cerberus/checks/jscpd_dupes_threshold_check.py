@@ -1,9 +1,9 @@
 """Copy-paste duplication cap: cerberus itself runs jscpd over the repo's
 workspace-registered code and enforces the configured threshold
-(`[max_duplication] threshold` in cerberus.toml, default 2%) against every
+(`[jscpd_dupes_threshold] threshold` in cerberus.toml, default 2%) against every
 language's duplicated-token percentage from jscpd's json report — not just
 the aggregate total. Cerberus owns the whole jscpd invocation: the file
-selection pattern and ignore globs come from `[max_duplication] pattern` and
+selection pattern and ignore globs come from `[jscpd_dupes_threshold] pattern` and
 `ignore` in cerberus.toml, scan roots come from the repo's own workspace
 manifests (bun `workspaces`, uv `[tool.uv.workspace] members`), and the
 subprocess runs with its cwd outside the repo so repo-local jscpd config
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "max-duplication"
+ID = "jscpd_dupes_threshold"
 SUMMARY = "copy-paste duplication per language stays under the configured jscpd threshold"
 SCOPE = Scope.CONTENT
 
@@ -70,9 +70,9 @@ def _selection_argv(ctx: Context) -> list[str]:
         "bunx",
         "jscpd",
         "--pattern",
-        ctx.config.max_duplication_pattern,
+        ctx.config.jscpd_dupes_pattern,
         "--ignore",
-        ",".join(ctx.config.max_duplication_ignore),
+        ",".join(ctx.config.jscpd_dupes_ignore),
     ]
 
 
@@ -113,7 +113,7 @@ def _load_report(report_dir: Path) -> dict[str, Any] | None:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    threshold = ctx.config.max_duplication_threshold
+    threshold = ctx.config.jscpd_dupes_threshold
     scan_roots = [str(root) for root in _scan_roots(repo, ctx)]
     with tempfile.TemporaryDirectory(prefix="cerberus-jscpd-") as report_dir:
         argv = [
@@ -140,12 +140,12 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error("jscpd wrote no readable json report")
         return res
     stats = _language_stats(report)
-    if stats:
-        res.detail = "; ".join(f"{s.label}: {s.duplicated_tokens} ({s.percentage:.2f}%)" for s in stats)
+    stats_line = "; ".join(f"{s.label}: {s.duplicated_tokens} ({s.percentage:.2f}%)" for s in stats)
     offenders = [s.label for s in stats if s.percentage > threshold]
     if offenders:
-        header = f"duplication exceeds the {threshold:g}% threshold in {', '.join(offenders)}"
-        res.fail("\n".join([header, *_clone_lines(report, ctx.source.root.resolve())]))
+        res.fail("\n".join([stats_line, *_clone_lines(report, ctx.source.root.resolve())]))
     else:
+        if stats_line:
+            res.detail = stats_line
         res.ok(f"duplication is under the {threshold:g}% threshold in every language")
     return res

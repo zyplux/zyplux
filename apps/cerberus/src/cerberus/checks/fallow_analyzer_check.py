@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "no-dead-code"
+ID = "fallow_analyzer"
 SUMMARY = "fallow finds no unused code, circular imports, or functions above its complexity thresholds"
 SCOPE = Scope.CONTENT
 
@@ -45,6 +45,35 @@ _COMPLEXITY_METRICS = (
 )
 
 
+_MAINTAINABILITY_SCALE = ((85, "good"), (65, "moderate"))
+
+
+def _maintainability_rating(score: float) -> str:
+    return next((word for floor, word in _MAINTAINABILITY_SCALE if score >= floor), "low")
+
+
+def _health_status_line(report: dict[str, Any]) -> str | None:
+    summary = report.get("summary", {})
+    above = summary.get("functions_above_threshold")
+    analyzed = summary.get("functions_analyzed")
+    maintainability = summary.get("average_maintainability")
+    parts = []
+    if above is not None:
+        parts.append(f"{above} above threshold")
+    if analyzed is not None:
+        parts.append(f"{analyzed} analyzed")
+    if maintainability is not None:
+        parts.append(f"maintainability {maintainability:.1f} ({_maintainability_rating(maintainability)})")
+    if not parts:
+        return None
+    glyph = "✗" if above else "✓"
+    line = f"{glyph} " + " · ".join(parts)
+    elapsed_ms = report.get("elapsed_ms")
+    if elapsed_ms is not None:
+        line += f" ({elapsed_ms / 1000:.2f}s)"
+    return line
+
+
 def _complexity_lines(report: dict[str, Any]) -> list[str]:
     thresholds = report["summary"]
     lines = []
@@ -58,29 +87,28 @@ def _complexity_lines(report: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _record_dead_code(res: CheckResult, outcome: subprocess.CompletedProcess[str]) -> int | None:
+def _record_dead_code(res: CheckResult, outcome: subprocess.CompletedProcess[str]) -> None:
+    if outcome.returncode == 0:
+        return
     report = _parse_report(outcome)
     issue_count = report.get("total_issues") if report is not None else None
-    if outcome.returncode == 0:
-        return issue_count
     if issue_count is None:
         res.fail(f"fallow dead-code exited {outcome.returncode}; run `bunx fallow dead-code` locally for details")
     else:
         res.fail(f"fallow found {issue_count} dead-code issues; run `bunx fallow dead-code` locally for details")
-    return issue_count
 
 
-def _record_complexity(res: CheckResult, outcome: subprocess.CompletedProcess[str]) -> int | None:
-    report = _parse_report(outcome)
-    offenders = report.get("findings") if report is not None else None
+def _record_complexity(
+    res: CheckResult, outcome: subprocess.CompletedProcess[str], report: dict[str, Any] | None
+) -> None:
     if outcome.returncode == 0:
-        return len(offenders) if offenders is not None else 0
+        return
+    offenders = report.get("findings") if report is not None else None
     if report is None or not offenders:
         res.fail(f"fallow health exited {outcome.returncode}; run `bunx fallow health` locally for details")
-        return None
-    header = f"fallow found {len(offenders)} functions above its complexity thresholds"
+        return
+    header = _health_status_line(report) or f"fallow found {len(offenders)} functions above its complexity thresholds"
     res.fail("\n".join([header, *_complexity_lines(report)]))
-    return len(offenders)
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
@@ -95,10 +123,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         except proc.ToolNotFoundError as exc:
             res.error(str(exc))
             return res
-    dead_code_count = _record_dead_code(res, outcomes[0])
-    complexity_count = _record_complexity(res, outcomes[1])
-    if dead_code_count is not None and complexity_count is not None:
-        res.detail = f"ts: {dead_code_count + complexity_count}"
+    _record_dead_code(res, outcomes[0])
+    health_report = _parse_report(outcomes[1])
+    _record_complexity(res, outcomes[1], health_report)
     if not res.findings:
+        if health_report is not None:
+            res.detail = _health_status_line(health_report)
         res.ok("fallow found no dead code, cycles, or complexity offenders")
     return res

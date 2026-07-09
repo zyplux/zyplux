@@ -1,4 +1,4 @@
-# 29. [Banning dead code and complexity offenders via fallow](test_29_no-dead-code.py)
+# 29. [Banning dead code and complexity offenders via fallow](test_29_fallow_analyzer.py)
 
 ## 29.1 scoping the check
 
@@ -18,6 +18,10 @@
 
 ### 29.3.1 fails listing each function fallow health flags above its thresholds
 
-## 29.4 surfacing the measured issue count
+### 29.3.2 fails listing only the metrics fallow reported when coverage data is absent
 
-### 29.4.1 reports the combined fallow issue count
+## 29.4 surfacing fallow's health status line
+
+### 29.4.1 reports fallow's health status line on a clean run
+
+### 29.4.2 leaves the detail unset on failure so the status line appears only in the fail line
