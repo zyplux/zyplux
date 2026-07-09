@@ -12,19 +12,23 @@
 
 ### 27.2.1 fails when package.json has an inline knip key
 
-## 27.3 allowlisting standalone knip.json content per repo
+## 27.3 limiting standalone knip.json to the shared per-key allowances
 
-### 27.3.1 fails when knip.json is present but the repo has no allowlisted config
+### 27.3.1 fails when knip.json customizes anything beyond the allowed keys
 
-### 27.3.2 fails when knip.json does not match the repo's allowlisted config
+### 27.3.2 fails when an allowed key is not a list of strings
 
-### 27.3.3 passes when knip.json matches the repo's allowlisted config, ignoring $schema
+### 27.3.3 fails when ignoreBinaries names a binary outside the shared allowance
 
-### 27.3.4 passes when knip.json is absent and the repo needs no customization
+### 27.3.4 fails when ignoreDependencies names a dependency outside the shared allowance
 
-### 27.3.5 errors when knip.json cannot be parsed
+### 27.3.5 passes when customizations draw only from the shared allowances, ignoring $schema
 
-### 27.3.6 errors when knip.json is not an object
+### 27.3.6 passes when knip.json is absent and the repo needs no customization
+
+### 27.3.7 errors when knip.json cannot be parsed
+
+### 27.3.8 errors when knip.json is not an object
 
 ## 27.4 requiring an entry-exports pass scoped to unpublished workspaces
 
@@ -54,10 +58,14 @@
 
 ### 27.4.13 ignores non npm targets when computing published workspace dirs
 
-### 27.4.14 requires the prod config to repeat the repo's allowlisted base config
+### 27.4.14 requires the prod config to repeat knip.json's customizations
 
-### 27.4.15 passes when the prod config repeats the repo's allowlisted base config
+### 27.4.15 passes when the prod config repeats knip.json's customizations
 
 ### 27.4.16 fails and names a workspace entry with extra keys
 
 ### 27.4.17 fails when the workspaces key is not an object
+
+### 27.4.18 allows excluding exactly the catalog issue type
+
+### 27.4.19 fails when exclude covers anything beyond the catalog issue type

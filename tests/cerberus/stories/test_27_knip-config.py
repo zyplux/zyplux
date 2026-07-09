@@ -11,15 +11,21 @@ if TYPE_CHECKING:
     from cerberus.model import CheckResult, Finding, Repo, Status
 
 type RunCheck = Callable[[str, Repo, Context], CheckResult]
-type RunKnipConfig = Callable[..., CheckResult]
+type RunKnipConfig = Callable[[dict[str, str]], CheckResult]
 
 CHECK_ID = "knip-config"
 
 _PKG_NO_KNIP = '{"name": "demo"}'
 _PKG_INLINE_KNIP = '{"name": "demo", "knip": {"ignoreBinaries": ["uv"]}}'
 
-_BASE_MATCHING = '{"$schema": "https://unpkg.com/knip@6/schema.json", "ignoreBinaries": ["podman", "uv"]}'
-_BASE_WRONG = '{"ignoreBinaries": ["uv"]}'
+_BASE_ALLOWED = (
+    '{"$schema": "https://unpkg.com/knip@6/schema.json", '
+    '"ignoreBinaries": ["podman", "uv"], "ignoreDependencies": ["cloudflare"]}'
+)
+_BASE_EXTRA_KEY = '{"ignoreBinaries": ["uv"], "entry": ["src/main.ts"]}'
+_BASE_NOT_A_LIST = '{"ignoreBinaries": "uv"}'
+_BASE_BINARY_OUTSIDE_ALLOWANCE = '{"ignoreBinaries": ["uv", "terraform"]}'
+_BASE_DEPENDENCY_OUTSIDE_ALLOWANCE = '{"ignoreDependencies": ["cloudflare", "left-pad"]}'
 
 _ENTRY_EXPORTS_OK = '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"]}'
 _ENTRY_EXPORTS_NOT_TRUE = '{"includeEntryExports": false, "ignoreWorkspaces": ["tests/*"]}'
@@ -41,8 +47,15 @@ _ENTRY_EXPORTS_MALFORMED_WORKSPACE_ENTRY = (
 _ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT = (
     '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "workspaces": []}'
 )
-_ENTRY_EXPORTS_ZYPLUX = (
-    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["podman", "uv"]}'
+_ENTRY_EXPORTS_EXCLUDE_CATALOG = (
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "exclude": ["catalog"]}'
+)
+_ENTRY_EXPORTS_EXCLUDE_TOO_MUCH = (
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "exclude": ["catalog", "exports"]}'
+)
+_ENTRY_EXPORTS_WITH_ALLOWANCES = (
+    '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], '
+    '"ignoreBinaries": ["podman", "uv"], "ignoreDependencies": ["cloudflare"]}'
 )
 
 _RELEASE_TARGETS_ONE_NPM = (
@@ -63,18 +76,15 @@ _RELEASE_TARGETS_MIXED_KINDS = (
     'surface = ["tool"]\n'
 )
 
-_OK = (
-    "knip.json (if any) matches the repo's allowlisted config; "
-    "knip.prod.json exactly exempts every published npm target"
-)
+_OK = "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
 
 
 @pytest.fixture
 def run_knip_config(
     ctx: Context, run_check: RunCheck, repo_class: type[Repo], monkeypatch: pytest.MonkeyPatch
 ) -> RunKnipConfig:
-    def _run(files: dict[str, str], *, repo_name: str = "demo") -> CheckResult:
-        repo = repo_class(repo_name)
+    def _run(files: dict[str, str]) -> CheckResult:
+        repo = repo_class("demo")
         monkeypatch.setattr(ctx, "paths", lambda _repo: sorted(files))
         monkeypatch.setattr(ctx, "file", lambda _repo, path: files.get(path))
         return run_check(CHECK_ID, repo, ctx)
@@ -115,49 +125,74 @@ def test_27_2_1_fails_when_package_json_has_an_inline_knip_key(
     )
 
 
-def test_27_3_1_fails_when_knip_json_is_present_but_the_repo_has_no_allowlisted_config(
+def test_27_3_1_fails_when_knip_json_customizes_anything_beyond_the_allowed_keys(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
-        "knip.json": _BASE_WRONG,
+        "knip.json": _BASE_EXTRA_KEY,
         "knip.prod.json": _ENTRY_EXPORTS_OK,
     })
     assert (
-        finding(status.FAIL, "knip.json present but demo has no allowlisted customization; remove it or allowlist it")
+        finding(
+            status.FAIL,
+            'knip.json may only customize "ignoreBinaries", "ignoreDependencies"; unexpected key(s): entry',
+        )
         in result.findings
     )
 
 
-def test_27_3_2_fails_when_knip_json_does_not_match_the_repos_allowlisted_config(
+def test_27_3_2_fails_when_an_allowed_key_is_not_a_list_of_strings(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_knip_config(
-        {
-            "package.json": _PKG_NO_KNIP,
-            "knip.json": _BASE_WRONG,
-            "knip.prod.json": _ENTRY_EXPORTS_OK,
-        },
-        repo_name="zyplux",
-    )
-    assert finding(status.FAIL, "knip.json does not match the allowlisted config for zyplux") in result.findings
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_NOT_A_LIST,
+        "knip.prod.json": _ENTRY_EXPORTS_OK,
+    })
+    assert finding(status.FAIL, 'knip.json "ignoreBinaries" must be a JSON array of strings') in result.findings
 
 
-def test_27_3_3_passes_when_knip_json_matches_the_repos_allowlisted_config_ignoring_schema(
+def test_27_3_3_fails_when_ignore_binaries_names_a_binary_outside_the_shared_allowance(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_knip_config(
-        {
-            "package.json": _PKG_NO_KNIP,
-            "knip.json": _BASE_MATCHING,
-            "knip.prod.json": _ENTRY_EXPORTS_ZYPLUX,
-        },
-        repo_name="zyplux",
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_BINARY_OUTSIDE_ALLOWANCE,
+        "knip.prod.json": _ENTRY_EXPORTS_OK,
+    })
+    assert (
+        finding(status.FAIL, "knip.json ignoreBinaries allows only podman, uv; not allowed: terraform")
+        in result.findings
     )
+
+
+def test_27_3_4_fails_when_ignore_dependencies_names_a_dependency_outside_the_shared_allowance(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_DEPENDENCY_OUTSIDE_ALLOWANCE,
+        "knip.prod.json": _ENTRY_EXPORTS_OK,
+    })
+    assert (
+        finding(status.FAIL, "knip.json ignoreDependencies allows only cloudflare; not allowed: left-pad")
+        in result.findings
+    )
+
+
+def test_27_3_5_passes_when_customizations_draw_only_from_the_shared_allowances_ignoring_schema(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_ALLOWED,
+        "knip.prod.json": _ENTRY_EXPORTS_WITH_ALLOWANCES,
+    })
     assert result.findings == [finding(status.PASS, _OK)]
 
 
-def test_27_3_4_passes_when_knip_json_is_absent_and_the_repo_needs_no_customization(
+def test_27_3_6_passes_when_knip_json_is_absent_and_the_repo_needs_no_customization(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_knip_config({
@@ -167,7 +202,7 @@ def test_27_3_4_passes_when_knip_json_is_absent_and_the_repo_needs_no_customizat
     assert result.findings == [finding(status.PASS, _OK)]
 
 
-def test_27_3_5_errors_when_knip_json_cannot_be_parsed(run_knip_config: RunKnipConfig, status: type[Status]) -> None:
+def test_27_3_7_errors_when_knip_json_cannot_be_parsed(run_knip_config: RunKnipConfig, status: type[Status]) -> None:
     result = run_knip_config({
         "package.json": _PKG_NO_KNIP,
         "knip.json": "{unterminated",
@@ -177,7 +212,7 @@ def test_27_3_5_errors_when_knip_json_cannot_be_parsed(run_knip_config: RunKnipC
     assert result.findings[0].message.startswith("could not parse knip.json:")
 
 
-def test_27_3_6_errors_when_knip_json_is_not_an_object(
+def test_27_3_8_errors_when_knip_json_is_not_an_object(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
     result = run_knip_config({
@@ -329,31 +364,26 @@ def test_27_4_13_ignores_non_npm_targets_when_computing_published_workspace_dirs
     assert result.findings == [finding(status.PASS, _OK)]
 
 
-def test_27_4_14_requires_the_prod_config_to_repeat_the_repos_allowlisted_base_config(
+def test_27_4_14_requires_the_prod_config_to_repeat_knip_jsons_customizations(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_knip_config(
-        {
-            "package.json": _PKG_NO_KNIP,
-            "knip.json": _BASE_MATCHING,
-            "knip.prod.json": _ENTRY_EXPORTS_OK,
-        },
-        repo_name="zyplux",
-    )
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_ALLOWED,
+        "knip.prod.json": _ENTRY_EXPORTS_OK,
+    })
     assert finding(status.FAIL, 'knip.prod.json must set "ignoreBinaries": ["podman", "uv"]') in result.findings
+    assert finding(status.FAIL, 'knip.prod.json must set "ignoreDependencies": ["cloudflare"]') in result.findings
 
 
-def test_27_4_15_passes_when_the_prod_config_repeats_the_repos_allowlisted_base_config(
+def test_27_4_15_passes_when_the_prod_config_repeats_knip_jsons_customizations(
     run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
 ) -> None:
-    result = run_knip_config(
-        {
-            "package.json": _PKG_NO_KNIP,
-            "knip.json": _BASE_MATCHING,
-            "knip.prod.json": _ENTRY_EXPORTS_ZYPLUX,
-        },
-        repo_name="zyplux",
-    )
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.json": _BASE_ALLOWED,
+        "knip.prod.json": _ENTRY_EXPORTS_WITH_ALLOWANCES,
+    })
     assert result.findings == [finding(status.PASS, _OK)]
 
 
@@ -382,3 +412,23 @@ def test_27_4_17_fails_when_the_workspaces_key_is_not_an_object(
         "knip.prod.json": _ENTRY_EXPORTS_WORKSPACES_NOT_AN_OBJECT,
     })
     assert finding(status.FAIL, 'knip.prod.json "workspaces" must be a JSON object') in result.findings
+
+
+def test_27_4_18_allows_excluding_exactly_the_catalog_issue_type(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.prod.json": _ENTRY_EXPORTS_EXCLUDE_CATALOG,
+    })
+    assert result.findings == [finding(status.PASS, _OK)]
+
+
+def test_27_4_19_fails_when_exclude_covers_anything_beyond_the_catalog_issue_type(
+    run_knip_config: RunKnipConfig, finding: type[Finding], status: type[Status]
+) -> None:
+    result = run_knip_config({
+        "package.json": _PKG_NO_KNIP,
+        "knip.prod.json": _ENTRY_EXPORTS_EXCLUDE_TOO_MUCH,
+    })
+    assert finding(status.FAIL, 'knip.prod.json "exclude" (if any) must be exactly ["catalog"]') in result.findings

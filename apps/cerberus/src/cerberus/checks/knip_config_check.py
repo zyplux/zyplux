@@ -1,8 +1,13 @@
 """knip config governance: a repo's knip settings live in standalone files,
 never inline in `package.json`, so they read the same way `ruff.toml`/
-`.rumdl.toml` do. A bare `knip.json` is optional and, if present, must match
-the repo's allowlisted content — knip's own defaults are the baseline, and a
-repo only earns a customization by being listed in `ALLOWED_KNIP_JSON`.
+`.rumdl.toml` do. A bare `knip.json` is optional and, if present, may only
+set the keys in `ALLOWED_CUSTOMIZATIONS`, each drawn from its shared
+allowance: `ignoreBinaries` for system-level tools every org repo may shell
+out to from JS/TS scripts (knip flags them as unlisted binaries because
+they are deliberately not npm dependencies and missing from knip's built-in
+global-binary list), and `ignoreDependencies` for packages knip cannot see
+being consumed. Knip's own defaults remain the baseline; every other
+customization stays forbidden.
 
 A second file, `knip.prod.json`, runs knip's entry-exports pass with the test
 harness excluded: `includeEntryExports` makes knip check a workspace's own
@@ -17,8 +22,11 @@ is exactly "only production code counts." The workspaces exempted from
 `release-targets.toml` — those packages have consumers outside the monorepo
 this pass can't see. `--config` replaces knip's config wholesale rather than
 layering on top of `knip.json` (knip has no `extends`), so this file must also
-repeat the repo's allowlisted `knip.json` content verbatim — otherwise this
-pass would flag things the base pass was told to ignore.
+repeat the repo's `knip.json` content verbatim — otherwise this pass would
+flag things the base pass was told to ignore. It may additionally set
+`"exclude": ["catalog"]`: with tests out of the graph, test-only catalog
+entries would read as unused, and the base pass already checks the catalog
+with tests visible.
 """
 
 from __future__ import annotations
@@ -45,16 +53,22 @@ BASE_CONFIG = "knip.json"
 PROD_CONFIG = "knip.prod.json"
 _RELEASE_TARGETS = "release-targets.toml"
 _REQUIRED_IGNORE_WORKSPACES = ["tests/*"]
-_PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces"})
+_PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces", "exclude"})
+# The prod pass may exclude exactly the catalog issue type: with `ignoreWorkspaces: ["tests/*"]`
+# knip cannot see test usage of catalog entries, so test-only entries would read as unused —
+# the base pass, which keeps tests in the graph, still checks the catalog.
+_PROD_ALLOWED_EXCLUDE = ["catalog"]
 _OK_MESSAGE = (
-    "knip.json (if any) matches the repo's allowlisted config; "
-    "knip.prod.json exactly exempts every published npm target"
+    "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
 )
 
-# A repo earns a standalone knip.json only by being listed here, with its exact allowed content
-# ($schema aside — every repo may add it for editor support without it being part of the diff).
-ALLOWED_KNIP_JSON: dict[str, dict[str, Any]] = {
-    "zyplux": {"ignoreBinaries": ["podman", "uv"]},
+# Per-key allowances any org repo may draw from in its knip.json.
+# ignoreBinaries: system-level tools invoked from JS/TS scripts without being npm dependencies;
+# knip's built-in global-binary list covers docker/git/curl/… but not these.
+# ignoreDependencies: packages consumed in ways knip cannot trace.
+ALLOWED_CUSTOMIZATIONS: dict[str, frozenset[str]] = {
+    "ignoreBinaries": frozenset({"podman", "uv"}),
+    "ignoreDependencies": frozenset({"cloudflare"}),
 }
 
 
@@ -86,24 +100,37 @@ def _check_no_inline_key(manifest: dict[str, Any], res: CheckResult) -> None:
         res.fail(f'{PACKAGE_JSON} must not have a "knip" key; move its content to a standalone {BASE_CONFIG}')
 
 
-def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any]:
+    """Validate knip.json against the shared allowance; return its content ($schema aside) for the prod pass."""
     content = ctx.file(repo, BASE_CONFIG)
     if content is None:
-        return
+        return {}
     try:
         parsed = json.loads(content)
     except json.JSONDecodeError as exc:
         res.error(f"could not parse {BASE_CONFIG}: {exc}")
-        return
+        return {}
     if not isinstance(parsed, dict):
         res.error(f"{BASE_CONFIG} must be a JSON object")
-        return
-    allowed = ALLOWED_KNIP_JSON.get(repo.name)
-    if allowed is None:
-        res.fail(f"{BASE_CONFIG} present but {repo.name} has no allowlisted customization; remove it or allowlist it")
-        return
-    if _without_schema(parsed) != allowed:
-        res.fail(f"{BASE_CONFIG} does not match the allowlisted config for {repo.name}")
+        return {}
+    base = _without_schema(parsed)
+    stray_keys = sorted(set(base) - set(ALLOWED_CUSTOMIZATIONS))
+    if stray_keys:
+        allowed_keys = ", ".join(f'"{key}"' for key in ALLOWED_CUSTOMIZATIONS)
+        res.fail(f"{BASE_CONFIG} may only customize {allowed_keys}; unexpected key(s): {', '.join(stray_keys)}")
+    for key, allowance in ALLOWED_CUSTOMIZATIONS.items():
+        names = base.get(key)
+        if names is None:
+            continue
+        if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+            res.fail(f'{BASE_CONFIG} "{key}" must be a JSON array of strings')
+            continue
+        outside = sorted(set(names) - allowance)
+        if outside:
+            res.fail(
+                f"{BASE_CONFIG} {key} allows only {', '.join(sorted(allowance))}; not allowed: {', '.join(outside)}"
+            )
+    return base
 
 
 def _workspace_exemptions(workspaces: object) -> tuple[set[str], list[str]]:
@@ -141,7 +168,7 @@ def _check_workspace_exemptions(repo: Repo, ctx: Context, parsed: dict[str, Any]
         res.fail(f"{PROD_CONFIG} workspaces exempts non-published dir(s): {', '.join(extra)}")
 
 
-def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: CheckResult) -> None:
     content = ctx.file(repo, PROD_CONFIG)
     if content is None:
         res.fail(f"no {PROD_CONFIG} at repo root — needed to catch dead/test-only exports")
@@ -156,7 +183,7 @@ def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
         return
 
     required = {
-        **ALLOWED_KNIP_JSON.get(repo.name, {}),
+        **base,
         "includeEntryExports": True,
         "ignoreWorkspaces": _REQUIRED_IGNORE_WORKSPACES,
     }
@@ -166,6 +193,9 @@ def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     for key, expected in required.items():
         if parsed.get(key) != expected:
             res.fail(f'{PROD_CONFIG} must set "{key}": {json.dumps(expected)}')
+    exclude = parsed.get("exclude")
+    if exclude is not None and exclude != _PROD_ALLOWED_EXCLUDE:
+        res.fail(f'{PROD_CONFIG} "exclude" (if any) must be exactly {json.dumps(_PROD_ALLOWED_EXCLUDE)}')
 
     _check_workspace_exemptions(repo, ctx, parsed, res)
 
@@ -186,8 +216,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     _check_no_inline_key(manifest, res)
-    _check_base_config(repo, ctx, res)
-    _check_prod_config(repo, ctx, res)
+    base = _check_base_config(repo, ctx, res)
+    _check_prod_config(repo, ctx, base, res)
 
     if not res.problems:
         res.ok(_OK_MESSAGE)
