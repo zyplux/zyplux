@@ -317,7 +317,16 @@ class FakeRegistry:
 
 
 @pytest.fixture
-def fake_registry(monkeypatch: pytest.MonkeyPatch) -> FakeRegistry:
+def registry_cache_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    """Point the latest-release lookup cache under this test's tmp dir; returns the cache file path."""
+    cache_home = tmp_path / "xdg-cache"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(cache_home))
+    return cache_home / "cerberus" / "registry_latest.json"
+
+
+@pytest.fixture
+def fake_registry(monkeypatch: pytest.MonkeyPatch, registry_cache_file: Path) -> FakeRegistry:
+    del registry_cache_file
     fake = FakeRegistry()
     monkeypatch.setattr(registries, "_fetch_json", fake.fetch_json)
     return fake

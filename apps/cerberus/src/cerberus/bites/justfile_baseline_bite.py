@@ -200,7 +200,7 @@ def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
         for segment in _SEGMENT_SPLIT.split(line)
     )
     if not any(_invokes_cerberus(segment) for segment in segments):
-        res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`")
+        res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 
 def _check_clean_uses_cz(jf: justfile.Justfile, res: CheckResult) -> None:

@@ -11,7 +11,7 @@ package = false
 members = ["apps/cerberus", "apps/totchef", "packages/util_py"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=cerberus --cov=totchef --cov-report=term-missing"
+addopts = "-n auto --cov=cerberus --cov=totchef --cov-report=term-missing"
 testpaths = ["tests/cerberus", "tests/totchef"]
 
 [tool.coverage.report]
@@ -34,6 +34,7 @@ lint = [
 test = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.8.0",
     "tomli-w>=1.2.0",
 ]
 type = [

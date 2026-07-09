@@ -29,8 +29,8 @@ BASELINE_JUST = resources.files("cerberus").joinpath("baseline.just").read_text(
 CONFORMING_JUSTFILE = f"# BASELINE\n{BASELINE_JUST}\n# CUSTOM\n"
 
 JUSTFILE_WITH_TRAILING_WS = CONFORMING_JUSTFILE.replace(
-    "check: install knip typecheck lint test\n",
-    "check: install knip typecheck lint test   \n",
+    "check: install knip typecheck lint test cerberus\n",
+    "check: install knip typecheck lint test cerberus   \n",
 )
 
 CONFORMING_CI = """\

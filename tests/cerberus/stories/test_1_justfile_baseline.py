@@ -36,10 +36,10 @@ WRONG_ALIAS_TARGET = CONFORMING.replace("alias k := knip\n", "alias k := lint\n"
 MISSING_REQUIRED_RECIPE = CONFORMING.replace(DEFAULT_RECIPE, "")
 MISSING_RECOMMENDED = CONFORMING.replace("alias ui := upgrade-interactive\n", "").replace(CLEAN_RECIPE, "")
 WRONG_CHECK_ORDER = CONFORMING.replace(
-    "check: install knip typecheck lint test", "check: install lint knip typecheck test"
+    "check: install knip typecheck lint test cerberus", "check: install lint knip typecheck test cerberus"
 )
 INTERLEAVED_CHECK = CONFORMING.replace(
-    "check: install knip typecheck lint test", "check: install knip build typecheck lint test"
+    "check: install knip typecheck lint test cerberus", "check: install knip build typecheck lint test cerberus"
 ) + ("\nbuild:\n    bun run build\n")
 DEFAULT_NO_LIST = CONFORMING.replace("default:\n    @just --list\n", "default:\n    @echo hi\n")
 BARE_TOOL_CALL = CONFORMING.replace("    uv run rumdl check --fix\n", "    rumdl check\n")
@@ -47,8 +47,8 @@ WITH_MODULES = CONFORMING + "\nmod infra 'infra/justfile'\nmod tools\nmod? extra
 DEGENERATE_MODULE_PATH = CONFORMING + "\nmod infra ''\n"
 NO_CERBERUS_RUN = CONFORMING.replace("    uv run cerberus --fix\n", "")
 CERBERUS_IN_CHECK_BODY = NO_CERBERUS_RUN.replace(
-    "check: install knip typecheck lint test",
-    "check: install knip typecheck lint test\n    uv run cerberus --fix",
+    "check: install knip typecheck lint test cerberus",
+    "check: install knip typecheck lint test cerberus\n    uv run cerberus --fix",
 )
 CERBERUS_ONLY_MENTIONED = NO_CERBERUS_RUN.replace(
     "    bun run lint:fix\n",
@@ -165,7 +165,7 @@ def test_1_3_1_fails_when_the_check_recipe_runs_its_steps_out_of_order(
         status.FAIL,
         [
             (
-                "`check` dependencies ['install', 'lint', 'knip', 'typecheck', 'test'] must contain "
+                "`check` dependencies ['install', 'lint', 'knip', 'typecheck', 'test', 'cerberus'] must contain "
                 "['install', 'knip', 'typecheck', 'lint', 'test'] in order"
             )
         ],
@@ -251,7 +251,7 @@ def test_1_9_1_fails_when_no_recipe_in_the_check_pipeline_runs_cerberus(
     result = run_justfile_check(NO_CERBERUS_RUN)
     assert (result.status, structural_messages(result)) == (
         status.FAIL,
-        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`"],
+        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline"],
     )
 
 
@@ -268,7 +268,7 @@ def test_1_9_3_does_not_count_a_mere_mention_of_cerberus(
     result = run_justfile_check(CERBERUS_ONLY_MENTIONED)
     assert (result.status, structural_messages(result)) == (
         status.FAIL,
-        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `lint`"],
+        ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline"],
     )
 
 

@@ -169,7 +169,7 @@ run.
 ### 1.9.2 counts a cerberus run in the check recipe body itself
 
 A justfile that runs cerberus from the `check` recipe's own body instead of a
-dependency like `lint` earns no cerberus-run finding.
+dependency like the `cerberus` recipe earns no cerberus-run finding.
 
 ### 1.9.3 does not count a mere mention of cerberus
 
