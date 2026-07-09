@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import type { TempDir } from '#fixtures';
@@ -32,8 +31,8 @@ describe('11.1 cleaning a single repo', () => {
 
     await cz.run('clean');
 
-    expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(false);
-    expect(existsSync(path.join(tempDir.path, 'dist'))).toBe(false);
+    expect(tempDir.exists('node_modules')).toBe(false);
+    expect(tempDir.exists('dist')).toBe(false);
   });
 
   test('11.1.2 protects dotenv files by default even though they are gitignored', async ({ cz, tempDir }) => {
@@ -43,9 +42,9 @@ describe('11.1 cleaning a single repo', () => {
 
     await cz.run('clean');
 
-    expect(existsSync(path.join(tempDir.path, '.env'))).toBe(true);
-    expect(existsSync(path.join(tempDir.path, '.env.local'))).toBe(true);
-    expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(false);
+    expect(tempDir.exists('.env')).toBe(true);
+    expect(tempDir.exists('.env.local')).toBe(true);
+    expect(tempDir.exists('node_modules')).toBe(false);
   });
 
   test('11.1.3 dry-run reports what would be removed without deleting anything', async ({ cz, logs, tempDir }) => {
@@ -54,7 +53,7 @@ describe('11.1 cleaning a single repo', () => {
 
     await cz.run('clean', '--dry-run');
 
-    expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(true);
+    expect(tempDir.exists('node_modules')).toBe(true);
     expect(logs.logLines).toContain('  Would remove node_modules/');
   });
 
@@ -76,8 +75,8 @@ describe('11.2 discovering every repo under a non-repo directory', () => {
 
     await cz.run('clean');
 
-    expect(existsSync(path.join(tempDir.path, 'repo-a/node_modules'))).toBe(false);
-    expect(existsSync(path.join(tempDir.path, 'repo-b/node_modules'))).toBe(false);
+    expect(tempDir.exists('repo-a/node_modules')).toBe(false);
+    expect(tempDir.exists('repo-b/node_modules')).toBe(false);
   });
 
   test('11.2.2 discovers repos in dot-prefixed directories too', async ({ cz, tempDir }) => {
@@ -86,7 +85,7 @@ describe('11.2 discovering every repo under a non-repo directory', () => {
 
     await cz.run('clean');
 
-    expect(existsSync(path.join(tempDir.path, '.github/node_modules'))).toBe(false);
+    expect(tempDir.exists('.github/node_modules')).toBe(false);
   });
 });
 
@@ -99,8 +98,8 @@ describe('11.3 excluding paths', () => {
 
     await cz.run('clean', '--exclude', 'repo-b');
 
-    expect(existsSync(path.join(tempDir.path, 'repo-a/node_modules'))).toBe(false);
-    expect(existsSync(path.join(tempDir.path, 'repo-b/node_modules'))).toBe(true);
+    expect(tempDir.exists('repo-a/node_modules')).toBe(false);
+    expect(tempDir.exists('repo-b/node_modules')).toBe(true);
     expect(logs.logLines).toContain('repo-b: skipped (--exclude)');
   });
 
@@ -111,8 +110,8 @@ describe('11.3 excluding paths', () => {
 
     await cz.run('clean', '--exclude', 'vendor-cache');
 
-    expect(existsSync(path.join(tempDir.path, 'vendor-cache'))).toBe(true);
-    expect(existsSync(path.join(tempDir.path, 'node_modules'))).toBe(false);
+    expect(tempDir.exists('vendor-cache')).toBe(true);
+    expect(tempDir.exists('node_modules')).toBe(false);
   });
 
   test('11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere', async ({
@@ -127,8 +126,8 @@ describe('11.3 excluding paths', () => {
 
     await cz.run('clean', '--exclude', 'repo-b');
 
-    expect(existsSync(path.join(tempDir.path, 'repo-a/repo-b'))).toBe(false);
-    expect(existsSync(path.join(tempDir.path, 'repo-b/node_modules'))).toBe(true);
+    expect(tempDir.exists('repo-a/repo-b')).toBe(false);
+    expect(tempDir.exists('repo-b/node_modules')).toBe(true);
   });
 });
 

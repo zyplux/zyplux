@@ -1,21 +1,21 @@
-import type { VersionSource } from '@zyplux/cz/contracts';
 import type { CliRunner, ConsoleCapture, FetchFake, ShellFake, TempDir } from '@zyplux/tests-fixtures';
 
 import { runCz } from '@zyplux/cz';
-import { ManifestSchema } from '@zyplux/cz/contracts';
+import { DepsCatalogSchema, ManifestSchema } from '@zyplux/cz/contracts';
 import { cliTest, createCliRunner, notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
-import { parseJson, parseToml, readJson } from '@zyplux/util';
+import { parseJson, parseToml } from '@zyplux/util';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import * as z from 'zod';
 
-export const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
+const workspaceRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 type Catalog = {
   loadRepos: () => Promise<string[]>;
+  outPath: string;
+  readOutput: (relativePath?: string) => Promise<string>;
   run: (options?: RunCatalogOptions) => Promise<void>;
   runOverWorkspace: () => Promise<void>;
   unresolvedNames: (system: 'npm' | 'pypi') => string[];
@@ -25,32 +25,39 @@ type Catalog = {
 type CzFixtures = {
   catalog: Catalog;
   cz: CliRunner;
-  findTarget: FindTarget;
+  liveWorkspace: LiveWorkspace;
   registries: Registries;
   release: Release;
   repo: Repo;
 };
 
-type FindTarget = (label: string) => Promise<TargetFacts>;
+type LiveWorkspace = {
+  root: string;
+  targetLabels: () => Promise<string[]>;
+};
 
 type PendingCerberusOptions = {
-  published?: Partial<RegistryPublishedState>;
+  published?: RegistryPublishedState;
   tagRunPolls?: [string, ...string[]];
 };
 
-type Registries = { setPublished: (published: RegistryPublishedState) => void };
+type Registries = {
+  denyGhcrAuth: () => void;
+  setPublished: (published: RegistryPublishedState) => void;
+};
 
 type RegistryPublishedState = {
   ghcrEverVisible?: boolean;
-  ghcrPublished: boolean;
-  npmPublished: boolean;
+  ghcrPublished?: boolean;
+  npmPublished?: boolean;
   pypiEverVisible?: boolean;
-  pypiPublished: boolean;
+  pypiPublished?: boolean;
 };
 
 type Release = {
-  stagePendingCerberus: (options?: PendingCerberusOptions) => Promise<TargetFacts>;
-  stagePendingCerberusAndCiImage: () => Promise<{ cerberus: TargetFacts; ciImage: TargetFacts }>;
+  stageAllPublished: () => void;
+  stagePendingCerberus: (options?: PendingCerberusOptions) => void;
+  stagePendingCerberusAndCiImage: () => void;
 };
 
 type Repo = {
@@ -70,7 +77,15 @@ type Repo = {
 
 type RunCatalogOptions = { out?: string };
 
-type TargetFacts = { dir: string; version: string };
+type SeededTargets = {
+  cerberus: TargetFacts;
+  ci: TargetFacts;
+  util: TargetFacts;
+};
+
+type TargetFacts = { dir: string; label: string; tag: string; version: string };
+
+type TargetsFixtures = { targets: SeededTargets };
 
 const BENIGN_WRITE_COMMANDS = [
   'gh pr create',
@@ -85,17 +100,18 @@ const BENIGN_WRITE_COMMANDS = [
   'git push',
 ];
 
-const CatalogSchema = z.array(z.string());
-
 const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: ConsoleCapture) => {
   const outPath = path.join(tempDir.path, 'catalog.json');
+  const readOutput = (relativePath = 'catalog.json') => readFile(path.join(tempDir.path, relativePath), 'utf8');
   const runGit = (...args: string[]) => {
     execFileSync('git', args, { cwd: tempDir.path, stdio: 'ignore' });
   };
   runGit('init', '--quiet');
 
   return {
-    loadRepos: async () => parseJson(await readFile(outPath, 'utf8'), CatalogSchema),
+    loadRepos: async () => parseJson(await readOutput(), DepsCatalogSchema),
+    outPath,
+    readOutput,
     run: async ({ out = 'catalog.json' }: RunCatalogOptions = {}) => {
       await cz.run('deps-catalog', '--dir', tempDir.path, '--out', out);
     },
@@ -113,33 +129,20 @@ const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: ConsoleCap
   } satisfies Catalog;
 };
 
-const readSourceVersion = async (source: VersionSource) => {
-  const sourcePath = path.join(workspaceRoot, source.file);
-  if ('json' in source) {
-    const fields = await readJson(sourcePath, z.record(z.string(), z.unknown()));
-    return z.string().parse(fields[source.json]);
-  }
-  const match = new RegExp(source.regex, 'm').exec(await readFile(sourcePath, 'utf8'))?.[1];
-  if (match === undefined) throw new Error(`could not read version from ${source.file}`);
-  return match;
-};
+const createLiveWorkspace = () =>
+  ({
+    root: workspaceRoot,
+    targetLabels: async () => {
+      const manifestText = await readFile(path.join(workspaceRoot, 'release-targets.toml'), 'utf8');
+      return parseToml(manifestText, ManifestSchema).target.map(target => target.label);
+    },
+  }) satisfies LiveWorkspace;
 
-const findTargetFacts = async (label: string) => {
-  const manifestText = await readFile(path.join(workspaceRoot, 'release-targets.toml'), 'utf8');
-  const manifest = parseToml(manifestText, ManifestSchema);
-  const target = manifest.target.find(candidate => candidate.label === label);
-  if (target === undefined) throw new Error(`${label} target missing from release-targets.toml`);
-  return {
-    dir: path.join(workspaceRoot, path.dirname(target.version.file)),
-    version: await readSourceVersion(target.version),
-  };
-};
-
-const createRepo = (shell: ShellFake) => {
+const createRepo = (shell: ShellFake, { path }: TempDir) => {
   const setRoot = (dir: string) => {
     shell.on('git rev-parse --show-toplevel', dir);
   };
-  setRoot(workspaceRoot);
+  setRoot(path);
   for (const command of BENIGN_WRITE_COMMANDS) shell.on(command, '');
 
   const setCurrentBranch = (branch: string) => {
@@ -201,31 +204,39 @@ const TAG_RUNS_PATTERN = /--json databaseId,headBranch/;
 
 const createRelease = (repo: Repo, registries: Registries, shell: ShellFake) =>
   ({
-    stagePendingCerberus: async ({ published, tagRunPolls = ['100\n101\n999'] }: PendingCerberusOptions = {}) => {
+    stageAllPublished: () => {
+      repo.syncMain('sha-head');
+      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
+    },
+    stagePendingCerberus: ({ published, tagRunPolls = ['100\n101\n999'] }: PendingCerberusOptions = {}) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false, ...published });
       shell.on('gh release list', 'false');
       shell.on(KNOWN_RUNS_PATTERN, '100\n101');
       shell.on(TAG_RUNS_PATTERN, ...tagRunPolls);
-      return findTargetFacts('zyplux-cerberus');
     },
-    stagePendingCerberusAndCiImage: async () => {
+    stagePendingCerberusAndCiImage: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
       shell.on('gh release list', 'false');
       shell.on(KNOWN_RUNS_PATTERN, '100');
       shell.on(/gh run list.*cerberus-v/, '100\n111');
       shell.on(/gh run list.*ci-image-v/, '100\n222');
-      return {
-        cerberus: await findTargetFacts('zyplux-cerberus'),
-        ciImage: await findTargetFacts('ghcr.io/zyplux/ci'),
-      };
     },
   }) satisfies Release;
 
 const createRegistries = (network: FetchFake) =>
   ({
-    setPublished: ({ ghcrEverVisible, ghcrPublished, npmPublished, pypiEverVisible, pypiPublished }) => {
+    denyGhcrAuth: () => {
+      network.on('https://ghcr.io/token', () => notFoundResponse());
+    },
+    setPublished: ({
+      ghcrEverVisible,
+      ghcrPublished = false,
+      npmPublished = false,
+      pypiEverVisible,
+      pypiPublished = false,
+    }) => {
       let ghcrProbeCount = 0;
       let pypiProbeCount = 0;
       network.on('https://ghcr.io/token', () => Response.json({ token: 'gh-token' }));
@@ -244,6 +255,56 @@ const createRegistries = (network: FetchFake) =>
     },
   }) satisfies Registries;
 
+const SEEDED_MANIFEST = String.raw`[[target]]
+kind = "npm"
+label = "@zyplux/util"
+surface = []
+tag_prefix = "util-v"
+version = { file = "packages/util/package.json", json = "version" }
+
+[[target]]
+kind = "pypi"
+label = "zyplux-cerberus"
+surface = []
+tag_prefix = "cerberus-v"
+version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
+
+[[target]]
+kind = "ghcr"
+label = "ghcr.io/zyplux/ci"
+surface = []
+tag_prefix = "ci-image-v"
+version = { file = "containers/ci/Containerfile", regex = '^LABEL org\.opencontainers\.image\.version="([^"]+)"' }
+`;
+
+const seedReleaseTargets = async (tempDir: TempDir) => {
+  await tempDir.write('release-targets.toml', SEEDED_MANIFEST);
+  await tempDir.write('packages/util/package.json', '{ "name": "@zyplux/util", "version": "1.2.3" }\n');
+  await tempDir.write('apps/cerberus/pyproject.toml', '[project]\nname = "zyplux-cerberus"\nversion = "2.3.4"\n');
+  await tempDir.write('containers/ci/Containerfile', 'FROM scratch\nLABEL org.opencontainers.image.version="3.4.5"\n');
+
+  return {
+    cerberus: {
+      dir: path.join(tempDir.path, 'apps/cerberus'),
+      label: 'zyplux-cerberus',
+      tag: 'cerberus-v2.3.4',
+      version: '2.3.4',
+    },
+    ci: {
+      dir: path.join(tempDir.path, 'containers/ci'),
+      label: 'ghcr.io/zyplux/ci',
+      tag: 'ci-image-v3.4.5',
+      version: '3.4.5',
+    },
+    util: {
+      dir: path.join(tempDir.path, 'packages/util'),
+      label: '@zyplux/util',
+      tag: 'util-v1.2.3',
+      version: '1.2.3',
+    },
+  } satisfies SeededTargets;
+};
+
 export const test = cliTest.extend<CzFixtures>({
   catalog: async ({ cz, logs, tempDir }, use) => {
     await use(createCatalog(cz, tempDir, logs));
@@ -251,8 +312,8 @@ export const test = cliTest.extend<CzFixtures>({
   cz: async ({}, use) => {
     await use(createCliRunner(runCz));
   },
-  findTarget: async ({}, use) => {
-    await use(findTargetFacts);
+  liveWorkspace: async ({}, use) => {
+    await use(createLiveWorkspace());
   },
   registries: async ({ network }, use) => {
     await use(createRegistries(network));
@@ -260,9 +321,19 @@ export const test = cliTest.extend<CzFixtures>({
   release: async ({ registries, repo, shell }, use) => {
     await use(createRelease(repo, registries, shell));
   },
-  repo: async ({ shell }, use) => {
-    await use(createRepo(shell));
+  repo: async ({ shell, tempDir }, use) => {
+    await use(createRepo(shell, tempDir));
   },
+});
+
+export const targetsTest = test.extend<TargetsFixtures>({
+  targets: [
+    async ({ repo, tempDir }, use) => {
+      repo.setRoot(tempDir.path);
+      await use(await seedReleaseTargets(tempDir));
+    },
+    { auto: true },
+  ],
 });
 
 export const tempCwdTest = test.extend<{ tempCwd: undefined }>({
@@ -280,6 +351,5 @@ export const tempCwdTest = test.extend<{ tempCwd: undefined }>({
   ],
 });
 
-export { notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
 export type { TempDir } from '@zyplux/tests-fixtures';
-export { describe, expect, vi } from 'vitest';
+export { describe, expect } from 'vitest';

@@ -15,6 +15,8 @@ export const TargetSchema = z.object({
 
 export const ManifestSchema = z.object({ target: z.array(TargetSchema) });
 
+export const DepsCatalogSchema = z.array(z.string());
+
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type Target = z.infer<typeof TargetSchema>;
 export type VersionSource = z.infer<typeof VersionSourceSchema>;

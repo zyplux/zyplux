@@ -1,4 +1,4 @@
-import { describe, expect, notFoundResponse, okResponse, test, workspaceRoot } from '#fixtures';
+import { describe, expect, targetsTest as test } from '#fixtures';
 
 describe('5.1 validating the target before bootstrapping', () => {
   test('5.1.1 rejects a label no release target owns', async ({ cz }) => {
@@ -17,42 +17,37 @@ describe('5.1 validating the target before bootstrapping', () => {
 describe('5.2 bootstrapping an npm target', () => {
   test("5.2.1 skips publishing when the target's version is already on npm", async ({
     cz,
-    findTarget,
     logs,
-    network,
-    repo,
+    registries,
     shell,
   }) => {
-    repo.setRoot(workspaceRoot);
-    network.otherwise(() => okResponse());
-    const util = await findTarget('@zyplux/util');
+    registries.setPublished({ npmPublished: true });
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
     expect(logs.logLines).toContain(
-      `@zyplux/util ${util.version} is already on npm — enable its trusted publisher; no bootstrap needed`,
+      '@zyplux/util 1.2.3 is already on npm — enable its trusted publisher; no bootstrap needed',
     );
     expect(shell.commandsMatching(/bun pm pack/)).toHaveLength(0);
   });
 
   test('5.2.2 publishes the target when its version is not yet on npm', async ({
     cz,
-    findTarget,
     logs,
-    network,
-    repo,
+    registries,
     shell,
+    targets,
   }) => {
-    repo.setRoot(workspaceRoot);
-    network.otherwise(() => notFoundResponse());
+    registries.setPublished({ npmPublished: false });
     shell.on(/bun pm pack/, '');
-    const util = await findTarget('@zyplux/util');
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    expect(shell.commands).toContain(`cd ${util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`);
+    expect(shell.commands).toContain(
+      `cd ${targets.util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`,
+    );
     expect(logs.logLines).toContain(
-      `Published @zyplux/util ${util.version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
+      'Published @zyplux/util 1.2.3. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.',
     );
   });
 });

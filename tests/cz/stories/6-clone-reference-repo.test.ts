@@ -1,8 +1,4 @@
-import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
-
-import { describe, expect, tempCwdTest as test, vi } from '#fixtures';
+import { describe, expect, tempCwdTest as test } from '#fixtures';
 
 describe('6.1 building the clone url and destination', () => {
   test('6.1.1 builds a github url and destination from an owner/name shorthand', async ({ cz, shell }) => {
@@ -60,23 +56,30 @@ describe('6.1 building the clone url and destination', () => {
 });
 
 describe('6.2 re-cloning over an existing destination', () => {
-  const dest = path.join('reference_clones', 'existing-scratch-repo');
-
-  test('6.2.1 prompts for confirmation and removes the existing destination before cloning', async ({ cz, shell }) => {
-    await mkdir(dest, { recursive: true });
-    let promptedWith: string | undefined;
-    vi.stubGlobal('prompt', (message?: string) => {
-      promptedWith = message;
-      return '';
-    });
+  test('6.2.1 prompts for confirmation and removes the existing destination before cloning', async ({
+    cz,
+    prompt,
+    shell,
+    tempDir,
+  }) => {
+    await tempDir.write('reference_clones/existing-scratch-repo/.keep', '');
     shell.on('git clone', '');
 
     await cz.run('clone-reference-repo', 'existing-scratch-repo');
 
-    expect(promptedWith).toBe(`${dest} exists — rm -rf and re-clone? [enter to continue, ^C to abort]`);
-    expect(existsSync(dest)).toBe(false);
+    expect(prompt.messages).toEqual([
+      'reference_clones/existing-scratch-repo exists — rm -rf and re-clone? [enter to continue, ^C to abort]',
+    ]);
+    expect(tempDir.exists('reference_clones/existing-scratch-repo')).toBe(false);
     expect(shell.calls).toContainEqual({
-      argv: ['clone', '--depth', '1', '--single-branch', 'https://github.com/existing-scratch-repo.git', dest],
+      argv: [
+        'clone',
+        '--depth',
+        '1',
+        '--single-branch',
+        'https://github.com/existing-scratch-repo.git',
+        'reference_clones/existing-scratch-repo',
+      ],
       program: 'git',
     });
   });

@@ -19,7 +19,7 @@
     },
     "apps/cz": {
       "name": "@zyplux/cz",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "bin": {
         "cz": "./src/index.ts",
       },
@@ -88,7 +88,6 @@
         "@zyplux/tsconfig": "workspace:*",
         "@zyplux/util": "workspace:*",
         "vitest": "catalog:",
-        "zod": "catalog:",
       },
     },
     "tests/eslint-config": {
@@ -108,7 +107,7 @@
     },
     "tests/fixtures": {
       "name": "@zyplux/tests-fixtures",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@zyplux/tsconfig": "workspace:*",

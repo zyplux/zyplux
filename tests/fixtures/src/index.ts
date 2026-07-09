@@ -2,6 +2,7 @@ export { CliExitError, type CliIo, type CliMain, type CliRunner, createCliRunner
 export { type ConsoleCapture, createConsoleCapture } from './console';
 export { createFetchFake, type FetchFake, type FetchReply, notFoundResponse, okResponse } from './fetch';
 export { createTempDir, type TempDir } from './fs';
+export { createPromptFake, type PromptFake } from './prompt';
 export {
   createShellFake,
   fakeShellOutput,
@@ -11,4 +12,4 @@ export {
   type ShellReply,
   toArgv,
 } from './shell';
-export { type CliFixtures, cliTest, type LibraryFixtures, libraryTest } from './story';
+export { type CliFixtures, cliTest, type EnvStub, type LibraryFixtures, libraryTest } from './story';
