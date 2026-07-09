@@ -21,7 +21,7 @@
       "@typescript-eslint/type-utils": "^8.63.0",
       "@typescript-eslint/utils": "^8.63.0",
       "@vitest/coverage-istanbul": "^4.1.10",
-      "@vitest/eslint-plugin": "^1.6.21",
+      "@vitest/eslint-plugin": "^1.6.22",
       "eslint": "^10.6.0",
       "eslint-config-prettier": "^10.1.8",
       "eslint-plugin-perfectionist": "^5.10.0",
