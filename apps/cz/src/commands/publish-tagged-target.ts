@@ -24,7 +24,7 @@ export const publishTaggedTargetCommand = command(
 type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
 
 export const publishNpm = async (dir: string) => {
-  await $`cd ${dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`;
+  await $`cd ${dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`;
 };
 
 const publishPypi = async (label: string) => {
