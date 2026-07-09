@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
+    from seam_fixtures import RegisterFakeCheck
     from typer.testing import Result
 
-type RegisterFakeCheck = Callable[[str, Callable[[Repo, Context], CheckResult]], None]
 
 runner = CliRunner()
 

@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING, Protocol
 import pytest
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
 
     from cerberus.context import Context
-    from cerberus.model import CheckResult, Finding, Repo, Status
+    from cerberus.model import CheckResult, Repo
     from cerberus.source import GitHistoryUnavailableError
+    from seam_fixtures import MakeFinding, RunCheck
 
-type RunCheck = Callable[[str, Repo, Context], CheckResult]
 
 MANIFEST = """
 [[target]]
@@ -117,61 +117,52 @@ def run_release_bumps(
     return run
 
 
-def test_14_1_1_skips_repos_that_publish_nothing(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
-) -> None:
+def test_14_1_1_skips_repos_that_publish_nothing(run_release_bumps: RunReleaseBumps, skip: MakeFinding) -> None:
     result = run_release_bumps(manifest=None)
-    assert result.findings == [finding(status.SKIP, "no release-targets.toml — repo publishes nothing")]
+    assert result.findings == [skip("no release-targets.toml — repo publishes nothing")]
 
 
 def test_14_1_2_errors_when_the_release_manifest_is_malformed(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(manifest=MALFORMED_MANIFEST)
-    assert result.findings == [
-        finding(status.ERROR, "release-targets.toml is malformed: Invalid value (at line 1, column 7)")
-    ]
+    assert result.findings == [error("release-targets.toml is malformed: Invalid value (at line 1, column 7)")]
 
 
 def test_14_1_3_errors_when_the_manifest_has_no_target_array(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(manifest="")
     assert result.findings == [
-        finding(
-            status.ERROR,
+        error(
             "release-targets.toml is malformed: release-targets.toml has no [[target]] array (found None)",
         )
     ]
 
 
 def test_14_1_4_errors_when_a_target_has_an_unknown_kind(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(manifest=MANIFEST.replace('kind = "npm"', 'kind = "cargo"'))
     assert result.findings == [
-        finding(
-            status.ERROR,
+        error(
             "release-targets.toml is malformed: target '@zyplux/widget' has unknown kind 'cargo' "
             "(expected one of ['ghcr', 'npm', 'pypi'])",
         )
     ]
 
 
-def test_14_2_1_fails_when_the_version_file_is_missing(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
-) -> None:
+def test_14_2_1_fails_when_the_version_file_is_missing(run_release_bumps: RunReleaseBumps, fail: MakeFinding) -> None:
     result = run_release_bumps(version_file_content=None)
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version file {VERSION_FILE} is missing")]
+    assert result.findings == [fail(f"{LABEL}: version file {VERSION_FILE} is missing")]
 
 
 def test_14_2_2_fails_when_the_version_file_is_not_valid_json(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(version_file_content="not json")
     assert result.findings == [
-        finding(
-            status.FAIL,
+        fail(
             f"{LABEL}: {VERSION_FILE} is not valid JSON: Expecting value: line 1 column 1 (char 0)",
         )
     ]
@@ -187,26 +178,20 @@ def test_14_2_2_fails_when_the_version_file_is_not_valid_json(
     ids=["missing_key", "non_mapping_path", "no_extractor"],
 )
 def test_14_2_3_fails_when_no_version_is_found_in_the_version_file(
-    run_release_bumps: RunReleaseBumps,
-    manifest: str,
-    version_file_content: str,
-    finding: type[Finding],
-    status: type[Status],
+    run_release_bumps: RunReleaseBumps, manifest: str, version_file_content: str, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(manifest=manifest, version_file_content=version_file_content)
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: no version found in {VERSION_FILE}")]
+    assert result.findings == [fail(f"{LABEL}: no version found in {VERSION_FILE}")]
 
 
 def test_14_2_4_fails_when_the_declared_version_is_not_semver(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(version_file_content=version_json("not-a-version"))
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 'not-a-version' is not semver")]
+    assert result.findings == [fail(f"{LABEL}: version 'not-a-version' is not semver")]
 
 
-def test_14_2_5_reads_the_version_via_the_target_regex(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
-) -> None:
+def test_14_2_5_reads_the_version_via_the_target_regex(run_release_bumps: RunReleaseBumps, ok: MakeFinding) -> None:
     result = run_release_bumps(
         manifest=REGEX_MANIFEST,
         version_path="apps/widget/pyproject.toml",
@@ -215,47 +200,45 @@ def test_14_2_5_reads_the_version_via_the_target_regex(
         changed=[],
     )
     assert result.findings == [
-        finding(status.PASS, "zyplux-widget: 0.2.0 is ahead of published 0.1.0"),
-        finding(status.PASS, DONE),
+        ok("zyplux-widget: 0.2.0 is ahead of published 0.1.0"),
+        ok(DONE),
     ]
 
 
 def test_14_3_1_treats_a_target_with_nothing_published_as_not_yet_released(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, ok: MakeFinding
 ) -> None:
     result = run_release_bumps(published=None)
     assert result.findings == [
-        finding(status.PASS, f"{LABEL}: not yet released"),
-        finding(status.PASS, DONE),
+        ok(f"{LABEL}: not yet released"),
+        ok(DONE),
     ]
 
 
 def test_14_3_2_fails_when_the_current_version_trails_the_published_one(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(version_file_content=version_json("0.2.0"), published="0.10.0", changed=[])
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.2.0 is below published 0.10.0")]
+    assert result.findings == [fail(f"{LABEL}: version 0.2.0 is below published 0.10.0")]
 
 
 def test_14_3_3_errors_when_the_published_version_is_not_semver(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(published="not-a-version")
     assert result.findings == [
-        finding(
-            status.ERROR,
+        error(
             f"{LABEL}: cannot determine the latest published version: published version 'not-a-version' is not semver",
         )
     ]
 
 
 def test_14_3_4_errors_when_the_published_version_cannot_be_determined(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(published=UNREACHABLE)
     assert result.findings == [
-        finding(
-            status.ERROR,
+        error(
             f"{LABEL}: cannot determine the latest published version: "
             "https://registry.npmjs.org/@zyplux%2Fwidget: connection refused",
         )
@@ -263,36 +246,35 @@ def test_14_3_4_errors_when_the_published_version_cannot_be_determined(
 
 
 def test_14_4_1_passes_when_the_current_version_is_ahead_of_the_latest_published_release(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, ok: MakeFinding
 ) -> None:
     result = run_release_bumps(version_file_content=version_json("0.2.0"), published="0.1.0", changed=[])
     assert result.findings == [
-        finding(status.PASS, f"{LABEL}: 0.2.0 is ahead of published 0.1.0"),
-        finding(status.PASS, DONE),
+        ok(f"{LABEL}: 0.2.0 is ahead of published 0.1.0"),
+        ok(DONE),
     ]
 
 
 def test_14_4_2_fails_when_the_current_version_trails_the_latest_published_release(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(published="0.2.0", changed=[])
-    assert result.findings == [finding(status.FAIL, f"{LABEL}: version 0.1.0 is below published 0.2.0")]
+    assert result.findings == [fail(f"{LABEL}: version 0.1.0 is below published 0.2.0")]
 
 
 def test_14_5_1_passes_when_the_release_surface_is_unchanged_since_the_latest_release(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, ok: MakeFinding
 ) -> None:
     result = run_release_bumps(published="0.1.0", changed=[])
-    assert result.findings == [finding(status.PASS, DONE)]
+    assert result.findings == [ok(DONE)]
 
 
 def test_14_5_2_fails_and_names_the_required_bump_when_the_surface_changed_without_one(
-    run_release_bumps: RunReleaseBumps, finding: type[Finding], status: type[Status]
+    run_release_bumps: RunReleaseBumps, fail: MakeFinding
 ) -> None:
     result = run_release_bumps(published="0.1.0", changed=["packages/widget/src/a.ts"])
     assert result.findings == [
-        finding(
-            status.FAIL,
+        fail(
             f"{LABEL}: surface changed since widget-v0.1.0 but version is still 0.1.0 — bump it (e.g. 0.1.1)",
         )
     ]
@@ -300,9 +282,8 @@ def test_14_5_2_fails_and_names_the_required_bump_when_the_surface_changed_witho
 
 def test_14_5_3_errors_when_the_surface_diff_cannot_be_computed(
     run_release_bumps: RunReleaseBumps,
-    finding: type[Finding],
-    status: type[Status],
     git_history_unavailable_error: type[GitHistoryUnavailableError],
+    error: MakeFinding,
 ) -> None:
     result = run_release_bumps(published="0.1.0", changed=git_history_unavailable_error("git diff failed"))
-    assert result.findings == [finding(status.ERROR, f"{LABEL}: cannot diff against widget-v0.1.0: git diff failed")]
+    assert result.findings == [error(f"{LABEL}: cannot diff against widget-v0.1.0: git diff failed")]

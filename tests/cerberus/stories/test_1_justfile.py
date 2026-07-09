@@ -11,11 +11,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from cerberus.context import Context
-    from cerberus.model import CheckResult, Repo, Status
+    from cerberus.model import CheckResult, Status
+    from seam_fixtures import RunCheck, RunCheckOnDisk, RunCheckWithFiles
 
-type RunCheck = Callable[[str, Repo, Context], CheckResult]
-type RunCheckOnDisk = Callable[..., CheckResult]
-type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
 type RunJustfileCheck = Callable[[str | None], CheckResult]
 
 requires_just = pytest.mark.skipif(shutil.which("just") is None, reason="requires the `just` binary on PATH")
