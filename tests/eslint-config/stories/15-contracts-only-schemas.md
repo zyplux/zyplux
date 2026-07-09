@@ -22,6 +22,8 @@
 
 ### 15.3.2 flags re-exports from other modules
 
+### 15.3.3 flags value re-exports from zod while allowing type-only re-exports
+
 ## 15.4 rejecting non-declarative statements
 
 ### 15.4.1 flags non-schema local declarations and non-const bindings

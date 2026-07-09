@@ -91,6 +91,13 @@ describe('15.3 rejecting non-zod module edges', () => {
     ]);
     expect(lintRule("export * from './other';", contractsFile)).toMatchObject([{ messageId: 'nonZodImport' }]);
   });
+
+  test('15.3.3 flags value re-exports from zod while allowing type-only re-exports', ({ lintRule }) => {
+    expect(lintRule("export { z } from 'zod';", contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule("export * from 'zod';", contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule("export type { ZodType } from 'zod';", contractsFile)).toHaveLength(0);
+    expect(lintRule("export type * from 'zod';", contractsFile)).toHaveLength(0);
+  });
 });
 
 describe('15.4 rejecting non-declarative statements', () => {

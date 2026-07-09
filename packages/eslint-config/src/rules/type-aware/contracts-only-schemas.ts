@@ -61,7 +61,7 @@ export const contractsOnlySchemas = createRule<[], MessageId>({
       if (node.exportKind === 'type') return;
       const { declaration } = node;
       if (declaration === null) {
-        if (node.source !== null) return;
+        if (node.source !== null && node.source.value !== ZOD_MODULE) return;
         for (const specifier of node.specifiers) {
           if (specifier.exportKind === 'type') continue;
           if (!isSchema(specifier.local)) context.report({ messageId: 'nonSchemaExport', node: specifier });
@@ -80,6 +80,9 @@ export const contractsOnlySchemas = createRule<[], MessageId>({
       switch (statement.type) {
         case AST_NODE_TYPES.ExportAllDeclaration: {
           checkModuleSource(statement);
+          if (statement.source.value === ZOD_MODULE && statement.exportKind !== 'type') {
+            context.report({ messageId: 'nonSchemaExport', node: statement });
+          }
           return;
         }
         case AST_NODE_TYPES.ExportNamedDeclaration: {
