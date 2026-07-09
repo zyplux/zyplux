@@ -29,7 +29,3 @@ REPO_ROOT = find_zyplux_root()
 SRC = REPO_ROOT / "apps" / "totchef" / "src"
 TESTS = REPO_ROOT / "tests" / "totchef"
 STORIES_DIR = TESTS / "stories"
-
-
-def list_story_docs() -> list[Path]:
-    return sorted(STORIES_DIR.glob("[0-9]*_*.md"), key=lambda path: int(path.name.split("_")[0]))
