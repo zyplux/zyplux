@@ -27,12 +27,20 @@ class Config:
     jscpd_dupes_ignore: tuple[str, ...]
 
 
+def _table(data: dict[str, Any], key: str) -> dict[str, Any]:
+    section = data.get(key, {})
+    if not isinstance(section, dict):
+        msg = f"cerberus.toml [{key}] must be a table, got {type(section).__name__}"
+        raise TypeError(msg)
+    return section
+
+
 def _from_dict(data: dict[str, Any]) -> Config:
-    aliases = data.get("aliases", {})
-    recipes = data.get("recipes", {})
-    ci = data.get("ci", {})
-    ci_required = ci.get("required", {})
-    jscpd_dupes = data.get("jscpd_dupes_threshold", {})
+    aliases = _table(data, "aliases")
+    recipes = _table(data, "recipes")
+    ci = _table(data, "ci")
+    ci_required = _table(ci, "required")
+    jscpd_dupes = _table(data, "jscpd_dupes_threshold")
     return Config(
         default_recipe_marker=data["default_recipe_marker"],
         required_aliases=dict(aliases.get("required", {})),

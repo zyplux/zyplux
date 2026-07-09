@@ -30,6 +30,8 @@
 
 ### 16.5.1 uses the recipe requirements from the given config file instead of the bundled defaults
 
+### 16.5.2 rejects a config file whose section is not a table
+
 ## 16.6 disabling checks per repo via pyproject
 
 ### 16.6.1 skips a disabled check and explains why in the output

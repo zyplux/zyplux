@@ -183,6 +183,18 @@ def test_16_5_1_uses_the_recipe_requirements_from_the_given_config_file_instead_
     assert "`default` recipe should run `just --menu`" in result.output
 
 
+def test_16_5_2_rejects_a_config_file_whose_section_is_not_a_table(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    config_path = conforming_repo / "cerberus.toml"
+    config_path.write_text('default_recipe_marker = "just --list"\njscpd_dupes_threshold = 0.5\n')
+
+    result = invoke_lint("--check", "codeowners_coverage", "--config", str(config_path))
+
+    assert isinstance(result.exception, TypeError)
+    assert "[jscpd_dupes_threshold] must be a table" in str(result.exception)
+
+
 def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
