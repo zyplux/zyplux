@@ -1,12 +1,23 @@
+import type { ShellFake } from '#fixtures';
+
 import { $, describe, expect, readTrimmed, test } from '#fixtures';
+
+const expectBuiltArgv = async (
+  shell: ShellFake,
+  invoke: () => Promise<unknown>,
+  program: string,
+  expectedArgv: readonly string[],
+) => {
+  shell.otherwise('output');
+
+  await invoke();
+
+  expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program });
+};
 
 describe('6.1 translating flag objects into CLI arguments', () => {
   test('6.1.1 omits a false boolean flag entirely', async ({ shell }) => {
-    shell.otherwise('output');
-
-    await $.git.branch('feat-x', { delete: false });
-
-    expect(shell.calls[0]).toEqual({ argv: ['branch', 'feat-x'], program: 'git' });
+    await expectBuiltArgv(shell, () => $.git.branch('feat-x', { delete: false }), 'git', ['branch', 'feat-x']);
   });
 });
 
@@ -34,13 +45,9 @@ describe('6.2 building git subcommands', () => {
     ['revParse', () => $.git.revParse('HEAD', { abbrevRef: true }), ['rev-parse', '--abbrev-ref', 'HEAD']],
     ['showToplevel', () => $.git.showToplevel('/tmp'), ['rev-parse', '--show-toplevel']],
     ['status', () => $.git.status({ porcelain: true }), ['status', '--porcelain']],
-  ] as const)('6.2.1 builds git %s argv from its arguments and flags', async ([, invoke, expectedArgv], { shell }) => {
-    shell.otherwise('output');
-
-    await invoke();
-
-    expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program: 'git' });
-  });
+  ] as const)('6.2.1 builds git %s argv from its arguments and flags', async ([, invoke, expectedArgv], { shell }) =>
+    expectBuiltArgv(shell, invoke, 'git', expectedArgv),
+  );
 });
 
 describe('6.3 building gh subcommands', () => {
@@ -82,13 +89,9 @@ describe('6.3 building gh subcommands', () => {
       () => $.gh.run.view('123', { json: 'status,conclusion' }),
       ['run', 'view', '123', '--json', 'status,conclusion'],
     ],
-  ] as const)('6.3.1 builds gh %s argv from its arguments and flags', async ([, invoke, expectedArgv], { shell }) => {
-    shell.otherwise('output');
-
-    await invoke();
-
-    expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program: 'gh' });
-  });
+  ] as const)('6.3.1 builds gh %s argv from its arguments and flags', async ([, invoke, expectedArgv], { shell }) =>
+    expectBuiltArgv(shell, invoke, 'gh', expectedArgv),
+  );
 });
 
 describe('6.4 reading trimmed command output', () => {
@@ -128,20 +131,11 @@ describe('6.6 omitting optional flags falls back to defaults', () => {
     ['git.status', () => $.git.status(), ['status'], 'git'],
   ] as const)(
     '6.6.1 omits any flags when %s is called without them',
-    async ([, invoke, expectedArgv, expectedProgram], { shell }) => {
-      shell.otherwise('output');
-
-      await invoke();
-
-      expect(shell.calls[0]).toEqual({ argv: [...expectedArgv], program: expectedProgram });
-    },
+    async ([, invoke, expectedArgv, expectedProgram], { shell }) =>
+      expectBuiltArgv(shell, invoke, expectedProgram, expectedArgv),
   );
 
   test('6.6.2 builds the same show toplevel argv when git.showToplevel is called without a cwd', async ({ shell }) => {
-    shell.otherwise('output');
-
-    await $.git.showToplevel();
-
-    expect(shell.calls[0]).toEqual({ argv: ['rev-parse', '--show-toplevel'], program: 'git' });
+    await expectBuiltArgv(shell, () => $.git.showToplevel(), 'git', ['rev-parse', '--show-toplevel']);
   });
 });

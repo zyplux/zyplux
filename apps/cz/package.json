@@ -45,6 +45,7 @@
     "#commands/publish-tagged-target": "./src/commands/publish-tagged-target.ts",
     "#commands/push-branch": "./src/commands/push-branch.ts",
     "#commands/release-bumped-targets": "./src/commands/release-bumped-targets.ts",
+    "#commands/release-tag-command": "./src/commands/release-tag-command.ts",
     "#deps-catalog": "./src/deps-catalog.ts",
     "#package.json": "./package.json",
     "#release-targets": "./src/release-targets.ts"

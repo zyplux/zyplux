@@ -8,6 +8,7 @@ import { parseJson, parseToml, readJson } from '@zyplux/util';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import * as z from 'zod';
 
@@ -26,10 +27,16 @@ type CzFixtures = {
   cz: CliRunner;
   findTarget: FindTarget;
   registries: Registries;
+  release: Release;
   repo: Repo;
 };
 
 type FindTarget = (label: string) => Promise<TargetFacts>;
+
+type PendingCerberusOptions = {
+  published?: Partial<RegistryPublishedState>;
+  tagRunPolls?: [string, ...string[]];
+};
 
 type Registries = { setPublished: (published: RegistryPublishedState) => void };
 
@@ -41,8 +48,13 @@ type RegistryPublishedState = {
   pypiPublished: boolean;
 };
 
+type Release = {
+  stagePendingCerberus: (options?: PendingCerberusOptions) => Promise<TargetFacts>;
+  stagePendingCerberusAndCiImage: () => Promise<{ cerberus: TargetFacts; ciImage: TargetFacts }>;
+};
+
 type Repo = {
-  queuePrField: (field: string, ...values: [string, ...string[]]) => void;
+  queuePrFields: (fields: Record<string, [string, ...string[]] | string>) => void;
   setCopilotReviewedHead: (sha: string) => void;
   setCurrentBranch: (branch: string) => void;
   setHeadSha: (sha: string) => void;
@@ -52,6 +64,7 @@ type Repo = {
   setRepoSlug: (slug: string) => void;
   setRoot: (dir: string) => void;
   setWorkingTreeStatus: (status: string) => void;
+  syncFeatureBranch: (branch: string, sha: string) => void;
   syncMain: (sha: string) => void;
 };
 
@@ -141,10 +154,18 @@ const createRepo = (shell: ShellFake) => {
   const setWorkingTreeStatus = (status: string) => {
     shell.on('git status --porcelain', status);
   };
+  const setRemoteBranchSha = (branch: string, ...shas: [string, ...string[]]) => {
+    const [firstSha, ...laterShas] = shas;
+    const toRefLine = (sha: string) => `${sha}\trefs/heads/${branch}`;
+    shell.on(`git ls-remote origin refs/heads/${branch}`, toRefLine(firstSha), ...laterShas.map(sha => toRefLine(sha)));
+  };
 
   return {
-    queuePrField: (field, ...values) => {
-      shell.on(`gh pr view --jq .${field}`, ...values);
+    queuePrFields: fields => {
+      for (const [field, values] of Object.entries(fields)) {
+        const queued: [string, ...string[]] = typeof values === 'string' ? [values] : values;
+        shell.on(`gh pr view --jq .${field}`, ...queued);
+      }
     },
     setCopilotReviewedHead: sha => {
       shell.on('gh api', sha);
@@ -154,21 +175,18 @@ const createRepo = (shell: ShellFake) => {
     setPrListState: state => {
       shell.on('gh pr list', state);
     },
-    setRemoteBranchSha: (branch, ...shas) => {
-      const [firstSha, ...laterShas] = shas;
-      const toRefLine = (sha: string) => `${sha}\trefs/heads/${branch}`;
-      shell.on(
-        `git ls-remote origin refs/heads/${branch}`,
-        toRefLine(firstSha),
-        ...laterShas.map(sha => toRefLine(sha)),
-      );
-    },
+    setRemoteBranchSha,
     setRemoteMainSha,
     setRepoSlug: slug => {
       shell.on('gh repo view --jq .nameWithOwner', slug);
     },
     setRoot,
     setWorkingTreeStatus,
+    syncFeatureBranch: (branch, sha) => {
+      setCurrentBranch(branch);
+      setHeadSha(sha);
+      setRemoteBranchSha(branch, sha);
+    },
     syncMain: sha => {
       setCurrentBranch('main');
       setHeadSha(sha);
@@ -177,6 +195,33 @@ const createRepo = (shell: ShellFake) => {
     },
   } satisfies Repo;
 };
+
+const KNOWN_RUNS_PATTERN = /--json databaseId --workflow/;
+const TAG_RUNS_PATTERN = /--json databaseId,headBranch/;
+
+const createRelease = (repo: Repo, registries: Registries, shell: ShellFake) =>
+  ({
+    stagePendingCerberus: async ({ published, tagRunPolls = ['100\n101\n999'] }: PendingCerberusOptions = {}) => {
+      repo.syncMain('sha-head');
+      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false, ...published });
+      shell.on('gh release list', 'false');
+      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
+      shell.on(TAG_RUNS_PATTERN, ...tagRunPolls);
+      return findTargetFacts('zyplux-cerberus');
+    },
+    stagePendingCerberusAndCiImage: async () => {
+      repo.syncMain('sha-head');
+      registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
+      shell.on('gh release list', 'false');
+      shell.on(KNOWN_RUNS_PATTERN, '100');
+      shell.on(/gh run list.*cerberus-v/, '100\n111');
+      shell.on(/gh run list.*ci-image-v/, '100\n222');
+      return {
+        cerberus: await findTargetFacts('zyplux-cerberus'),
+        ciImage: await findTargetFacts('ghcr.io/zyplux/ci'),
+      };
+    },
+  }) satisfies Release;
 
 const createRegistries = (network: FetchFake) =>
   ({
@@ -212,9 +257,27 @@ export const test = cliTest.extend<CzFixtures>({
   registries: async ({ network }, use) => {
     await use(createRegistries(network));
   },
+  release: async ({ registries, repo, shell }, use) => {
+    await use(createRelease(repo, registries, shell));
+  },
   repo: async ({ shell }, use) => {
     await use(createRepo(shell));
   },
+});
+
+export const tempCwdTest = test.extend<{ tempCwd: undefined }>({
+  tempCwd: [
+    async ({ tempDir }, use) => {
+      const entryCwd = process.cwd();
+      process.chdir(tempDir.path);
+      try {
+        await use(undefined);
+      } finally {
+        process.chdir(entryCwd);
+      }
+    },
+    { auto: true },
+  ],
 });
 
 export { notFoundResponse, okResponse } from '@zyplux/tests-fixtures';

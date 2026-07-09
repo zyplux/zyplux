@@ -1,4 +1,4 @@
-export { libraryTest as test } from '@zyplux/tests-fixtures';
+export { type ShellFake, libraryTest as test } from '@zyplux/tests-fixtures';
 export {
   $,
   findManifests,

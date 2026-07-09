@@ -1,26 +1,10 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import process from 'node:process';
 
 import type { TempDir } from '#fixtures';
 
-import { test as base, describe, expect } from '#fixtures';
-
-const test = base.extend<{ tempCwd: undefined }>({
-  tempCwd: [
-    async ({ tempDir }, use) => {
-      const entryCwd = process.cwd();
-      process.chdir(tempDir.path);
-      try {
-        await use(undefined);
-      } finally {
-        process.chdir(entryCwd);
-      }
-    },
-    { auto: true },
-  ],
-});
+import { describe, expect, tempCwdTest as test } from '#fixtures';
 
 const runGit = (cwd: string, ...args: string[]) => {
   execFileSync('git', args, { cwd, stdio: 'ignore' });

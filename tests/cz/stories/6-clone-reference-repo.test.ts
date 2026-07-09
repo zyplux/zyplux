@@ -1,24 +1,8 @@
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import process from 'node:process';
 
-import { test as base, describe, expect, vi } from '#fixtures';
-
-const test = base.extend<{ tempCwd: undefined }>({
-  tempCwd: [
-    async ({ tempDir }, use) => {
-      const entryCwd = process.cwd();
-      process.chdir(tempDir.path);
-      try {
-        await use(undefined);
-      } finally {
-        process.chdir(entryCwd);
-      }
-    },
-    { auto: true },
-  ],
-});
+import { describe, expect, tempCwdTest as test, vi } from '#fixtures';
 
 describe('6.1 building the clone url and destination', () => {
   test('6.1.1 builds a github url and destination from an owner/name shorthand', async ({ cz, shell }) => {
