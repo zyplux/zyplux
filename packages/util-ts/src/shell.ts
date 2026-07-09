@@ -104,6 +104,8 @@ const git = {
 
 export const $ = Object.assign(async (...args: Parameters<typeof Bun.$>) => Bun.$(...args), { gh, git });
 
+export const captureMerged = async (argv: string[]) => Bun.$`${argv} 2>&1`.nothrow().quiet();
+
 export const readTrimmed = async (command: Promise<CommandOutput>) => {
   const output = await command;
   return output.text().trim();

@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import json
-import time
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from cerberus.model import Status
     from seam_fixtures import RunCheckOnDisk
@@ -198,56 +195,3 @@ def test_22_5_1_errors_instead_of_passing_when_a_registry_lookup_fails(
     result = run_check_on_disk(CHECK_ID, files)
     assert result.status is status.ERROR
     assert [f.message for f in result.problems] == [f"could not determine the latest `ghcr.io/zyplux/ci`: {failure}"]
-
-
-def write_cache(cache_file: Path, entries: dict[str, object]) -> None:
-    cache_file.parent.mkdir(parents=True, exist_ok=True)
-    cache_file.write_text(json.dumps(entries), encoding="utf-8")
-
-
-def read_cache(cache_file: Path) -> dict[str, dict[str, object]]:
-    parsed: dict[str, dict[str, object]] = json.loads(cache_file.read_text(encoding="utf-8"))
-    return parsed
-
-
-def test_22_6_1_skips_the_registry_when_a_fresh_cache_entry_matches_the_used_version(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, registry_cache_file: Path, status: type[Status]
-) -> None:
-    write_cache(registry_cache_file, {"npm:@zyplux/util": {"latest": "0.2.0", "fetched_at": time.time()}})
-    result = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_UTIL_LOCK})
-    assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])
-
-
-def test_22_6_2_looks_up_live_when_the_used_version_differs_from_the_cached_latest(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, registry_cache_file: Path, status: type[Status]
-) -> None:
-    write_cache(registry_cache_file, {"npm:@zyplux/util": {"latest": "0.1.0", "fetched_at": time.time()}})
-    fake_registry.serve_npm("@zyplux/util", "0.2.0")
-    result = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_UTIL_LOCK})
-    assert (result.status, result.problems) == (status.PASS, [])
-    assert fake_registry.requests == [("registry.npmjs.org", "/@zyplux%2Futil")]
-    assert read_cache(registry_cache_file)["npm:@zyplux/util"]["latest"] == "0.2.0"
-
-
-def test_22_6_3_looks_up_live_when_the_cache_entry_has_expired(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, registry_cache_file: Path, status: type[Status]
-) -> None:
-    expired = time.time() - 2 * 60 * 60
-    write_cache(registry_cache_file, {"npm:@zyplux/util": {"latest": "0.2.0", "fetched_at": expired}})
-    fake_registry.serve_npm("@zyplux/util", "0.3.0")
-    result = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_UTIL_LOCK})
-    assert (result.status, [f.message for f in result.problems], fake_registry.requests) == (
-        status.FAIL,
-        ["`@zyplux/util` is 0.2.0 in bun.lock, latest is 0.3.0; run `just upgrade`"],
-        [("registry.npmjs.org", "/@zyplux%2Futil")],
-    )
-
-
-def test_22_6_4_records_a_confirmed_lookup_for_the_next_run(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: RegistryDouble, status: type[Status]
-) -> None:
-    fake_registry.serve_npm("@zyplux/util", "0.2.0")
-    first = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_UTIL_LOCK})
-    second = run_check_on_disk(CHECK_ID, {"bun.lock": NPM_UTIL_LOCK})
-    assert (first.status, second.status) == (status.PASS, status.PASS)
-    assert fake_registry.requests == [("registry.npmjs.org", "/@zyplux%2Futil")]

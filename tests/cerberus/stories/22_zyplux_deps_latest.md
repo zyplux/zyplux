@@ -92,37 +92,3 @@ silent pass.
 When the lookup for a used artifact raises, the check emits an ERROR finding
 naming the artifact and the failure, once per artifact, so the coverage gap
 stays visible.
-
-## 22.6 caching confirmed lookups between runs
-
-Registry lookups are the bite's only slow, network-bound work and re-answer
-the same question on every run, so confirmed answers are cached for an hour
-under the user cache dir (`$XDG_CACHE_HOME/cerberus/registry_latest.json`).
-A cache entry is only ever trusted to re-confirm an already-passing artifact:
-it is used when it is fresh and its latest equals every used version of the
-artifact. Anything else — a version mismatch (e.g. right after `just
-upgrade`), an expired entry, an unknown artifact, a failed lookup — goes to
-the registry live, so a lag finding is always based on a live answer and a
-new release is missed for at most the TTL.
-
-### 22.6.1 skips the registry when a fresh cache entry matches the used version
-
-A cache entry younger than the TTL whose latest equals the artifact's used
-version passes without a single registry request.
-
-### 22.6.2 looks up live when the used version differs from the cached latest
-
-When a lock resolves an artifact past the cached latest (the state `just
-upgrade` leaves behind), the cached entry is distrusted: the artifact is
-looked up live, the fresh answer passes the check, and the cache is updated —
-never a phantom lag finding from a stale cache.
-
-### 22.6.3 looks up live when the cache entry has expired
-
-An entry older than the TTL is ignored even when it matches the used version:
-the artifact is looked up live and lag is reported from the fresh answer.
-
-### 22.6.4 records a confirmed lookup for the next run
-
-A live lookup writes the artifact's latest back to the cache, so an immediate
-re-run confirms from the cache and makes no registry request.

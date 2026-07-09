@@ -1,147 +1,70 @@
 # Quality-gate speedup: a case study
 
-How `just c` went from 61s to ~32s (July 2026), written up as a teaching doc.
-The specific numbers will drift; the method and the reasoning are the part
-worth keeping.
+How `just c` went from 61s to ~32s (July 2026). The numbers will drift; the method and reasoning are the part worth keeping.
 
 ## Step 0 — profile before optimizing
 
-`just c` is a pipeline of ~15 commands. Before touching anything, each one was
-run separately wrapped in `time`, producing a cost map:
+`just c` is a pipeline of ~15 commands. Each was run separately wrapped in `time`, producing a cost map:
 
-| Step                      | Time     | Verdict                 |
-| ------------------------- | -------- | ----------------------- |
-| vitest (JS tests)         | 24.3s    | worth attacking         |
-| pytest (Python tests)     | 15.7s    | worth attacking         |
-| cerberus                  | 2.7–6.5s | suspicious variance     |
-| eslint                    | 3.5s     | already cached, fine    |
-| everything else, combined | ~3s      | ignore                  |
+| Step                      | Time     | Verdict              |
+| ------------------------- | -------- | -------------------- |
+| vitest (JS tests)         | 24.3s    | worth attacking      |
+| pytest (Python tests)     | 15.7s    | worth attacking      |
+| cerberus                  | 2.7–6.5s | suspicious variance  |
+| eslint                    | 3.5s     | already cached, fine |
+| everything else, combined | ~3s      | ignore               |
 
-90% of the time lived in 3 of 15 steps; effort on the other 12 would have been
-wasted. This table alone decided the whole project.
+90% of the time lived in 3 of 15 steps; effort on the other 12 would have been wasted. This table alone decided the whole project.
 
-`time` prints **real** (wall-clock) and **user** (CPU actually burned).
-Comparing them tells you *what kind* of slow you have:
+`time` prints **real** (wall-clock) and **user** (CPU actually burned). Comparing them tells you *what kind* of slow you have:
 
-- cerberus: 6.5s real, 1.0s user → not computing, **waiting** — almost always
-  network or disk.
-- vitest: 24s real, 120s user → already parallel across ~5 cores; the fix must
-  reduce *work*, not add parallelism.
+- cerberus: 6.5s real, 1.0s user → not computing, **waiting** — almost always network or disk.
+- vitest: 24s real, 120s user → already parallel across ~5 cores; the fix must reduce *work*, not add parallelism.
 
 ## Change 1 — `isolate: false` in vitest (24s → 15s)
 
-**What.** By default vitest gives every test *file* a brand-new, sealed
-JavaScript environment. Nothing leaks between files — but every file also
-re-imports everything from scratch.
+By default vitest gives every test *file* a brand-new, sealed JavaScript environment. Nothing leaks between files — but every file re-imports everything from scratch.
 
-**How it was found.** Two experiments. Running with coverage off saved only
-~3s, acquitting the initial suspect. The vitest summary line pointed at the
-real culprit: `import 70s, transform 17s` — more time loading modules than
-running tests. Timing each test project separately showed
-`tests/eslint-config` was 18.3s of the 21s: its 15 test files each import the
-entire ESLint config stack (typescript-eslint, unicorn, react, perfectionist),
-a huge module graph rebuilt 15 times.
+Coverage-off saved only ~3s, acquitting the initial suspect. The vitest summary line named the real culprit: `import 70s, transform 17s` — more time loading modules than running tests. Per-project timing pinned it on `tests/eslint-config` (18.3s of 21s): its 15 files each import the entire ESLint config stack (typescript-eslint, unicorn, react, perfectionist), a huge module graph rebuilt 15 times.
 
-**Why the fix helps.** `isolate: false` lets a worker keep its loaded modules
-and run several test files in them — the config stack loads once per worker
-instead of once per file.
+`isolate: false` lets a worker keep its loaded modules across test files — the config stack loads once per worker instead of once per file.
 
-**Accepted tradeoff.** Test files can now see state a previous file left
-behind (a mutated global, a leftover mock). `restoreMocks`, `unstubEnvs`, and
-`unstubGlobals` mitigate this. If a test ever fails in the full run but passes
-alone, suspect this setting first.
+**Accepted tradeoff.** Files can now see state a previous file left behind (a mutated global, a leftover mock). `restoreMocks`, `unstubEnvs`, and `unstubGlobals` mitigate this. If a test fails in the full run but passes alone, suspect this setting first.
 
 ## Change 2 — pytest-xdist (16s → 9s)
 
-**What.** Plain pytest runs 605 tests one at a time on one core of an 8-core
-machine. `pytest-xdist` with `-n auto` spawns one worker per core.
+Plain pytest runs 605 tests serially on one core of an 8-core machine. `pytest --durations=10` showed the totchef story tests take ~1.5s *each* (real subprocess/filesystem work). Serial slow tests + idle cores is the textbook case for `pytest-xdist -n auto`: one worker per core. Verified with `uv run --with pytest-xdist pytest -n auto` — a way to trial a package without adding it — before committing it to `pyproject.toml`.
 
-**How it was found.** `pytest --durations=10` listed the slowest tests: the
-totchef story tests take ~1.5s *each* (real subprocess/filesystem work).
-Serial slow tests + idle cores = the textbook xdist case. Verified with
-`uv run --with pytest-xdist pytest -n auto` — a way to trial a package without
-adding it — before committing it to `pyproject.toml`.
-
-**Why it's safe here.** Parallel tests only break when tests share state (same
-temp dir, same port, same global). These use isolated `tmp_path` fixtures.
-Coverage still works — pytest-cov merges the workers' data.
+It's safe here because parallel tests only break when they share state (a temp dir, a port, a global), and these use isolated `tmp_path` fixtures. Coverage still works — pytest-cov merges the workers' data.
 
 ## Change 3 — parallel gate structure
 
-**What.** Two structural moves in the justfile:
+Two structural moves in the justfile:
 
-- The `test` recipe starts vitest and pytest **at the same time** and waits
-  for both. They're independent, so the 15s job and the 9s job cost
-  max(15, 9) instead of 15 + 9.
-- `uv run cerberus --fix` moved from `lint` to its own `cerberus` recipe,
-  which runs **last** in `check` — after tests.
+- The `test` recipe starts vitest and pytest **at the same time** and waits for both: max(15, 9) instead of 15 + 9. (The runner logic later moved into `cz test`, so every org repo gets it from one place.)
+- `uv run cerberus --fix` moved from `lint` to its own `cerberus` recipe, running **last** in `check` — after tests.
 
-**Why the cerberus move matters beyond speed.** It fixed a latent correctness
-bug. The fallow bite computes a CRAP score (complexity × untested-ness) from
-the coverage report tests write — but `lint` ran *before* `test`, so cerberus
-always judged the code against the *previous* run's coverage. CLAUDE.md even
-carried a warning telling humans how to work around the resulting phantom
-findings. Reordering made the warning obsolete: right data, right order, no
-ritual.
+The cerberus move fixed a latent correctness bug, not just speed: the fallow bite computes a CRAP score (complexity × untested-ness) from the coverage report tests write — but `lint` ran *before* `test`, so cerberus always judged code against the *previous* run's coverage. CLAUDE.md even carried a warning about the resulting phantom findings. Right order made the warning obsolete.
 
-**The first design was wrong, instructively.** The original attempt built two
-fully parallel chains (all JS steps ∥ all Python steps). It was fast — and
-then the gate itself failed it: cerberus enforces that every org repo's
-justfile has `check`'s steps as ordered dependencies and matches the canonical
-`baseline.just` byte-for-byte. Instead of fighting the invariant, the question
-became: *where does parallelism actually pay?* Only in `test` — everything
-else is ~7s combined. Parallelizing just the tests fits the existing
-invariants and lands within a second or two of the fancy version. When you
-find yourself fighting a tool, the tool is usually encoding a decision someone
-made on purpose.
+**The first design was wrong, instructively.** Two fully parallel chains (all JS steps ∥ all Python steps) were fast — and the gate itself failed them: cerberus requires `check`'s steps as ordered dependencies matching the canonical baseline. Instead of fighting the invariant, ask: *where does parallelism actually pay?* Only in `test` — everything else is ~7s combined. Parallelizing just the tests fits the invariants and lands within a second or two of the fancy version. When you find yourself fighting a tool, it's usually encoding a decision someone made on purpose.
 
-**Bonus bug found while testing.** `just t <name>` (filtered tests) had been
-silently broken *before* these changes: a filtered run covers little code, the
-coverage `fail_under 90` check fails, pytest exits 1, and the recipe's
-tolerance for exit code 5 never matched. Fix: filtered runs skip coverage
-entirely (`--no-cov` / `--coverage.enabled=false`) — which also means a
-partial run can no longer overwrite the full coverage report cerberus reads.
-Found by simply running `just t nomatchxyz` to verify the rewrite — always
-exercise the paths you touched, not just the happy one.
+**Bonus bug found while testing.** `just t <name>` (filtered tests) had been broken all along: a filtered run covers little code, coverage `fail_under 90` fails, pytest exits 1 — never the tolerated 5. Fix: filtered runs skip coverage (`--no-cov` / `--coverage.enabled=false`), which also stops partial runs from clobbering the coverage report cerberus reads. Found by running `just t nomatchxyz` — always exercise the paths you touched, not just the happy one.
 
-## Change 4 — caching cerberus's registry lookups (~3–6s of network wait)
+## Rejected — caching cerberus's registry lookups (~3–6s of network wait)
 
-**What.** The `zyplux_deps_latest` bite asks npm/PyPI/GHCR "what's the latest
-version?" over the network on *every* run — answers that change maybe weekly.
-The result now lives in `~/.cache/cerberus/registry_latest.json` for an hour.
+The `zyplux_deps_latest` bite asks npm/PyPI/GHCR "what's the latest version?" on *every* run. A one-hour TTL cache under `~/.cache/cerberus/` was built, passed the gate — and was reverted.
 
-**How it was found.** The real ≫ user gap from step 0 said "waiting on I/O";
-reading the bite's source confirmed HTTP calls to three registries.
+The bite's entire job is to enforce that consumers are on the latest release *immediately* — the org workflow is release, then bump consumers right away. A TTL cache means the check silently stops enforcing exactly when it matters most, for up to an hour. Against that: ~3 seconds saved. Enforcement tools earn their keep by being trustworthy; trading trust for seconds is a bad deal, and every cache adds a state file, an invalidation story, and a new way to be confused by a stale run. A cache is only acceptable where staleness is harmless — in a *linter for freshness*, staleness is the one intolerable thing.
 
-**The footgun the design avoids.** A naive one-hour cache fails nastily: run
-`just upgrade`, the lockfile now has 0.7.0, but the cache still says "latest
-is 0.6.0" — and the check *fails you for being ahead*, telling you to run the
-upgrade you just ran. So the rule became: **a cache entry may only confirm a
-pass, never justify a fail.** If the cached latest matches what's in use →
-trust it, skip the network. Any disagreement → look up live. The only blind
-spot left is inherent to any TTL: a release published minutes ago goes
-unnoticed for up to an hour, locally only (CI runners start with no cache).
+**Kept instead: concurrency, not caching.** Fresh answers, fetched in parallel. `zyplux_deps_latest` already fanned its lookups out over a thread pool; `release_surface_version_bump` got the same treatment — prefetch all targets concurrently, verify sequentially from the prefetched map, findings byte-identical. Batching was also checked: neither npm nor PyPI offers a multi-package endpoint; GHCR's auth token can cover several repositories in one request (repeated `scope=` params), worth doing only if the org ever consumes more than one GHCR image per run — today each bite queries exactly one.
 
-Deliberately *not* cached: `release_surface_version_bump`, the bite that gates
-releases — a stale answer there could corrupt a release decision; freshness is
-the point.
-
-**Process.** Test-first, per this repo's convention: behavior spec as story
-section 22.6, four tests, three failing, then implementation until green. And
-because `baseline.just` and the bite code are part of cerberus's published
-release surface, another bite demanded the version bump to 0.14.0 — the
-governance machine policing its own change.
+**Version note.** `baseline.just` and the justfile bite changed (change 3) — a release-surface change, so the release-surface bite demanded a cerberus version bump: the governance machine policing its own change.
 
 ## Takeaways
 
 1. **Profile before optimizing** — 3 of 15 steps held 90% of the time.
-2. **real vs user time** tells you whether you're compute-bound (do less work)
-   or wait-bound (cache, parallelize, or reorder).
-3. **Parallelize only independent long poles** — concurrency everywhere buys
-   little over concurrency where it counts, and costs structure.
-4. **Order operations by data flow** — the producer of data (tests →
-   coverage) must run before its consumer (cerberus).
-5. **Caches need a story for staleness** — decide who may be lied to, for how
-   long, and make the cache unable to cause false alarms.
-6. **When the tooling pushes back, listen** — the rejected first design is why
-   the final one is both fast and idiomatic.
+2. **real vs user time** tells you whether you're compute-bound (do less work) or wait-bound (cache, parallelize, or reorder).
+3. **Parallelize only independent long poles** — concurrency everywhere buys little over concurrency where it counts, and costs structure.
+4. **Order operations by data flow** — the producer (tests → coverage) must run before its consumer (cerberus).
+5. **Never cache what a tool exists to keep fresh** — a staleness window in a freshness check hollows out the check; seconds saved don't buy back lost trust.
+6. **When the tooling pushes back, listen** — the rejected first design is why the final one is both fast and idiomatic.

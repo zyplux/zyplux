@@ -42,19 +42,7 @@ lint:
 
 # Run tests for both workspaces, JS and Python in parallel. Optional arg filters by test name, skipping coverage; never fails when nothing matches.
 test name='':
-    #!/usr/bin/env bash
-    set -euo pipefail
-    js_log=$(mktemp) py_log=$(mktemp)
-    trap 'rm -f "$js_log" "$py_log"' EXIT
-    bun run test {{ if name == '' { '' } else { '-t ' + quote(name) + ' --passWithNoTests --coverage.enabled=false' } }} >"$js_log" 2>&1 &
-    js_pid=$!
-    (uv run pytest {{ if name == '' { '' } else { '--no-cov -k ' + quote(name) } }} || [ "$?" -eq 5 ]) >"$py_log" 2>&1 &
-    py_pid=$!
-    js_status=0 py_status=0
-    wait "$js_pid" || js_status=$?
-    wait "$py_pid" || py_status=$?
-    cat "$js_log" "$py_log"
-    [ "$js_status" -eq 0 ] && [ "$py_status" -eq 0 ]
+    bun run --silent cz test {{ if name == '' { '' } else { quote(name) } }}
 
 # Verify org invariants with cerberus, over the coverage report `test` regenerates.
 cerberus:

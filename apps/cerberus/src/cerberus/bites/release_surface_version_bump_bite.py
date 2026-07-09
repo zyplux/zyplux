@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import tomllib
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,7 @@ SCOPE = Scope.GIT_HISTORY
 
 _MANIFEST = "release-targets.toml"
 _TARGET_KEY = "target"
+_MAX_CONCURRENT_LOOKUPS = 8
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 _GHCR_HOST_PREFIX = "ghcr.io/"
 
@@ -128,19 +130,34 @@ def _fetch_latest_published(target: _Target) -> tuple[Semver, str]:
     return semver, version
 
 
-def _verify(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> None:
+def _fetch_all_latest(targets: list[_Target]) -> dict[_Target, tuple[Semver, str] | registries.RegistryLookupError]:
+    def lookup(target: _Target) -> tuple[Semver, str] | registries.RegistryLookupError:
+        try:
+            return _fetch_latest_published(target)
+        except registries.RegistryLookupError as err:
+            return err
+
+    with ThreadPoolExecutor(max_workers=min(_MAX_CONCURRENT_LOOKUPS, len(targets))) as pool:
+        return dict(zip(targets, pool.map(lookup, targets), strict=True))
+
+
+def _verify(
+    repo: Repo,
+    ctx: Context,
+    target: _Target,
+    latest: tuple[Semver, str] | registries.RegistryLookupError,
+    res: CheckResult,
+) -> None:
     resolved = _current_semver(repo, ctx, target, res)
     if resolved is None:
         return
     current, version = resolved
 
-    try:
-        latest = _fetch_latest_published(target)
-    except registries.RegistryNotFoundError:
+    if isinstance(latest, registries.RegistryNotFoundError):
         res.ok(f"{target.label}: not yet released")
         return
-    except registries.RegistryLookupError as exc:
-        res.error(f"{target.label}: cannot determine the latest published version: {exc}")
+    if isinstance(latest, registries.RegistryLookupError):
+        res.error(f"{target.label}: cannot determine the latest published version: {latest}")
         return
 
     latest_semver, latest_version = latest
@@ -177,8 +194,13 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error(f"{_MANIFEST} is malformed: {exc}")
         return res
 
+    if not targets:
+        res.ok("every published target's version tracks its surface")
+        return res
+
+    latest_by_target = _fetch_all_latest(targets)
     for target in targets:
-        _verify(repo, ctx, target, res)
+        _verify(repo, ctx, target, latest_by_target[target], res)
 
     if not res.problems:
         res.ok("every published target's version tracks its surface")

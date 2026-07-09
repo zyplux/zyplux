@@ -12,6 +12,7 @@ import { printTagKindCommand, runPrintTagKind } from '#commands/print-tag-kind';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from '#commands/publish-tagged-target';
 import { pushBranchCommand, runPushBranch } from '#commands/push-branch';
 import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from '#commands/release-bumped-targets';
+import { runTest, testCommand } from '#commands/test';
 import pkg from '#package.json' with { type: 'json' };
 
 const VERSION = pkg.version;
@@ -32,6 +33,7 @@ const program = defineProgram({
     publishTaggedTargetCommand,
     printTagKindCommand,
     cleanCommand,
+    testCommand,
   ),
 });
 
@@ -83,6 +85,9 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'release-bumped-targets': {
       return runReleaseBumpedTargets();
+    }
+    case 'test': {
+      return runTest(result);
     }
     default: {
       return assertNever(result);
