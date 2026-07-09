@@ -35,7 +35,7 @@ describe('8.2 publishing to each registry kind', () => {
     await cz.run('publish-tagged-target', `util-v${util.version}`);
 
     expect(shell.commandsMatching(/bun pm pack/)).toEqual([
-      `cd ${util.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`,
+      `cd ${util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`,
     ]);
   });
 

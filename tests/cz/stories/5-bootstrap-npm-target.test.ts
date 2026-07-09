@@ -50,9 +50,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    expect(shell.commands).toContain(
-      `cd ${util.dir} && bun pm pack && bunx npm@latest publish ./*.tgz --access public`,
-    );
+    expect(shell.commands).toContain(`cd ${util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`);
     expect(logs.logLines).toContain(
       `Published @zyplux/util ${util.version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
     );

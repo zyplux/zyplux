@@ -36,8 +36,8 @@ publishing can be enabled, and that first publish needs a credential.
    - CLI alternative (requires interactive 2FA; `bunx` avoids installing npm):
 
      ```sh
-     bunx npm@latest login
-     bunx npm@latest trust github @zyplux/util --file release.yml --repo zyplux/zyplux --allow-publish
+     bunx npm@11 login
+     bunx npm@11 trust github @zyplux/util --file release.yml --repo zyplux/zyplux --allow-publish
      ```
 
 3. From then on `just release` publishes new versions via OIDC — no token, with
