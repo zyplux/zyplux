@@ -26,7 +26,7 @@
 
 ### 28.3.2 enforces a configured threshold per language
 
-### 28.3.3 defaults the threshold to two percent when the config omits it
+### 28.3.3 defaults the threshold to zero point one percent when the config omits it
 
 ### 28.3.4 passes a configured pattern and ignore through to jscpd
 

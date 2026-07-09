@@ -1,6 +1,6 @@
 """Copy-paste duplication cap: cerberus itself runs jscpd over the repo's
 workspace-registered code and enforces the configured threshold
-(`[jscpd_dupes_threshold] threshold` in cerberus.toml, default 2%) against every
+(`[jscpd_dupes_threshold] threshold` in cerberus.toml, default 0.1%) against every
 language's duplicated-token percentage from jscpd's json report — not just
 the aggregate total. Cerberus owns the whole jscpd invocation: the file
 selection pattern and ignore globs come from `[jscpd_dupes_threshold] pattern` and

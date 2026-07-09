@@ -45,7 +45,7 @@ def _from_dict(data: dict[str, Any]) -> Config:
         ci_image=ci.get("image", ""),
         ci_required_ts=tuple(ci_required.get("ts", [])),
         ci_required_python=tuple(ci_required.get("python", [])),
-        jscpd_dupes_threshold=jscpd_dupes.get("threshold", 2),
+        jscpd_dupes_threshold=jscpd_dupes.get("threshold", 0.1),
         jscpd_dupes_pattern=jscpd_dupes.get("pattern", "**/*.{ts,tsx,py}"),
         jscpd_dupes_ignore=tuple(jscpd_dupes.get("ignore", ["**/dist/**", "**/.venv/**", "**/*.gen.*"])),
     )

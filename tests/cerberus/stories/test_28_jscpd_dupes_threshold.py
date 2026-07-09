@@ -43,9 +43,9 @@ def _report(
     return {"jscpd-report.json": json.dumps({"duplicates": clones or [], "statistics": {"formats": formats}})}
 
 
-_UNDER_THRESHOLD_REPORT = _report(typescript=(1167, 1.9), python=(1623, 1.3))
+_UNDER_THRESHOLD_REPORT = _report(typescript=(40, 0.05), python=(30, 0.03))
 _LANGUAGE_OVER_THRESHOLD_REPORT = _report(
-    clones=[_clone("src/a.ts", "src/b.ts")], typescript=(1167, 3.1), python=(120, 0.2)
+    clones=[_clone("src/a.ts", "src/b.ts")], typescript=(1167, 3.1), python=(120, 0.02)
 )
 
 
@@ -109,7 +109,7 @@ def test_28_1_1_passes_when_every_language_stays_under_the_duplication_threshold
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     result = run_jscpd_dupes()
-    assert result.findings == [ok("duplication is under the 2% threshold in every language")]
+    assert result.findings == [ok("duplication is under the 0.1% threshold in every language")]
 
 
 def test_28_1_2_fails_when_one_language_exceeds_the_threshold_even_though_the_total_is_under(
@@ -119,7 +119,7 @@ def test_28_1_2_fails_when_one_language_exceeds_the_threshold_even_though_the_to
     result = run_jscpd_dupes()
     assert result.findings == [
         fail(
-            "ts: 1167 (3.10%); py: 120 (0.20%)\n    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]",
+            "ts: 1167 (3.10%); py: 120 (0.02%)\n    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]",
         )
     ]
 
@@ -156,17 +156,17 @@ def test_28_1_5_errors_when_jscpd_writes_no_readable_json_report(
 def test_28_2_1_reports_duplicated_tokens_and_percentage_per_language(
     run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc
 ) -> None:
-    fake_proc.serve("jscpd", output_files=_report(typescript=(1167, 1.9), python=(1623, 1.3)))
+    fake_proc.serve("jscpd", output_files=_report(typescript=(90, 0.09), python=(45, 0.03)))
     result = run_jscpd_dupes()
-    assert result.detail == "ts: 1167 (1.90%); py: 1623 (1.30%)"
+    assert result.detail == "ts: 90 (0.09%); py: 45 (0.03%)"
 
 
 def test_28_2_2_reads_reports_with_flat_per_language_stats(run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc) -> None:
-    flat = {"typescript": {"duplicatedTokens": 40, "percentageTokens": 0.5}}
+    flat = {"typescript": {"duplicatedTokens": 40, "percentageTokens": 0.05}}
     report = {"jscpd-report.json": json.dumps({"duplicates": [], "statistics": {"formats": flat}})}
     fake_proc.serve("jscpd", output_files=report)
     result = run_jscpd_dupes()
-    assert result.detail == "ts: 40 (0.50%)"
+    assert result.detail == "ts: 40 (0.05%)"
 
 
 def test_28_2_3_leaves_the_detail_unset_on_failure_so_the_stats_appear_only_in_the_fail_line(
@@ -194,13 +194,13 @@ def test_28_3_2_enforces_a_configured_threshold_per_language(
     assert result.findings == [ok("duplication is under the 5% threshold in every language")]
 
 
-def test_28_3_3_defaults_the_threshold_to_two_percent_when_the_config_omits_it(
+def test_28_3_3_defaults_the_threshold_to_zero_point_one_percent_when_the_config_omits_it(
     run_jscpd_dupes: RunJscpdDupes, fake_proc: FakeProc, status: type[Status]
 ) -> None:
     fake_proc.serve("jscpd", output_files=_LANGUAGE_OVER_THRESHOLD_REPORT)
     result = run_jscpd_dupes(config_toml=_THRESHOLDLESS_TOML)
     assert result.findings[0].status == status.FAIL
-    assert result.findings[0].message.startswith("ts: 1167 (3.10%); py: 120 (0.20%)")
+    assert result.findings[0].message.startswith("ts: 1167 (3.10%); py: 120 (0.02%)")
 
 
 def test_28_3_4_passes_a_configured_pattern_and_ignore_through_to_jscpd(
