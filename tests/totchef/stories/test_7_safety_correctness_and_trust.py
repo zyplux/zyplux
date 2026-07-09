@@ -15,28 +15,6 @@ if TYPE_CHECKING:
     from arrange_fixtures import FakeHttp, FakeSystem, FakeTerminal, RecipeBuilder
     from container_fixtures import ContainerRun
 
-GIT_NEEDS_INSTALL = (
-    "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n"
-    "        500 http://archive noble/main amd64 Packages\n"
-)
-
-
-class _NullContext:
-    (
-        """contextlib.nullcontext without the import — this file is held to zero runtime """
-        """imports (see test_story_imports.py)."""
-    )
-
-    def __init__(self, value: Path) -> None:
-        self._value = value
-
-    def __enter__(self) -> Path:
-        return self._value
-
-    def __exit__(self, *exc: object) -> None:
-        return None
-
-
 # 7.1 Trust that re-runs only change what drifted
 
 
@@ -149,11 +127,15 @@ def test_7_3_2_forked_child_drops_privilege_for_user_nodes(
 
 
 def test_7_3_3_plan_and_lint_never_escalate(
-    terminal: FakeTerminal, totchef: Totchef, cli: Cli, monkeypatch: pytest.MonkeyPatch
+    terminal: FakeTerminal,
+    totchef: Totchef,
+    cli: Cli,
+    git_needs_install: str,
+    escalation_probe: Callable[[], list[tuple[str, list[str]]]],
 ) -> None:
     """plan and lint never escalate."""
     totchef.recipe.declares("apt_pkg", packages=["git"])  # a root-scoped cook
-    terminal.arrange("apt-cache policy git", GIT_NEEDS_INSTALL)
+    terminal.arrange("apt-cache policy git", git_needs_install)
 
     totchef.plan().assert_shows("apt_pkg.git", "would install")
     terminal.expect_not_ran("nala")  # probed, but no privileged transaction
@@ -162,14 +144,7 @@ def test_7_3_3_plan_and_lint_never_escalate(
     terminal.expect_not_ran("nala")
 
     # the real gate: from a non-root euid, neither command re-execs under sudo
-    escalations: list[tuple[str, list[str]]] = []
-    monkeypatch.setattr("os.geteuid", lambda: 1000)  # not root — so any escalation would call execvp
-    monkeypatch.setattr("os.execvp", lambda *argv: escalations.append(argv))
-    monkeypatch.setattr("totchef.cli.run_recipe", lambda *_args, **_kwargs: {})  # don't fork real cooks in-process
-    monkeypatch.setattr(
-        "totchef.cli.start_logging", lambda _echo_to_terminal=True: _NullContext(totchef.workdir / "log")
-    )
-    monkeypatch.setattr("totchef.cli.drain_logs", lambda: None)
+    escalations = escalation_probe()
     recipe_path = totchef.workdir / "recipe.toml"
     recipe_path.write_text('[apt_pkg]\npackages = ["git"]\n')
 

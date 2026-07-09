@@ -26,6 +26,8 @@ type PushFlags = { setUpstream?: boolean };
 
 type ReleaseCreateFlags = { generateNotes?: boolean; target?: string; title?: string };
 
+type ReleaseDeleteFlags = { cleanupTag?: boolean; yes?: boolean };
+
 type ReleaseListFlags = { jq?: string; json?: string };
 
 type RepoViewFlags = { jq?: string; json?: string };
@@ -62,6 +64,8 @@ const gh = {
   release: {
     create: async (tag: string, flags: ReleaseCreateFlags = {}) =>
       Bun.$`gh ${['release', 'create', tag, ...toArgs(flags)]}`,
+    delete: async (tag: string, flags: ReleaseDeleteFlags = {}) =>
+      Bun.$`gh ${['release', 'delete', tag, ...toArgs(flags)]}`,
     list: async (flags: ReleaseListFlags = {}) => Bun.$`gh ${['release', 'list', ...toArgs(flags)]}`.quiet(),
   },
   repo: {

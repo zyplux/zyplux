@@ -1,8 +1,5 @@
 import { describe, expect, test } from '#fixtures';
 
-const KNOWN_RUNS_PATTERN = /--json databaseId --workflow/;
-const TAG_RUNS_PATTERN = /--json databaseId,headBranch/;
-
 const renderRunViewCommand = (runId: string) =>
   `gh run view ${runId} --jq .status, .conclusion --json status,conclusion`;
 
@@ -75,19 +72,12 @@ describe('10. Releasing every target whose version was bumped', () => {
   describe('10.3 publishing a pending target', () => {
     test('10.3.1 cuts a release, watches its workflow to success, and confirms registry visibility', async ({
       cz,
-      findTarget,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+      const cerberus = await release.stagePendingCerberus();
       shell.on('gh run view 999', 'completed\nsuccess');
-      const cerberus = await findTarget('zyplux-cerberus');
 
       await cz.run('release-bumped-targets');
 
@@ -98,18 +88,13 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.2 rejects when the publish workflow finishes unsuccessfully', async ({
+    test('10.3.2 rejects when the publish workflow finishes unsuccessfully, rolling back the release', async ({
       cz,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+      const cerberus = await release.stagePendingCerberus();
       shell.on('gh run view 999', 'completed\nfailure');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
@@ -117,14 +102,16 @@ describe('10. Releasing every target whose version was bumped', () => {
       );
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
       expect(logs.warnLines).toHaveLength(0);
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.3 rejects when the publish workflow never starts', async ({ cz, logs, registries, repo, shell }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101');
+    test('10.3.3 rejects when the publish workflow never starts, rolling back the release', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      const cerberus = await release.stagePendingCerberus({ tagRunPolls: ['100\n101'] });
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
@@ -133,14 +120,16 @@ describe('10. Releasing every target whose version was bumped', () => {
         expect.stringContaining('publish workflow did not start; check the Actions tab'),
       );
       expect(shell.commandsMatching('gh run view')).toHaveLength(0);
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.4 rejects when the publish workflow never completes', async ({ cz, logs, registries, repo, shell }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+    test('10.3.4 rejects when the publish workflow never completes, rolling back the release', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      const cerberus = await release.stagePendingCerberus();
       shell.on('gh run view 999', 'in_progress');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
@@ -149,28 +138,17 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.errorLines).toContainEqual(
         expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'),
       );
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
     });
 
-    test('10.3.5 warns instead of failing when the registry never shows the new version', async ({
+    test('10.3.5 warns instead of failing when the registry never shows the new version, without rolling back', async ({
       cz,
-      findTarget,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({
-        ghcrPublished: true,
-        npmPublished: true,
-        pypiEverVisible: false,
-        pypiPublished: false,
-      });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+      const cerberus = await release.stagePendingCerberus({ published: { pypiEverVisible: false } });
       shell.on('gh run view 999', 'completed\nsuccess');
-      const cerberus = await findTarget('zyplux-cerberus');
 
       await cz.run('release-bumped-targets');
 
@@ -178,23 +156,17 @@ describe('10. Releasing every target whose version was bumped', () => {
         `zyplux-cerberus ${cerberus.version} published (workflow succeeded) but is not visible on its registry yet — likely propagation lag; it should appear shortly`,
       );
       expect(logs.logLines).not.toContainEqual(expect.stringContaining('Published zyplux-cerberus'));
+      expect(shell.commandsMatching('gh release delete')).toHaveLength(0);
     });
 
     test('10.3.6 keeps polling while the run list is still empty instead of watching a phantom run', async ({
       cz,
-      findTarget,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '', '100\n101\n999');
+      const cerberus = await release.stagePendingCerberus({ tagRunPolls: ['', '100\n101\n999'] });
       shell.on('gh run view 999', 'completed\nsuccess');
-      const cerberus = await findTarget('zyplux-cerberus');
 
       await cz.run('release-bumped-targets');
 
@@ -202,50 +174,56 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs.logLines).toContain(`Published zyplux-cerberus ${cerberus.version}`);
     });
 
-    test('10.3.7 rejects when the workflow completes without reporting a conclusion', async ({
+    test('10.3.7 rejects when the workflow completes without reporting a conclusion, rolling back the release', async ({
       cz,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, '100\n101\n999');
+      const cerberus = await release.stagePendingCerberus();
       shell.on('gh run view 999', 'completed');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
       expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'unknown'"));
+      expect(shell.commands).toContain(`gh release delete cerberus-v${cerberus.version} --cleanup-tag --yes`);
+    });
+
+    test('10.3.8 reports the original publish failure, not the rollback failure, when rollback also fails', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      await release.stagePendingCerberus();
+      shell.on('gh run view 999', 'completed\nfailure');
+      shell.on('gh release delete', () => {
+        throw new Error('gh: permission denied');
+      });
+
+      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+        '1 of 1 targets failed to publish: zyplux-cerberus',
+      );
+      expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
+      expect(logs.errorLines).toContainEqual(expect.stringContaining('Rollback of cerberus-v'));
     });
   });
 
   describe('10.4 publishing multiple pending targets', () => {
     test('10.4.1 publishes all pending targets concurrently, each watching its own tagged workflow run', async ({
       cz,
-      findTarget,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100');
-      shell.on(/gh run list.*cerberus-v/, '100\n111');
-      shell.on(/gh run list.*ci-image-v/, '100\n222');
+      const { cerberus, ciImage } = await release.stagePendingCerberusAndCiImage();
       let isCiImageRunCompleted = false;
       shell.on('gh run view 111', () => (isCiImageRunCompleted ? 'completed\nsuccess' : 'in_progress'));
       shell.on('gh run view 222', () => {
         isCiImageRunCompleted = true;
         return 'completed\nsuccess';
       });
-      const cerberus = await findTarget('zyplux-cerberus');
-      const ciImage = await findTarget('ghcr.io/zyplux/ci');
 
       await cz.run('release-bumped-targets');
 
@@ -260,22 +238,13 @@ describe('10. Releasing every target whose version was bumped', () => {
 
     test('10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end', async ({
       cz,
-      findTarget,
       logs,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100');
-      shell.on(/gh run list.*cerberus-v/, '100\n111');
-      shell.on(/gh run list.*ci-image-v/, '100\n222');
+      const { cerberus, ciImage } = await release.stagePendingCerberusAndCiImage();
       shell.on('gh run view 111', 'completed\nfailure');
       shell.on('gh run view 222', 'completed\nsuccess');
-      const cerberus = await findTarget('zyplux-cerberus');
-      const ciImage = await findTarget('ghcr.io/zyplux/ci');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 2 targets failed to publish: zyplux-cerberus',
@@ -289,16 +258,10 @@ describe('10. Releasing every target whose version was bumped', () => {
 
     test('10.4.3 reports failures in manifest order even when a later target fails first', async ({
       cz,
-      registries,
-      repo,
+      release,
       shell,
     }) => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100');
-      shell.on(/gh run list.*cerberus-v/, '100\n111');
-      shell.on(/gh run list.*ci-image-v/, '100\n222');
+      await release.stagePendingCerberusAndCiImage();
       let isCiImageRunCompleted = false;
       shell.on('gh run view 111', () => (isCiImageRunCompleted ? 'completed\nfailure' : 'in_progress'));
       shell.on('gh run view 222', () => {

@@ -1,0 +1,33 @@
+# 29. [Banning dead code and complexity offenders via fallow](test_29_fallow_analyzer.py)
+
+## 29.1 scoping the check
+
+### 29.1.1 skips repos with no package.json without running fallow
+
+## 29.2 enforcing fallow's dead-code verdict
+
+### 29.2.1 passes when both fallow analyses exit clean
+
+### 29.2.2 runs fallow dead code and health non-interactively from a shielded cwd against the repo root
+
+### 29.2.3 fails with the issue count when fallow dead-code reports issues
+
+### 29.2.4 errors when bunx is not on PATH
+
+## 29.3 enforcing fallow's complexity thresholds
+
+### 29.3.1 fails listing each function fallow health flags above its thresholds
+
+### 29.3.2 fails listing only the metrics fallow reported when coverage data is absent
+
+## 29.4 surfacing fallow's health status line
+
+### 29.4.1 reports fallow's health status line on a clean run
+
+### 29.4.2 leaves the detail unset on failure so the status line appears only in the fail line
+
+## 29.5 owning fallow's configuration
+
+### 29.5.1 shields fallow behind a cerberus-owned config ignoring workspace dirs without a package.json
+
+### 29.5.2 errors when package.json is not valid JSON instead of crashing

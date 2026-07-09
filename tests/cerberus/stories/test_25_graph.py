@@ -148,9 +148,7 @@ def test_25_1_1_connects_two_python_files_that_import_each_other(built_graph: Gr
     assert _has_edge(built_graph, "pkg_b", "pkg_a", "imports")
 
 
-def test_25_1_2_connects_a_typescript_file_to_the_file_it_imports_via_a_relative_path(
-    built_graph: GraphData,
-) -> None:
+def test_25_1_2_connects_a_typescript_file_to_the_file_it_imports_via_a_relative_path(built_graph: GraphData) -> None:
     assert _has_edge(built_graph, "src_bar", "src_foo", "imports")
 
 
@@ -235,9 +233,7 @@ def test_25_6_2_marks_every_contains_edge_as_confidently_extracted(built_graph: 
     assert all(e["confidence"] == "EXTRACTED" for e in contains_edges)
 
 
-def test_25_7_1_resolves_an_absolute_import_tie_to_the_lexicographically_first_candidate(
-    repo_root: Path,
-) -> None:
+def test_25_7_1_resolves_an_absolute_import_tie_to_the_lexicographically_first_candidate(repo_root: Path) -> None:
     (repo_root / "pkg" / "aaa").mkdir(parents=True)
     (repo_root / "pkg" / "bbb").mkdir(parents=True)
     (repo_root / "pkg" / "aaa" / "target.py").write_text("VALUE = 'aaa'\n")

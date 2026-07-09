@@ -6,6 +6,10 @@
 
 ### 16.1.2 defaults to the current directory when no path argument is given
 
+### 16.1.3 prints one line per bite with its id and outcome
+
+### 16.1.4 appends a bite's measured detail to its line
+
 ## 16.2 surfacing check failures end to end
 
 ### 16.2.1 fails when the ci workflow file is missing
@@ -25,6 +29,8 @@
 ## 16.5 pointing the linter at an alternate config file
 
 ### 16.5.1 uses the recipe requirements from the given config file instead of the bundled defaults
+
+### 16.5.2 rejects a config file whose section is not a table
 
 ## 16.6 disabling checks per repo via pyproject
 
@@ -49,3 +55,7 @@
 ## 16.10 isolating a crashing check
 
 ### 16.10.1 reports a crashing check as an error instead of aborting the run
+
+## 16.11 rendering a skipped bite distinctly
+
+### 16.11.1 renders a skipped bite with its skip glyph and reason

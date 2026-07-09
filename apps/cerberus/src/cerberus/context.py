@@ -34,9 +34,6 @@ class Context:
     def paths(self, repo: Repo) -> list[str]:
         return self._cached(("paths", repo.name), lambda: self.source.list_paths(repo))
 
-    def tags(self, repo: Repo, prefix: str) -> list[str]:
-        return self._cached(("tags", repo.name, prefix), lambda: self.source.tags(repo, prefix))
-
     def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]:
         key = ("changed_paths", repo.name, ref, tuple(surface))
         return self._cached(key, lambda: self.source.changed_paths(repo, ref, surface))

@@ -3,35 +3,21 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as z from 'zod';
 
+import type { Target, VersionSource } from '#contracts';
+
+import { ManifestSchema } from '#contracts';
+
 const GhcrTokenSchema = z.object({ token: z.string() });
 const JsonFieldsSchema = z.record(z.string(), z.unknown());
-
-const VersionSourceSchema = z.union([
-  z.object({ file: z.string(), json: z.string() }),
-  z.object({ file: z.string(), regex: z.string() }),
-]);
-
-const TargetSchema = z.object({
-  kind: z.enum(['ghcr', 'npm', 'pypi']),
-  label: z.string(),
-  surface: z.array(z.string()),
-  tag_prefix: z.string(),
-  version: VersionSourceSchema,
-});
-
-const ManifestSchema = z.object({ target: z.array(TargetSchema) });
 
 export type ReleaseTarget = {
   dir: string;
   isPublished: (version: string) => Promise<boolean>;
-  kind: TargetSpec['kind'];
+  kind: Target['kind'];
   label: string;
   readVersion: () => Promise<string>;
   tagPrefix: string;
 };
-
-type TargetSpec = z.infer<typeof TargetSchema>;
-type VersionSource = z.infer<typeof VersionSourceSchema>;
 
 const readVersion = async (repoRoot: string, source: VersionSource) => {
   const text = await readFile(path.join(repoRoot, source.file), 'utf8');
@@ -68,7 +54,7 @@ const ghcrImagePublished = async (repo: string, tag: string) => {
   });
 };
 
-const checkPackagePublished = async ({ kind, label }: TargetSpec, version: string) => {
+const checkPackagePublished = async ({ kind, label }: Target, version: string) => {
   if (kind === 'npm') {
     return httpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
   }

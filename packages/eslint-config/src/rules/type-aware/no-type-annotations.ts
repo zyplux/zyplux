@@ -6,12 +6,12 @@ import * as ts from 'typescript';
 
 import { createRule } from '#create-rule';
 
-export type NoTypeAnnotationsOptions = [{ narrowing: boolean; redundant: boolean }];
-
 type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
 
 type MessageId =
   'narrowReturnType' | 'narrowVarType' | 'removeAnnotation' | 'removeParamType' | 'removeReturnType' | 'removeVarType';
+
+type NoTypeAnnotationsOptions = [{ narrowing: boolean; redundant: boolean }];
 
 const ignoredKeys = new Set<string>(['loc', 'parent', 'range']);
 
@@ -289,34 +289,47 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       });
     };
 
+    const soleContextualSignature = (tsArrow: ts.ArrowFunction) => {
+      const contextualType = checker.getContextualType(tsArrow);
+      if (!contextualType) return;
+      const signatures = contextualType.getCallSignatures();
+      return signatures.length === 1 ? signatures[0] : undefined;
+    };
+
+    const redundantParamAnnotation = (
+      arrow: TSESTree.ArrowFunctionExpression,
+      tsArrow: ts.ArrowFunction,
+      { parameters: contextualParams }: ts.Signature,
+      ownParameters: ReadonlySet<ts.Node>,
+      index: number,
+      param: TSESTree.Parameter,
+    ) => {
+      const binding = annotatedIdentifierParam(param);
+      if (!binding?.typeAnnotation) return;
+
+      const contextualParam = contextualParams[index];
+      if (!contextualParam) return;
+      if (isSelfReferentialContextualParam(contextualParam, ownParameters)) return;
+      if (isContextualParamInferredFromCallback(arrow, index)) return;
+
+      const contextualParamType = checker.getTypeOfSymbolAtLocation(contextualParam, tsArrow);
+      const annotatedType = services.getTypeAtLocation(binding);
+      if (annotatedType !== contextualParamType || !isInferableType(annotatedType)) return;
+
+      return binding.typeAnnotation;
+    };
+
     const checkParams = (arrow: TSESTree.ArrowFunctionExpression) => {
       if (isArrowAtModuleBoundary(arrow, exportedNames)) return;
 
       const tsArrow = services.esTreeNodeToTSNodeMap.get(arrow);
-      const contextualType = checker.getContextualType(tsArrow);
-      if (!contextualType) return;
-
-      const signatures = contextualType.getCallSignatures();
-      if (signatures.length !== 1) return;
-      const signature = signatures[0];
+      const signature = soleContextualSignature(tsArrow);
       if (!signature) return;
 
       const ownParameters = new Set<ts.Node>(tsArrow.parameters);
-
       for (const [index, param] of arrow.params.entries()) {
-        const binding = annotatedIdentifierParam(param);
-        if (!binding?.typeAnnotation) continue;
-
-        const contextualParam = signature.parameters[index];
-        if (!contextualParam) continue;
-        if (isSelfReferentialContextualParam(contextualParam, ownParameters)) continue;
-        if (isContextualParamInferredFromCallback(arrow, index)) continue;
-
-        const contextualParamType = checker.getTypeOfSymbolAtLocation(contextualParam, tsArrow);
-        const annotatedType = services.getTypeAtLocation(binding);
-        if (annotatedType !== contextualParamType || !isInferableType(annotatedType)) continue;
-
-        reportRedundant(binding.typeAnnotation, 'removeParamType');
+        const annotation = redundantParamAnnotation(arrow, tsArrow, signature, ownParameters, index, param);
+        if (annotation) reportRedundant(annotation, 'removeParamType');
       }
     };
 

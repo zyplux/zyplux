@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class ToolNotFoundError(RuntimeError):
@@ -9,7 +13,7 @@ class ToolNotFoundError(RuntimeError):
         super().__init__(f"`{tool}` not found on PATH")
 
 
-def run(argv: list[str]) -> subprocess.CompletedProcess[str]:
+def run(argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     """The single audited subprocess boundary for cerberus.
 
     `argv[0]` is resolved to an absolute path via PATH, `argv[1:]` are
@@ -20,4 +24,4 @@ def run(argv: list[str]) -> subprocess.CompletedProcess[str]:
     executable = shutil.which(argv[0])
     if executable is None:
         raise ToolNotFoundError(argv[0])
-    return subprocess.run([executable, *argv[1:]], capture_output=True, text=True, check=False)
+    return subprocess.run([executable, *argv[1:]], capture_output=True, text=True, check=False, cwd=cwd)

@@ -31,16 +31,6 @@ def git_checkout(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def tagged_checkout(git_checkout: Path) -> Path:
-    (git_checkout / "a.txt").write_text("one")
-    _git(git_checkout, "add", "-A")
-    _git(git_checkout, "commit", "-m", "first")
-    _git(git_checkout, "tag", "widget-v0.1.0")
-    _git(git_checkout, "tag", "other-v9.9.9")
-    return git_checkout
-
-
-@pytest.fixture
 def diffable_checkout(git_checkout: Path) -> Path:
     (git_checkout / "tracked.txt").write_text("one")
     (git_checkout / "untouched.txt").write_text("stable")
@@ -147,21 +137,7 @@ def test_17_4_2_returns_no_workflows_when_there_is_no_workflows_directory(
 
 
 @requires_git
-def test_17_5_1_lists_tags_matching_a_given_prefix(
-    tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
-    assert local_source(tagged_checkout).tags(repo, "widget-v") == ["widget-v0.1.0"]
-
-
-@requires_git
-def test_17_5_2_returns_no_tags_when_none_match_the_prefix(
-    tagged_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
-    assert local_source(tagged_checkout).tags(repo, "absent-v") == []
-
-
-@requires_git
-def test_17_6_1_lists_surface_paths_changed_since_the_ref(
+def test_17_5_1_lists_surface_paths_changed_since_the_ref(
     diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
 ) -> None:
     changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["tracked.txt"])
@@ -170,7 +146,7 @@ def test_17_6_1_lists_surface_paths_changed_since_the_ref(
 
 
 @requires_git
-def test_17_6_2_excludes_surface_paths_unchanged_since_the_ref(
+def test_17_5_2_excludes_surface_paths_unchanged_since_the_ref(
     diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
 ) -> None:
     changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["untouched.txt"])
@@ -179,17 +155,28 @@ def test_17_6_2_excludes_surface_paths_unchanged_since_the_ref(
 
 
 @requires_git
-def test_17_7_1_errors_when_git_history_cannot_be_read_outside_a_repo(
+def test_17_5_3_counts_uncommitted_working_tree_changes_against_the_ref(
+    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
+) -> None:
+    (diffable_checkout / "untouched.txt").write_text("edited, not committed")
+
+    changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["untouched.txt"])
+
+    assert changed == ["untouched.txt"]
+
+
+@requires_git
+def test_17_6_1_errors_when_git_history_cannot_be_read_outside_a_repo(
     tmp_path: Path,
     repo: Repo,
     local_source: type[LocalSource],
     git_history_unavailable_error: type[GitHistoryUnavailableError],
 ) -> None:
     with pytest.raises(git_history_unavailable_error):
-        local_source(tmp_path).tags(repo, "widget-v")
+        local_source(tmp_path).changed_paths(repo, "widget-v0.1.0", ["a.txt"])
 
 
-def test_17_7_2_errors_when_the_git_binary_is_missing(
+def test_17_6_2_errors_when_the_git_binary_is_missing(
     tmp_path: Path,
     repo: Repo,
     local_source: type[LocalSource],
@@ -198,10 +185,10 @@ def test_17_7_2_errors_when_the_git_binary_is_missing(
 ) -> None:
     del no_git
     with pytest.raises(git_history_unavailable_error):
-        local_source(tmp_path).tags(repo, "widget-v")
+        local_source(tmp_path).changed_paths(repo, "widget-v0.1.0", ["a.txt"])
 
 
-def test_17_8_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
+def test_17_7_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
     tmp_path: Path, repo: Repo, make_context: Callable[..., Context]
 ) -> None:
     (tmp_path / "doc.md").write_text("before")
@@ -215,12 +202,10 @@ def test_17_8_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
 
 
 @requires_git
-def test_17_8_2_keys_cached_history_reads_by_their_arguments(
+def test_17_7_2_keys_cached_history_reads_by_their_arguments(
     diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]
 ) -> None:
     disk_ctx = make_context(diffable_checkout)
 
-    assert disk_ctx.tags(repo, "widget-v") == ["widget-v0.1.0"]
-    assert disk_ctx.tags(repo, "absent-v") == []
     assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["tracked.txt"]) == ["tracked.txt"]
     assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["untouched.txt"]) == []

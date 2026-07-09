@@ -3,7 +3,7 @@
     "parserOptions": { "tsconfigRootDir": "<rootDir>", "projectService": true },
     "sourceType": "module",
     "ecmaVersion": 2026,
-    "parser": "typescript-eslint/parser@8.62.1",
+    "parser": "typescript-eslint/parser@8.63.0",
     "globals": {
       "AggregateError": false,
       "Array": false,
@@ -727,7 +727,7 @@
     "unicorn/prefer-top-level-await": [2],
     "unicorn/prefer-type-error": [2],
     "unicorn/prefer-type-literal-last": [2],
-    "unicorn/prefer-uint8array-base64": [2],
+    "unicorn/prefer-uint8array-base64": [0],
     "unicorn/prefer-unary-minus": [2],
     "unicorn/prefer-unicode-code-point-escapes": [2],
     "unicorn/prefer-url-can-parse": [2],
@@ -1137,10 +1137,10 @@
   },
   "plugins": [
     "@",
-    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.62.1",
-    "perfectionist:eslint-plugin-perfectionist@5.9.1",
-    "unicorn:eslint-plugin-unicorn@70.0.0",
-    "@zyplux:@zyplux/eslint-config@0.6.6"
+    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.63.0",
+    "perfectionist:eslint-plugin-perfectionist@5.10.0",
+    "unicorn:eslint-plugin-unicorn@71.1.0",
+    "@zyplux:@zyplux/eslint-config@0.6.7"
   ],
   "language": "@/js"
 }

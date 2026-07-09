@@ -22,13 +22,25 @@ class Config:
     ci_image: str
     ci_required_ts: tuple[str, ...]
     ci_required_python: tuple[str, ...]
+    jscpd_dupes_threshold: float
+    jscpd_dupes_pattern: str
+    jscpd_dupes_ignore: tuple[str, ...]
+
+
+def _table(data: dict[str, Any], key: str) -> dict[str, Any]:
+    section = data.get(key, {})
+    if not isinstance(section, dict):
+        msg = f"cerberus.toml [{key}] must be a table, got {type(section).__name__}"
+        raise TypeError(msg)
+    return section
 
 
 def _from_dict(data: dict[str, Any]) -> Config:
-    aliases = data.get("aliases", {})
-    recipes = data.get("recipes", {})
-    ci = data.get("ci", {})
-    ci_required = ci.get("required", {})
+    aliases = _table(data, "aliases")
+    recipes = _table(data, "recipes")
+    ci = _table(data, "ci")
+    ci_required = _table(ci, "required")
+    jscpd_dupes = _table(data, "jscpd_dupes_threshold")
     return Config(
         default_recipe_marker=data["default_recipe_marker"],
         required_aliases=dict(aliases.get("required", {})),
@@ -41,6 +53,9 @@ def _from_dict(data: dict[str, Any]) -> Config:
         ci_image=ci.get("image", ""),
         ci_required_ts=tuple(ci_required.get("ts", [])),
         ci_required_python=tuple(ci_required.get("python", [])),
+        jscpd_dupes_threshold=jscpd_dupes.get("threshold", 0.1),
+        jscpd_dupes_pattern=jscpd_dupes.get("pattern", "**/*.{ts,tsx,py}"),
+        jscpd_dupes_ignore=tuple(jscpd_dupes.get("ignore", ["**/dist/**", "**/.venv/**", "**/*.gen.*"])),
     )
 
 
@@ -60,6 +75,6 @@ def repo_disabled_checks(root: Path) -> frozenset[str]:
     cerberus: Any = tool.get("cerberus", {}) if isinstance(tool, dict) else {}
     disabled = cerberus.get("disable", []) if isinstance(cerberus, dict) else cerberus
     if not isinstance(disabled, list) or not all(isinstance(check, str) for check in disabled):
-        msg = "[tool.cerberus] disable must be a list of check id strings"
+        msg = "[tool.cerberus] disable must be a list of bite id strings"
         raise TypeError(msg)
     return frozenset(disabled)
