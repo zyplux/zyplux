@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING
 
 import pytest
@@ -7,9 +8,9 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from cerberus.model import CheckResult, Finding, Status
+    from cerberus.model import CheckResult
+    from seam_fixtures import MakeFinding, RunCheckWithFiles
 
-type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
 type RunTsProjectReferences = Callable[[dict[str, str]], CheckResult]
 
 CHECK_ID = "ts-project-references"
@@ -26,40 +27,37 @@ _TSBUILD_PKG = '{"workspaces": ["packages/*"], "scripts": {"typecheck": "tsc --b
 
 @pytest.fixture
 def run_ts_project_references(run_check_with_files: RunCheckWithFiles) -> RunTsProjectReferences:
-    def _run(files: dict[str, str]) -> CheckResult:
-        return run_check_with_files(CHECK_ID, files)
-
-    return _run
+    return partial(run_check_with_files, CHECK_ID)
 
 
 def test_10_1_1_skips_repos_with_no_package_json(
-    run_ts_project_references: RunTsProjectReferences, finding: type[Finding], status: type[Status]
+    run_ts_project_references: RunTsProjectReferences, skip: MakeFinding
 ) -> None:
     result = run_ts_project_references({"README.md": "# demo\n"})
-    assert result.findings == [finding(status.SKIP, "no package.json")]
+    assert result.findings == [skip("no package.json")]
 
 
 @pytest.mark.parametrize("manifest", [_NON_WORKSPACE_PKG, "not json"], ids=["no_workspaces_key", "invalid_json"])
 def test_10_1_2_skips_repos_whose_package_json_is_not_a_workspace(
-    run_ts_project_references: RunTsProjectReferences, manifest: str, finding: type[Finding], status: type[Status]
+    run_ts_project_references: RunTsProjectReferences, manifest: str, skip: MakeFinding
 ) -> None:
     result = run_ts_project_references({"package.json": manifest, "tsconfig.json": "{}"})
-    assert result.findings == [finding(status.SKIP, "not a workspace")]
+    assert result.findings == [skip("not a workspace")]
 
 
 def test_10_1_3_skips_workspaces_with_no_tsconfig_file(
-    run_ts_project_references: RunTsProjectReferences, finding: type[Finding], status: type[Status]
+    run_ts_project_references: RunTsProjectReferences, skip: MakeFinding
 ) -> None:
     result = run_ts_project_references({"package.json": _NO_TSCONFIG_PKG})
-    assert result.findings == [finding(status.SKIP, "no tsconfig")]
+    assert result.findings == [skip("no tsconfig")]
 
 
 @pytest.mark.parametrize("manifest", [_NO_TYPECHECK_PKG, _BLANK_TYPECHECK_PKG], ids=["missing", "blank"])
 def test_10_2_1_fails_when_the_typecheck_script_is_missing_or_blank(
-    run_ts_project_references: RunTsProjectReferences, manifest: str, finding: type[Finding], status: type[Status]
+    run_ts_project_references: RunTsProjectReferences, manifest: str, fail: MakeFinding
 ) -> None:
     result = run_ts_project_references({"package.json": manifest, "tsconfig.json": "{}"})
-    assert result.findings == [finding(status.FAIL, "no `typecheck` script; expected `tsc -b` (project references)")]
+    assert result.findings == [fail("no `typecheck` script; expected `tsc -b` (project references)")]
 
 
 @pytest.mark.parametrize(
@@ -71,21 +69,15 @@ def test_10_2_1_fails_when_the_typecheck_script_is_missing_or_blank(
     ids=["single_project", "per_package_fanout"],
 )
 def test_10_2_2_fails_when_the_typecheck_script_does_not_build_via_project_references(
-    run_ts_project_references: RunTsProjectReferences,
-    manifest: str,
-    script: str,
-    finding: type[Finding],
-    status: type[Status],
+    run_ts_project_references: RunTsProjectReferences, manifest: str, script: str, fail: MakeFinding
 ) -> None:
     result = run_ts_project_references({"package.json": manifest, "tsconfig.json": "{}"})
-    assert result.findings == [
-        finding(status.FAIL, f"`typecheck` must run `tsc -b` (project references); found `{script}`")
-    ]
+    assert result.findings == [fail(f"`typecheck` must run `tsc -b` (project references); found `{script}`")]
 
 
 @pytest.mark.parametrize("manifest", [_TSB_PKG, _TSBUILD_PKG], ids=["tsc -b", "tsc --build"])
 def test_10_2_3_passes_when_the_typecheck_script_builds_via_project_references(
-    run_ts_project_references: RunTsProjectReferences, manifest: str, finding: type[Finding], status: type[Status]
+    run_ts_project_references: RunTsProjectReferences, manifest: str, ok: MakeFinding
 ) -> None:
     result = run_ts_project_references({"package.json": manifest, "tsconfig.json": "{}"})
-    assert result.findings == [finding(status.PASS, "typecheck runs via project references")]
+    assert result.findings == [ok("typecheck runs via project references")]

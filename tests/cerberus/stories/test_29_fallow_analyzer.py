@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from seam_fixtures import FakeProc, MakeFinding, RunCheckWithFiles
 
-    from cerberus.model import CheckResult, Finding, Status
-
-type RunCheckWithFiles = Callable[[str, dict[str, str]], CheckResult]
 
 CHECK_ID = "fallow_analyzer"
 
@@ -60,50 +57,29 @@ _HEALTH_OVER_THRESHOLD = json.dumps({
 })
 
 
-class ProcDouble(Protocol):
-    """The shape of the subprocess test double `fake_proc` hands back.
-
-    A structural type, not a nominal import of the concrete class conftest.py
-    builds — keeps this file free of any dependency on where that class lives.
-    """
-
-    calls: list[tuple[list[str], Path | None]]
-
-    def serve(
-        self,
-        tool: str,
-        *,
-        returncode: int = 0,
-        stdout: str = "",
-        stderr: str = "",
-        output_files: dict[str, str] | None = None,
-    ) -> None: ...
-    def serve_missing(self, tool: str) -> None: ...
-
-
-def _serve_clean(fake_proc: ProcDouble) -> None:
+def _serve_clean(fake_proc: FakeProc) -> None:
     fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
 
 
 def test_29_1_1_skips_repos_with_no_package_json_without_running_fallow(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, skip: MakeFinding
 ) -> None:
     result = run_check_with_files(CHECK_ID, {})
-    assert result.findings == [finding(status.SKIP, "no package.json")]
+    assert result.findings == [skip("no package.json")]
     assert fake_proc.calls == []
 
 
 def test_29_2_1_passes_when_both_fallow_analyses_exit_clean(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, ok: MakeFinding
 ) -> None:
     _serve_clean(fake_proc)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.findings == [finding(status.PASS, "fallow found no dead code, cycles, or complexity offenders")]
+    assert result.findings == [ok("fallow found no dead code, cycles, or complexity offenders")]
 
 
 def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_at_the_repo_root(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc
 ) -> None:
     _serve_clean(fake_proc)
     run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
@@ -111,33 +87,30 @@ def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_at_the_repo_r
 
 
 def test_29_2_3_fails_with_the_issue_count_when_fallow_dead_code_reports_issues(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, fail: MakeFinding
 ) -> None:
     fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.findings == [
-        finding(status.FAIL, "fallow found 3 dead-code issues; run `bunx fallow dead-code` locally for details")
-    ]
+    assert result.findings == [fail("fallow found 3 dead-code issues; run `bunx fallow dead-code` locally for details")]
 
 
 def test_29_2_4_errors_when_bunx_is_not_on_path(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, error: MakeFinding
 ) -> None:
     fake_proc.serve_missing("bunx")
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert result.findings == [finding(status.ERROR, "`bunx` not found on PATH")]
+    assert result.findings == [error("`bunx` not found on PATH")]
 
 
 def test_29_3_1_fails_listing_each_function_fallow_health_flags_above_its_thresholds(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, fail: MakeFinding
 ) -> None:
     fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
     fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
-        finding(
-            status.FAIL,
+        fail(
             "✗ 2 above threshold · 941 analyzed · maintainability 92.1 (good) (0.01s)\n"
             "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15, CRAP 160/30\n"
             "    src/rules/types.ts:292 checkParams — cyclomatic 13/20, cognitive 16/15, CRAP 49.5/30",
@@ -146,7 +119,7 @@ def test_29_3_1_fails_listing_each_function_fallow_health_flags_above_its_thresh
 
 
 def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_data_is_absent(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble, finding: type[Finding], status: type[Status]
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, fail: MakeFinding
 ) -> None:
     health_without_crap = json.dumps({
         "findings": [
@@ -171,8 +144,7 @@ def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_dat
     fake_proc.serve("fallow health", returncode=1, stdout=health_without_crap)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
-        finding(
-            status.FAIL,
+        fail(
             "✗ 1 above threshold · 500 analyzed · maintainability 70.0 (moderate)\n"
             "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15",
         )
@@ -180,7 +152,7 @@ def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_dat
 
 
 def test_29_4_1_reports_fallows_health_status_line_on_a_clean_run(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc
 ) -> None:
     _serve_clean(fake_proc)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
@@ -188,7 +160,7 @@ def test_29_4_1_reports_fallows_health_status_line_on_a_clean_run(
 
 
 def test_29_4_2_leaves_the_detail_unset_on_failure_so_the_status_line_appears_only_in_the_fail_line(
-    run_check_with_files: RunCheckWithFiles, fake_proc: ProcDouble
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc
 ) -> None:
     fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
     fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)

@@ -7,9 +7,9 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from cerberus.model import CheckResult, Status
+    from cerberus.model import Status
+    from seam_fixtures import RunCheckOnDisk
 
-type RunCheckOnDisk = Callable[..., CheckResult]
 
 CHECK_ID = "zyplux-latest"
 

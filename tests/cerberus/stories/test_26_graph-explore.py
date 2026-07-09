@@ -157,9 +157,7 @@ def mega_hub_repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_26_2_4_stops_expanding_through_a_hub_node_without_excluding_the_hub_itself(
-    mega_hub_repo: Path,
-) -> None:
+def test_26_2_4_stops_expanding_through_a_hub_node_without_excluding_the_hub_itself(mega_hub_repo: Path) -> None:
     built = _invoke("graph", str(mega_hub_repo))
     assert built.exit_code == 0, built.output
 
