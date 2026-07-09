@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from cerberus.config import Config
     from cerberus.context import Context
 
-ID = "justfile_baseline"
+ID = "justfile"
 SUMMARY = (
     "canonical baseline block, recipe names, aliases, check pipeline, local cerberus run, "
     "clean via cz clean, wrapped tool calls, no trailing whitespace"

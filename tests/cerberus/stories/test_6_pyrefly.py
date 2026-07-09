@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 type RunPyrefly = Callable[..., CheckResult]
 
-CHECK_ID = "pyrefly_strict"
+CHECK_ID = "pyrefly"
 
 _PYREFLY_STRICT = (
     'preset = "strict"\n\n'

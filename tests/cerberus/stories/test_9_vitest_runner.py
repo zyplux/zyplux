@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 type RunVitestRunner = Callable[..., CheckResult]
 
-CHECK_ID = "vitest_only_runner"
+CHECK_ID = "vitest"
 
 _VITEST_PKG = '{"scripts": {"test": "vitest run"}}'
 _BUN_TEST_PKG = '{"scripts": {"test": "bun test"}}'
@@ -38,9 +38,11 @@ def run_vitest_runner(
     return _run
 
 
-def test_9_1_1_skips_repos_with_no_package_json(run_vitest_runner: RunVitestRunner, skip: MakeFinding) -> None:
+def test_9_1_1_skips_repos_with_neither_a_package_json_nor_a_root_vitest_config(
+    run_vitest_runner: RunVitestRunner, skip: MakeFinding
+) -> None:
     result = run_vitest_runner({"README.md": "# demo\n"})
-    assert result.findings == [skip("no package.json")]
+    assert result.findings == [skip("no package.json or root vitest.config")]
 
 
 @pytest.mark.parametrize("manifest", [_BUN_TEST_PKG, _BUN_BAIL_TEST_PKG], ids=["bare", "flagged"])

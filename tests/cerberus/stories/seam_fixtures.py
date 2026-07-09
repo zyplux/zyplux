@@ -31,7 +31,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 from cerberus import bites, config, context, proc, registries, tool_pins
-from cerberus.bites.rumdl_canonical_config_bite import CANONICAL as _RUMDL_CANONICAL
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
@@ -202,7 +201,7 @@ def no_git(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def rumdl_canonical() -> str:
-    return _RUMDL_CANONICAL
+    return config.load().rumdl_canonical
 
 
 @pytest.fixture

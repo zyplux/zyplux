@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 type RunLineLength = Callable[[dict[str, str]], CheckResult]
 
-CHECK_ID = "line_length_120"
+CHECK_ID = "line_length"
 
 RUFF_120 = "line-length = 120\n"
 PRETTIER_120 = "const config = {\n  printWidth: 120,\n};\n"

@@ -1,8 +1,8 @@
-# 9. [Requiring vitest as the sole test runner for TypeScript](test_9_vitest_only_runner.py)
+# 9. [Requiring vitest as the sole test runner for TypeScript](test_9_vitest_runner.py)
 
 ## 9.1 scoping the check to repos with test tooling to configure
 
-### 9.1.1 skips repos with no package json
+### 9.1.1 skips repos with neither a package json nor a root vitest config
 
 ## 9.2 requiring every package json test script to invoke vitest instead of bun
 

@@ -79,7 +79,7 @@ FREE_FORM_CUSTOM_TAIL = CONFORMING + (
     "# Smoke-test the checkout.\nsmoke:\n    echo {{ greeting }}\n"
 )
 
-CHECK_ID = "justfile_baseline"
+CHECK_ID = "justfile"
 
 
 def baseline_messages(result: CheckResult) -> list[str]:

@@ -1,4 +1,4 @@
-# 10. [Requiring TypeScript typecheck to run via project references](test_10_tsc_project_references.py)
+# 10. [Requiring TypeScript typecheck to run via project references](test_10_tsc.py)
 
 ## 10.1 scoping the check to typescript workspaces with project references
 

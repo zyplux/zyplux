@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 type RunRuff = Callable[..., CheckResult]
 
-CHECK_ID = "ruff_select_all"
+CHECK_ID = "ruff"
 
 _RUFF_CANONICAL = (
     "line-length = 120\n"

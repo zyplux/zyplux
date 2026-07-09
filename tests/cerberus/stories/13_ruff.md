@@ -1,4 +1,4 @@
-# 13. [Requiring a standalone, strict, minimally-relaxed ruff config](test_13_ruff_select_all.py)
+# 13. [Requiring a standalone, strict, minimally-relaxed ruff config](test_13_ruff.py)
 
 ## 13.1 scoping the check to python repos
 

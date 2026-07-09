@@ -103,7 +103,7 @@ def test_16_1_3_prints_one_line_per_active_bite_with_its_id_and_outcome(
         rendered = (f"🐾 {check_id}", f"💢 {check_id}:", f"○ {check_id}:")
         assert any(line in result.output for line in rendered)
     assert "💢 codeowners_coverage:" in result.output
-    assert "🐾 justfile_baseline" in result.output
+    assert "🐾 justfile" in result.output
 
 
 def test_16_1_4_appends_a_bites_measured_detail_to_its_line(
@@ -175,12 +175,12 @@ def test_16_4_2_rejects_an_unknown_check_name_given_on_the_command_line(invoke_l
 def test_16_5_1_uses_the_recipe_requirements_from_the_given_config_file_instead_of_the_bundled_defaults(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
-    baseline = invoke_lint("--check", "justfile_baseline")
+    baseline = invoke_lint("--check", "justfile")
     assert baseline.exit_code == 0, baseline.output
 
     config_path = conforming_repo / "cerberus.toml"
-    config_path.write_text('[justfile_baseline]\ndefault_recipe_marker = "just --menu"\n')
-    result = invoke_lint("--check", "justfile_baseline", "--config", str(config_path))
+    config_path.write_text('[justfile]\ndefault_recipe_marker = "just --menu"\n')
+    result = invoke_lint("--check", "justfile", "--config", str(config_path))
 
     assert result.exit_code == 1
     assert "`default` recipe should run `just --menu`" in result.output
@@ -190,13 +190,13 @@ def test_16_5_2_rejects_a_config_file_whose_section_is_not_a_table(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     config_path = conforming_repo / "cerberus.toml"
-    scalar_section = 'jscpd_dupes_threshold = 0.5\n\n[justfile_baseline]\ndefault_recipe_marker = "just --list"\n'
+    scalar_section = 'jscpd = 0.5\n\n[justfile]\ndefault_recipe_marker = "just --list"\n'
     config_path.write_text(scalar_section)
 
     result = invoke_lint("--check", "codeowners_coverage", "--config", str(config_path))
 
     assert isinstance(result.exception, TypeError)
-    assert "[jscpd_dupes_threshold] must be a table" in str(result.exception)
+    assert "[jscpd] must be a table" in str(result.exception)
 
 
 @requires_just
@@ -298,13 +298,13 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
     assert "🐾 codeowners_coverage" not in result.output
 
 
-_REPO_OVERRIDE_TOML = "[jscpd_dupes_threshold]\nthreshold = 7\n"
+_REPO_OVERRIDE_TOML = "[jscpd]\nthreshold = 7\n"
 
 
 def _register_config_probe(register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]) -> None:
     def probe(repo: Repo, ctx: Context) -> CheckResult:
         result = check_result("codeowners_coverage", repo.name)
-        result.detail = f"threshold {ctx.config.jscpd_dupes_threshold:g} marker `{ctx.config.default_recipe_marker}`"
+        result.detail = f"threshold {ctx.config.jscpd_threshold:g} marker `{ctx.config.default_recipe_marker}`"
         return result
 
     register_fake_check("codeowners_coverage", probe)
@@ -325,7 +325,7 @@ def test_16_12_1_overlays_a_repo_root_cerberus_toml_onto_the_bundled_defaults(
     assert "threshold 7 marker `just --list`" in result.output
 
 
-def test_16_12_2_replaces_the_configuration_wholesale_when_an_explicit_config_file_is_given(
+def test_16_12_2_applies_an_explicit_config_file_in_place_of_the_repos_own_overlay(
     conforming_repo: Path,
     invoke_lint: Callable[..., Result],
     register_fake_check: RegisterFakeCheck,
@@ -334,7 +334,7 @@ def test_16_12_2_replaces_the_configuration_wholesale_when_an_explicit_config_fi
     _register_config_probe(register_fake_check, check_result)
     (conforming_repo / "cerberus.toml").write_text(_REPO_OVERRIDE_TOML)
     explicit = conforming_repo / "explicit.toml"
-    explicit.write_text('[justfile_baseline]\ndefault_recipe_marker = "just --menu"\n')
+    explicit.write_text('[justfile]\ndefault_recipe_marker = "just --menu"\n')
 
     result = invoke_lint("--check", "codeowners_coverage", "--config", str(explicit))
 

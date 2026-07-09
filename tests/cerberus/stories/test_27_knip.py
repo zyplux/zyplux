@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 type RunKnipConfig = Callable[..., CheckResult]
 
-CHECK_ID = "knip_standalone_config"
+CHECK_ID = "knip"
 
 _PKG_NO_KNIP = '{"name": "demo"}'
 _PKG_INLINE_KNIP = '{"name": "demo", "knip": {"ignoreBinaries": ["uv"]}}'

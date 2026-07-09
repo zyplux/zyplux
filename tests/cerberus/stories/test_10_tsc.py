@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 type RunTsProjectReferences = Callable[[dict[str, str]], CheckResult]
 
-CHECK_ID = "tsc_project_references"
+CHECK_ID = "tsc"
 
 _NON_WORKSPACE_PKG = '{"scripts": {"typecheck": "tsc -b"}}'
 _NO_TSCONFIG_PKG = '{"workspaces": ["packages/*"], "scripts": {"typecheck": "tsc -b"}}'

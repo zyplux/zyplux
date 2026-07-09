@@ -9,11 +9,9 @@ from cerberus.model import CheckResult, Repo, Scope
 if TYPE_CHECKING:
     from cerberus.context import Context
 
-ID = "pytest_coverage_floor"
+ID = "pytest"
 SUMMARY = "pytest enforces a coverage floor of at least 90% via [tool.coverage.report] fail_under"
 SCOPE = Scope.CONTENT
-
-MIN_COVERAGE = 90
 
 
 def _fail_under(config: dict[str, Any]) -> object:
@@ -34,17 +32,18 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error(f"could not parse {PYPROJECT}")
         return res
 
+    floor = ctx.config.pytest_min_coverage
     fail_under = _fail_under(config)
     if fail_under is None:
         res.fail(
             f"{PYPROJECT} has no [tool.coverage.report] fail_under; "
-            f"pytest coverage must enforce a floor of at least {MIN_COVERAGE}%"
+            f"pytest coverage must enforce a floor of at least {floor}%"
         )
     elif not isinstance(fail_under, (int, float)):
         res.fail(f"{PYPROJECT} [tool.coverage.report] fail_under must be a number; found {fail_under!r}")
-    elif fail_under < MIN_COVERAGE:
-        res.fail(f"{PYPROJECT} [tool.coverage.report] fail_under is {fail_under}, below the required {MIN_COVERAGE}")
+    elif fail_under < floor:
+        res.fail(f"{PYPROJECT} [tool.coverage.report] fail_under is {fail_under}, below the required {floor}")
 
     if not res.problems:
-        res.ok(f"pytest coverage gate enforces >= {MIN_COVERAGE}% ([tool.coverage.report] fail_under)")
+        res.ok(f"pytest coverage gate enforces >= {floor}% ([tool.coverage.report] fail_under)")
     return res

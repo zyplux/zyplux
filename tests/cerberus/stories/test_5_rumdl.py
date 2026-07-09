@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 type RunRumdl = Callable[[str | None], CheckResult]
 
-CHECK_ID = "rumdl_canonical_config"
+CHECK_ID = "rumdl"
 
 NON_CANONICAL = '[global]\ndisable = ["MD033", "MD013"]\n\n[MD024]\nsiblings-only = true\n'
 UNPARSEABLE = "[global\ndisable = [\n"

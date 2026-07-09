@@ -1,10 +1,8 @@
-# 19. [Requiring a vitest coverage floor of at least 90%](test_19_vitest_coverage_floor.py)
+# 19. [Requiring a vitest coverage floor of at least 90%](test_19_vitest.py)
 
-## 19.1 scoping the check to repos with a root vitest config
+## 19.1 scoping the coverage checks to repos with a root vitest config
 
-### 19.1.1 skips repos with no root vitest config
-
-### 19.1.2 ignores a nested vitest config that is not at the repo root
+### 19.1.1 ignores a nested vitest config that is not at the repo root
 
 ## 19.2 requiring the config file to be readable and well formed
 

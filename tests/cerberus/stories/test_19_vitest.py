@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 type RunCheckWithFiles = Callable[[str, Mapping[str, str | None]], CheckResult]
 type RunVitestCoverage = Callable[[Mapping[str, str | None]], CheckResult]
 
-CHECK_ID = "vitest_coverage_floor"
+CHECK_ID = "vitest"
 
 _COMPLIANT_CONFIG = (
     "export default defineConfig({\n"
@@ -31,7 +31,7 @@ _COMPLIANT_CONFIG = (
     "});\n"
 )
 
-_SKIP_MESSAGE = "no root vitest.config"
+_SKIP_MESSAGE = "no package.json or root vitest.config"
 _NO_COVERAGE_MESSAGE = "vitest.config.ts has no `coverage` block; vitest coverage must enforce a floor of at least 90%"
 
 
@@ -40,15 +40,7 @@ def run_vitest_coverage(run_check_with_files: RunCheckWithFiles) -> RunVitestCov
     return partial(run_check_with_files, CHECK_ID)
 
 
-def test_19_1_1_skips_repos_with_no_root_vitest_config(
-    run_vitest_coverage: RunVitestCoverage, skip: MakeFinding
-) -> None:
-    result = run_vitest_coverage({"README.md": "# demo\n"})
-
-    assert result.findings == [skip(_SKIP_MESSAGE)]
-
-
-def test_19_1_2_ignores_a_nested_vitest_config_that_is_not_at_the_repo_root(
+def test_19_1_1_ignores_a_nested_vitest_config_that_is_not_at_the_repo_root(
     run_vitest_coverage: RunVitestCoverage, skip: MakeFinding
 ) -> None:
     files = {"packages/a/vitest.config.ts": "export default defineProject({ test: {} });\n"}

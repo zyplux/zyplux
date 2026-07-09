@@ -1,4 +1,4 @@
-# 28. [Capping copy-paste duplication via jscpd](test_28_jscpd_dupes_threshold.py)
+# 28. [Capping copy-paste duplication via jscpd](test_28_jscpd.py)
 
 ## 28.1 enforcing the duplication threshold per language from jscpd's json report
 

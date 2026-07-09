@@ -1,8 +1,8 @@
-# 1. [Requiring repos to ship a conformant justfile](test_1_justfile_baseline.py)
+# 1. [Requiring repos to ship a conformant justfile](test_1_justfile.py)
 
 Every repo in the org must ship a `justfile` that gives contributors the same
 commands everywhere: `install`, `lint`, `test`, `check`, `push`, and so on. The
-`justfile` check (`apps/cerberus/src/cerberus/bites/justfile_baseline_bite.py`)
+`justfile` check (`apps/cerberus/src/cerberus/bites/justfile_bite.py`)
 enforces that shape two ways: a byte-exact canonical baseline block (packaged
 with cerberus as `baseline.just`, see 1.10) and structural sub-checks that
 give precise incremental findings while a repo migrates. It leans on the

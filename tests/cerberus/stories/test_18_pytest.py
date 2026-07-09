@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 type RunPytestCoverage = Callable[[str | None], CheckResult]
 
-CHECK_ID = "pytest_coverage_floor"
+CHECK_ID = "pytest"
 PYPROJECT = "pyproject.toml"
 
 _OK_MESSAGE = "pytest coverage gate enforces >= 90% ([tool.coverage.report] fail_under)"

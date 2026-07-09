@@ -58,7 +58,9 @@ _GLYPH = {
     Status.ERROR: "[magenta]‼[/magenta]",
 }
 
-ConfigOpt = Annotated[Path | None, typer.Option("--config", help="Path to a cerberus.toml.")]
+ConfigOpt = Annotated[
+    Path | None, typer.Option("--config", help="Overlay file applied in place of the repo root cerberus.toml.")
+]
 CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to named bite(s).")]
 
 
@@ -130,8 +132,9 @@ def lint(
     Exits non-zero on any FAIL or ERROR, so it drops straight into CI like any
     linter. `--fix` rewrites what it can (trailing whitespace) and leaves the
     rest to report. A repo adjusts org defaults via a `cerberus.toml` at its
-    root, overlaid key by key onto the bundled configuration; `off = true` in
-    a bite's table switches it off entirely, unless `--check` names it.
+    root, overlaid key by key onto the bundled configuration (`--config` names
+    a file to overlay in its place); `off = true` in a bite's table switches
+    it off entirely, unless `--check` names it.
     """
     ctx = context.local_context(config.load(config_path, repo_root=path), path, fix=fix, verbose=verbose)
     repo = ctx.repos()[0]

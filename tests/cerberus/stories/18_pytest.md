@@ -1,4 +1,4 @@
-# 18. [Requiring a pytest coverage floor of at least 90%](test_18_pytest_coverage_floor.py)
+# 18. [Requiring a pytest coverage floor of at least 90%](test_18_pytest.py)
 
 ## 18.1 scoping the check to python repos
 

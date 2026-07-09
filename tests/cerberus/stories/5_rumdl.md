@@ -1,4 +1,4 @@
-# 5. [Keeping .rumdl.toml on the org-canonical rule config](test_5_rumdl_canonical_config.py)
+# 5. [Keeping .rumdl.toml on the org-canonical rule config](test_5_rumdl.py)
 
 ## 5.1 enforcing the canonical rule config
 

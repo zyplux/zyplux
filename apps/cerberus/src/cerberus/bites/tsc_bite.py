@@ -9,7 +9,7 @@ from cerberus.model import CheckResult, Repo, Scope
 if TYPE_CHECKING:
     from cerberus.context import Context
 
-ID = "tsc_project_references"
+ID = "tsc"
 SUMMARY = "TypeScript typecheck runs via project references (tsc -b), not a per-package fan-out"
 SCOPE = Scope.CONTENT
 

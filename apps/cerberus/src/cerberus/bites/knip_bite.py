@@ -1,8 +1,8 @@
 """knip config governance: a repo's knip settings live in standalone files,
 never inline in `package.json`, so they read the same way `ruff.toml`/
 `.rumdl.toml` do. A bare `knip.json` is optional and, if present, may only
-set the keys in `ALLOWED_CUSTOMIZATIONS`, each drawn from its shared
-allowance: `ignoreBinaries` for system-level tools every org repo may shell
+set the keys in the configured `allowed_customizations`, each drawn from its
+shared allowance: `ignoreBinaries` for system-level tools every org repo may shell
 out to from JS/TS scripts (knip flags them as unlisted binaries because
 they are deliberately not npm dependencies and missing from knip's built-in
 global-binary list), and `ignoreDependencies` for packages knip cannot see
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "knip_standalone_config"
+ID = "knip"
 SUMMARY = (
     "knip config is standalone (never inline in package.json) and its prod pass exempts "
     "exactly the repo's published npm targets"
@@ -52,24 +52,10 @@ PACKAGE_JSON = "package.json"
 BASE_CONFIG = "knip.json"
 PROD_CONFIG = "knip.prod.json"
 _RELEASE_TARGETS = "release-targets.toml"
-_REQUIRED_IGNORE_WORKSPACES = ["tests/*"]
 _PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces", "exclude"})
-# The prod pass may exclude exactly the catalog issue type: with `ignoreWorkspaces: ["tests/*"]`
-# knip cannot see test usage of catalog entries, so test-only entries would read as unused —
-# the base pass, which keeps tests in the graph, still checks the catalog.
-_PROD_ALLOWED_EXCLUDE = ["catalog"]
 _OK_MESSAGE = (
     "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
 )
-
-# Per-key allowances any org repo may draw from in its knip.json.
-# ignoreBinaries: system-level tools invoked from JS/TS scripts without being npm dependencies;
-# knip's built-in global-binary list covers docker/git/curl/… but not these.
-# ignoreDependencies: packages consumed in ways knip cannot trace.
-ALLOWED_CUSTOMIZATIONS: dict[str, frozenset[str]] = {
-    "ignoreBinaries": frozenset({"podman", "uv"}),
-    "ignoreDependencies": frozenset({"cloudflare"}),
-}
 
 
 def _without_schema(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -114,11 +100,12 @@ def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, 
         res.error(f"{BASE_CONFIG} must be a JSON object")
         return {}
     base = _without_schema(parsed)
-    stray_keys = sorted(set(base) - set(ALLOWED_CUSTOMIZATIONS))
+    customizations = ctx.config.knip_allowed_customizations
+    stray_keys = sorted(set(base) - set(customizations))
     if stray_keys:
-        allowed_keys = ", ".join(f'"{key}"' for key in ALLOWED_CUSTOMIZATIONS)
+        allowed_keys = ", ".join(f'"{key}"' for key in customizations)
         res.fail(f"{BASE_CONFIG} may only customize {allowed_keys}; unexpected key(s): {', '.join(stray_keys)}")
-    for key, allowance in ALLOWED_CUSTOMIZATIONS.items():
+    for key, allowance in customizations.items():
         names = base.get(key)
         if names is None:
             continue
@@ -185,7 +172,7 @@ def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: Chec
     required = {
         **base,
         "includeEntryExports": True,
-        "ignoreWorkspaces": _REQUIRED_IGNORE_WORKSPACES,
+        "ignoreWorkspaces": ctx.config.knip_required_ignore_workspaces,
     }
     stray_keys = sorted(set(parsed) - set(required) - _PROD_EXTRA_KEYS)
     if stray_keys:
@@ -194,8 +181,9 @@ def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: Chec
         if parsed.get(key) != expected:
             res.fail(f'{PROD_CONFIG} must set "{key}": {json.dumps(expected)}')
     exclude = parsed.get("exclude")
-    if exclude is not None and exclude != _PROD_ALLOWED_EXCLUDE:
-        res.fail(f'{PROD_CONFIG} "exclude" (if any) must be exactly {json.dumps(_PROD_ALLOWED_EXCLUDE)}')
+    allowed_exclude = ctx.config.knip_prod_allowed_exclude
+    if exclude is not None and exclude != allowed_exclude:
+        res.fail(f'{PROD_CONFIG} "exclude" (if any) must be exactly {json.dumps(allowed_exclude)}')
 
     _check_workspace_exemptions(repo, ctx, parsed, res)
 

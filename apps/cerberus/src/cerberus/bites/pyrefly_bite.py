@@ -9,7 +9,7 @@ from cerberus.model import CheckResult, Repo, Scope
 if TYPE_CHECKING:
     from cerberus.context import Context
 
-ID = "pyrefly_strict"
+ID = "pyrefly"
 SUMMARY = "all code, tests included, type-checks under strict pyrefly with no relaxations"
 SCOPE = Scope.CONTENT
 
@@ -20,19 +20,6 @@ _PRODUCTION_TOPS = ("apps", "packages")
 _TESTS_TOP = "tests"
 _NAMESPACE_DEPTH = 2
 _SRC_LAYOUT_DEPTH = 3
-
-_ERROR_KINDS = frozenset({
-    "implicit-any",
-    "implicit-any-parameter",
-    "implicit-any-type-argument",
-    "implicit-any-attribute",
-    "implicit-any-empty-container",
-    "explicit-any",
-    "unannotated-return",
-    "missing-override-decorator",
-    "potential-bad-keyword-argument",
-    "unused-ignore",
-})
 
 
 def _python_roots(paths: list[str]) -> tuple[set[str], set[str]]:
@@ -69,8 +56,8 @@ def _as_list(value: object) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
-def _check_top_level_errors(config: dict[str, Any], res: CheckResult) -> None:
-    stray = sorted(key for key in config if key in _ERROR_KINDS)
+def _check_top_level_errors(config: dict[str, Any], error_kinds: frozenset[str], res: CheckResult) -> None:
+    stray = sorted(key for key in config if key in error_kinds)
     if stray:
         res.fail(f"{PATH} sets error kinds at the top level, not under errors: {', '.join(stray)}")
     top_errors = config.get("errors")
@@ -136,7 +123,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if config is None:
         return res
 
-    _check_top_level_errors(config, res)
+    _check_top_level_errors(config, ctx.config.pyrefly_error_kinds, res)
     _check_coverage(config, production_roots, test_roots, res)
     _check_sub_configs(config, res)
 

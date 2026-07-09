@@ -8,26 +8,11 @@ from cerberus.model import CheckResult, Repo, Scope
 if TYPE_CHECKING:
     from cerberus.context import Context
 
-ID = "rumdl_canonical_config"
+ID = "rumdl"
 SUMMARY = "`.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)"
 SCOPE = Scope.CONTENT
 
 PATH = ".rumdl.toml"
-
-CANONICAL = """\
-[global]
-disable = [
-    "MD013", # line-length
-    "MD022", # blanks-around-headings
-    "MD031", # blanks-around-fences
-    "MD032", # blanks-around-lists
-    "MD033", # no-inline-html
-]
-
-# no-duplicate-heading
-[MD024]
-siblings-only = true
-"""
 
 
 def _rules_only(parsed: dict[str, Any]) -> dict[str, Any]:
@@ -46,20 +31,21 @@ def _exclude(parsed: dict[str, Any]) -> list[str]:
     return []
 
 
-def _render(exclude: list[str]) -> str:
+def _render(canonical: str, exclude: list[str]) -> str:
     if not exclude:
-        return CANONICAL
+        return canonical
     entries = ", ".join(f'"{path}"' for path in exclude)
-    return CANONICAL.replace("]\n", f"]\nexclude = [{entries}]\n", 1)
+    return canonical.replace("]\n", f"]\nexclude = [{entries}]\n", 1)
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
+    canonical = ctx.config.rumdl_canonical
     content = ctx.file(repo, PATH)
 
     if content is None:
         if ctx.fix:
-            ctx.write_file(repo, PATH, CANONICAL)
+            ctx.write_file(repo, PATH, canonical)
         else:
             res.fail(f"no {PATH} at repo root")
         return res
@@ -70,9 +56,9 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error(f"could not parse {PATH}: {err}")
         return res
 
-    if _rules_only(parsed) != _rules_only(tomllib.loads(CANONICAL)):
+    if _rules_only(parsed) != _rules_only(tomllib.loads(canonical)):
         if ctx.fix:
-            ctx.write_file(repo, PATH, _render(_exclude(parsed)))
+            ctx.write_file(repo, PATH, _render(canonical, _exclude(parsed)))
         else:
             res.fail(f"{PATH} rule config does not match the org canonical")
         return res

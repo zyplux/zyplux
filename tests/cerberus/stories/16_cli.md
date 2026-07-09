@@ -66,11 +66,11 @@ Any bite switches off with `off = true` in its `[<bite id>]` config table — th
 
 ## 16.12 overriding configuration from a repo-root cerberus.toml
 
-A repo tightens org defaults without forking them: a `cerberus.toml` at the repo root overlays the bundled configuration key by key, so the file only names what it overrides. An explicit `--config` still replaces the configuration wholesale.
+A repo tightens org defaults without forking them: a `cerberus.toml` at the repo root overlays the bundled configuration key by key, so the file only names what it overrides. An explicit `--config` file overlays the same way, standing in for the repo's own file — the bundled defaults always stay the base.
 
 ### 16.12.1 overlays a repo root cerberus.toml onto the bundled defaults
 
-### 16.12.2 replaces the configuration wholesale when an explicit config file is given
+### 16.12.2 applies an explicit config file in place of the repo's own overlay
 
 ## 16.13 printing verbose diagnostics on demand
 

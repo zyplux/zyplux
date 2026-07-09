@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "fallow_analyzer"
+ID = "fallow"
 SUMMARY = "fallow finds no unused code, circular imports, or functions above its complexity thresholds"
 SCOPE = Scope.CONTENT
 

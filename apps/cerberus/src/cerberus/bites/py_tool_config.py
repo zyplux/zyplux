@@ -1,4 +1,4 @@
-"""Shared machinery for checks on Python tool configs (ruff, pyrefly, pytest_coverage_floor).
+"""Shared machinery for checks on Python tool configs (ruff, pyrefly, pytest).
 
 Each of those checks starts the same way: the repo counts as Python only when
 a root `pyproject.toml` exists, and the org keeps lint/type tool config in a

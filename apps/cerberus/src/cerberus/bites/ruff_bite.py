@@ -8,15 +8,13 @@ from cerberus.model import CheckResult, Repo, Scope
 if TYPE_CHECKING:
     from cerberus.context import Context
 
-ID = "ruff_select_all"
+ID = "ruff"
 SUMMARY = 'ruff runs standalone in preview with `select = ["ALL"]`; relaxations stay within the sanctioned set'
 SCOPE = Scope.CONTENT
 
 PATH = "ruff.toml"
 
 REQUIRED_SELECT = ["ALL"]
-SANCTIONED_IGNORE = frozenset({"COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S606", "S607"})
-SANCTIONED_TEST_IGNORE = frozenset({"ANN001", "INP001", "S101"})
 
 
 def _lint_table(config: dict[str, Any]) -> dict[str, Any]:
@@ -39,18 +37,18 @@ def _check_select(lint: dict[str, Any], res: CheckResult) -> None:
         res.fail(f'{PATH} must set `[lint] select = ["ALL"]` (found {select!r})')
 
 
-def _check_ignore(lint: dict[str, Any], res: CheckResult) -> None:
-    stray = sorted(set(_as_strs(lint.get("ignore"))) - SANCTIONED_IGNORE)
+def _check_ignore(lint: dict[str, Any], sanctioned: frozenset[str], res: CheckResult) -> None:
+    stray = sorted(set(_as_strs(lint.get("ignore"))) - sanctioned)
     if stray:
         res.fail(f"{PATH} ignores rules outside the sanctioned set: {', '.join(stray)}")
 
 
-def _check_per_file_ignores(lint: dict[str, Any], res: CheckResult) -> None:
+def _check_per_file_ignores(lint: dict[str, Any], sanctioned: frozenset[str], res: CheckResult) -> None:
     per_file = lint.get("per-file-ignores")
     if not isinstance(per_file, dict):
         return
     for glob, rules in per_file.items():
-        stray = sorted(set(_as_strs(rules)) - SANCTIONED_TEST_IGNORE)
+        stray = sorted(set(_as_strs(rules)) - sanctioned)
         if stray:
             res.fail(f"per-file-ignores `{glob}` relaxes rules outside the sanctioned test set: {', '.join(stray)}")
 
@@ -82,8 +80,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_preview(config, res)
     lint = _lint_table(config)
     _check_select(lint, res)
-    _check_ignore(lint, res)
-    _check_per_file_ignores(lint, res)
+    _check_ignore(lint, ctx.config.ruff_sanctioned_ignore, res)
+    _check_per_file_ignores(lint, ctx.config.ruff_sanctioned_test_ignore, res)
 
     if not res.problems:
         res.ok(f'{PATH} is standalone, preview, select=["ALL"], relaxations within the sanctioned set')

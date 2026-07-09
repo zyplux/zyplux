@@ -1,4 +1,4 @@
-[justfile_baseline]
+[justfile]
 default_recipe_marker = "just --list"
 required = [
     { recipe = "default" },
@@ -19,8 +19,7 @@ recommended = [
 check_pipeline = ["install", "knip", "typecheck", "lint", "test"]
 wrapped_tools = ["ruff", "pyrefly", "pytest", "rumdl", "vulture", "cerberus", "eslint", "prettier", "knip", "tsc"]
 
-[workflow_toolchain_only]
-allowed_setup_actions = ["astral-sh/setup-uv", "oven-sh/setup-bun"]
+[ci_workflow_gate]
 
 [ci_check_sequence]
 image = "ghcr.io/zyplux/ci"
@@ -43,6 +42,99 @@ python = [
     "pyrefly check",
     "pytest",
 ]
+
+[ci_cerberus_step]
+
+[workflow_toolchain_only]
+allowed_setup_actions = ["astral-sh/setup-uv", "oven-sh/setup-bun"]
+
+# Error kinds pinned by the org: they may only appear under `errors`, never at the top level.
+[pyrefly]
+error_kinds = [
+    "implicit-any",
+    "implicit-any-parameter",
+    "implicit-any-type-argument",
+    "implicit-any-attribute",
+    "implicit-any-empty-container",
+    "explicit-any",
+    "unannotated-return",
+    "missing-override-decorator",
+    "potential-bad-keyword-argument",
+    "unused-ignore",
+]
+
+[ruff]
+sanctioned_ignore = ["COM812", "ISC001", "D", "DOC", "CPY001", "S404", "S603", "S606", "S607"]
+sanctioned_test_ignore = ["ANN001", "INP001", "S101"]
+
+[line_length]
+width = 120
+
+[rumdl]
+canonical = '''
+[global]
+disable = [
+    "MD013", # line-length
+    "MD022", # blanks-around-headings
+    "MD031", # blanks-around-fences
+    "MD032", # blanks-around-lists
+    "MD033", # no-inline-html
+]
+
+# no-duplicate-heading
+[MD024]
+siblings-only = true
+'''
+
+[knip]
+required_ignore_workspaces = ["tests/*"]
+# The prod pass may exclude exactly the catalog issue type: with `ignoreWorkspaces: ["tests/*"]`
+# knip cannot see test usage of catalog entries, so test-only entries would read as unused —
+# the base pass, which keeps tests in the graph, still checks the catalog.
+prod_allowed_exclude = ["catalog"]
+
+# Per-key allowances any org repo may draw from in its knip.json.
+# ignoreBinaries: system-level tools invoked from JS/TS scripts without being npm dependencies;
+# knip's built-in global-binary list covers docker/git/curl/… but not these.
+# ignoreDependencies: packages consumed in ways knip cannot trace.
+[knip.allowed_customizations]
+ignoreBinaries = ["podman", "uv"]
+ignoreDependencies = ["cloudflare"]
+
+[vitest]
+min_coverage = 90
+
+[tsc]
+
+[catalog_pinned_deps]
+
+[story_tests_lockstep_py]
+
+[story_tests_lockstep_ts]
+
+[cli_ts_test_seam]
+
+[lib_ts_test_seam]
+
+[cli_py_test_seam]
+
+[lib_py_test_seam]
+
+[release_surface_version_bump]
+
+[codeowners_coverage]
+
+[pytest]
+min_coverage = 90
+
+[jscpd]
+threshold = 0.1
+pattern = "**/*.{ts,tsx,py}"
+ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
+
+[fallow]
+
+[zyplux_deps_latest]
 
 # Only the repo carrying the pin source can act on a lagging pin; it switches this on in its overlay.
 [tool_pins_latest]

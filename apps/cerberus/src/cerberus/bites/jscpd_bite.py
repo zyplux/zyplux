@@ -1,9 +1,9 @@
 """Copy-paste duplication cap: cerberus itself runs jscpd over the repo's
 workspace-registered code and enforces the configured threshold
-(`[jscpd_dupes_threshold] threshold` in cerberus.toml, default 0.1%) against every
+(`[jscpd] threshold` in cerberus.toml, default 0.1%) against every
 language's duplicated-token percentage from jscpd's json report — not just
 the aggregate total. Cerberus owns the whole jscpd invocation: the file
-selection pattern and ignore globs come from `[jscpd_dupes_threshold] pattern` and
+selection pattern and ignore globs come from `[jscpd] pattern` and
 `ignore` in cerberus.toml, scan roots come from the repo's own workspace
 manifests (bun `workspaces`, uv `[tool.uv.workspace] members`), the
 subprocess runs with its cwd outside the repo so repo-local jscpd config
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "jscpd_dupes_threshold"
+ID = "jscpd"
 SUMMARY = "copy-paste duplication per language stays under the configured jscpd threshold"
 SCOPE = Scope.CONTENT
 
@@ -54,9 +54,9 @@ def _selection_argv(ctx: Context) -> list[str]:
         "bunx",
         tool_pins.format_spec("jscpd"),
         "--pattern",
-        ctx.config.jscpd_dupes_pattern,
+        ctx.config.jscpd_pattern,
         "--ignore",
-        ",".join(ctx.config.jscpd_dupes_ignore),
+        ",".join(ctx.config.jscpd_ignore),
     ]
 
 
@@ -97,7 +97,7 @@ def _load_report(report_dir: Path) -> dict[str, Any] | None:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    threshold = ctx.config.jscpd_dupes_threshold
+    threshold = ctx.config.jscpd_threshold
     try:
         scan_roots = [str(root) for root in _scan_roots(repo, ctx)]
     except json.JSONDecodeError as exc:

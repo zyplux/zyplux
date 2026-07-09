@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 type RunFallow = Callable[..., CheckResult]
 
-CHECK_ID = "fallow_analyzer"
+CHECK_ID = "fallow"
 
 _PACKAGE_JSON = '{"name": "demo"}'
 
