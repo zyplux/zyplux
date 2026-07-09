@@ -2,6 +2,8 @@ import type { Shell, ShellFake } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
 
+type ArgvCase = [string, Invoke, string[]];
+type FlaglessArgvCase = [string, Invoke, string[], string];
 type Invoke = ($: Shell) => Promise<unknown>;
 
 const expectBuiltArgv = async (
@@ -23,7 +25,7 @@ describe('6.1 translating flag objects into CLI arguments', () => {
   });
 });
 
-const gitArgvCases: readonly (readonly [string, Invoke, readonly string[]])[] = [
+const gitArgvCases: ArgvCase[] = [
   ['branch', $ => $.git.branch('feat-x', { delete: true, force: true }), ['branch', '--delete', '--force', 'feat-x']],
   ['checkout', $ => $.git.checkout('main'), ['checkout', 'main']],
   [
@@ -51,7 +53,7 @@ describe('6.2 building git subcommands', () => {
   );
 });
 
-const ghArgvCases: readonly (readonly [string, Invoke, readonly string[]])[] = [
+const ghArgvCases: ArgvCase[] = [
   [
     'api',
     $ => $.gh.api('repos/x/y', { input: '-', method: 'POST' }),
@@ -117,7 +119,7 @@ describe('6.5 invoking the shell function directly', () => {
   });
 });
 
-const flaglessArgvCases: readonly (readonly [string, Invoke, readonly string[], string])[] = [
+const flaglessArgvCases: FlaglessArgvCase[] = [
   ['gh.api', $ => $.gh.api('repos/x/y'), ['api', 'repos/x/y'], 'gh'],
   ['gh.pr.list', $ => $.gh.pr.list(), ['pr', 'list'], 'gh'],
   ['gh.pr.merge', $ => $.gh.pr.merge(), ['pr', 'merge'], 'gh'],

@@ -7,7 +7,9 @@ const settle = () => Promise.resolve();
 
 describe('mapWithConcurrency', () => {
   describe('2.1 mapping items concurrently while preserving output order', () => {
-    test('2.1.1 maps each item to its result in original order even when tasks settle out of order', async ({ mapWithConcurrency }) => {
+    test('2.1.1 maps each item to its result in original order even when tasks settle out of order', async ({
+      mapWithConcurrency,
+    }) => {
       const inputs = ['a', 'bb', 'ccc', 'dddd', 'eeeee'];
 
       const labelled = await mapWithConcurrency(inputs, workerLimit, async (text, index) => {

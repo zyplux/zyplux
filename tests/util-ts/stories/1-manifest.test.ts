@@ -49,8 +49,11 @@ const pyprojectTomlText = [
 ].join('\n');
 
 describe('1.1 parsing manifest text into typed shapes', () => {
-  test('1.1.1 parses package json text into a typed manifest and strips unknown keys', ({ PackageJsonSchema, parseJson }) => {
-    const manifest = parseJson(packageJsonText, PackageJsonSchema);
+  test('1.1.1 parses package json text into a typed manifest and strips unknown keys', ({
+    packageJsonSchema,
+    parseJson,
+  }) => {
+    const manifest = parseJson(packageJsonText, packageJsonSchema);
 
     expect(manifest).toEqual({
       dependencies: { zod: 'catalog:' },
@@ -60,14 +63,17 @@ describe('1.1 parsing manifest text into typed shapes', () => {
     expect(manifest).not.toHaveProperty('scripts');
   });
 
-  test('1.1.2 tolerates the array form of workspaces', ({ PackageJsonSchema, parseJson }) => {
-    const manifest = parseJson('{ "workspaces": ["packages/*"] }', PackageJsonSchema);
+  test('1.1.2 tolerates the array form of workspaces', ({ packageJsonSchema, parseJson }) => {
+    const manifest = parseJson('{ "workspaces": ["packages/*"] }', packageJsonSchema);
 
     expect(manifest).toEqual({ workspaces: ['packages/*'] });
   });
 
-  test('1.1.3 parses pyproject toml text with pep 621 and pep 735 dependency sections and strips unknown keys', ({ parseToml, PyProjectSchema }) => {
-    const manifest = parseToml(pyprojectTomlText, PyProjectSchema);
+  test('1.1.3 parses pyproject toml text with pep 621 and pep 735 dependency sections and strips unknown keys', ({
+    parseToml,
+    pyProjectSchema,
+  }) => {
+    const manifest = parseToml(pyprojectTomlText, pyProjectSchema);
 
     expect(manifest).toEqual({
       'dependency-groups': { dev: ['ruff>=0.1'] },
@@ -79,8 +85,11 @@ describe('1.1 parsing manifest text into typed shapes', () => {
 });
 
 describe('1.2 collecting and normalizing dependency names from a manifest', () => {
-  test('1.2.1 collects npm catalog and dependency field names while skipping workspace local specs', ({ npmDependencyNames, PackageJsonSchema }) => {
-    const manifest = PackageJsonSchema.parse({
+  test('1.2.1 collects npm catalog and dependency field names while skipping workspace local specs', ({
+    npmDependencyNames,
+    packageJsonSchema,
+  }) => {
+    const manifest = packageJsonSchema.parse({
       dependencies: { '@scope/local': 'workspace:*', react: '^19' },
       devDependencies: { vitest: 'catalog:' },
       workspaces: { catalog: { zod: 'catalog:' }, catalogs: { build: { esbuild: '^0.21' } } },
@@ -89,8 +98,11 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
     expect(npmDependencyNames(manifest).toSorted(byLocale)).toEqual(['esbuild', 'react', 'vitest', 'zod']);
   });
 
-  test('1.2.2 collects python requirement names across every section while dropping python itself', ({ PyProjectSchema, pythonRequirementNames }) => {
-    const manifest = PyProjectSchema.parse({
+  test('1.2.2 collects python requirement names across every section while dropping python itself', ({
+    pyProjectSchema,
+    pythonRequirementNames,
+  }) => {
+    const manifest = pyProjectSchema.parse({
       'dependency-groups': { dev: ['Ruff>=0.1'] },
       project: { dependencies: ['httpx>=0.28', 'python>=3.12'], 'optional-dependencies': { http: ['urllib3'] } },
       tool: { uv: { 'dev-dependencies': ['pytest>=8'] } },
@@ -126,7 +138,10 @@ describe("1.3 resolving a manifest's repository url", () => {
 });
 
 describe('1.4 discovering manifests tracked by git', () => {
-  test('1.4.1 lists tracked manifests under the repo and excludes ignored paths', async ({ findManifests, workspaceRoot }) => {
+  test('1.4.1 lists tracked manifests under the repo and excludes ignored paths', async ({
+    findManifests,
+    workspaceRoot,
+  }) => {
     const manifests = await findManifests(workspaceRoot);
 
     expect({

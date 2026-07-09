@@ -101,9 +101,7 @@ def test_31_2_3_fails_a_suite_that_declares_no_fixtures_alias(
     run_fixture_roles_tests: RunFixtureRolesTests, fail: MakeFinding
 ) -> None:
     result = run_fixture_roles_tests(_suite_files(suite_manifest=_ROLES_SUITE_NO_ALIAS))
-    assert result.findings == [
-        fail("tests/app/package.json: no '#fixtures' alias targeting './fixtures/index.ts'")
-    ]
+    assert result.findings == [fail("tests/app/package.json: no '#fixtures' alias targeting './fixtures/index.ts'")]
 
 
 def test_31_2_4_fails_a_suite_missing_the_act_module(

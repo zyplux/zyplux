@@ -25,14 +25,6 @@ export type Registries = {
   setPublished: (published: RegistryPublishedState) => void;
 };
 
-export type RegistryPublishedState = {
-  ghcrEverVisible?: boolean;
-  ghcrPublished?: boolean;
-  npmPublished?: boolean;
-  pypiEverVisible?: boolean;
-  pypiPublished?: boolean;
-};
-
 export type Release = {
   stageAllPublished: () => void;
   stagePendingCerberus: (options?: PendingCerberusOptions) => void;
@@ -60,7 +52,15 @@ export type SeededTargets = {
   util: TargetFacts;
 };
 
-export type TargetFacts = { dir: string; label: string; tag: string; version: string };
+type RegistryPublishedState = {
+  ghcrEverVisible?: boolean;
+  ghcrPublished?: boolean;
+  npmPublished?: boolean;
+  pypiEverVisible?: boolean;
+  pypiPublished?: boolean;
+};
+
+type TargetFacts = { dir: string; label: string; tag: string; version: string };
 
 const BENIGN_WRITE_COMMANDS = [
   'gh pr create',

@@ -39,7 +39,9 @@ describe('tryParseToml', () => {
       expect(tryParseToml(malformedToml, ConfigSchema)).toBeUndefined();
     });
 
-    test('4.2.3 returns undefined instead of throwing when the parsed value does not match the schema', ({ tryParseToml }) => {
+    test('4.2.3 returns undefined instead of throwing when the parsed value does not match the schema', ({
+      tryParseToml,
+    }) => {
       expect(tryParseToml(schemaMismatchToml, ConfigSchema)).toBeUndefined();
     });
   });

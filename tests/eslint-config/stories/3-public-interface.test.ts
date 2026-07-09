@@ -1,6 +1,6 @@
-import type { ZypluxConfig as Config } from '#fixtures';
-
 import * as z from 'zod';
+
+import type { ZypluxConfig as Config } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
 

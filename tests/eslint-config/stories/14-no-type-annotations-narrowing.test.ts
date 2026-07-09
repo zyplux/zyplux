@@ -24,7 +24,10 @@ const expectRemovableNarrowing = (
 };
 
 describe('14.1 flagging variable annotations that hide members of their initializer', () => {
-  test('14.1.1 flags a variable type hiding one or several members, suggesting removal', ({ applySuggestion, lintRule }) => {
+  test('14.1.1 flags a variable type hiding one or several members, suggesting removal', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -41,7 +44,10 @@ describe('14.1 flagging variable annotations that hide members of their initiali
     );
   });
 
-  test('14.1.2 flags hiding a member declared on a named interface, in source or annotation position', ({ applySuggestion, lintRule }) => {
+  test('14.1.2 flags hiding a member declared on a named interface, in source or annotation position', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -112,7 +118,10 @@ describe('14.1 flagging variable annotations that hide members of their initiali
     );
   });
 
-  test('14.1.7 flags a bare function-type annotation hiding a property of the callable value', ({ applySuggestion, lintRule }) => {
+  test('14.1.7 flags a bare function-type annotation hiding a property of the callable value', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -168,7 +177,10 @@ describe('14.2 flagging return annotations that hide members of the returned val
     );
   });
 
-  test('14.2.4 does not mistake the returns of a nested function for the outer return', ({ applySuggestion, lintRule }) => {
+  test('14.2.4 does not mistake the returns of a nested function for the outer return', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -178,7 +190,10 @@ describe('14.2 flagging return annotations that hide members of the returned val
     );
   });
 
-  test('14.2.5 flags a nested arrow inside an exported boundary, which is still internal', ({ applySuggestion, lintRule }) => {
+  test('14.2.5 flags a nested arrow inside an exported boundary, which is still internal', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -188,7 +203,10 @@ describe('14.2 flagging return annotations that hide members of the returned val
     );
   });
 
-  test('14.2.6 flags a function-type return annotation hiding a property of the returned callable value', ({ applySuggestion, lintRule }) => {
+  test('14.2.6 flags a function-type return annotation hiding a property of the returned callable value', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,
@@ -224,7 +242,10 @@ describe('14.3 flagging module boundaries all the same', () => {
     );
   });
 
-  test('14.3.2 flags exported function declarations and methods of exported classes', ({ applySuggestion, lintRule }) => {
+  test('14.3.2 flags exported function declarations and methods of exported classes', ({
+    applySuggestion,
+    lintRule,
+  }) => {
     expectRemovableNarrowing(
       lintRule,
       applySuggestion,

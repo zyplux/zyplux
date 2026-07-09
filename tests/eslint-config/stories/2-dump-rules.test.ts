@@ -1,6 +1,6 @@
-import type { PrintedConfig } from '#fixtures';
-
 import path from 'node:path';
+
+import type { PrintedConfig } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
 
@@ -14,9 +14,13 @@ const applyRootDirPlaceholder = (config: PrintedConfig) => {
 
 describe('2. Dumping the fully resolved eslint config to a committed rules snapshot', () => {
   describe('2.1 keeping the committed snapshot in sync with the live resolved config', () => {
-    test('2.1.1 matches the resolved config', { timeout: printConfigTimeoutMs }, ({ resolvedConfig, rulesSnapshot }) => {
-      expect(applyRootDirPlaceholder(resolvedConfig)).toStrictEqual(rulesSnapshot);
-    });
+    test(
+      '2.1.1 matches the resolved config',
+      { timeout: printConfigTimeoutMs },
+      ({ resolvedConfig, rulesSnapshot }) => {
+        expect(applyRootDirPlaceholder(resolvedConfig)).toStrictEqual(rulesSnapshot);
+      },
+    );
   });
 
   describe('2.2 keeping the snapshot portable across checkouts', () => {

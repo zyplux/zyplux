@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cerberus.bites import story_docs, test_seam
+from cerberus.bites import test_seam
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -57,7 +57,7 @@ def _check_alias(res: CheckResult, suite: str, manifest: dict[str, object]) -> N
         res.fail(f"{suite}/package.json: '{_FIXTURES_ALIAS}' must map to '{_INDEX_TARGET}', got '{target}'")
 
 
-def _check_subject_imports(res: CheckResult, suite: str, subject: str, modules: dict[str, str], act_path: str) -> None:
+def _check_subject_imports(res: CheckResult, subject: str, modules: dict[str, str], act_path: str) -> None:
     contracts_seam = f"{subject}{_CONTRACTS_SUBPATH}"
     for path, content in sorted(modules.items()):
         if path == act_path:
@@ -72,11 +72,10 @@ def _check_subject_imports(res: CheckResult, suite: str, subject: str, modules: 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    paths = ctx.paths(repo)
-    members = story_docs.ts_member_dirs(repo, ctx, paths)
-    if not members:
-        res.skip("no TypeScript packages")
+    paths_and_members = test_seam.ts_paths_and_members(repo, ctx, res)
+    if paths_and_members is None:
         return res
+    paths, members = paths_and_members
     suites = sorted(_story_suites(paths) & set(members))
     if not suites:
         res.skip("no torn-out story suites")
@@ -97,7 +96,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             for path in paths
             if path.startswith(f"{suite}/fixtures/") and (content := ctx.file(repo, path)) is not None
         }
-        _check_subject_imports(res, suite, subject, modules, act_path)
+        _check_subject_imports(res, subject, modules, act_path)
 
     if not res.problems:
         res.ok(_OK_MESSAGE)

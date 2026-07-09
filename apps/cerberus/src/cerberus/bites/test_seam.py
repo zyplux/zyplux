@@ -81,6 +81,16 @@ def _check_exports_surface(res: CheckResult, manifest_path: str, manifest: dict[
         res.fail(f"{manifest_path}: {subject} '{_CONTRACTS_EXPORT_KEY}' seam must map to '{_CONTRACTS_TARGET}'")
 
 
+def ts_paths_and_members(repo: Repo, ctx: Context, res: CheckResult) -> tuple[list[str], list[str]] | None:
+    """The repo's paths and bun workspace member dirs, or None (skip recorded) without TypeScript packages."""
+    paths = ctx.paths(repo)
+    members = story_docs.ts_member_dirs(repo, ctx, paths)
+    if not members:
+        res.skip("no TypeScript packages")
+        return None
+    return paths, members
+
+
 def _governing_manifest(story_file: str, path_set: frozenset[str]) -> str | None:
     directory = story_file.rsplit("/", 1)[0]
     while "/" in directory:

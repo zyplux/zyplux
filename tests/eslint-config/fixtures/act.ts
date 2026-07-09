@@ -83,7 +83,7 @@ export const createMergedLint = async (ruleId: string): Promise<RuleLint> => {
 
 export const createLintRule = (ruleName: string): RuleLintWithOptions => {
   const linter = new Linter();
-  return (code: string, { filename = 'file.ts', options }: RuleLintOptions = {}) =>
+  return (code, { filename = 'file.ts', options }: RuleLintOptions = {}) =>
     linter.verify(code, pluginRuleConfig(ruleName, options), path.join(suiteDir, filename));
 };
 
