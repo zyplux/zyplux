@@ -4,6 +4,8 @@ Cerberus runs jscpd and fallow at exact versions pinned in its `tool_pins` modul
 
 ## 30.1 biting only where the pins are editable
 
+The bundled configuration ships this bite `off = true`, so consumer repos never even run it (see [16.6](16_cli.md)); the repo owning cerberus switches it on in its root `cerberus.toml` overlay. The pin-source detection below stays as a guard for a run that is enabled (or `--check`-named) somewhere the pins are not editable.
+
 ### 30.1.1 skips a repo that does not carry the cerberus tool pins source
 
 A consumer repo cannot bump a pin baked into the cerberus package, so the check skips it without a single registry lookup.

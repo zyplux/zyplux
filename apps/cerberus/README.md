@@ -24,7 +24,7 @@ Runs every bite and exits non-zero on any failure or error, so it drops into CI 
 | `--fix`          | Auto-fix fixable problems (e.g. trailing whitespace)              |
 | `--verbose`/`-v` | Itemize what each bite measured (clones, dead-code issues)        |
 
-A repo opts out of specific bites with `[tool.cerberus] disable = ["bite_id", ...]` in its `pyproject.toml`.
+A repo switches a bite off with `off = true` in that bite's `cerberus.toml` table (see Config below); naming an off bite with `--check` still runs it.
 
 ## Bites
 
@@ -64,8 +64,10 @@ Every repo's `justfile` must start with the line `# BASELINE`, carry the canonic
 
 ## Config
 
-Policy — required recipes and aliases, the canonical CI sequence — lives in [`cerberus.toml`](src/cerberus/cerberus.toml). A repo tightens the defaults by shipping a `cerberus.toml` at its root: it overlays the bundled configuration key by key, so it only names what it overrides (e.g. a stricter `[jscpd_dupes_threshold] threshold`). An explicit `--config PATH` replaces the configuration wholesale instead.
+Policy — required recipes and aliases, the canonical CI sequence — lives in [`cerberus.toml`](src/cerberus/cerberus.toml), where every setting sits under its bite's table (`[justfile_baseline]`, `[ci_check_sequence]`, `[jscpd_dupes_threshold]`, …). A repo adjusts the defaults by shipping a `cerberus.toml` at its root: it overlays the bundled configuration key by key, so it only names what it overrides (e.g. a stricter `[jscpd_dupes_threshold] threshold`). An explicit `--config PATH` replaces the configuration wholesale instead.
+
+Every bite table also takes a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
-`tool_pins_latest` guards the jscpd/fallow pins the same way, but only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos skip it and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.
+`tool_pins_latest` guards the jscpd/fallow pins the same way, but runs only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos never see it (bundled `off = true`) and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.

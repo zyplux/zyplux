@@ -16,11 +16,10 @@ type RunJscpdDupes = Callable[..., CheckResult]
 
 CHECK_ID = "jscpd_dupes_threshold"
 
-_CUSTOM_THRESHOLD_TOML = 'default_recipe_marker = "just --list"\n\n[jscpd_dupes_threshold]\nthreshold = 5\n'
-_THRESHOLDLESS_TOML = 'default_recipe_marker = "just --list"\n\n[jscpd_dupes_threshold]\npattern = "**/*.py"\n'
-_CUSTOM_SELECTION_TOML = (
-    'default_recipe_marker = "just --list"\n\n[jscpd_dupes_threshold]\npattern = "**/*.rs"\nignore = ["**/target/**"]\n'
-)
+_BASE_TOML = '[justfile_baseline]\ndefault_recipe_marker = "just --list"\n'
+_CUSTOM_THRESHOLD_TOML = f"{_BASE_TOML}\n[jscpd_dupes_threshold]\nthreshold = 5\n"
+_THRESHOLDLESS_TOML = f'{_BASE_TOML}\n[jscpd_dupes_threshold]\npattern = "**/*.py"\n'
+_CUSTOM_SELECTION_TOML = f'{_BASE_TOML}\n[jscpd_dupes_threshold]\npattern = "**/*.rs"\nignore = ["**/target/**"]\n'
 _DEFAULT_PATTERN = "**/*.{ts,tsx,py}"
 _DEFAULT_IGNORE = "**/dist/**,**/.venv/**,**/*.gen.*"
 _REPORT_DIR_PLACEHOLDER = "<report-dir>"

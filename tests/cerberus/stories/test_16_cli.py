@@ -88,8 +88,8 @@ def test_16_1_2_defaults_to_the_current_directory_when_no_path_argument_is_given
 
 
 @requires_just
-def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
-    conforming_repo: Path, invoke_lint: Callable[..., Result], known_check_ids: tuple[str, ...]
+def test_16_1_3_prints_one_line_per_active_bite_with_its_id_and_outcome(
+    conforming_repo: Path, invoke_lint: Callable[..., Result], known_check_ids: tuple[str, ...], ctx: Context
 ) -> None:
     (conforming_repo / ".github" / "CODEOWNERS").unlink()
 
@@ -97,6 +97,9 @@ def test_16_1_3_prints_one_line_per_bite_with_its_id_and_outcome(
 
     assert result.exit_code == 1
     for check_id in known_check_ids:
+        if check_id in ctx.config.disabled_bites:
+            assert check_id not in result.output
+            continue
         rendered = (f"🐾 {check_id}", f"💢 {check_id}:", f"○ {check_id}:")
         assert any(line in result.output for line in rendered)
     assert "💢 codeowners_coverage:" in result.output
@@ -176,7 +179,7 @@ def test_16_5_1_uses_the_recipe_requirements_from_the_given_config_file_instead_
     assert baseline.exit_code == 0, baseline.output
 
     config_path = conforming_repo / "cerberus.toml"
-    config_path.write_text('default_recipe_marker = "just --menu"\n')
+    config_path.write_text('[justfile_baseline]\ndefault_recipe_marker = "just --menu"\n')
     result = invoke_lint("--check", "justfile_baseline", "--config", str(config_path))
 
     assert result.exit_code == 1
@@ -187,7 +190,8 @@ def test_16_5_2_rejects_a_config_file_whose_section_is_not_a_table(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     config_path = conforming_repo / "cerberus.toml"
-    config_path.write_text('default_recipe_marker = "just --list"\njscpd_dupes_threshold = 0.5\n')
+    scalar_section = 'jscpd_dupes_threshold = 0.5\n\n[justfile_baseline]\ndefault_recipe_marker = "just --list"\n'
+    config_path.write_text(scalar_section)
 
     result = invoke_lint("--check", "codeowners_coverage", "--config", str(config_path))
 
@@ -195,36 +199,52 @@ def test_16_5_2_rejects_a_config_file_whose_section_is_not_a_table(
     assert "[jscpd_dupes_threshold] must be a table" in str(result.exception)
 
 
-def test_16_6_1_skips_a_disabled_check_and_explains_why_in_the_output(
+@requires_just
+def test_16_6_1_leaves_an_off_bite_out_of_the_run_and_the_output(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     (conforming_repo / ".github" / "CODEOWNERS").unlink()
-    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["codeowners_coverage"]\n')
+    (conforming_repo / "cerberus.toml").write_text("[codeowners_coverage]\noff = true\n")
 
-    result = invoke_lint("--check", "codeowners_coverage")
+    result = invoke_lint()
 
     assert result.exit_code == 0, result.output
-    assert "codeowners_coverage" in result.output
-    assert "disabled" in result.output.lower()
-    assert "[tool.cerberus]" in result.output
+    assert "codeowners_coverage" not in result.output
 
 
-def test_16_6_2_warns_and_carries_on_when_a_pyproject_disable_list_names_an_unknown_check(
+def test_16_6_2_runs_an_off_bite_when_named_explicitly_with_check(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
-    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = ["no-such-check"]\n')
+    (conforming_repo / ".github" / "CODEOWNERS").unlink()
+    (conforming_repo / "cerberus.toml").write_text("[codeowners_coverage]\noff = true\n")
+
+    result = invoke_lint("--check", "codeowners_coverage")
+
+    assert result.exit_code == 1
+    assert "💢 codeowners_coverage:" in result.output
+
+
+@requires_just
+def test_16_6_3_re_enables_a_bundled_off_bite_when_the_repo_overlay_sets_off_to_false(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    without_overlay = invoke_lint()
+    assert "tool_pins_latest" not in without_overlay.output
+
+    (conforming_repo / "cerberus.toml").write_text("[tool_pins_latest]\noff = false\n")
+    result = invoke_lint()
+
+    assert result.exit_code == 0, result.output
+    assert "○ tool_pins_latest: no cerberus tool pins source in the repo" in result.output
+
+
+def test_16_6_4_warns_and_carries_on_when_an_off_table_names_an_unknown_bite(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    (conforming_repo / "cerberus.toml").write_text("[no_such_bite]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output
-    assert "unknown disabled bites ignored: no-such-check" in result.output
-
-
-def test_16_6_3_rejects_a_disable_value_that_is_not_a_list_of_check_ids(
-    conforming_repo: Path, invoke_lint: Callable[..., Result]
-) -> None:
-    (conforming_repo / "pyproject.toml").write_text('[tool.cerberus]\ndisable = "codeowners_coverage"\n')
-    result = invoke_lint("--check", "codeowners_coverage")
-    assert isinstance(result.exception, TypeError)
-    assert "list of bite id strings" in str(result.exception)
+    assert "unknown off bites ignored: no_such_bite" in result.output
 
 
 def test_16_7_1_lists_every_registered_check_by_id(known_check_ids: tuple[str, ...]) -> None:
@@ -314,7 +334,7 @@ def test_16_12_2_replaces_the_configuration_wholesale_when_an_explicit_config_fi
     _register_config_probe(register_fake_check, check_result)
     (conforming_repo / "cerberus.toml").write_text(_REPO_OVERRIDE_TOML)
     explicit = conforming_repo / "explicit.toml"
-    explicit.write_text('default_recipe_marker = "just --menu"\n')
+    explicit.write_text('[justfile_baseline]\ndefault_recipe_marker = "just --menu"\n')
 
     result = invoke_lint("--check", "codeowners_coverage", "--config", str(explicit))
 

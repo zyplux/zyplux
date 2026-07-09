@@ -6,7 +6,7 @@
 
 ### 16.1.2 defaults to the current directory when no path argument is given
 
-### 16.1.3 prints one line per bite with its id and outcome
+### 16.1.3 prints one line per active bite with its id and outcome
 
 ### 16.1.4 appends a bite's measured detail to its line
 
@@ -32,13 +32,17 @@
 
 ### 16.5.2 rejects a config file whose section is not a table
 
-## 16.6 disabling checks per repo via pyproject
+## 16.6 switching bites off in configuration
 
-### 16.6.1 skips a disabled check and explains why in the output
+Any bite switches off with `off = true` in its `[<bite id>]` config table — the same table that carries its other settings, handled uniformly by the runner rather than each bite. The bundled defaults ship bites that only one repo can act on (like `tool_pins_latest`) as off, a repo overlay switches any bite off or back on (`off = false`), and an off bite leaves no trace in the output. Naming an off bite explicitly with `--check` still runs it: an explicit ask outranks a default.
 
-### 16.6.2 warns and carries on when a pyproject disable list names an unknown check
+### 16.6.1 leaves an off bite out of the run and the output
 
-### 16.6.3 rejects a disable value that is not a list of check ids
+### 16.6.2 runs an off bite when named explicitly with check
+
+### 16.6.3 re-enables a bundled-off bite when the repo overlay sets off to false
+
+### 16.6.4 warns and carries on when an off table names an unknown bite
 
 ## 16.7 listing the available checks
 

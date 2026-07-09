@@ -1,30 +1,31 @@
+[justfile_baseline]
 default_recipe_marker = "just --list"
-
-[aliases.required]
-i = "install"
-k = "knip"
-tc = "typecheck"
-l = "lint"
-t = "test"
-c = "check"
-p = "push"
-pr = "push-ready"
-
-[aliases.recommended]
-u = "upgrade"
-ui = "upgrade-interactive"
-
-[recipes]
-required = ["default", "install", "knip", "typecheck", "lint", "test", "check", "push", "push-ready"]
-recommended = ["upgrade", "upgrade-interactive", "clean"]
+required = [
+    { recipe = "default" },
+    { recipe = "install", alias = "i" },
+    { recipe = "knip", alias = "k" },
+    { recipe = "typecheck", alias = "tc" },
+    { recipe = "lint", alias = "l" },
+    { recipe = "test", alias = "t" },
+    { recipe = "check", alias = "c" },
+    { recipe = "push", alias = "p" },
+    { recipe = "push-ready", alias = "pr" },
+]
+recommended = [
+    { recipe = "upgrade", alias = "u" },
+    { recipe = "upgrade-interactive", alias = "ui" },
+    { recipe = "clean" },
+]
 check_pipeline = ["install", "knip", "typecheck", "lint", "test"]
 wrapped_tools = ["ruff", "pyrefly", "pytest", "rumdl", "vulture", "cerberus", "eslint", "prettier", "knip", "tsc"]
 
-[ci]
+[workflow_toolchain_only]
 allowed_setup_actions = ["astral-sh/setup-uv", "oven-sh/setup-bun"]
+
+[ci_check_sequence]
 image = "ghcr.io/zyplux/ci"
 
-[ci.required]
+[ci_check_sequence.required]
 ts = [
     "bun install --frozen-lockfile",
     "bun run knip",
@@ -42,3 +43,7 @@ python = [
     "pyrefly check",
     "pytest",
 ]
+
+# Only the repo carrying the pin source can act on a lagging pin; it switches this on in its overlay.
+[tool_pins_latest]
+off = true

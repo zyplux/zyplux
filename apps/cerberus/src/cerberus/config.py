@@ -25,6 +25,7 @@ class Config:
     jscpd_dupes_threshold: float
     jscpd_dupes_pattern: str
     jscpd_dupes_ignore: tuple[str, ...]
+    disabled_bites: frozenset[str]
 
 
 def _table(data: dict[str, Any], key: str) -> dict[str, Any]:
@@ -35,27 +36,45 @@ def _table(data: dict[str, Any], key: str) -> dict[str, Any]:
     return section
 
 
+def _disabled_bites(data: dict[str, Any]) -> frozenset[str]:
+    return frozenset(
+        bite_id for bite_id, section in data.items() if isinstance(section, dict) and section.get("off") is True
+    )
+
+
+def _aliases(entries: list[dict[str, str]]) -> dict[str, str]:
+    return {entry["alias"]: entry["recipe"] for entry in entries if "alias" in entry}
+
+
+def _recipes(entries: list[dict[str, str]]) -> tuple[str, ...]:
+    return tuple(entry["recipe"] for entry in entries)
+
+
 def _from_dict(data: dict[str, Any]) -> Config:
-    aliases = _table(data, "aliases")
-    recipes = _table(data, "recipes")
-    ci = _table(data, "ci")
+    """Build a Config from per-bite tables: every setting lives under `[<bite id>]`."""
+    justfile = _table(data, "justfile_baseline")
+    required = justfile.get("required", [])
+    recommended = justfile.get("recommended", [])
+    toolchain = _table(data, "workflow_toolchain_only")
+    ci = _table(data, "ci_check_sequence")
     ci_required = _table(ci, "required")
     jscpd_dupes = _table(data, "jscpd_dupes_threshold")
     return Config(
-        default_recipe_marker=data["default_recipe_marker"],
-        required_aliases=dict(aliases.get("required", {})),
-        recommended_aliases=dict(aliases.get("recommended", {})),
-        required_recipes=tuple(recipes.get("required", [])),
-        recommended_recipes=tuple(recipes.get("recommended", [])),
-        check_pipeline=tuple(recipes.get("check_pipeline", [])),
-        wrapped_tools=tuple(recipes.get("wrapped_tools", [])),
-        allowed_setup_actions=tuple(ci.get("allowed_setup_actions", [])),
+        default_recipe_marker=justfile["default_recipe_marker"],
+        required_aliases=_aliases(required),
+        recommended_aliases=_aliases(recommended),
+        required_recipes=_recipes(required),
+        recommended_recipes=_recipes(recommended),
+        check_pipeline=tuple(justfile.get("check_pipeline", [])),
+        wrapped_tools=tuple(justfile.get("wrapped_tools", [])),
+        allowed_setup_actions=tuple(toolchain.get("allowed_setup_actions", [])),
         ci_image=ci.get("image", ""),
         ci_required_ts=tuple(ci_required.get("ts", [])),
         ci_required_python=tuple(ci_required.get("python", [])),
         jscpd_dupes_threshold=jscpd_dupes.get("threshold", 0.1),
         jscpd_dupes_pattern=jscpd_dupes.get("pattern", "**/*.{ts,tsx,py}"),
         jscpd_dupes_ignore=tuple(jscpd_dupes.get("ignore", ["**/dist/**", "**/.venv/**", "**/*.gen.*"])),
+        disabled_bites=_disabled_bites(data),
     )
 
 
@@ -77,17 +96,3 @@ def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     if repo_toml is not None and repo_toml.is_file():
         data = _overlay(data, tomllib.loads(repo_toml.read_text()))
     return _from_dict(data)
-
-
-def repo_disabled_checks(root: Path) -> frozenset[str]:
-    """Check ids the repo opts out of, via `[tool.cerberus] disable` in pyproject.toml."""
-    pyproject = root / "pyproject.toml"
-    if not pyproject.is_file():
-        return frozenset()
-    tool = tomllib.loads(pyproject.read_text()).get("tool", {})
-    cerberus: Any = tool.get("cerberus", {}) if isinstance(tool, dict) else {}
-    disabled = cerberus.get("disable", []) if isinstance(cerberus, dict) else cerberus
-    if not isinstance(disabled, list) or not all(isinstance(check, str) for check in disabled):
-        msg = "[tool.cerberus] disable must be a list of bite id strings"
-        raise TypeError(msg)
-    return frozenset(disabled)

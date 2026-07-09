@@ -129,23 +129,23 @@ def lint(
 
     Exits non-zero on any FAIL or ERROR, so it drops straight into CI like any
     linter. `--fix` rewrites what it can (trailing whitespace) and leaves the
-    rest to report. A repo opts out of bites via `[tool.cerberus] disable` in
-    its pyproject.toml, and tightens org defaults via a `cerberus.toml` at its
-    root, overlaid key by key onto the bundled configuration.
+    rest to report. A repo adjusts org defaults via a `cerberus.toml` at its
+    root, overlaid key by key onto the bundled configuration; `off = true` in
+    a bite's table switches it off entirely, unless `--check` names it.
     """
     ctx = context.local_context(config.load(config_path, repo_root=path), path, fix=fix, verbose=verbose)
     repo = ctx.repos()[0]
     selected = _select_checks(check)
 
-    disabled = config.repo_disabled_checks(path)
-    unknown = disabled - set(bites.BY_ID)
-    if unknown:
-        err.print(f"[yellow]unknown disabled bites ignored: {', '.join(sorted(unknown))}[/yellow]")
-    active = [chk for chk in selected if chk.id not in disabled]
+    off = ctx.config.disabled_bites
+    unknown_off = off - set(bites.BY_ID)
+    if unknown_off:
+        err.print(f"[yellow]unknown off bites ignored: {', '.join(sorted(unknown_off))}[/yellow]")
+    active = selected if check else [chk for chk in selected if chk.id not in off]
 
     results = [_run_check(chk, repo, ctx) for chk in active]
 
-    _render_lint(repo, results, sorted(disabled & set(bites.BY_ID)))
+    _render_lint(repo, results)
     if _failed(results):
         raise typer.Exit(code=1)
 
@@ -203,11 +203,9 @@ def graph_query(
     console.print(query_text(graph, question, depth=depth, dfs=dfs, budget=budget), markup=False, soft_wrap=True)
 
 
-def _render_lint(repo: Repo, results: list[CheckResult], disabled: list[str]) -> None:
+def _render_lint(repo: Repo, results: list[CheckResult]) -> None:
     console.print(f"🐺 cerberus v{__version__}")
     console.print(f"[bold]{repo.name}[/bold]")
-    for check_id in disabled:
-        console.print(rf"  {_GLYPH[Status.SKIP]} {check_id}: disabled by \[tool.cerberus]")
     problems = [(r.check, f) for r in results for f in r.problems]
     for result in results:
         detail = f" {result.detail}" if result.detail else ""
