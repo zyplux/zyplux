@@ -120,6 +120,81 @@ const collectScopeTree = (root: TSESLint.Scope.Scope) => {
   return scopes;
 };
 
+const collectSortedReads = ({ references }: TSESLint.Scope.Variable) => {
+  const reads: PropertyRead[] = [];
+  for (const reference of references) {
+    const read = propertyReadOf(reference.identifier);
+    if (!read) return;
+    reads.push(read);
+  }
+  return reads.toSorted((left, right) => left.member.range[0] - right.member.range[0]);
+};
+
+const constAliasOf = (member: TSESTree.MemberExpression) => {
+  const declarator = member.parent;
+  if (
+    declarator.type !== AST_NODE_TYPES.VariableDeclarator ||
+    declarator.init !== member ||
+    declarator.id.type !== AST_NODE_TYPES.Identifier ||
+    declarator.parent.kind !== 'const' ||
+    declarator.parent.declarations.length !== 1
+  ) {
+    return;
+  }
+  return { declaration: declarator.parent, local: declarator.id };
+};
+
+const partitionReads = (sourceCode: Readonly<TSESLint.SourceCode>, reads: readonly PropertyRead[]) => {
+  const aliasAbsorptions: AliasAbsorption[] = [];
+  const directReads: PropertyRead[] = [];
+  const propertyNames: string[] = [];
+  const seenProperties = new Set<string>();
+
+  for (const read of reads) {
+    if (!seenProperties.has(read.property)) {
+      seenProperties.add(read.property);
+      propertyNames.push(read.property);
+    }
+
+    const alias = constAliasOf(read.member);
+    if (!alias) {
+      directReads.push(read);
+      continue;
+    }
+    const localVariable = sourceCode
+      .getDeclaredVariables(alias.declaration)
+      .find(variable => variable.defs.some(def => def.name === alias.local));
+    if (!localVariable) return;
+    aliasAbsorptions.push({ ...alias, localVariable, property: read.property });
+  }
+
+  return { aliasAbsorptions, directReads, propertyNames };
+};
+
+const hasAliasRenameConflict = (aliasAbsorptions: readonly AliasAbsorption[]) => {
+  const removedNames = new Set(aliasAbsorptions.map(absorption => absorption.local.name));
+  return aliasAbsorptions.some(
+    absorption => absorption.local.name !== absorption.property && removedNames.has(absorption.property),
+  );
+};
+
+const hasFreeVariableCapture = ({ through }: TSESLint.Scope.Scope, introducedNames: ReadonlySet<string>) =>
+  through.some(reference => introducedNames.has(reference.identifier.name));
+
+const findLocalCollisions = (
+  functionScope: TSESLint.Scope.Scope,
+  introducedNames: ReadonlySet<string>,
+  exemptVariables: ReadonlySet<TSESLint.Scope.Variable>,
+) => {
+  const collidingLocals = new Set<string>();
+  const scopedVariables = collectScopeTree(functionScope).flatMap(scope => scope.variables);
+  for (const variable of scopedVariables) {
+    if (exemptVariables.has(variable)) continue;
+    if (introducedNames.has(variable.name)) collidingLocals.add(variable.name);
+  }
+  return [...collidingLocals].toSorted((left, right) => left.localeCompare(right));
+};
+
 const wholeLineRemovalSpan = ({ text }: Readonly<TSESLint.SourceCode>, { range }: TSESTree.Node) => {
   let start = range[0];
   while (start > 0 && (text[start - 1] === ' ' || text[start - 1] === '\t')) {
@@ -148,65 +223,23 @@ export const preferDestructuredParams = createRule({
       const paramVariable = declaredVariables.find(variable => variable.defs.some(def => def.name === param));
       if (!paramVariable || paramVariable.references.length === 0) return;
 
-      const reads: PropertyRead[] = [];
-      for (const reference of paramVariable.references) {
-        const read = propertyReadOf(reference.identifier);
-        if (!read) return;
-        reads.push(read);
-      }
-      reads.sort((left, right) => left.member.range[0] - right.member.range[0]);
+      const reads = collectSortedReads(paramVariable);
+      if (!reads) return;
 
-      const aliasAbsorptions: AliasAbsorption[] = [];
-      const directReads: PropertyRead[] = [];
-      const propertyNames: string[] = [];
-      const seenProperties = new Set<string>();
-
-      for (const read of reads) {
-        if (!seenProperties.has(read.property)) {
-          seenProperties.add(read.property);
-          propertyNames.push(read.property);
-        }
-
-        const declarator = read.member.parent;
-        if (
-          declarator.type === AST_NODE_TYPES.VariableDeclarator &&
-          declarator.init === read.member &&
-          declarator.id.type === AST_NODE_TYPES.Identifier &&
-          declarator.parent.kind === 'const' &&
-          declarator.parent.declarations.length === 1
-        ) {
-          const local = declarator.id;
-          const localVariable = sourceCode
-            .getDeclaredVariables(declarator.parent)
-            .find(variable => variable.defs.some(def => def.name === local));
-          if (!localVariable) return;
-          aliasAbsorptions.push({ declaration: declarator.parent, local, localVariable, property: read.property });
-        } else {
-          directReads.push(read);
-        }
-      }
+      const partition = partitionReads(sourceCode, reads);
+      if (!partition) return;
+      const { aliasAbsorptions, directReads, propertyNames } = partition;
+      if (hasAliasRenameConflict(aliasAbsorptions)) return;
 
       const introducedNames = new Set(propertyNames);
-      const removedNames = new Set(aliasAbsorptions.map(absorption => absorption.local.name));
-      for (const absorption of aliasAbsorptions) {
-        if (absorption.local.name !== absorption.property && removedNames.has(absorption.property)) return;
-      }
-
-      const absorbedVariables = new Set(aliasAbsorptions.map(absorption => absorption.localVariable));
       const functionScope = paramVariable.scope;
+      if (hasFreeVariableCapture(functionScope, introducedNames)) return;
 
-      for (const reference of functionScope.through) {
-        if (introducedNames.has(reference.identifier.name)) return;
-      }
-
-      const collidingLocals = new Set<string>();
-      const scopedVariables = collectScopeTree(functionScope).flatMap(scope => scope.variables);
-      for (const variable of scopedVariables) {
-        if (variable === paramVariable || absorbedVariables.has(variable)) continue;
-        if (introducedNames.has(variable.name)) collidingLocals.add(variable.name);
-      }
-
-      const localCollisions = [...collidingLocals].toSorted((left, right) => left.localeCompare(right));
+      const exemptVariables = new Set([
+        paramVariable,
+        ...aliasAbsorptions.map(absorption => absorption.localVariable),
+      ]);
+      const localCollisions = findLocalCollisions(functionScope, introducedNames, exemptVariables);
       return { aliasAbsorptions, directReads, localCollisions, param, propertyNames };
     };
 
