@@ -1,20 +1,25 @@
 """Dead-code and complexity ban for the JS/TS workspace: cerberus runs
 fallow's dead-code analysis (unused files, exports, dependencies, circular
 imports) and its health analysis (functions above fallow's complexity
-thresholds) over the checkout and fails on any finding. Thresholds and
-ignores are the repo's business via fallow's own config; cerberus enforces
-the verdict and reports the specific findings from fallow's json output.
-`--quiet --fail-on-issues` makes each run non-interactive with the verdict in
-the exit code. Fallow analyzes only TypeScript/JavaScript, so a repo without
-a `package.json` is out of scope.
+thresholds) over the checkout and fails on any finding. Cerberus owns the
+whole fallow invocation: it writes its own config — ignoring only the
+directories a bun workspace glob matches that hold no package.json, which
+fallow would otherwise warn about during workspace discovery — and runs the
+subprocess with `--root`/`--config` from a cwd outside the repo, so
+repo-local fallow config (`.fallowrc.json`, `fallow.toml`) can never leak
+in. `--quiet --fail-on-issues` makes each run non-interactive with the
+verdict in the exit code. Fallow analyzes only TypeScript/JavaScript, so a
+repo without a `package.json` is out of scope.
 """
 
 from __future__ import annotations
 
 import json
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cerberus import proc
+from cerberus import proc, workspaces
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -111,18 +116,38 @@ def _record_complexity(
     res.fail("\n".join([header, *_complexity_lines(report)]))
 
 
+def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
+    repo_root = ctx.source.root.resolve()
+    packageless = {
+        match.relative_to(repo_root).as_posix()
+        for glob in workspaces.bun_member_globs(repo, ctx)
+        for match in repo_root.glob(glob)
+        if match.is_dir() and not (match / "package.json").is_file()
+    }
+    return sorted(packageless)
+
+
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     if ctx.file(repo, "package.json") is None:
         res.skip("no package.json")
         return res
+    try:
+        ignored_dirs = _packageless_member_dirs(repo, ctx)
+    except json.JSONDecodeError as exc:
+        res.error(f"package.json is not valid JSON: {exc}")
+        return res
     outcomes = []
-    for analysis in ("dead-code", "health"):
-        try:
-            outcomes.append(proc.run(["bunx", "fallow", analysis, *_SHARED_FLAGS], cwd=ctx.source.root))
-        except proc.ToolNotFoundError as exc:
-            res.error(str(exc))
-            return res
+    with tempfile.TemporaryDirectory(prefix="cerberus-fallow-") as shield_dir:
+        config_path = Path(shield_dir) / "fallow.json"
+        config_path.write_text(json.dumps({"ignorePatterns": ignored_dirs}))
+        flags = [*_SHARED_FLAGS, "--root", str(ctx.source.root.resolve()), "--config", str(config_path)]
+        for analysis in ("dead-code", "health"):
+            try:
+                outcomes.append(proc.run(["bunx", "fallow", analysis, *flags], cwd=Path(shield_dir)))
+            except proc.ToolNotFoundError as exc:
+                res.error(str(exc))
+                return res
     _record_dead_code(res, outcomes[0])
     health_report = _parse_report(outcomes[1])
     _record_complexity(res, outcomes[1], health_report)

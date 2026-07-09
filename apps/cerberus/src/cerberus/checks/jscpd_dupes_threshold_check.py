@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cerberus import proc
+from cerberus import proc, workspaces
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -40,27 +40,9 @@ class _LanguageStat:
     percentage: float
 
 
-def _bun_workspace_globs(repo: Repo, ctx: Context) -> list[str]:
-    package_json = ctx.file(repo, "package.json")
-    if package_json is None:
-        return []
-    workspaces = json.loads(package_json).get("workspaces", [])
-    if isinstance(workspaces, dict):
-        workspaces = workspaces.get("packages", [])
-    return list(workspaces)
-
-
-def _uv_workspace_globs(repo: Repo, ctx: Context) -> list[str]:
-    pyproject = ctx.file(repo, "pyproject.toml")
-    if pyproject is None:
-        return []
-    workspace = tomllib.loads(pyproject).get("tool", {}).get("uv", {}).get("workspace", {})
-    return list(workspace.get("members", []))
-
-
 def _scan_roots(repo: Repo, ctx: Context) -> list[Path]:
     repo_root = ctx.source.root.resolve()
-    globs = [*_bun_workspace_globs(repo, ctx), *_uv_workspace_globs(repo, ctx)]
+    globs = [*workspaces.bun_member_globs(repo, ctx), *workspaces.uv_member_globs(repo, ctx)]
     members = {match for glob in globs for match in repo_root.glob(glob) if match.is_dir()}
     return sorted(members) if members else [repo_root]
 

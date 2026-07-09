@@ -8,7 +8,7 @@
 
 ### 29.2.1 passes when both fallow analyses exit clean
 
-### 29.2.2 runs fallow dead code and health non-interactively at the repo root
+### 29.2.2 runs fallow dead code and health non-interactively from a shielded cwd against the repo root
 
 ### 29.2.3 fails with the issue count when fallow dead-code reports issues
 
@@ -25,3 +25,9 @@
 ### 29.4.1 reports fallow's health status line on a clean run
 
 ### 29.4.2 leaves the detail unset on failure so the status line appears only in the fail line
+
+## 29.5 owning fallow's configuration
+
+### 29.5.1 shields fallow behind a cerberus-owned config ignoring workspace dirs without a package.json
+
+### 29.5.2 errors when package.json is not valid JSON instead of crashing

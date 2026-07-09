@@ -4,16 +4,22 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from seam_fixtures import FakeProc, MakeFinding, RunCheckWithFiles
+import pytest
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from cerberus.model import CheckResult, Repo, Status
+    from seam_fixtures import FakeProc, MakeContext, MakeFinding, RunCheck, RunCheckWithFiles
+
+type RunFallow = Callable[..., CheckResult]
 
 CHECK_ID = "fallow_analyzer"
 
 _PACKAGE_JSON = '{"name": "demo"}'
 
-_DEAD_CODE_ARGV = ["bunx", "fallow", "dead-code", "--quiet", "--fail-on-issues", "--format", "json"]
-_HEALTH_ARGV = ["bunx", "fallow", "health", "--quiet", "--fail-on-issues", "--format", "json"]
+_SHARED_FLAGS = ["--quiet", "--fail-on-issues", "--format", "json"]
+_SHIELD_DIR_PLACEHOLDER = "<shield-dir>"
 
 _CLEAN_DEAD_CODE = json.dumps({"total_issues": 0})
 _CLEAN_HEALTH = json.dumps({
@@ -62,6 +68,50 @@ def _serve_clean(fake_proc: FakeProc) -> None:
     fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
 
 
+def _argv(analysis: str, repo_root: Path) -> list[str]:
+    return [
+        "bunx",
+        "fallow",
+        analysis,
+        *_SHARED_FLAGS,
+        "--root",
+        str(repo_root.resolve()),
+        "--config",
+        f"{_SHIELD_DIR_PLACEHOLDER}/fallow.json",
+    ]
+
+
+def _mask_shield_dir(calls: list[tuple[list[str], Path | None]]) -> list[tuple[list[str], Path | None]]:
+    masked = []
+    for argv, cwd in calls:
+        masked_argv = list(argv)
+        config_idx = masked_argv.index("--config") + 1
+        shield_dir = str(Path(masked_argv[config_idx]).parent)
+        masked_argv[config_idx] = masked_argv[config_idx].replace(shield_dir, _SHIELD_DIR_PLACEHOLDER)
+        masked_cwd = Path(_SHIELD_DIR_PLACEHOLDER) if cwd == Path(shield_dir) else cwd
+        masked.append((masked_argv, masked_cwd))
+    return masked
+
+
+@pytest.fixture
+def repo_root(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
+@pytest.fixture
+def run_fallow(repo: Repo, run_check: RunCheck, make_context: MakeContext, repo_root: Path) -> RunFallow:
+    def _run(files: dict[str, str]) -> CheckResult:
+        for path, content in files.items():
+            target = repo_root / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        return run_check(CHECK_ID, repo, make_context(repo_root))
+
+    return _run
+
+
 def test_29_1_1_skips_repos_with_no_package_json_without_running_fallow(
     run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, skip: MakeFinding
 ) -> None:
@@ -78,12 +128,15 @@ def test_29_2_1_passes_when_both_fallow_analyses_exit_clean(
     assert result.findings == [ok("fallow found no dead code, cycles, or complexity offenders")]
 
 
-def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_at_the_repo_root(
-    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc
+def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_from_a_shielded_cwd_against_the_repo_root(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
 ) -> None:
     _serve_clean(fake_proc)
-    run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
-    assert fake_proc.calls == [(_DEAD_CODE_ARGV, Path()), (_HEALTH_ARGV, Path())]
+    run_fallow({"package.json": _PACKAGE_JSON})
+    assert _mask_shield_dir(fake_proc.calls) == [
+        (_argv("dead-code", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
+        (_argv("health", repo_root), Path(_SHIELD_DIR_PLACEHOLDER)),
+    ]
 
 
 def test_29_2_3_fails_with_the_issue_count_when_fallow_dead_code_reports_issues(
@@ -166,3 +219,30 @@ def test_29_4_2_leaves_the_detail_unset_on_failure_so_the_status_line_appears_on
     fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.detail is None
+
+
+def test_29_5_1_shields_fallow_behind_a_cerberus_owned_config_ignoring_workspace_dirs_without_a_package_json(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+) -> None:
+    _serve_clean(fake_proc)
+    (repo_root / "apps" / "py").mkdir(parents=True)
+    (repo_root / "apps" / "web").mkdir(parents=True)
+    (repo_root / "apps" / "web" / "package.json").write_text('{"name": "web"}')
+    (repo_root / "tests" / "py").mkdir(parents=True)
+
+    run_fallow({"package.json": json.dumps({"name": "demo", "workspaces": ["apps/*", "tests/*"]})})
+
+    assert [json.loads(snapshot) for snapshot in fake_proc.config_snapshots] == [
+        {"ignorePatterns": ["apps/py", "tests/py"]},
+        {"ignorePatterns": ["apps/py", "tests/py"]},
+    ]
+    assert all(not cwd.is_relative_to(repo_root) for _, cwd in fake_proc.calls if cwd is not None)
+
+
+def test_29_5_2_errors_when_package_json_is_not_valid_json_instead_of_crashing(
+    run_fallow: RunFallow, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    result = run_fallow({"package.json": "{not json"})
+    assert result.findings[0].status == status.ERROR
+    assert result.findings[0].message.startswith("package.json is not valid JSON:")
+    assert fake_proc.calls == []

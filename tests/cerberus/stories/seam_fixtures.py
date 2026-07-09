@@ -218,11 +218,15 @@ class FakeProc:
     distinct subcommands can be served per subcommand via a `"tool subcommand"`
     key. `output_files` are written into the directory the invocation names
     after `--output`, mimicking tools that emit report files there.
+    `config_snapshots` captures the content of the file each invocation names
+    after `--config` — checks write that file into a temp dir that is gone by
+    the time a test can look, so the double reads it at call time.
     """
 
     outcomes: dict[str, subprocess.CompletedProcess[str]] = field(default_factory=dict)
     served_output_files: dict[str, dict[str, str]] = field(default_factory=dict)
     calls: list[tuple[list[str], Path | None]] = field(default_factory=list)
+    config_snapshots: list[str] = field(default_factory=list)
     missing: set[str] = field(default_factory=set)
 
     def serve(
@@ -250,10 +254,15 @@ class FakeProc:
         for name, text in files.items():
             (out_dir / name).write_text(text)
 
+    def _snapshot_config_file(self, argv: list[str]) -> None:
+        if "--config" in argv:
+            self.config_snapshots.append(Path(argv[argv.index("--config") + 1]).read_text(encoding="utf-8"))
+
     def run(self, argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         self.calls.append((list(argv), cwd))
         if argv[0] in self.missing:
             raise proc.ToolNotFoundError(argv[0])
+        self._snapshot_config_file(argv)
         launched = argv[1:] if argv[0] == "bunx" and len(argv) > 1 else argv
         subcommand_key = " ".join(launched[:2])
         tool = subcommand_key if subcommand_key in self.outcomes else launched[0]
