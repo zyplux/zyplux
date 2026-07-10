@@ -32,7 +32,7 @@ const allOverrides: Linter.RulesRecord = {
 
 const strictStylisticOverrides: Linter.RulesRecord = {
   '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
-  '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+  '@typescript-eslint/consistent-type-definitions': 'off',
   '@typescript-eslint/no-restricted-imports': [
     'error',
     {

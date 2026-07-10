@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cerberus.bites import story_docs, test_seam
+from cerberus.bites import test_seam
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -45,11 +45,10 @@ def _is_library(package: str, manifest: dict[str, Any]) -> bool:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    paths = ctx.paths(repo)
-    members = story_docs.ts_member_dirs(repo, ctx, paths)
-    if not members:
-        res.skip("no TypeScript packages")
+    paths_and_members = test_seam.ts_paths_and_members(repo, ctx, res)
+    if paths_and_members is None:
         return res
+    paths, members = paths_and_members
 
     seam = test_seam.Seam.from_paths(repo, ctx, "library", paths)
     libraries = [m for m in members if _has_ts_sources(m, paths) and _is_library(m, seam.load_manifest(m))]

@@ -1,53 +1,39 @@
-import { describe, expect, normalizeRepoUrl, test } from '#fixtures';
+import { describe, expect, test } from '#fixtures';
 
-const expectNormalizesTo = (raw: string | undefined, expected: string | undefined) => {
-  expect(normalizeRepoUrl(raw)).toBe(expected);
-};
+type CanonicalUrlCase = [shape: string, raw: string, canonical: string];
+
+const canonicalUrlCases: CanonicalUrlCase[] = [
+  [
+    'a git plus https url with a git suffix',
+    'git+https://github.com/facebook/react.git',
+    'https://github.com/facebook/react',
+  ],
+  ['a bare host and path', 'github.com/dahlia/optique', 'https://github.com/dahlia/optique'],
+  ['an ssh style remote', 'git@github.com:psf/requests.git', 'https://github.com/psf/requests'],
+  ['a github colon shorthand', 'github:colinhacks/zod', 'https://github.com/colinhacks/zod'],
+  ['a url with extra path segments', 'https://github.com/foo/bar/tree/main/packages/x', 'https://github.com/foo/bar'],
+  ['a non github host url with a git suffix', 'https://gitlab.com/owner/repo.git', 'https://gitlab.com/owner/repo'],
+  ['a git plus ssh protocol remote', 'git+ssh://git@github.com/psf/requests.git', 'https://github.com/psf/requests'],
+];
 
 describe('3.1 normalizing many repo url shapes into a canonical https url', () => {
-  test('3.1.1 strips a leading git plus prefix and a trailing git suffix', () => {
-    expectNormalizesTo('git+https://github.com/facebook/react.git', 'https://github.com/facebook/react');
-  });
-
-  test('3.1.2 defaults a bare host and path to an https url', () => {
-    expectNormalizesTo('github.com/dahlia/optique', 'https://github.com/dahlia/optique');
-  });
-
-  test('3.1.3 converts an ssh style remote to an https url', () => {
-    expectNormalizesTo('git@github.com:psf/requests.git', 'https://github.com/psf/requests');
-  });
-
-  test('3.1.4 expands a github colon shorthand into a full github url', () => {
-    expectNormalizesTo('github:colinhacks/zod', 'https://github.com/colinhacks/zod');
-  });
-
-  test('3.1.5 trims extra path segments down to the owner and repo', () => {
-    expectNormalizesTo('https://github.com/foo/bar/tree/main/packages/x', 'https://github.com/foo/bar');
-  });
-
-  test('3.1.6 works for a non github host and strips its git suffix', () => {
-    expectNormalizesTo('https://gitlab.com/owner/repo.git', 'https://gitlab.com/owner/repo');
-  });
-
-  test('3.1.7 normalizes a git plus ssh protocol remote to an https url', () => {
-    expectNormalizesTo('git+ssh://git@github.com/psf/requests.git', 'https://github.com/psf/requests');
-  });
+  test.for(canonicalUrlCases)(
+    '3.1.1 normalizes %s into a canonical https url',
+    ([, raw, canonical], { normalizeRepoUrl }) => {
+      expect(normalizeRepoUrl(raw)).toBe(canonical);
+    },
+  );
 });
 
+const nonRepoInputCases: [shape: string, raw: string | undefined][] = [
+  ['an empty string', ''],
+  ['a url with no owner and repo path', 'https://example.com'],
+  ['a value that is not a url', 'not a url'],
+  ['an undefined input', undefined],
+];
+
 describe('3.2 rejecting values that do not name a repository', () => {
-  test('3.2.1 returns undefined for an empty string', () => {
-    expectNormalizesTo('', undefined);
-  });
-
-  test('3.2.2 returns undefined for a url with no owner and repo path', () => {
-    expectNormalizesTo('https://example.com', undefined);
-  });
-
-  test('3.2.3 returns undefined for a value that is not a url', () => {
-    expectNormalizesTo('not a url', undefined);
-  });
-
-  test('3.2.4 returns undefined for an undefined input', () => {
-    expectNormalizesTo(undefined, undefined);
+  test.for(nonRepoInputCases)('3.2.1 returns undefined for %s', ([, raw], { normalizeRepoUrl }) => {
+    expect(normalizeRepoUrl(raw)).toBe(undefined);
   });
 });

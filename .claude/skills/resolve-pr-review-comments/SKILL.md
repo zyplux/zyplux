@@ -11,7 +11,7 @@ description: >
   comments on a PR. Drives the GitHub API via `gh`.
 metadata:
   kind: prompt
-  version: "0.8.0"
+  version: "0.9.0"
   user-invocable: "true"
   argument-hint: "[<pr-number-or-url>]"
 ---
@@ -143,7 +143,9 @@ done
 ## Steps 6–9 — triage every unresolved comment
 
 Read the unresolved Copilot threads and the diff for the cited files, so your
-decision is grounded in the real code (**Step 6**):
+decision is grounded in the real code (**Step 6**). The `--jq` filter drops
+resolved threads at the source — never triage from an unfiltered dump, or an
+already-settled thread can masquerade as open work. Use the following query:
 
 ```bash
 gh api graphql -F owner="$OWNER" -F name="$REPO" -F number="$NUMBER" -f query='
@@ -152,20 +154,17 @@ query($owner:String!,$name:String!,$number:Int!){
     pullRequest(number:$number){
       reviewThreads(first:100){
         nodes{
-          id isResolved isOutdated path line
-          comments(first:50){ nodes{ databaseId body author{ login __typename } } }
+          id isResolved isOutdated path startLine line
+          comments(first:50){ nodes{ databaseId body diffHunk author{ login __typename } } }
         }
       }
     }
   }
-}'
+}' --jq '.data.repository.pullRequest.reviewThreads.nodes | map(select(.isResolved | not))'
 gh pr diff "$NUMBER"
 ```
 
-Keep threads where `isResolved` is false and the first comment's author is Copilot;
-record each thread's `id`, `path`, `line`, and comment `body`.
-
-Treat every comment with skepticism first — false positives land on almost every
+Treat every Copilot comment with skepticism first — false positives land on almost every
 PR. Judge it against the real code, not its own framing: fact-check factual
 claims (web search if the code alone doesn't settle it) and weigh it against this
 repo's actual goals and conventions (`CLAUDE.md`) before agreeing to change
@@ -202,7 +201,7 @@ Once every thread has a reply (agreed ones still unresolved), go to **Step 10**.
 
 ## Step 10 — commit, push, then resolve
 
-**Commit every code fix before pushing — and push before resolving the
+Run `just c` to ensure the gate is green. Then **Commit every code fix before pushing — and push before resolving the
 remaining threads.** The org gate re-evaluates `copilot-review-complete` the
 instant a thread is resolved; resolving an "agree" thread while its fix is only
 local (or committed but unpushed) flips the gate to `success` on the
@@ -220,20 +219,12 @@ git status --porcelain   # if non-empty, `just c` autofixed something —
 git log --oneline -1     # must show your fix commit(s), not the pre-existing head
 ```
 
-Commit before running `just c`, not after: some of its checks read the
-committed tree rather than the working tree — e.g. `cerberus`'s version-bump
-check, which diffs against the last commit — so running it against
-uncommitted changes can pass or fail against stale state. If it autofixes
-anything post-commit, fold that into a follow-up commit rather than leaving it
-uncommitted — an uncommitted autofix is exactly the "unpushed fix" trap Step 10
-exists to avoid.
-
 Before running `just pr`, re-run the Step 6 GraphQL query one last time and
-confirm every thread from this round — both "agree" and "disagree" — shows
-`isResolved: true` except the "agree" ones you're deliberately holding open
-until after the push. This catches a thread dropped mid-triage (e.g. a reply
-posted but the resolve call missed or failed) before it becomes a stray
-unresolved thread on the next round.
+confirm the only threads it still returns are the "agree" ones you're
+deliberately holding open until after the push — every "disagree" thread from
+this round must be gone from the output. This catches a thread dropped
+mid-triage (e.g. a reply posted but the resolve call missed or failed) before
+it becomes a stray unresolved thread on the next round.
 
 Then run `just pr`. It pushes the current head, flips back to ready, and enables
 auto-merge (held by the gates until the head is clean). Only once the push has

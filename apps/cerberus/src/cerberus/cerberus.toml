@@ -116,6 +116,8 @@ min_coverage = 90
 
 [lib_ts_test_seam]
 
+[fixture_roles_ts]
+
 [cli_py_test_seam]
 
 [lib_py_test_seam]

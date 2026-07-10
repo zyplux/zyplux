@@ -245,12 +245,13 @@ def test_14_3_4_errors_when_the_published_version_cannot_be_determined(
     ]
 
 
-def test_14_4_1_passes_when_the_current_version_is_ahead_of_the_latest_published_release(
-    run_release_bumps: RunReleaseBumps, ok: MakeFinding
+@pytest.mark.parametrize("version", ["0.1.1", "0.2.0", "1.0.0"], ids=["patch", "minor", "major"])
+def test_14_4_1_passes_when_the_current_version_is_one_step_ahead_of_the_latest_published_release(
+    run_release_bumps: RunReleaseBumps, version: str, ok: MakeFinding
 ) -> None:
-    result = run_release_bumps(version_file_content=version_json("0.2.0"), published="0.1.0", changed=[])
+    result = run_release_bumps(version_file_content=version_json(version), published="0.1.0", changed=[])
     assert result.findings == [
-        ok(f"{LABEL}: 0.2.0 is ahead of published 0.1.0"),
+        ok(f"{LABEL}: {version} is ahead of published 0.1.0"),
         ok(DONE),
     ]
 
@@ -260,6 +261,22 @@ def test_14_4_2_fails_when_the_current_version_trails_the_latest_published_relea
 ) -> None:
     result = run_release_bumps(published="0.2.0", changed=[])
     assert result.findings == [fail(f"{LABEL}: version 0.1.0 is below published 0.2.0")]
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["0.5.2", "0.7.0", "2.0.0", "0.6.1"],
+    ids=["skipped_patch", "skipped_minor", "skipped_major", "minor_with_patch"],
+)
+def test_14_4_3_fails_when_the_current_version_skips_ahead_of_the_latest_published_release(
+    run_release_bumps: RunReleaseBumps, version: str, fail: MakeFinding
+) -> None:
+    result = run_release_bumps(version_file_content=version_json(version), published="0.5.0", changed=[])
+    assert result.findings == [
+        fail(
+            f"{LABEL}: version {version} skips ahead of published 0.5.0 — bump one step (0.5.1, 0.6.0, or 1.0.0)",
+        )
+    ]
 
 
 def test_14_5_1_passes_when_the_release_surface_is_unchanged_since_the_latest_release(

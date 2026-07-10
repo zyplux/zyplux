@@ -2,10 +2,10 @@ import { plugin } from '#plugin';
 
 import type { ConfigWithExtends } from './types';
 
-export const contractsRules: ConfigWithExtends = {
-  files: ['**/src/contracts.ts'],
+export const testSeamRules: ConfigWithExtends = {
+  files: ['**/stories/*.test.{ts,tsx}'],
   plugins: { '@zyplux': plugin },
   rules: {
-    '@zyplux/contracts-only-schemas': 'error',
+    '@zyplux/test-seam-only-imports': 'error',
   },
 };

@@ -2,11 +2,12 @@ import prettier from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 import { base } from './configs/base';
-import { contractsRules } from './configs/contracts';
 import { gitignore } from './configs/gitignore';
 import { perfectionistConfig } from './configs/perfectionist';
 import { reactPresets, type RendererGlobs } from './configs/react';
+import { contractsRules, schemaBoundaryRules } from './configs/schema-boundary';
 import { tanstackRoutes } from './configs/tanstack';
+import { testSeamRules } from './configs/test-seam';
 import { typescript } from './configs/typescript';
 import { unicornConfig } from './configs/unicorn';
 import { vitestConfig } from './configs/vitest';
@@ -74,6 +75,8 @@ const create = (options: ZypluxOptions = {}) => {
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
     contractsRules,
+    schemaBoundaryRules,
+    testSeamRules,
     vitestConfig,
     prettier,
   );

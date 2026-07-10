@@ -1,10 +1,10 @@
-import { describe, expect, poll, test } from '#fixtures';
+import { describe, expect, test } from '#fixtures';
 
 const intervalMs = 1;
 const RESOLVES_ON_THIRD_ATTEMPT = 3;
 
 describe('5.1 polling a probe until it returns a defined value', () => {
-  test('5.1.1 returns the first defined result without retrying', async () => {
+  test('5.1.1 returns the first defined result without retrying', async ({ poll }) => {
     let calls = 0;
     const probe = () => {
       calls += 1;
@@ -16,7 +16,7 @@ describe('5.1 polling a probe until it returns a defined value', () => {
     expect({ calls, result }).toEqual({ calls: 1, result: 'found' });
   });
 
-  test('5.1.2 retries after undefined results until the probe returns a value', async () => {
+  test('5.1.2 retries after undefined results until the probe returns a value', async ({ poll }) => {
     let calls = 0;
     const probe = () => {
       calls += 1;
@@ -28,7 +28,7 @@ describe('5.1 polling a probe until it returns a defined value', () => {
     expect({ calls, result }).toEqual({ calls: RESOLVES_ON_THIRD_ATTEMPT, result: 'found' });
   });
 
-  test('5.1.3 returns undefined once every attempt is exhausted', async () => {
+  test('5.1.3 returns undefined once every attempt is exhausted', async ({ poll }) => {
     let calls = 0;
     const probe = () => {
       calls += 1;
@@ -40,7 +40,7 @@ describe('5.1 polling a probe until it returns a defined value', () => {
     expect({ calls, result }).toEqual({ calls: 4, result: undefined });
   });
 
-  test('5.1.4 waits intervalMs between attempts', async () => {
+  test('5.1.4 waits intervalMs between attempts', async ({ poll }) => {
     const timestamps: number[] = [];
     const probe = () => {
       timestamps.push(performance.now());

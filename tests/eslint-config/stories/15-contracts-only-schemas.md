@@ -1,6 +1,6 @@
-# 15. [Keeping contracts modules to zod schemas only](15-contracts-only-schemas.test.ts)
+# 15. [Keeping contracts exports to zod schemas only](15-contracts-only-schemas.test.ts)
 
-## 15.1 accepting purely declarative contracts modules
+## 15.1 accepting schemas-only export surfaces
 
 ### 15.1.1 allows a module of zod imports and exported schema consts
 
@@ -16,19 +16,23 @@
 
 ### 15.2.3 flags a non-schema value in an export specifier list while allowing schemas and type specifiers
 
-## 15.3 rejecting non-zod module edges
+## 15.3 opening imports while holding the export surface
 
-### 15.3.1 flags imports from anything but zod, whether value, type, alias, or builtin
+### 15.3.1 allows imports from any module, value or type
 
-### 15.3.2 flags re-exports from other modules
+### 15.3.2 allows building and re-exporting schemas from any source
 
-### 15.3.3 flags value re-exports from zod while allowing type-only re-exports
+### 15.3.3 flags re-exporting non-schema values while allowing type-only re-exports
 
-## 15.4 rejecting non-declarative statements
+### 15.3.4 flags value star re-exports as unverifiable while allowing type-only star re-exports
 
-### 15.4.1 flags non-schema local declarations and non-const bindings
+## 15.4 freeing local statements while covering every export form
 
-### 15.4.2 flags side-effecting statements and default exports
+### 15.4.1 allows non-schema locals, mutable bindings, and side-effecting statements
+
+### 15.4.2 checks a default export against the schemas-only surface
+
+### 15.4.3 flags a mutable exported binding
 
 ## 15.5 scoping the rule to contracts files in the shipped config
 

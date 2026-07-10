@@ -6,7 +6,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
   describe('9.1 validating preconditions', () => {
     test('9.1.1 rejects --hold without --ready', async ({ cz, shell }) => {
       await expect(cz.run('push-branch', '--hold')).rejects.toThrow('--hold requires --ready');
-      expect(shell.commandsMatching('git rev-parse')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('git rev-parse');
     });
 
     test('9.1.2 rejects a detached HEAD', async ({ cz, repo }) => {
@@ -29,10 +29,10 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       await cz.run('push-branch');
 
-      expect(shell.commands).toContain('git checkout main');
-      expect(shell.commands).toContain('git pull --ff-only');
-      expect(shell.commands).toContain('git branch --delete --force feat-x');
-      expect(shell.commandsMatching('git push')).toHaveLength(0);
+      expect(shell).toHaveRun('git checkout main');
+      expect(shell).toHaveRun('git pull --ff-only');
+      expect(shell).toHaveRun('git branch --delete --force feat-x');
+      expect(shell).not.toHaveRunMatching('git push');
     });
   });
 
@@ -44,13 +44,13 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       await cz.run('push-branch');
 
-      expect(shell.commands).toContain('git push --set-upstream origin feat-x');
+      expect(shell).toHaveRun('git push --set-upstream origin feat-x');
       expect(shell.calls).toContainEqual({
         argv: ['pr', 'create', '--base', 'main', '--body', '', '--draft', '--title', 'feat-x'],
         program: 'gh',
       });
-      expect(logs.logLines).toContain(`PR (draft): ${PR_URL}`);
-      expect(shell.commandsMatching('gh pr ready')).toHaveLength(0);
+      expect(logs).toHaveLogged(`PR (draft): ${PR_URL}`);
+      expect(shell).not.toHaveRunMatching('gh pr ready');
     });
 
     test('9.3.2 rejects a push that does not land on the expected head', async ({ cz, repo, shell }) => {
@@ -60,7 +60,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.setRemoteBranchSha('feat-x', 'sha-elsewhere');
 
       await expect(cz.run('push-branch')).rejects.toThrow('push did not land');
-      expect(shell.commandsMatching('gh pr create')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh pr create');
     });
   });
 
@@ -77,8 +77,8 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.setCopilotReviewedHead('sha-different');
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('Copilot has not reviewed HEAD');
-      expect(shell.commandsMatching('gh pr ready')).toHaveLength(0);
-      expect(shell.commandsMatching('git push')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh pr ready');
+      expect(shell).not.toHaveRunMatching('git push');
     });
 
     test('9.4.2 flips to draft and pushes when Copilot already reviewed HEAD', async ({ cz, logs, repo, shell }) => {
@@ -96,12 +96,12 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await cz.run('push-branch', '--ready');
 
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready --undo', 'gh pr ready']);
-      expect(logs.logLines).toContain('flip: GitHub confirms PR is draft (was ready, HEAD sha-loc)');
-      expect(shell.commands).toContain('git push --set-upstream origin feat-x');
-      expect(logs.logLines).toContain(
+      expect(logs).toHaveLogged('flip: GitHub confirms PR is draft (was ready, HEAD sha-loc)');
+      expect(shell).toHaveRun('git push --set-upstream origin feat-x');
+      expect(logs).toHaveLogged(
         'flip: GitHub confirms PR is ready (draft→push→ready done; Copilot re-review triggered)',
       );
-      expect(shell.commands).toContain('gh pr merge --delete-branch --squash');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
     });
 
     test('9.4.3 skips the Copilot check when there are new commits to push', async ({ cz, repo, shell }) => {
@@ -113,8 +113,8 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       await cz.run('push-branch', '--ready');
 
-      expect(shell.commandsMatching('gh repo view')).toHaveLength(0);
-      expect(shell.commandsMatching('gh api')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh repo view');
+      expect(shell).not.toHaveRunMatching('gh api');
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready --undo', 'gh pr ready']);
     });
 
@@ -126,7 +126,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.setRemoteBranchSha('feat-x', 'sha-remote-old');
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('PR did not enter draft state before push');
-      expect(shell.commandsMatching('git push')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('git push');
     });
   });
 
@@ -139,9 +139,9 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await cz.run('push-branch', '--ready');
 
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready']);
-      expect(logs.logLines).toContain('flip: GitHub confirms PR is ready');
-      expect(shell.commands).toContain('gh pr merge --delete-branch --squash');
-      expect(logs.logLines).toContain(`PR merged: ${PR_URL}`);
+      expect(logs).toHaveLogged('flip: GitHub confirms PR is ready');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
+      expect(logs).toHaveLogged(`PR merged: ${PR_URL}`);
     });
 
     test('9.5.2 holds auto-merge when --hold is set', async ({ cz, logs, repo, shell }) => {
@@ -152,7 +152,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await cz.run('push-branch', '--hold', '--ready');
 
       expect(shell.commandsMatching('gh pr merge')).toEqual(['gh pr merge --disable-auto']);
-      expect(logs.logLines).toContain(`PR ready, auto-merge held: ${PR_URL}`);
+      expect(logs).toHaveLogged(`PR ready, auto-merge held: ${PR_URL}`);
     });
 
     test('9.5.3 rejects when the PR never returns to ready state', async ({ cz, repo, shell }) => {
@@ -163,7 +163,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
         'PR did not return to ready state; check the PR on GitHub',
       );
-      expect(shell.commandsMatching('gh pr merge')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh pr merge');
     });
   });
 
@@ -175,8 +175,8 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       await cz.run('push-branch', '--ready');
 
-      expect(shell.commands).toContain('gh pr merge --delete-branch --squash');
-      expect(logs.logLines).toContain(`PR merged: ${PR_URL}`);
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
+      expect(logs).toHaveLogged(`PR merged: ${PR_URL}`);
     });
 
     test('9.6.2 rejects a dirty merge state', async ({ cz, repo, shell }) => {
@@ -185,7 +185,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.queuePrFields({ isDraft: 'false', mergeStateStatus: 'DIRTY', url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('merge conflict');
-      expect(shell.commandsMatching('gh pr merge')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh pr merge');
     });
 
     test('9.6.3 schedules auto-merge for any other mergeable state', async ({ cz, logs, repo, shell }) => {
@@ -195,8 +195,8 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       await cz.run('push-branch', '--ready');
 
-      expect(shell.commands).toContain('gh pr merge --auto --delete-branch --squash');
-      expect(logs.logLines).toContain(`PR ready, auto-merge scheduled (BEHIND): ${PR_URL}`);
+      expect(shell).toHaveRun('gh pr merge --auto --delete-branch --squash');
+      expect(logs).toHaveLogged(`PR ready, auto-merge scheduled (BEHIND): ${PR_URL}`);
     });
 
     test('9.6.4 rejects when the merge state stays UNKNOWN', async ({ cz, repo, shell }) => {
@@ -207,7 +207,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
         'merge state stayed UNKNOWN; check the PR on GitHub',
       );
-      expect(shell.commandsMatching('gh pr merge')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('gh pr merge');
     });
   });
 });

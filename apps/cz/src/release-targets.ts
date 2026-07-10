@@ -1,14 +1,10 @@
 import { $, ensure, fetchJson, httpOk, parseJson, parseToml, readTrimmed } from '@zyplux/util';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import * as z from 'zod';
 
 import type { Target, VersionSource } from '#contracts';
 
-import { ManifestSchema } from '#contracts';
-
-const GhcrTokenSchema = z.object({ token: z.string() });
-const JsonFieldsSchema = z.record(z.string(), z.unknown());
+import { GhcrTokenSchema, ManifestSchema, VersionFieldSchema, VersionFileSchema } from '#contracts';
 
 export type ReleaseTarget = {
   dir: string;
@@ -22,8 +18,8 @@ export type ReleaseTarget = {
 const readVersion = async (repoRoot: string, source: VersionSource) => {
   const text = await readFile(path.join(repoRoot, source.file), 'utf8');
   if ('json' in source) {
-    const fields = parseJson(text, JsonFieldsSchema);
-    return z.string().parse(fields[source.json]);
+    const fields = parseJson(text, VersionFileSchema);
+    return VersionFieldSchema.parse(fields[source.json]);
   }
   const version = new RegExp(source.regex, 'm').exec(text)?.[1];
   if (version === undefined) {

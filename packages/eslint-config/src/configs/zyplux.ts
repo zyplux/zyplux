@@ -16,5 +16,6 @@ export const zypluxRules: ConfigWithExtends = {
     '@zyplux/no-zod-custom': 'error',
     '@zyplux/prefer-arrow-functions': ['error', { returnStyle: 'implicit' }],
     '@zyplux/prefer-destructured-params': 'error',
+    '@zyplux/type-over-interface': 'error',
   },
 };

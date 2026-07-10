@@ -6,6 +6,5 @@ export * from './map-with-concurrency';
 export * from './poll';
 export * from './repo-url';
 export * from './result';
-export * from './schema';
 export * from './shell';
 export * from './toml';

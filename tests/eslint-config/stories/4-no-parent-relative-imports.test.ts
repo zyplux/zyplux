@@ -22,12 +22,12 @@ describe('4. restricting parent-relative (../) imports', () => {
 
   describe('4.2 permitting non-parent-relative import specifiers', () => {
     test('4.2.1 allows a same directory relative import', ({ lint }) => {
-      expect(lint("import { x } from './x';")).toHaveLength(0);
+      expect(lint("import { x } from './x';")).toReportNothing();
     });
 
     test('4.2.2 allows alias and bare package imports', ({ lint }) => {
-      expect(lint("import { x } from '@/x';")).toHaveLength(0);
-      expect(lint("import { x } from 'node:path';")).toHaveLength(0);
+      expect(lint("import { x } from '@/x';")).toReportNothing();
+      expect(lint("import { x } from 'node:path';")).toReportNothing();
     });
   });
 });

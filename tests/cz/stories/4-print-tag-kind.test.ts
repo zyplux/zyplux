@@ -1,18 +1,16 @@
-import { describe, expect, test } from '#fixtures';
+import { describe, expect, targetsTest as test } from '#fixtures';
 
-const TAGGED_KINDS: [label: string, tagPrefix: string, kind: string][] = [
-  ['@zyplux/util', 'util-v', 'npm'],
-  ['zyplux-cerberus', 'cerberus-v', 'pypi'],
-  ['ghcr.io/zyplux/ci', 'ci-image-v', 'ghcr'],
+const TAGGED_KINDS: [tag: string, kind: string][] = [
+  ['util-v1.2.3', 'npm'],
+  ['cerberus-v2.3.4', 'pypi'],
+  ['ci-image-v3.4.5', 'ghcr'],
 ];
 
 describe('4.1 classifying a tag by its release target', () => {
   test.for(TAGGED_KINDS)(
     '4.1.1 prints the registry kind of the target that owns the tag',
-    async ([label, tagPrefix, kind], { cz, findTarget, logs }) => {
-      const target = await findTarget(label);
-
-      await cz.run('print-tag-kind', `${tagPrefix}${target.version}`);
+    async ([tag, kind], { cz, logs }) => {
+      await cz.run('print-tag-kind', tag);
 
       expect(logs.logLines).toEqual([kind]);
     },

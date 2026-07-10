@@ -1,6 +1,7 @@
 import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
 
-import { AST_NODE_TYPES } from '@typescript-eslint/utils';
+import { isTypeAnyType } from '@typescript-eslint/type-utils';
+import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 
@@ -215,6 +216,14 @@ const wholeLineRemovalSpan = ({ text }: Readonly<TSESLint.SourceCode>, { range }
 export const preferDestructuredParams = createRule({
   create: context => {
     const { sourceCode } = context;
+    const services = ESLintUtils.getParserServices(context);
+    const checker = services.program.getTypeChecker();
+
+    const bindsDeclaredProperties = (param: TSESTree.Identifier, propertyNames: readonly string[]) => {
+      const paramType = services.getTypeAtLocation(param);
+      if (isTypeAnyType(paramType)) return true;
+      return propertyNames.every(name => checker.getPropertyOfType(paramType, name) !== undefined);
+    };
 
     const planParameter = (param: TSESTree.Parameter, declaredVariables: readonly TSESLint.Scope.Variable[]) => {
       // Annotated params only — drop the `!param.typeAnnotation` check to also flag inferred-type params (e.g. inline callbacks).
@@ -230,6 +239,7 @@ export const preferDestructuredParams = createRule({
       if (!partition) return;
       const { aliasAbsorptions, directReads, propertyNames } = partition;
       if (hasAliasRenameConflict(aliasAbsorptions)) return;
+      if (!bindsDeclaredProperties(param, propertyNames)) return;
 
       const introducedNames = new Set(propertyNames);
       const functionScope = paramVariable.scope;
@@ -311,7 +321,8 @@ export const preferDestructuredParams = createRule({
   meta: {
     docs: {
       description:
-        'Require destructuring an explicitly-typed function parameter that is never used as a whole — only its properties are read. The accessed properties are pulled into the parameter pattern (`{ a, b }: T`) and the body is rewritten, with an autofix that also absorbs `const` aliases (`const parent = node.parent`). Accesses that call (`p.fn()`), write (`p.x = …`), increment, `delete`, index (`p[k]`), or optionally chain (`p?.x`) keep the whole object, so the parameter is left alone; parameters without a type annotation (e.g. inferred inline callbacks) are also left alone. When a property name would collide with a binding declared inside the function, the parameter is still reported but no autofix is offered (rename the local first); when it would instead capture a free variable the body reads from an outer scope, the parameter is left alone entirely.',
+        'Require destructuring an explicitly-typed function parameter that is never used as a whole — only its properties are read. The accessed properties are pulled into the parameter pattern (`{ a, b }: T`) and the body is rewritten, with an autofix that also absorbs `const` aliases (`const parent = node.parent`). Accesses that call (`p.fn()`), write (`p.x = …`), increment, `delete`, index (`p[k]`), or optionally chain (`p?.x`) keep the whole object, so the parameter is left alone; parameters without a type annotation (e.g. inferred inline callbacks) are also left alone. A property that the parameter’s declared type does not carry — readable only after narrowing, as in `node.type === X && node.declare` on a union — exempts the parameter, since the destructured pattern could not typecheck. When a property name would collide with a binding declared inside the function, the parameter is still reported but no autofix is offered (rename the local first); when it would instead capture a free variable the body reads from an outer scope, the parameter is left alone entirely.',
+      requiresTypeChecking: true,
     },
     fixable: 'code',
     messages: {
