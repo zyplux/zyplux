@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "release_surface_version_bump"
-SUMMARY = "a published target's version is bumped whenever its release surface changes"
+SUMMARY = "a published target's version is bumped by exactly one step whenever its release surface changes"
 SCOPE = Scope.GIT_HISTORY
 
 _MANIFEST = "release-targets.toml"
@@ -100,6 +100,15 @@ def _parse_semver(version: str) -> Semver | None:
     return (int(match[1]), int(match[2]), int(match[3])) if match else None
 
 
+def _format_semver(semver: Semver) -> str:
+    return ".".join(map(str, semver))
+
+
+def _single_step_bumps(latest: Semver) -> tuple[Semver, Semver, Semver]:
+    major, minor, patch = latest
+    return ((major, minor, patch + 1), (major, minor + 1, 0), (major + 1, 0, 0))
+
+
 def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult) -> tuple[Semver, str] | None:
     content = ctx.file(repo, target.version_file)
     if content is None:
@@ -162,7 +171,15 @@ def _verify(
 
     latest_semver, latest_version = latest
     if current > latest_semver:
-        res.ok(f"{target.label}: {version} is ahead of published {latest_version}")
+        steps = _single_step_bumps(latest_semver)
+        if current in steps:
+            res.ok(f"{target.label}: {version} is ahead of published {latest_version}")
+        else:
+            patch_step, minor_step, major_step = map(_format_semver, steps)
+            res.fail(
+                f"{target.label}: version {version} skips ahead of published {latest_version} — "
+                f"bump one step ({patch_step}, {minor_step}, or {major_step})"
+            )
         return
     if current < latest_semver:
         res.fail(f"{target.label}: version {version} is below published {latest_version}")

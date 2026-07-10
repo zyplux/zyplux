@@ -2,6 +2,8 @@ import type { $ } from '@zyplux/util';
 
 import { vi } from 'vitest';
 
+import { isPatternMatch } from './pattern-match';
+
 type ShellOutput = Awaited<ReturnType<typeof $.git.status>>;
 type ShellPromise = ReturnType<typeof Bun.$>;
 type ShellValue = Parameters<typeof Bun.$>[1];
@@ -78,7 +80,7 @@ const isCommandMatch = (command: string, pattern: RegExp | string) => {
     if (!command.startsWith(pattern)) return false;
     return command.length === pattern.length || command[pattern.length] === ' ';
   }
-  return pattern.test(command);
+  return isPatternMatch(command, pattern);
 };
 
 const takeReply = ({ replies }: ShellRoute) => {

@@ -19,7 +19,7 @@
     },
     "apps/cz": {
       "name": "@zyplux/cz",
-      "version": "0.7.0",
+      "version": "0.6.0",
       "bin": {
         "cz": "./src/index.ts",
       },
@@ -107,7 +107,7 @@
     },
     "tests/fixtures": {
       "name": "@zyplux/tests-fixtures",
-      "version": "0.6.0",
+      "version": "0.4.0",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@zyplux/tsconfig": "workspace:*",

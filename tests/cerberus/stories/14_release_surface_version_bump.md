@@ -34,9 +34,11 @@
 
 ## 14.4 comparing the current version against the latest published release
 
-### 14.4.1 passes when the current version is ahead of the latest published release
+### 14.4.1 passes when the current version is one step ahead of the latest published release
 
 ### 14.4.2 fails when the current version trails the latest published release
+
+### 14.4.3 fails when the current version skips ahead of the latest published release
 
 ## 14.5 requiring a bump when the release surface changed
 

@@ -3,6 +3,8 @@ import { expect } from 'vitest';
 import type { ConsoleCapture } from './console';
 import type { ShellFake } from './shell';
 
+import { isPatternMatch } from './pattern-match';
+
 export type LineMatch = RegExp | string;
 
 export const registerMatchers = <Registered extends Parameters<typeof expect.extend>[0]>(matchers: Registered) => {
@@ -11,7 +13,7 @@ export const registerMatchers = <Registered extends Parameters<typeof expect.ext
 };
 
 const isLineMatch = (line: string, expected: LineMatch) =>
-  typeof expected === 'string' ? line === expected : expected.test(line);
+  typeof expected === 'string' ? line === expected : isPatternMatch(line, expected);
 
 const renderLines = (label: string, lines: string[]) =>
   lines.length === 0 ? `${label}: (none)` : `${label}:\n${lines.map(line => `  ${line}`).join('\n')}`;
