@@ -29,8 +29,8 @@ describe('1.1 pushing a branch', () => {
 
     await runPushBranch({ command: 'push-branch', hold: false, ready: false });
 
-    expect(shell.commands).toContain('git push --set-upstream origin feat-x');
-    expect(logs.logLines).toContain('PR (draft): https://github.com/acme/repo/pull/1');
+    expect(shell).toHaveRun('git push --set-upstream origin feat-x');
+    expect(logs).toHaveLogged('PR (draft): https://github.com/acme/repo/pull/1');
   });
 });
 ```
@@ -48,3 +48,11 @@ describe('1.1 pushing a branch', () => {
 - `createPromptFake()` — accepts every `prompt()` call and records `messages`.
 - `createTempDir()` — `path`, `write(relativePath, content)`, `exists(relativePath)`, `remove()`.
 - `fakeShellOutput(stdout, exitCode?)`, `fakeShellPromise(result)`, `toArgv(values)` — raw `Bun.$` doubles behind `createShellFake`.
+
+## Matchers
+
+Importing a base registers domain matchers via `expect.extend`:
+
+- `expect(shell).toHaveRun(command)` — the exact rendered command ran.
+- `expect(shell).toHaveRunMatching(pattern)` — some command matches (string = command prefix at a word boundary, same as `on`; RegExp = test); negate with `.not` for "never ran".
+- `expect(logs).toHaveLogged(line?)` / `toHaveWarned(line?)` / `toHaveErrored(line?)` — a captured line equals the string (or matches the RegExp); with no argument, that the channel captured anything, so `.not.toHaveWarned()` asserts silence.

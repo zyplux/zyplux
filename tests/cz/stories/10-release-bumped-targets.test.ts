@@ -9,7 +9,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       repo.setCurrentBranch('feat-x');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow("releases are cut from main, not 'feat-x'");
-      expect(shell.commandsMatching('git status')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('git status');
     });
 
     test('10.1.2 refuses to run with a dirty working tree', async ({ cz, repo, shell }) => {
@@ -17,7 +17,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       repo.setWorkingTreeStatus(' M some-file.ts');
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow('working tree is dirty');
-      expect(shell.commandsMatching('git fetch')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('git fetch');
     });
 
     test('10.1.3 refuses to run when local main is behind or ahead of origin/main', async ({ cz, repo }) => {
@@ -34,8 +34,8 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-      expect(logs.logLines).toContain('Skipping @zyplux/util 1.2.3 (already published)');
-      expect(shell.commandsMatching('gh release create')).toHaveLength(0);
+      expect(logs).toHaveLogged('Skipping @zyplux/util 1.2.3 (already published)');
+      expect(shell).not.toHaveRunMatching('gh release create');
     });
 
     test('10.2.2 skips a target that already has a github release', async ({ cz, logs, registries, repo, shell }) => {
@@ -45,8 +45,8 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-      expect(logs.logLines).toContain('Skipping zyplux-cerberus 2.3.4 (release cerberus-v2.3.4 already exists)');
-      expect(shell.commandsMatching('gh release create')).toHaveLength(0);
+      expect(logs).toHaveLogged('Skipping zyplux-cerberus 2.3.4 (release cerberus-v2.3.4 already exists)');
+      expect(shell).not.toHaveRunMatching('gh release create');
     });
   });
 
@@ -62,11 +62,11 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await cz.run('release-bumped-targets');
 
-      expect(shell.commands).toContain(
+      expect(shell).toHaveRun(
         'gh release create cerberus-v2.3.4 --generate-notes --target sha-head --title cerberus-v2.3.4',
       );
-      expect(shell.commands).toContain(renderRunViewCommand('999'));
-      expect(logs.logLines).toContain('Published zyplux-cerberus 2.3.4');
+      expect(shell).toHaveRun(renderRunViewCommand('999'));
+      expect(logs).toHaveLogged('Published zyplux-cerberus 2.3.4');
     });
 
     test('10.3.2 rejects when the publish workflow finishes unsuccessfully, rolling back the release', async ({
@@ -81,9 +81,9 @@ describe('10. Releasing every target whose version was bumped', () => {
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
-      expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
-      expect(logs.warnLines).toHaveLength(0);
-      expect(shell.commands).toContain('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
+      expect(logs).toHaveErrored(/publish workflow 999 finished with 'failure'/);
+      expect(logs).not.toHaveWarned();
+      expect(shell).toHaveRun('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
     });
 
     test('10.3.3 rejects when the publish workflow never starts, rolling back the release', async ({
@@ -97,11 +97,9 @@ describe('10. Releasing every target whose version was bumped', () => {
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
-      expect(logs.errorLines).toContainEqual(
-        expect.stringContaining('publish workflow did not start; check the Actions tab'),
-      );
-      expect(shell.commandsMatching('gh run view')).toHaveLength(0);
-      expect(shell.commands).toContain('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
+      expect(logs).toHaveErrored(/publish workflow did not start; check the Actions tab/);
+      expect(shell).not.toHaveRunMatching('gh run view');
+      expect(shell).toHaveRun('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
     });
 
     test('10.3.4 rejects when the publish workflow never completes, rolling back the release', async ({
@@ -116,10 +114,10 @@ describe('10. Releasing every target whose version was bumped', () => {
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
-      expect(logs.errorLines).toContainEqual(
-        expect.stringContaining('publish workflow 999 did not complete within the watch window; check the Actions tab'),
+      expect(logs).toHaveErrored(
+        /publish workflow 999 did not complete within the watch window; check the Actions tab/,
       );
-      expect(shell.commands).toContain('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
+      expect(shell).toHaveRun('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
     });
 
     test('10.3.5 warns instead of failing when the registry never shows the new version, without rolling back', async ({
@@ -133,11 +131,11 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await cz.run('release-bumped-targets');
 
-      expect(logs.warnLines).toContain(
+      expect(logs).toHaveWarned(
         'zyplux-cerberus 2.3.4 published (workflow succeeded) but is not visible on its registry yet — likely propagation lag; it should appear shortly',
       );
-      expect(logs.logLines).not.toContainEqual(expect.stringContaining('Published zyplux-cerberus'));
-      expect(shell.commandsMatching('gh release delete')).toHaveLength(0);
+      expect(logs).not.toHaveLogged(/Published zyplux-cerberus/);
+      expect(shell).not.toHaveRunMatching('gh release delete');
     });
 
     test('10.3.6 keeps polling while the run list is still empty instead of watching a phantom run', async ({
@@ -151,8 +149,8 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await cz.run('release-bumped-targets');
 
-      expect(shell.commands).toContain(renderRunViewCommand('999'));
-      expect(logs.logLines).toContain('Published zyplux-cerberus 2.3.4');
+      expect(shell).toHaveRun(renderRunViewCommand('999'));
+      expect(logs).toHaveLogged('Published zyplux-cerberus 2.3.4');
     });
 
     test('10.3.7 rejects when the workflow completes without reporting a conclusion, rolling back the release', async ({
@@ -167,8 +165,8 @@ describe('10. Releasing every target whose version was bumped', () => {
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
-      expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'unknown'"));
-      expect(shell.commands).toContain('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
+      expect(logs).toHaveErrored(/publish workflow 999 finished with 'unknown'/);
+      expect(shell).toHaveRun('gh release delete cerberus-v2.3.4 --cleanup-tag --yes');
     });
 
     test('10.3.8 reports the original publish failure, not the rollback failure, when rollback also fails', async ({
@@ -186,8 +184,8 @@ describe('10. Releasing every target whose version was bumped', () => {
       await expect(cz.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets failed to publish: zyplux-cerberus',
       );
-      expect(logs.errorLines).toContainEqual(expect.stringContaining("publish workflow 999 finished with 'failure'"));
-      expect(logs.errorLines).toContainEqual(expect.stringContaining('Rollback of cerberus-v'));
+      expect(logs).toHaveErrored(/publish workflow 999 finished with 'failure'/);
+      expect(logs).toHaveErrored(/Rollback of cerberus-v/);
     });
   });
 
@@ -211,10 +209,10 @@ describe('10. Releasing every target whose version was bumped', () => {
       const releaseCreateCommands = shell.commandsMatching('gh release create');
       expect(releaseCreateCommands).toContainEqual(expect.stringContaining('cerberus-v2.3.4'));
       expect(releaseCreateCommands).toContainEqual(expect.stringContaining('ci-image-v3.4.5'));
-      expect(shell.commands).toContain(renderRunViewCommand('111'));
-      expect(shell.commands).toContain(renderRunViewCommand('222'));
-      expect(logs.logLines).toContain('Published zyplux-cerberus 2.3.4');
-      expect(logs.logLines).toContain('Published ghcr.io/zyplux/ci 3.4.5');
+      expect(shell).toHaveRun(renderRunViewCommand('111'));
+      expect(shell).toHaveRun(renderRunViewCommand('222'));
+      expect(logs).toHaveLogged('Published zyplux-cerberus 2.3.4');
+      expect(logs).toHaveLogged('Published ghcr.io/zyplux/ci 3.4.5');
     });
 
     test('10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end', async ({
@@ -231,8 +229,8 @@ describe('10. Releasing every target whose version was bumped', () => {
         '1 of 2 targets failed to publish: zyplux-cerberus',
       );
 
-      expect(logs.logLines).toContain('Published ghcr.io/zyplux/ci 3.4.5');
-      expect(logs.errorLines).toContain("zyplux-cerberus 2.3.4: publish workflow 111 finished with 'failure'");
+      expect(logs).toHaveLogged('Published ghcr.io/zyplux/ci 3.4.5');
+      expect(logs).toHaveErrored("zyplux-cerberus 2.3.4: publish workflow 111 finished with 'failure'");
     });
 
     test('10.4.3 reports failures in manifest order even when a later target fails first', async ({

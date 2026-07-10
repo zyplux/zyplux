@@ -306,32 +306,32 @@ describe('14.5 permitting annotations that hide nothing', () => {
         'declare const exact: { a: number; b: number }; const x: { a: number; b: number } = exact;',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
     expect(
       lintRule(
         'declare const exact: { a: number; b: number }; class C { field: { a: number; b: number } = exact; }',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 
   test('14.5.2 allows widening literals and array element types', ({ lintRule }) => {
-    expect(lintRule('const x: number = 5;', narrowingOnly)).toHaveLength(0);
-    expect(lintRule('declare const lit: "a"; const x: string = lit;', narrowingOnly)).toHaveLength(0);
+    expect(lintRule('const x: number = 5;', narrowingOnly)).toReportNothing();
+    expect(lintRule('declare const lit: "a"; const x: string = lit;', narrowingOnly)).toReportNothing();
     expect(
       lintRule('declare const arr: number[]; const widened: (number | string)[] = arr;', narrowingOnly),
-    ).toHaveLength(0);
-    expect(lintRule('class C { count: number = 5; }', narrowingOnly)).toHaveLength(0);
+    ).toReportNothing();
+    expect(lintRule('class C { count: number = 5; }', narrowingOnly)).toReportNothing();
   });
 
   test('14.5.3 allows erasing to unknown and open index-signature dictionaries', ({ lintRule }) => {
-    expect(lintRule('const x: unknown = { a: 1, b: 2 };', narrowingOnly)).toHaveLength(0);
+    expect(lintRule('const x: unknown = { a: 1, b: 2 };', narrowingOnly)).toReportNothing();
     expect(
       lintRule(
         'declare const wide: { a: number; b: number }; const dict: { [k: string]: number } = wide;',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 
   test('14.5.4 allows a member missing from some return branch, which is not common to all returns', ({ lintRule }) => {
@@ -340,7 +340,7 @@ describe('14.5 permitting annotations that hide nothing', () => {
         'declare const x: { a: number; b: number }; declare const y: { a: number; c: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 
   test('14.5.5 leaves async return types alone, whose body type is the resolved value', ({ lintRule }) => {
@@ -349,7 +349,7 @@ describe('14.5 permitting annotations that hide nothing', () => {
         'declare const wide: { a: number; b: number }; const f = async (): Promise<{ a: number }> => wide;',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 });
 
@@ -360,13 +360,13 @@ describe('14.6 permitting annotations the workaround cannot replace', () => {
         'declare const wide: { a: number; b: number }; declare const slim: { a: number }; let x: { a: number } = wide; x = slim;',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
     expect(
       lintRule(
         'declare const wide: { a: number; b: number }; declare const slim: { a: number }; class C { field: { a: number } = wide; m() { this.field = slim; } }',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 
   test('14.6.2 allows recursive arrows and generic returns referencing a type parameter', ({ lintRule }) => {
@@ -375,12 +375,12 @@ describe('14.6 permitting annotations the workaround cannot replace', () => {
         'declare const wide: { a: number; b: number }; const f = (n: number): { a: number } => n > 0 ? wide : f(n - 1);',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
-    expect(lintRule('const wrap = <T>(x: T): { value: T } => ({ value: x });', narrowingOnly)).toHaveLength(0);
+    ).toReportNothing();
+    expect(lintRule('const wrap = <T>(x: T): { value: T } => ({ value: x });', narrowingOnly)).toReportNothing();
   });
 
   test('14.6.3 allows an object literal that matches its annotation', ({ lintRule }) => {
-    expect(lintRule('const p: { x: number } = { x: 1 };', narrowingOnly)).toHaveLength(0);
+    expect(lintRule('const p: { x: number } = { x: 1 };', narrowingOnly)).toReportNothing();
   });
 
   test('14.6.4 allows function-type annotations over plain function values that hide nothing', ({ lintRule }) => {
@@ -389,9 +389,9 @@ describe('14.6 permitting annotations the workaround cannot replace', () => {
         'type Ctx = { id: string }; type StrictCreate = (context: Ctx) => Record<string, () => void>; const create: StrictCreate = context => ({});',
         narrowingOnly,
       ),
-    ).toHaveLength(0);
+    ).toReportNothing();
     expect(
       lintRule('declare const fn: (x: number) => void; const g: (x: number) => void = fn;', narrowingOnly),
-    ).toHaveLength(0);
+    ).toReportNothing();
   });
 });

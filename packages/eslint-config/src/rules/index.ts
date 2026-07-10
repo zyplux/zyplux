@@ -5,7 +5,7 @@ import { castToEslintRule, type EslintRule } from '#create-rule';
 import { noAnonymousParamType } from './syntactic/no-anonymous-param-type';
 import { noIdentityCast } from './syntactic/no-identity-cast';
 import { noTypePredicate } from './syntactic/no-type-predicate';
-import { preferDestructuredParams } from './syntactic/prefer-destructured-params';
+import { typeOverInterface } from './syntactic/type-over-interface';
 import { contractsOnlySchemas } from './type-aware/contracts-only-schemas';
 import { noReturnArrayPush } from './type-aware/no-return-array-push';
 import { noSchemasOutsideContracts } from './type-aware/no-schemas-outside-contracts';
@@ -13,6 +13,8 @@ import { noStrayPascalConst } from './type-aware/no-stray-pascal-const';
 import { noTypeAnnotations } from './type-aware/no-type-annotations';
 import { noUnvalidatedJson } from './type-aware/no-unvalidated-json';
 import { noZodCustom } from './type-aware/no-zod-custom';
+import { preferDestructuredParams } from './type-aware/prefer-destructured-params';
+import { testSeamOnlyImports } from './type-aware/test-seam-only-imports';
 
 const upstreamPreferArrowFunctions = preferArrowFunctions.rules['prefer-arrow-functions'];
 if (!upstreamPreferArrowFunctions) {
@@ -32,4 +34,6 @@ export const rules: Record<string, EslintRule> = {
   'no-zod-custom': noZodCustom,
   'prefer-arrow-functions': castToEslintRule(upstreamPreferArrowFunctions),
   'prefer-destructured-params': preferDestructuredParams,
+  'test-seam-only-imports': testSeamOnlyImports,
+  'type-over-interface': typeOverInterface,
 };

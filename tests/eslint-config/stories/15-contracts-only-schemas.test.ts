@@ -11,7 +11,7 @@ describe('15.1 accepting schemas-only export surfaces', () => {
       'export const UserSchema = z.object({ id: z.string() });',
       'export const OrderSchema = z.object({ user: UserSchema });',
     ].join('\n');
-    expect(lintRule(code, contractsFile)).toHaveLength(0);
+    expect(lintRule(code, contractsFile)).toReportNothing();
   });
 
   test('15.1.2 allows type-only exports and type-only zod imports', ({ lintRule }) => {
@@ -22,7 +22,7 @@ describe('15.1 accepting schemas-only export surfaces', () => {
       'export type Id = z.infer<typeof IdSchema>;',
       'export type AnySchema = ZodType;',
     ].join('\n');
-    expect(lintRule(code, contractsFile)).toHaveLength(0);
+    expect(lintRule(code, contractsFile)).toReportNothing();
   });
 
   test('15.1.3 allows non-exported schema consts and schema-building helpers feeding exported schemas', ({
@@ -34,7 +34,7 @@ describe('15.1 accepting schemas-only export surfaces', () => {
       'const withTimestamps = (schema: typeof BaseSchema) => schema.extend({ createdAt: z.string() });',
       'export const RecordSchema = withTimestamps(BaseSchema);',
     ].join('\n');
-    expect(lintRule(code, contractsFile)).toHaveLength(0);
+    expect(lintRule(code, contractsFile)).toReportNothing();
   });
 });
 
@@ -43,15 +43,13 @@ describe('15.2 rejecting non-schema exports', () => {
     const code = ["import * as z from 'zod';", 'export const parseId = (raw: string) => z.string().parse(raw);'].join(
       '\n',
     );
-    expect(lintRule(code, contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule(code, contractsFile)).toReport('nonSchemaExport');
   });
 
   test('15.2.2 flags exported plain objects, function declarations, and classes', ({ lintRule }) => {
-    expect(lintRule('export const config = { retries: 3 };', contractsFile)).toMatchObject([
-      { messageId: 'nonSchemaExport' },
-    ]);
-    expect(lintRule('export function parse() {}', contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
-    expect(lintRule('export class Contract {}', contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule('export const config = { retries: 3 };', contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule('export function parse() {}', contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule('export class Contract {}', contractsFile)).toReport('nonSchemaExport');
   });
 
   test('15.2.3 flags a non-schema value in an export specifier list while allowing schemas and type specifiers', ({
@@ -64,16 +62,16 @@ describe('15.2 rejecting non-schema exports', () => {
       'type User = z.infer<typeof UserSchema>;',
       'export { UserSchema, limit, type User };',
     ].join('\n');
-    expect(lintRule(code, contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule(code, contractsFile)).toReport('nonSchemaExport');
   });
 });
 
 describe('15.3 opening imports while holding the export surface', () => {
   test('15.3.1 allows imports from any module, value or type', ({ lintRule }) => {
-    expect(lintRule("import path from 'node:path';", contractsFile)).toHaveLength(0);
-    expect(lintRule("import { helper } from './helper';", contractsFile)).toHaveLength(0);
-    expect(lintRule("import type { Linter } from 'eslint';", contractsFile)).toHaveLength(0);
-    expect(lintRule("import { schema } from '#contracts/base';", contractsFile)).toHaveLength(0);
+    expect(lintRule("import path from 'node:path';", contractsFile)).toReportNothing();
+    expect(lintRule("import { helper } from './helper';", contractsFile)).toReportNothing();
+    expect(lintRule("import type { Linter } from 'eslint';", contractsFile)).toReportNothing();
+    expect(lintRule("import { schema } from '#contracts/base';", contractsFile)).toReportNothing();
   });
 
   test('15.3.2 allows building and re-exporting schemas from any source', ({ lintRule }) => {
@@ -82,32 +80,28 @@ describe('15.3 opening imports while holding the export surface', () => {
       "import { IdSchema } from '@zyplux/util/contracts';",
       'export const ProjectKeySchema = z.object({ projectKey: IdSchema });',
     ].join('\n');
-    expect(lintRule(composed, contractsFile)).toHaveLength(0);
+    expect(lintRule(composed, contractsFile)).toReportNothing();
     const derived = [
       "import * as z from 'zod';",
       "import { normalizeRepoUrl } from '@zyplux/util';",
       'export const RepoUrlSchema = z.string().transform(url => normalizeRepoUrl(url));',
     ].join('\n');
-    expect(lintRule(derived, contractsFile)).toHaveLength(0);
-    expect(lintRule("export { IdSchema } from '@zyplux/util/contracts';", contractsFile)).toHaveLength(0);
+    expect(lintRule(derived, contractsFile)).toReportNothing();
+    expect(lintRule("export { IdSchema } from '@zyplux/util/contracts';", contractsFile)).toReportNothing();
   });
 
   test('15.3.3 flags re-exporting non-schema values while allowing type-only re-exports', ({ lintRule }) => {
-    expect(lintRule("export { helper } from './helper';", contractsFile)).toMatchObject([
-      { messageId: 'nonSchemaExport' },
-    ]);
-    expect(lintRule("export { z } from 'zod';", contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
-    expect(lintRule("export type { ZodType } from 'zod';", contractsFile)).toHaveLength(0);
+    expect(lintRule("export { helper } from './helper';", contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule("export { z } from 'zod';", contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule("export type { ZodType } from 'zod';", contractsFile)).toReportNothing();
   });
 
   test('15.3.4 flags value star re-exports as unverifiable while allowing type-only star re-exports', ({
     lintRule,
   }) => {
-    expect(lintRule("export * from 'zod';", contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
-    expect(lintRule("export * from '@zyplux/util/contracts';", contractsFile)).toMatchObject([
-      { messageId: 'nonSchemaExport' },
-    ]);
-    expect(lintRule("export type * from 'zod';", contractsFile)).toHaveLength(0);
+    expect(lintRule("export * from 'zod';", contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule("export * from '@zyplux/util/contracts';", contractsFile)).toReport('nonSchemaExport');
+    expect(lintRule("export type * from 'zod';", contractsFile)).toReportNothing();
   });
 });
 
@@ -122,18 +116,18 @@ describe('15.4 freeing local statements while covering every export form', () =>
       'console.log(kinds, lookups);',
       'export const IdSchema = z.string();',
     ].join('\n');
-    expect(lintRule(code, contractsFile)).toHaveLength(0);
+    expect(lintRule(code, contractsFile)).toReportNothing();
   });
 
   test('15.4.2 checks a default export against the schemas-only surface', ({ lintRule }) => {
-    expect(lintRule("import * as z from 'zod';\nexport default z.string();", contractsFile)).toHaveLength(0);
-    expect(lintRule('export default { retries: 3 };', contractsFile)).toMatchObject([{ messageId: 'nonSchemaExport' }]);
+    expect(lintRule("import * as z from 'zod';\nexport default z.string();", contractsFile)).toReportNothing();
+    expect(lintRule('export default { retries: 3 };', contractsFile)).toReport('nonSchemaExport');
   });
 
   test('15.4.3 flags a mutable exported binding', ({ lintRule }) => {
-    expect(lintRule("import * as z from 'zod';\nexport let MutableSchema = z.string();", contractsFile)).toMatchObject([
-      { messageId: 'nonSchemaExport' },
-    ]);
+    expect(lintRule("import * as z from 'zod';\nexport let MutableSchema = z.string();", contractsFile)).toReport(
+      'nonSchemaExport',
+    );
   });
 });
 

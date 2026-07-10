@@ -54,7 +54,7 @@ describe('11.1 cleaning a single repo', () => {
     await cz.run('clean', '--dry-run');
 
     expect(tempDir.exists('node_modules')).toBe(true);
-    expect(logs.logLines).toContain('  Would remove node_modules/');
+    expect(logs).toHaveLogged('  Would remove node_modules/');
   });
 
   test('11.1.4 reports nothing to clean when no gitignored artifacts exist', async ({ cz, logs, tempDir }) => {
@@ -62,7 +62,7 @@ describe('11.1 cleaning a single repo', () => {
 
     await cz.run('clean');
 
-    expect(logs.logLines).toContain('.: nothing to clean');
+    expect(logs).toHaveLogged('.: nothing to clean');
   });
 });
 
@@ -100,7 +100,7 @@ describe('11.3 excluding paths', () => {
 
     expect(tempDir.exists('repo-a/node_modules')).toBe(false);
     expect(tempDir.exists('repo-b/node_modules')).toBe(true);
-    expect(logs.logLines).toContain('repo-b: skipped (--exclude)');
+    expect(logs).toHaveLogged('repo-b: skipped (--exclude)');
   });
 
   test('11.3.2 protects a subfolder named by --exclude within a cleaned repo', async ({ cz, tempDir }) => {

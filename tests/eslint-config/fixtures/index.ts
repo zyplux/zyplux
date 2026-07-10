@@ -60,4 +60,5 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
 });
 
 export type { PrintedConfig, ZypluxConfig } from './act';
+export { lintMatchers } from './assert';
 export { describe, expect } from 'vitest';

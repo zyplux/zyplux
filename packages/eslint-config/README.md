@@ -69,8 +69,8 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 
 ## What's always on
 
-- Custom `@zyplux` rules: `contracts-only-schemas` (on `**/src/contracts.ts` only), `no-anonymous-param-type`, `no-identity-cast`, `no-return-array-push`, `no-schemas-outside-contracts` (on `**/src/**` except the contracts module), `no-stray-pascal-const`, `no-type-annotations`, `no-type-predicate`, `no-unvalidated-json`, `no-zod-custom`, `prefer-arrow-functions`, `prefer-destructured-params`.
-- Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface`, no type assertions.
+- Custom `@zyplux` rules: `contracts-only-schemas` (on `**/src/contracts.ts` only), `no-anonymous-param-type`, `no-identity-cast`, `no-return-array-push`, `no-schemas-outside-contracts` (on `**/src/**` except the contracts module), `no-stray-pascal-const`, `no-type-annotations`, `no-type-predicate`, `no-unvalidated-json`, `no-zod-custom`, `prefer-arrow-functions`, `prefer-destructured-params`, `test-seam-only-imports` (on `**/stories/*.test.{ts,tsx}` — story tests reach workspace code only through `#` fixture aliases), `type-over-interface`.
+- Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).
 - unicorn + perfectionist (natural sorting); prettier last, so formatting rules are off.
 - Your `.gitignore` is honored — patterns from `<tsconfigRootDir>/.gitignore` become ESLint ignores (flat config doesn't read `.gitignore` on its own).

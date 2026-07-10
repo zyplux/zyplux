@@ -2,13 +2,10 @@ import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleName: 'prefer-destructured-params' });
 
-const destructureReport = [{ messageId: 'destructureParameter' }];
-const destructureNoFixReport = [{ messageId: 'destructureParameterNoFix' }];
-
 describe('8.1 rewriting property-only parameters into destructuring patterns', () => {
   test('8.1.1 rewrites a single property read in a concise body', ({ fixRule, lintRule }) => {
     const code = 'const first = (node: Foo) => node.parent;';
-    expect(lintRule(code)).toMatchObject(destructureReport);
+    expect(lintRule(code)).toReport('destructureParameter');
     expect(fixRule(code)).toBe('const first = ({ parent }: Foo) => parent;');
   });
 
@@ -88,53 +85,62 @@ describe('8.2 reporting without an autofix when destructuring would collide', ()
       '  return node.parent + parent;',
       '};',
     ].join('\n');
-    expect(lintRule(code)).toMatchObject(destructureNoFixReport);
+    expect(lintRule(code)).toReport('destructureParameterNoFix');
   });
 
   test('8.2.2 reports a same-named local alias clash without offering an autofix', ({ lintRule }) => {
-    expect(lintRule('const shadow = (node: Foo) => { let parent = node.parent; return parent; };')).toMatchObject(
-      destructureNoFixReport,
+    expect(lintRule('const shadow = (node: Foo) => { let parent = node.parent; return parent; };')).toReport(
+      'destructureParameterNoFix',
     );
   });
 
   test('8.2.3 reports a collision with a nested-scope binding without offering an autofix', ({ lintRule }) => {
-    expect(lintRule('const each = (node: Foo) => node.item.map(item => item);')).toMatchObject(destructureNoFixReport);
+    expect(lintRule('const each = (node: Foo) => node.item.map(item => item);')).toReport('destructureParameterNoFix');
   });
 });
 
 describe('8.3 permitting parameters that need their whole object', () => {
   test('8.3.1 leaves an untyped parameter alone', ({ lintRule }) => {
-    expect(lintRule('const inferred = (node) => node.parent;')).toHaveLength(0);
+    expect(lintRule('const inferred = (node) => node.parent;')).toReportNothing();
   });
 
   test('8.3.2 leaves two parameters that would destructure to the same name alone', ({ lintRule }) => {
-    expect(lintRule('const pairwise = (left: Foo, right: Foo) => left.member === right.member;')).toHaveLength(0);
+    expect(lintRule('const pairwise = (left: Foo, right: Foo) => left.member === right.member;')).toReportNothing();
   });
 
   test('8.3.3 leaves a whole object that is returned, passed on, or compared alone', ({ lintRule }) => {
-    expect(lintRule('const identity = (node: Foo) => node;')).toHaveLength(0);
-    expect(lintRule('const pass = (node: Foo) => use(node);')).toHaveLength(0);
-    expect(lintRule('const both = (node: Foo) => node.x === node;')).toHaveLength(0);
+    expect(lintRule('const identity = (node: Foo) => node;')).toReportNothing();
+    expect(lintRule('const pass = (node: Foo) => use(node);')).toReportNothing();
+    expect(lintRule('const both = (node: Foo) => node.x === node;')).toReportNothing();
   });
 
   test('8.3.4 leaves method calls, computed access, and optional access alone', ({ lintRule }) => {
-    expect(lintRule('const call = (node: Foo) => node.run();')).toHaveLength(0);
-    expect(lintRule('const indexed = (node: Foo, key: string) => node[key];')).toHaveLength(0);
-    expect(lintRule('const maybe = (node: Foo) => node?.parent;')).toHaveLength(0);
+    expect(lintRule('const call = (node: Foo) => node.run();')).toReportNothing();
+    expect(lintRule('const indexed = (node: Foo, key: string) => node[key];')).toReportNothing();
+    expect(lintRule('const maybe = (node: Foo) => node?.parent;')).toReportNothing();
   });
 
   test('8.3.5 leaves member writes, reserved-word properties, and already-destructured parameters alone', ({
     lintRule,
   }) => {
-    expect(lintRule('const write = (node: Foo) => { node.x = 1; };')).toHaveLength(0);
-    expect(lintRule('const reserved = (node: Foo) => node.default;')).toHaveLength(0);
-    expect(lintRule('const destructured = ({ parent }: Foo) => parent;')).toHaveLength(0);
+    expect(lintRule('const write = (node: Foo) => { node.x = 1; };')).toReportNothing();
+    expect(lintRule('const reserved = (node: Foo) => node.default;')).toReportNothing();
+    expect(lintRule('const destructured = ({ parent }: Foo) => parent;')).toReportNothing();
   });
 
   test('8.3.6 leaves an unused parameter and a free-variable capture alone', ({ lintRule }) => {
-    expect(lintRule('const unused = (node: Foo) => 1;')).toHaveLength(0);
+    expect(lintRule('const unused = (node: Foo) => 1;')).toReportNothing();
     expect(
       lintRule(['const capture = (node: Foo) => {', '  return node.helper + helper();', '};'].join('\n')),
-    ).toHaveLength(0);
+    ).toReportNothing();
+  });
+
+  test('8.3.7 leaves a union-typed parameter whose property read depends on narrowing alone', ({ lintRule }) => {
+    const code = [
+      'type Wide = { kind: "wide"; span: number };',
+      'type Slim = { kind: "slim" };',
+      'const isWideSpan = (node: Slim | Wide) => node.kind === "wide" && node.span > 0;',
+    ].join('\n');
+    expect(lintRule(code)).toReportNothing();
   });
 });

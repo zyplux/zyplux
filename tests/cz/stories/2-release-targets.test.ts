@@ -19,9 +19,9 @@ describe('2.1 loading release targets from the manifest', () => {
 
     await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-    expect(logs.logLines).toContain('Skipping @zyplux/util 1.2.3 (already published)');
-    expect(logs.logLines).toContain('Skipping zyplux-cerberus 2.3.4 (already published)');
-    expect(logs.logLines).toContain('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
+    expect(logs).toHaveLogged('Skipping @zyplux/util 1.2.3 (already published)');
+    expect(logs).toHaveLogged('Skipping zyplux-cerberus 2.3.4 (already published)');
+    expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
   });
 });
 
@@ -48,8 +48,8 @@ describe('2.3 checking whether the ghcr image target is published', () => {
 
     await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
 
-    expect(logs.logLines).toContain('Skipping ghcr.io/zyplux/ci 3.4.5 (release ci-image-v3.4.5 already exists)');
-    expect(logs.logLines).not.toContain('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
+    expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (release ci-image-v3.4.5 already exists)');
+    expect(logs).not.toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
   });
 });
 

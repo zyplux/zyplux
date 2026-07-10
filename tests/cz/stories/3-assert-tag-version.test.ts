@@ -4,7 +4,7 @@ describe('3.1 asserting a tag against the release manifest', () => {
   test("3.1.1 logs a confirmation when the tag matches its target's declared version", async ({ cz, logs }) => {
     await cz.run('assert-tag-version', 'util-v1.2.3');
 
-    expect(logs.logLines).toContain('@zyplux/util 1.2.3 matches util-v1.2.3');
+    expect(logs).toHaveLogged('@zyplux/util 1.2.3 matches util-v1.2.3');
   });
 
   test('3.1.2 rejects a tag no release target owns', async ({ cz }) => {

@@ -16,8 +16,8 @@ describe('8.1 skipping an already-published target', () => {
 
     await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-    expect(logs.logLines).toContain('@zyplux/util 1.2.3 is already published; nothing to do');
-    expect(shell.commandsMatching(/bun pm pack|podman|uv build/)).toHaveLength(0);
+    expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
+    expect(shell).not.toHaveRunMatching(/bun pm pack|podman|uv build/);
   });
 });
 
@@ -52,7 +52,7 @@ describe('8.2 publishing to each registry kind', () => {
       await expect(cz.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
         `${missingName} is required to push to GHCR`,
       );
-      expect(shell.commandsMatching('podman')).toHaveLength(0);
+      expect(shell).not.toHaveRunMatching('podman');
     },
   );
 

@@ -37,7 +37,7 @@ describe('7.1 writing the resolved repos to the output file', () => {
 
     const repos = ['https://github.com/colinhacks/zod', 'https://github.com/facebook/react'];
     await expect(catalog.readOutput()).resolves.toBe(`${JSON.stringify(repos, undefined, JSON_INDENT)}\n`);
-    expect(logs.logLines).toContain(`Wrote 2 source repositories to ${catalog.outPath}`);
+    expect(logs).toHaveLogged(`Wrote 2 source repositories to ${catalog.outPath}`);
   });
 
   test('7.1.2 reports unresolved dependencies alongside the written count', async ({ catalog, logs, network }) => {
@@ -46,9 +46,9 @@ describe('7.1 writing the resolved repos to the output file', () => {
 
     await catalog.run();
 
-    expect(logs.logLines).toContain('Unresolved (2) — no source repo found:');
-    expect(logs.logLines).toContain('  npm\treact');
-    expect(logs.logLines).toContain('  npm\tzod');
+    expect(logs).toHaveLogged('Unresolved (2) — no source repo found:');
+    expect(logs).toHaveLogged('  npm\treact');
+    expect(logs).toHaveLogged('  npm\tzod');
   });
 });
 

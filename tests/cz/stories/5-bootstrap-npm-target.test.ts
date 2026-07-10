@@ -25,10 +25,10 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    expect(logs.logLines).toContain(
+    expect(logs).toHaveLogged(
       '@zyplux/util 1.2.3 is already on npm — enable its trusted publisher; no bootstrap needed',
     );
-    expect(shell.commandsMatching(/bun pm pack/)).toHaveLength(0);
+    expect(shell).not.toHaveRunMatching(/bun pm pack/);
   });
 
   test('5.2.2 publishes the target when its version is not yet on npm', async ({
@@ -43,10 +43,8 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    expect(shell.commands).toContain(
-      `cd ${targets.util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`,
-    );
-    expect(logs.logLines).toContain(
+    expect(shell).toHaveRun(`cd ${targets.util.dir} && bun pm pack && bunx npm@11 publish ./*.tgz --access public`);
+    expect(logs).toHaveLogged(
       'Published @zyplux/util 1.2.3. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.',
     );
   });

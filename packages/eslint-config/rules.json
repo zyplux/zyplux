@@ -269,7 +269,7 @@
     "@typescript-eslint/consistent-generic-constructors": [2],
     "@typescript-eslint/consistent-indexed-object-style": [2],
     "@typescript-eslint/consistent-type-assertions": [2, { "assertionStyle": "never" }],
-    "@typescript-eslint/consistent-type-definitions": [2, "type"],
+    "@typescript-eslint/consistent-type-definitions": [0],
     "dot-notation": [0, { "allowKeywords": true, "allowPattern": "" }],
     "@typescript-eslint/dot-notation": [
       2,
@@ -781,6 +781,7 @@
       }
     ],
     "@zyplux/prefer-destructured-params": [2],
+    "@zyplux/type-over-interface": [2],
     "@zyplux/no-schemas-outside-contracts": [2],
     "curly": [0, "all"],
     "@stylistic/lines-around-comment": [0],

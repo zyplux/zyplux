@@ -39,3 +39,5 @@
 ### 8.3.5 leaves member writes, reserved-word properties, and already-destructured parameters alone
 
 ### 8.3.6 leaves an unused parameter and a free-variable capture alone
+
+### 8.3.7 leaves a union-typed parameter whose property read depends on narrowing alone
