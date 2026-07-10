@@ -8,20 +8,38 @@ import { argument, command, constant, merge, message, object, optional, string }
 const PYTEST_NO_TESTS_COLLECTED = 5;
 
 type Runner = {
-  argv: (name: string | undefined) => string[];
+  argv: (name: string | undefined) => Promise<string[]> | string[];
   label: string;
   manifest: string;
   toleratedExitCode?: number;
 };
 
+const resolveJsFilters = async (name: string) => {
+  const { createVitest } = await import('vitest/node');
+  const vitest = await createVitest('test', { passWithNoTests: true, watch: false });
+  try {
+    const { testModules } = await vitest.collect(undefined, { staticParse: true });
+    const pattern = new RegExp(name);
+    return testModules
+      .filter(
+        testModule =>
+          pattern.test(testModule.moduleId) ||
+          testModule.children.allTests().some(testCase => pattern.test(testCase.fullName)),
+      )
+      .map(testModule => testModule.moduleId);
+  } finally {
+    await vitest.close();
+  }
+};
+
 const RUNNERS: Runner[] = [
   {
-    argv: name => [
-      'bun',
-      'run',
-      'test',
-      ...(name === undefined ? [] : ['-t', name, '--passWithNoTests', '--coverage.enabled=false']),
-    ],
+    argv: async name => {
+      if (name === undefined) return ['bun', 'run', 'test'];
+      const filters = await resolveJsFilters(name);
+      const selectors = filters.length > 0 ? filters : ['-t', name];
+      return ['bun', 'run', 'test', ...selectors, '--passWithNoTests', '--coverage.enabled=false'];
+    },
     label: 'JS',
     manifest: 'package.json',
   },
@@ -50,7 +68,7 @@ export const runTest = async ({ name }: TestConfig) => {
   ensure(runners.length > 0, `no test workspace found: neither package.json nor pyproject.toml is in ${process.cwd()}`);
 
   const results = await Promise.all(
-    runners.map(async runner => ({ output: await captureMerged(runner.argv(name)), runner })),
+    runners.map(async runner => ({ output: await captureMerged(await runner.argv(name)), runner })),
   );
 
   const failedLabels: string[] = [];
