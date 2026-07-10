@@ -19,7 +19,7 @@
     },
     "apps/cz": {
       "name": "@zyplux/cz",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "bin": {
         "cz": "./src/index.ts",
       },
@@ -36,7 +36,7 @@
     },
     "packages/eslint-config": {
       "name": "@zyplux/eslint-config",
-      "version": "0.6.7",
+      "version": "0.7.0",
       "dependencies": {
         "@eslint/js": "catalog:",
         "@typescript-eslint/type-utils": "catalog:",
@@ -68,7 +68,7 @@
     },
     "packages/util-ts": {
       "name": "@zyplux/util",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "devDependencies": {
         "@types/bun": "catalog:",
         "@zyplux/tsconfig": "workspace:*",

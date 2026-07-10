@@ -1,43 +1,26 @@
 import {
   fetchJson,
   findManifests,
-  IdSchema,
   mapWithConcurrency,
   normalizePythonName,
   normalizeRepoUrl,
   npmDependencyNames,
-  PackageJsonSchema,
-  PyProjectSchema,
   pythonRequirementNames,
-  RepositorySchema,
   repositoryUrl,
-  StringRecordSchema,
   tryParseJson,
   tryParseToml,
-  VersionKeySchema,
 } from '@zyplux/util';
-import * as z from 'zod';
+import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+
+import type { DepsDevPackage } from '#contracts';
+
+import { DepsDevPackageSchema, DepsDevVersionSchema, NpmRegistrySchema, PypiProjectSchema } from '#contracts';
 
 type DepReposReport = { repos: string[]; unresolved: PackageRef[] };
 
 type PackageRef = { name: string; system: PackageSystem };
 
 type PackageSystem = 'npm' | 'pypi';
-
-const VersionEntrySchema = z.object({ isDefault: z.boolean().optional(), versionKey: VersionKeySchema });
-const DepsDevPackageSchema = z.object({ versions: z.array(VersionEntrySchema) });
-
-const LinkSchema = z.object({ label: z.string(), url: z.string() });
-const RelatedProjectSchema = z.object({ projectKey: IdSchema, relationType: z.string() });
-const DepsDevVersionSchema = z.object({
-  links: z.array(LinkSchema).optional(),
-  relatedProjects: z.array(RelatedProjectSchema).optional(),
-});
-
-const NpmRegistrySchema = z.object({ homepage: z.string().optional(), repository: RepositorySchema.optional() });
-
-const PypiInfoSchema = z.object({ home_page: z.string().nullish(), project_urls: StringRecordSchema.nullish() });
-const PypiProjectSchema = z.object({ info: PypiInfoSchema });
 
 const RESOLVE_CONCURRENCY = 8;
 
@@ -82,7 +65,7 @@ const collectDepsNames = async (dir: string) => {
   return { localRepos, npm: externalNames('npm'), pypi: externalNames('pypi') };
 };
 
-const defaultVersion = (pkg: undefined | z.infer<typeof DepsDevPackageSchema>) =>
+const defaultVersion = (pkg: DepsDevPackage | undefined) =>
   pkg?.versions.find(entry => entry.isDefault === true)?.versionKey.version ?? pkg?.versions.at(-1)?.versionKey.version;
 
 const resolveViaDepsDev = async (system: PackageSystem, name: string) => {

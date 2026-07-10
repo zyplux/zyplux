@@ -1,58 +1,10 @@
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
-import * as z from 'zod';
+
+import type { PackageJson, PyProject } from './contracts';
 
 import { attemptAsync } from './result';
-import {
-  LooseRecordSchema,
-  StringArraySchema,
-  StringRecordSchema,
-  UnknownArrayRecordSchema,
-  UnknownArraySchema,
-} from './schema';
 import { $ } from './shell';
-
-const CatalogsSchema = z.record(z.string(), LooseRecordSchema);
-
-const RepositoryObjectSchema = z.object({ url: z.string().optional() });
-export const RepositorySchema = z.union([z.string(), RepositoryObjectSchema]);
-
-const WorkspacesObjectSchema = z.object({
-  catalog: LooseRecordSchema.optional(),
-  catalogs: CatalogsSchema.optional(),
-});
-const WorkspacesSchema = z.union([StringArraySchema, WorkspacesObjectSchema]);
-
-export const PackageJsonSchema = z.object({
-  catalog: LooseRecordSchema.optional(),
-  catalogs: CatalogsSchema.optional(),
-  dependencies: LooseRecordSchema.optional(),
-  devDependencies: LooseRecordSchema.optional(),
-  name: z.string().optional(),
-  optionalDependencies: LooseRecordSchema.optional(),
-  peerDependencies: LooseRecordSchema.optional(),
-  repository: RepositorySchema.optional(),
-  workspaces: WorkspacesSchema.optional(),
-});
-
-const ProjectSchema = z.object({
-  dependencies: UnknownArraySchema.optional(),
-  name: z.string().optional(),
-  'optional-dependencies': UnknownArrayRecordSchema.optional(),
-  urls: StringRecordSchema.optional(),
-});
-
-const UvSchema = z.object({ 'dev-dependencies': UnknownArraySchema.optional() });
-const ToolSchema = z.object({ uv: UvSchema.optional() });
-
-export const PyProjectSchema = z.object({
-  'dependency-groups': UnknownArrayRecordSchema.optional(),
-  project: ProjectSchema.optional(),
-  tool: ToolSchema.optional(),
-});
-
-export type PackageJson = z.infer<typeof PackageJsonSchema>;
-export type PyProject = z.infer<typeof PyProjectSchema>;
 
 const LOCAL_NPM_PROTOCOL = /^(file|link|portal|workspace):/;
 const PYTHON_REQUIREMENT_NAME = /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)/;

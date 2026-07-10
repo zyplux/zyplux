@@ -5,16 +5,15 @@ import {
   normalizePythonName,
   normalizeRepoUrl,
   npmDependencyNames,
-  PackageJsonSchema,
   parseJson,
   parseToml,
   poll,
-  PyProjectSchema,
   pythonRequirementNames,
   readTrimmed,
   repositoryUrl,
   tryParseToml,
 } from '@zyplux/util';
+import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
 
 export type Shell = typeof $;
 

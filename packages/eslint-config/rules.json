@@ -781,6 +781,7 @@
       }
     ],
     "@zyplux/prefer-destructured-params": [2],
+    "@zyplux/no-schemas-outside-contracts": [2],
     "curly": [0, "all"],
     "@stylistic/lines-around-comment": [0],
     "@stylistic/max-len": [0],
@@ -1140,7 +1141,7 @@
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.63.0",
     "perfectionist:eslint-plugin-perfectionist@5.10.0",
     "unicorn:eslint-plugin-unicorn@71.1.0",
-    "@zyplux:@zyplux/eslint-config@0.6.7"
+    "@zyplux:@zyplux/eslint-config@0.7.0"
   ],
   "language": "@/js"
 }
