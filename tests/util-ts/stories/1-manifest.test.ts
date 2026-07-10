@@ -1,25 +1,6 @@
-import { execFileSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-
 import { describe, expect, test } from '#fixtures';
 
 const byLocale = (left: string, right: string) => left.localeCompare(right);
-
-const NESTED_REPO_MANIFESTS = { 'service-a': 'package.json', 'service-b': 'pyproject.toml' } as const;
-
-const createNestedGitRepos = async (reposRoot: string) => {
-  const manifestPaths: string[] = [];
-  for (const [repoName, manifestName] of Object.entries(NESTED_REPO_MANIFESTS)) {
-    const repoDir = path.join(reposRoot, repoName);
-    await mkdir(repoDir, { recursive: true });
-    execFileSync('git', ['init', '--quiet'], { cwd: repoDir, stdio: 'ignore' });
-    await writeFile(path.join(repoDir, manifestName), '{}');
-    execFileSync('git', ['add', manifestName], { cwd: repoDir, stdio: 'ignore' });
-    manifestPaths.push(path.join(repoDir, manifestName));
-  }
-  return manifestPaths;
-};
 
 const packageJsonText = [
   '{',
@@ -152,6 +133,7 @@ describe('1.4 discovering manifests tracked by git', () => {
   });
 
   test('1.4.2 discovers manifests across nested repositories when the directory itself is outside any repository', async ({
+    createNestedGitRepos,
     findManifests,
     tempDir,
   }) => {

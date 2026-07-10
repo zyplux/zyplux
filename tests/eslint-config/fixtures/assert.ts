@@ -1,6 +1,18 @@
 import type { Linter } from 'eslint';
 
+import { ParserOptionsSchema } from '@zyplux/eslint-config/contracts';
 import { registerMatchers } from '@zyplux/tests-fixtures';
+import path from 'node:path';
+
+import type { ZypluxConfig } from './act';
+
+export const isAbsolutePath = (candidate: string) => path.isAbsolute(candidate);
+
+export const tsconfigRootDirs = (config: ZypluxConfig) =>
+  config.flatMap(entry => {
+    const parsed = ParserOptionsSchema.safeParse(entry.languageOptions?.['parserOptions']);
+    return parsed.success ? [parsed.data.tsconfigRootDir] : [];
+  });
 
 export const applySuggestion = (code: string, { suggestions }: Linter.LintMessage, index = 0) => {
   const suggestion = suggestions?.[index];

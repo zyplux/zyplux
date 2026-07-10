@@ -3,14 +3,16 @@ import type { CliRunner } from '@zyplux/tests-fixtures';
 import { cliTest } from '@zyplux/tests-fixtures';
 
 import type { Catalog } from './act';
-import type { LiveWorkspace, Registries, Release, Repo, SeededTargets } from './arrange';
+import type { InitRepo, LiveWorkspace, Registries, Release, Repo, SeededTargets, WriteArtifacts } from './arrange';
 
 import { createCatalog, createCz } from './act';
 import {
+  createInitRepo,
   createLiveWorkspace,
   createRegistries,
   createRelease,
   createRepo,
+  createWriteArtifacts,
   enterCwd,
   seedReleaseTargets,
 } from './arrange';
@@ -55,7 +57,10 @@ export const targetsTest = test.extend<{ targets: SeededTargets }>({
   ],
 });
 
-export const tempCwdTest = test.extend<{ tempCwd: undefined }>({
+export const tempCwdTest = test.extend<{ initRepo: InitRepo; tempCwd: undefined; writeArtifacts: WriteArtifacts }>({
+  initRepo: async ({ tempDir }, use) => {
+    await use(createInitRepo(tempDir));
+  },
   tempCwd: [
     async ({ tempDir }, use) => {
       const restoreCwd = enterCwd(tempDir.path);
@@ -67,6 +72,9 @@ export const tempCwdTest = test.extend<{ tempCwd: undefined }>({
     },
     { auto: true },
   ],
+  writeArtifacts: async ({ tempDir }, use) => {
+    await use(createWriteArtifacts(tempDir));
+  },
 });
 
 export type { TempDir } from '@zyplux/tests-fixtures';

@@ -14,11 +14,12 @@ import {
   printConfig,
   subjects,
 } from './act';
-import { applySuggestion } from './assert';
+import { applySuggestion, isAbsolutePath, tsconfigRootDirs } from './assert';
 
 type EslintFixtures = {
   applySuggestion: typeof applySuggestion;
   fixRule: ReturnType<typeof createFixRule>;
+  isAbsolutePath: typeof isAbsolutePath;
   lint: Awaited<ReturnType<typeof createMergedLint>>;
   lintRule: ReturnType<typeof createLintRule>;
   plugin: typeof subjects.plugin;
@@ -27,6 +28,7 @@ type EslintFixtures = {
   ruleId: string;
   ruleName: string;
   rulesSnapshot: PrintedConfig;
+  tsconfigRootDirs: typeof tsconfigRootDirs;
   zyplux: typeof subjects.zyplux;
 };
 
@@ -35,6 +37,7 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
   fixRule: async ({ ruleName }, use) => {
     await use(createFixRule(ruleName));
   },
+  isAbsolutePath: makeFixture(isAbsolutePath),
   lint: async ({ ruleId }, use) => {
     await use(await createMergedLint(ruleId));
   },
@@ -56,9 +59,11 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
   rulesSnapshot: async ({}, use) => {
     await use(loadRulesSnapshot());
   },
+  tsconfigRootDirs: makeFixture(tsconfigRootDirs),
   zyplux: makeFixture(subjects.zyplux),
 });
 
 export type { PrintedConfig, ZypluxConfig } from './act';
 export { lintMatchers } from './assert';
+export type { Linter } from 'eslint';
 export { describe, expect } from 'vitest';

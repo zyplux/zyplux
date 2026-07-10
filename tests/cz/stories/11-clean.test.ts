@@ -1,33 +1,9 @@
-import { execFileSync } from 'node:child_process';
-import path from 'node:path';
-
-import type { TempDir } from '#fixtures';
-
 import { describe, expect, tempCwdTest as test } from '#fixtures';
 
-const runGit = (cwd: string, ...args: string[]) => {
-  execFileSync('git', args, { cwd, stdio: 'ignore' });
-};
-
-const initRepo = async (tempDir: TempDir, relativeDir: string, extraIgnored: string[] = []) => {
-  const ignored = ['node_modules/', 'dist/', '.env', '.env.*', ...extraIgnored];
-  await tempDir.write(path.join(relativeDir, '.gitignore'), `${ignored.join('\n')}\n`);
-  const repoPath = path.join(tempDir.path, relativeDir);
-  runGit(repoPath, 'init', '-q');
-  runGit(repoPath, 'add', '.gitignore');
-  runGit(repoPath, '-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-qm', 'init');
-};
-
-const writeArtifacts = async (tempDir: TempDir, relativeDir: string) => {
-  await tempDir.write(path.join(relativeDir, 'node_modules/pkg/index.js'), 'x');
-  await tempDir.write(path.join(relativeDir, 'dist/out.js'), 'x');
-  await tempDir.write(path.join(relativeDir, '.env'), 'SECRET=1');
-};
-
 describe('11.1 cleaning a single repo', () => {
-  test('11.1.1 removes gitignored build artifacts and caches', async ({ cz, tempDir }) => {
-    await initRepo(tempDir, '.');
-    await writeArtifacts(tempDir, '.');
+  test('11.1.1 removes gitignored build artifacts and caches', async ({ cz, initRepo, tempDir, writeArtifacts }) => {
+    await initRepo('.');
+    await writeArtifacts('.');
 
     await cz.run('clean');
 
@@ -35,9 +11,14 @@ describe('11.1 cleaning a single repo', () => {
     expect(tempDir.exists('dist')).toBe(false);
   });
 
-  test('11.1.2 protects dotenv files by default even though they are gitignored', async ({ cz, tempDir }) => {
-    await initRepo(tempDir, '.');
-    await writeArtifacts(tempDir, '.');
+  test('11.1.2 protects dotenv files by default even though they are gitignored', async ({
+    cz,
+    initRepo,
+    tempDir,
+    writeArtifacts,
+  }) => {
+    await initRepo('.');
+    await writeArtifacts('.');
     await tempDir.write('.env.local', 'SECRET=2');
 
     await cz.run('clean');
@@ -47,9 +28,15 @@ describe('11.1 cleaning a single repo', () => {
     expect(tempDir.exists('node_modules')).toBe(false);
   });
 
-  test('11.1.3 dry-run reports what would be removed without deleting anything', async ({ cz, logs, tempDir }) => {
-    await initRepo(tempDir, '.');
-    await writeArtifacts(tempDir, '.');
+  test('11.1.3 dry-run reports what would be removed without deleting anything', async ({
+    cz,
+    initRepo,
+    logs,
+    tempDir,
+    writeArtifacts,
+  }) => {
+    await initRepo('.');
+    await writeArtifacts('.');
 
     await cz.run('clean', '--dry-run');
 
@@ -57,8 +44,8 @@ describe('11.1 cleaning a single repo', () => {
     expect(logs).toHaveLogged('  Would remove node_modules/');
   });
 
-  test('11.1.4 reports nothing to clean when no gitignored artifacts exist', async ({ cz, logs, tempDir }) => {
-    await initRepo(tempDir, '.');
+  test('11.1.4 reports nothing to clean when no gitignored artifacts exist', async ({ cz, initRepo, logs }) => {
+    await initRepo('.');
 
     await cz.run('clean');
 
@@ -67,11 +54,16 @@ describe('11.1 cleaning a single repo', () => {
 });
 
 describe('11.2 discovering every repo under a non-repo directory', () => {
-  test('11.2.1 cleans every nested git repo found under the current directory', async ({ cz, tempDir }) => {
-    await initRepo(tempDir, 'repo-a');
-    await writeArtifacts(tempDir, 'repo-a');
-    await initRepo(tempDir, 'repo-b');
-    await writeArtifacts(tempDir, 'repo-b');
+  test('11.2.1 cleans every nested git repo found under the current directory', async ({
+    cz,
+    initRepo,
+    tempDir,
+    writeArtifacts,
+  }) => {
+    await initRepo('repo-a');
+    await writeArtifacts('repo-a');
+    await initRepo('repo-b');
+    await writeArtifacts('repo-b');
 
     await cz.run('clean');
 
@@ -79,9 +71,9 @@ describe('11.2 discovering every repo under a non-repo directory', () => {
     expect(tempDir.exists('repo-b/node_modules')).toBe(false);
   });
 
-  test('11.2.2 discovers repos in dot-prefixed directories too', async ({ cz, tempDir }) => {
-    await initRepo(tempDir, '.github');
-    await writeArtifacts(tempDir, '.github');
+  test('11.2.2 discovers repos in dot-prefixed directories too', async ({ cz, initRepo, tempDir, writeArtifacts }) => {
+    await initRepo('.github');
+    await writeArtifacts('.github');
 
     await cz.run('clean');
 
@@ -90,11 +82,11 @@ describe('11.2 discovering every repo under a non-repo directory', () => {
 });
 
 describe('11.3 excluding paths', () => {
-  test('11.3.1 skips a whole repo named by --exclude', async ({ cz, logs, tempDir }) => {
-    await initRepo(tempDir, 'repo-a');
-    await writeArtifacts(tempDir, 'repo-a');
-    await initRepo(tempDir, 'repo-b');
-    await writeArtifacts(tempDir, 'repo-b');
+  test('11.3.1 skips a whole repo named by --exclude', async ({ cz, initRepo, logs, tempDir, writeArtifacts }) => {
+    await initRepo('repo-a');
+    await writeArtifacts('repo-a');
+    await initRepo('repo-b');
+    await writeArtifacts('repo-b');
 
     await cz.run('clean', '--exclude', 'repo-b');
 
@@ -103,9 +95,14 @@ describe('11.3 excluding paths', () => {
     expect(logs).toHaveLogged('repo-b: skipped (--exclude)');
   });
 
-  test('11.3.2 protects a subfolder named by --exclude within a cleaned repo', async ({ cz, tempDir }) => {
-    await initRepo(tempDir, '.', ['vendor-cache/']);
-    await writeArtifacts(tempDir, '.');
+  test('11.3.2 protects a subfolder named by --exclude within a cleaned repo', async ({
+    cz,
+    initRepo,
+    tempDir,
+    writeArtifacts,
+  }) => {
+    await initRepo('.', ['vendor-cache/']);
+    await writeArtifacts('.');
     await tempDir.write('vendor-cache/keep.txt', 'keep');
 
     await cz.run('clean', '--exclude', 'vendor-cache');
@@ -116,13 +113,15 @@ describe('11.3 excluding paths', () => {
 
   test('11.3.3 does not let a skipped repo name protect a same-named ignored subfolder elsewhere', async ({
     cz,
+    initRepo,
     tempDir,
+    writeArtifacts,
   }) => {
-    await initRepo(tempDir, 'repo-a', ['repo-b/']);
-    await writeArtifacts(tempDir, 'repo-a');
+    await initRepo('repo-a', ['repo-b/']);
+    await writeArtifacts('repo-a');
     await tempDir.write('repo-a/repo-b/keep.txt', 'keep');
-    await initRepo(tempDir, 'repo-b');
-    await writeArtifacts(tempDir, 'repo-b');
+    await initRepo('repo-b');
+    await writeArtifacts('repo-b');
 
     await cz.run('clean', '--exclude', 'repo-b');
 

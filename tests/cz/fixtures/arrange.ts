@@ -3,6 +3,7 @@ import type { FetchFake, ShellFake, TempDir } from '@zyplux/tests-fixtures';
 import { ManifestSchema } from '@zyplux/cz/contracts';
 import { notFoundResponse, okResponse } from '@zyplux/tests-fixtures';
 import { parseToml } from '@zyplux/util';
+import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -258,3 +259,29 @@ export const enterCwd = (dir: string) => {
     process.chdir(entryCwd);
   };
 };
+
+export type InitRepo = (relativeDir: string, extraIgnored?: string[]) => Promise<void>;
+export type WriteArtifacts = (relativeDir: string) => Promise<void>;
+
+const runGit = (cwd: string, ...args: string[]) => {
+  execFileSync('git', args, { cwd, stdio: 'ignore' });
+};
+
+export const createInitRepo =
+  (tempDir: TempDir): InitRepo =>
+  async (relativeDir, extraIgnored = []) => {
+    const ignored = ['node_modules/', 'dist/', '.env', '.env.*', ...extraIgnored];
+    await tempDir.write(path.join(relativeDir, '.gitignore'), `${ignored.join('\n')}\n`);
+    const repoPath = path.join(tempDir.path, relativeDir);
+    runGit(repoPath, 'init', '-q');
+    runGit(repoPath, 'add', '.gitignore');
+    runGit(repoPath, '-c', 'user.email=test@example.com', '-c', 'user.name=Test', 'commit', '-qm', 'init');
+  };
+
+export const createWriteArtifacts =
+  (tempDir: TempDir): WriteArtifacts =>
+  async relativeDir => {
+    await tempDir.write(path.join(relativeDir, 'node_modules/pkg/index.js'), 'x');
+    await tempDir.write(path.join(relativeDir, 'dist/out.js'), 'x');
+    await tempDir.write(path.join(relativeDir, '.env'), 'SECRET=1');
+  };

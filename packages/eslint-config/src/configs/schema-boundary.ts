@@ -11,7 +11,7 @@ export const contractsRules: ConfigWithExtends = {
 };
 
 export const schemaBoundaryRules: ConfigWithExtends = {
-  files: ['**/src/**/*.{ts,tsx}'],
+  files: ['**/*.{ts,tsx}'],
   ignores: ['**/src/contracts.ts'],
   plugins: { '@zyplux': plugin },
   rules: {

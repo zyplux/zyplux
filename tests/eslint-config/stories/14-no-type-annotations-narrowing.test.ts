@@ -1,4 +1,4 @@
-import type { Linter } from 'eslint';
+import type { Linter } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
 

@@ -23,10 +23,15 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./contracts": {
+      "types": "./src/contracts.ts",
+      "default": "./src/contracts.ts"
+    },
     "./package.json": "./package.json"
   },
   "imports": {
     "#scripts/print-config": "./scripts/print-config.ts",
+    "#contracts": "./src/contracts.ts",
     "#create-rule": "./src/create-rule.ts",
     "#plugin": "./src/plugin.ts",
     "#package.json": "./package.json",

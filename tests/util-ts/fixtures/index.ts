@@ -1,14 +1,20 @@
 import { libraryTest, makeFixture } from '@zyplux/tests-fixtures';
+import { ZodError } from 'zod';
 
 import type { Subjects } from './act';
 
 import { subjects } from './act';
-import { workspaceRoot } from './arrange';
+import { createNestedGitRepos, workspaceRoot } from './arrange';
 
-type ArrangeFixtures = { workspaceRoot: string };
+type ArrangeFixtures = {
+  createNestedGitRepos: typeof createNestedGitRepos;
+  workspaceRoot: string;
+  zodError: typeof ZodError;
+};
 
 export const test = libraryTest.extend<ArrangeFixtures & Subjects>({
   $: makeFixture(subjects.$),
+  createNestedGitRepos: makeFixture(createNestedGitRepos),
   findManifests: makeFixture(subjects.findManifests),
   mapWithConcurrency: makeFixture(subjects.mapWithConcurrency),
   normalizePythonName: makeFixture(subjects.normalizePythonName),
@@ -24,6 +30,7 @@ export const test = libraryTest.extend<ArrangeFixtures & Subjects>({
   repositoryUrl: makeFixture(subjects.repositoryUrl),
   tryParseToml: makeFixture(subjects.tryParseToml),
   workspaceRoot,
+  zodError: makeFixture(ZodError),
 });
 
 export type { Shell } from './act';

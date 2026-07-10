@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import type { PrintedConfig } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
@@ -27,8 +25,8 @@ describe('2. Dumping the fully resolved eslint config to a committed rules snaps
     test(
       '2.2.1 replaces the absolute tsconfig root path with a stable placeholder',
       { timeout: printConfigTimeoutMs },
-      ({ resolvedConfig, rulesSnapshot }) => {
-        expect(path.isAbsolute(resolvedConfig.languageOptions.parserOptions.tsconfigRootDir)).toBe(true);
+      ({ isAbsolutePath, resolvedConfig, rulesSnapshot }) => {
+        expect(isAbsolutePath(resolvedConfig.languageOptions.parserOptions.tsconfigRootDir)).toBe(true);
         expect(rulesSnapshot.languageOptions.parserOptions.tsconfigRootDir).toBe(rootDirPlaceholder);
       },
     );

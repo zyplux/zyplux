@@ -1,16 +1,6 @@
-import * as z from 'zod';
-
 import type { ZypluxConfig as Config } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';
-
-const ParserOptionsSchema = z.looseObject({ tsconfigRootDir: z.string() });
-
-const tsconfigRootDirs = (config: Config) =>
-  config.flatMap(entry => {
-    const parsed = ParserOptionsSchema.safeParse(entry.languageOptions?.['parserOptions']);
-    return parsed.success ? [parsed.data.tsconfigRootDir] : [];
-  });
 
 const hasReactSettings = (config: Config) =>
   config.some(entry => entry.settings !== undefined && 'react' in entry.settings);
@@ -136,7 +126,7 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
       expect(entry?.ignores).toContain('**/dist');
     });
 
-    test('3.6.2 forwards the tsconfig root dir to the typescript parser options', ({ zyplux }) => {
+    test('3.6.2 forwards the tsconfig root dir to the typescript parser options', ({ tsconfigRootDirs, zyplux }) => {
       expect(tsconfigRootDirs(zyplux({ tsconfigRootDir: '/repo/root' }))).toEqual(['/repo/root']);
     });
   });

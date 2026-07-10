@@ -20,6 +20,11 @@ describe('16.1 keeping schema construction in contracts', () => {
     const code = ["import * as z from 'zod';", 'const TagsSchema = z.array(z.string()).optional();'].join('\n');
     expect(lintRule(code)).toReport('zodValueImport', 'schemaDeclaration');
   });
+
+  test('16.1.4 flags named bindings that expose schema factories', ({ lintRule }) => {
+    expect(lintRule("import { z } from 'zod';")).toReport('zodValueImport');
+    expect(lintRule("import { object } from 'zod';")).toReport('zodValueImport');
+  });
 });
 
 describe('16.2 allowing schema use outside contracts', () => {
@@ -45,14 +50,20 @@ describe('16.2 allowing schema use outside contracts', () => {
     ].join('\n');
     expect(lintRule(inferred)).toReportNothing();
   });
+
+  test('16.2.3 allows named zod values that cannot build schemas', ({ lintRule }) => {
+    const code = [
+      "import { ZodError } from 'zod';",
+      'export const describeSchemaError = (error: unknown) => (error instanceof ZodError ? error.message : undefined);',
+    ].join('\n');
+    expect(lintRule(code)).toReportNothing();
+  });
 });
 
-describe('16.3 scoping the rule to source files in the shipped config', () => {
-  test('16.3.1 enables the rule for source files while exempting the contracts module', ({ zyplux }) => {
+describe('16.3 scoping the rule to every typescript file in the shipped config', () => {
+  test('16.3.1 enables the rule for every typescript file while exempting the contracts modules', ({ zyplux }) => {
     const config = zyplux();
     const entries = config.filter(entry => entry.rules?.['@zyplux/no-schemas-outside-contracts'] !== undefined);
-    expect(entries.map(entry => [entry.files, entry.ignores])).toEqual([
-      [['**/src/**/*.{ts,tsx}'], ['**/src/contracts.ts']],
-    ]);
+    expect(entries.map(entry => [entry.files, entry.ignores])).toEqual([[['**/*.{ts,tsx}'], ['**/src/contracts.ts']]]);
   });
 });
