@@ -2,105 +2,125 @@ import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleId: '@typescript-eslint/consistent-type-definitions', ruleName: 'type-over-interface' });
 
+type FixCase = [shape: string, code: string, fixed: string, reportId?: string];
+type FixFixtures = { fixRule: (code: string) => string; lintRule: (code: string) => unknown };
+type LintFixtures = { lintRule: (code: string) => unknown };
+type ReportNothingCase = [shape: string, code: string];
+
+const runFixCase = ([, code, fixed, reportId]: FixCase, { fixRule, lintRule }: FixFixtures) => {
+  if (reportId !== undefined) expect(lintRule(code)).toReport(reportId);
+  expect(fixRule(code)).toBe(fixed);
+};
+
+const runReportNothingCase = ([, code]: ReportNothingCase, { lintRule }: LintFixtures) => {
+  expect(lintRule(code)).toReportNothing();
+};
+
 describe('18.1 rewriting interfaces into type aliases', () => {
-  test('18.1.1 fixes a plain interface into an equivalent type alias, normalizing whitespace', ({
-    fixRule,
-    lintRule,
-  }) => {
-    expect(lintRule('interface User { id: string }')).toReport('typeOverInterface');
-    expect(fixRule('interface User { id: string }')).toBe('type User = { id: string }');
-    expect(fixRule('interface Squeezed{ id: string }')).toBe('type Squeezed = { id: string }');
-    expect(fixRule('interface Stretched            { id: string }')).toBe('type Stretched = { id: string }');
-  });
-
-  test('18.1.2 fixes extends clauses into intersections and keeps type parameters', ({ fixRule }) => {
-    expect(fixRule('type A = { a: string };\ninterface B extends A { b: string }')).toBe(
+  const fixCases: FixCase[] = [
+    [
+      '18.1.1 fixes a plain interface into an equivalent type alias',
+      'interface User { id: string }',
+      'type User = { id: string }',
+      'typeOverInterface',
+    ],
+    [
+      '18.1.2 normalizes squeezed whitespace before the brace',
+      'interface Squeezed{ id: string }',
+      'type Squeezed = { id: string }',
+    ],
+    [
+      '18.1.3 normalizes stretched whitespace before the brace',
+      'interface Stretched            { id: string }',
+      'type Stretched = { id: string }',
+    ],
+    [
+      '18.1.4 fixes an extends clause into an intersection',
+      'type A = { a: string };\ninterface B extends A { b: string }',
       'type A = { a: string };\ntype B = { b: string } & A',
-    );
-    expect(fixRule('interface Box<T> { value: T }')).toBe('type Box<T> = { value: T }');
-    expect(fixRule('interface Pair extends Left, Right { id: string }')).toBe(
+    ],
+    [
+      '18.1.5 keeps a type parameter on the fixed alias',
+      'interface Box<T> { value: T }',
+      'type Box<T> = { value: T }',
+    ],
+    [
+      '18.1.6 fixes multiple extends clauses into an intersection',
+      'interface Pair extends Left, Right { id: string }',
       'type Pair = { id: string } & Left & Right',
-    );
-    expect(fixRule('interface Wrap extends Box<T1>, Cache<T2> { id: string }')).toBe(
+    ],
+    [
+      '18.1.7 keeps type arguments on extended intersection members',
+      'interface Wrap extends Box<T1>, Cache<T2> { id: string }',
       'type Wrap = { id: string } & Box<T1> & Cache<T2>',
-    );
-  });
-
-  test('18.1.3 fixes a default-exported interface into a named type alias with a default export', ({ fixRule }) => {
-    expect(fixRule('export default interface Props { id: string }')).toBe(
+    ],
+    [
+      '18.1.8 fixes a default-exported interface into a named type alias with a default export',
+      'export default interface Props { id: string }',
       'type Props = { id: string }\nexport default Props',
-    );
-  });
-
-  test('18.1.4 leaves a type alias alone, never preferring interfaces', ({ lintRule }) => {
-    expect(lintRule('type User = { id: string };')).toReportNothing();
-    expect(lintRule('type Pair = { id: string } & Left & Right;')).toReportNothing();
-  });
-
-  test('18.1.5 fixes an interface behind export and declare modifiers, keeping them in place', ({ fixRule }) => {
-    expect(fixRule('export declare interface Env { region: string }')).toBe(
+    ],
+    [
+      '18.1.9 fixes an interface behind export and declare modifiers, keeping them in place',
+      'export declare interface Env { region: string }',
       'export declare type Env = { region: string }',
-    );
-  });
+    ],
+  ];
+
+  test.for(fixCases)('%s', runFixCase);
+
+  test.for<ReportNothingCase>([
+    ['18.1.10 leaves a plain type alias alone', 'type User = { id: string };'],
+    ['18.1.11 leaves a type alias with an intersection alone', 'type Pair = { id: string } & Left & Right;'],
+  ])('%s', runReportNothingCase);
 });
 
 describe('18.2 exempting declaration-merging interfaces', () => {
-  test('18.2.1 allows interfaces inside declare module and declare global blocks', ({ lintRule }) => {
-    const moduleAugmentation = [
-      "declare module 'vitest' {",
-      '  interface Matchers<T> {',
-      '    toBeFlagged: () => T;',
-      '  }',
-      '}',
-      'export {};',
-    ].join('\n');
-    expect(lintRule(moduleAugmentation)).toReportNothing();
-    const globalAugmentation = [
-      'declare global {',
-      '  interface Window {',
-      '    appVersion: string;',
-      '  }',
-      '}',
-      'export {};',
-    ].join('\n');
-    expect(lintRule(globalAugmentation)).toReportNothing();
-  });
-
-  test('18.2.2 flags and fixes an interface inside a plain namespace, which does not merge upstream', ({
-    fixRule,
-    lintRule,
-  }) => {
-    expect(lintRule('namespace Config { interface Options { id: string } }')).toReport('typeOverInterface');
-    expect(fixRule('namespace Config { interface Options { id: string } }')).toBe(
+  const fixCases: FixCase[] = [
+    [
+      '18.2.1 flags and fixes an interface inside a plain namespace, which does not merge upstream',
+      'namespace Config { interface Options { id: string } }',
       'namespace Config { type Options = { id: string } }',
-    );
-  });
+      'typeOverInterface',
+    ],
+    [
+      '18.2.2 flags and fixes an interface inside a global block that lacks the declare keyword',
+      'global { interface Flags { id: string } }',
+      'global { type Flags = { id: string } }',
+      'typeOverInterface',
+    ],
+  ];
 
-  test('18.2.3 allows interfaces inside a declare namespace, whose ambient declarations merge', ({ lintRule }) => {
-    expect(lintRule('declare namespace Stats { interface Entry { id: string } }')).toReportNothing();
-  });
+  test.for(fixCases)('%s', runFixCase);
 
-  test('18.2.4 allows an interface nested in a namespace inside declare global', ({ lintRule }) => {
-    const nestedAugmentation = [
-      'declare global {',
-      '  namespace Stats {',
-      '    interface Entry {',
-      '      id: string;',
-      '    }',
-      '  }',
-      '}',
-      'export {};',
-    ].join('\n');
-    expect(lintRule(nestedAugmentation)).toReportNothing();
-  });
-
-  test('18.2.5 flags and fixes an interface inside a global block that lacks the declare keyword', ({
-    fixRule,
-    lintRule,
-  }) => {
-    expect(lintRule('global { interface Flags { id: string } }')).toReport('typeOverInterface');
-    expect(fixRule('global { interface Flags { id: string } }')).toBe('global { type Flags = { id: string } }');
-  });
+  test.for<ReportNothingCase>([
+    [
+      '18.2.3 allows an interface inside a declare module block',
+      ["declare module 'vitest' {", '  interface Matchers<T> {', '    toBeFlagged: () => T;', '  }', '}', 'export {};'].join(
+        '\n',
+      ),
+    ],
+    [
+      '18.2.4 allows an interface inside a declare global block',
+      ['declare global {', '  interface Window {', '    appVersion: string;', '  }', '}', 'export {};'].join('\n'),
+    ],
+    [
+      '18.2.5 allows interfaces inside a declare namespace, whose ambient declarations merge',
+      'declare namespace Stats { interface Entry { id: string } }',
+    ],
+    [
+      '18.2.6 allows an interface nested in a namespace inside declare global',
+      [
+        'declare global {',
+        '  namespace Stats {',
+        '    interface Entry {',
+        '      id: string;',
+        '    }',
+        '  }',
+        '}',
+        'export {};',
+      ].join('\n'),
+    ],
+  ])('%s', runReportNothingCase);
 });
 
 describe('18.3 replacing the upstream preference in the shipped config', () => {
