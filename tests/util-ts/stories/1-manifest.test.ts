@@ -96,12 +96,12 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
 
   const normalizeCases: NormalizeCase[] = [
     [
-      'normalizes an underscored requirement name into its pep 503 canonical form',
+      '1.2.3 normalizes an underscored requirement name into its pep 503 canonical form',
       'Flask_SQLAlchemy',
       'flask-sqlalchemy',
     ],
-    ['normalizes a dotted requirement name with a version specifier', 'ruamel.yaml >= 0.18', 'ruamel-yaml'],
-    ['returns undefined when no package name can be parsed from a requirement', '\t \n', undefined],
+    ['1.2.4 normalizes a dotted requirement name with a version specifier', 'ruamel.yaml >= 0.18', 'ruamel-yaml'],
+    ['1.2.5 returns undefined when no package name can be parsed from a requirement', '\t \n', undefined],
   ];
 
   test.for(normalizeCases)('%s', ([, requirement, canonical], { normalizePythonName }) => {
@@ -111,13 +111,17 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
 
 describe("1.3 resolving a manifest's repository url", () => {
   test.for([
-    ['reads the url from a string repository field', 'https://github.com/owner/repo', 'https://github.com/owner/repo'],
     [
-      'reads the url from an object repository field',
+      '1.3.1 reads the url from a string repository field',
+      'https://github.com/owner/repo',
+      'https://github.com/owner/repo',
+    ],
+    [
+      '1.3.2 reads the url from an object repository field',
       { url: 'git+https://github.com/owner/repo.git' },
       'git+https://github.com/owner/repo.git',
     ],
-    ['returns undefined when no repository is declared', undefined, undefined],
+    ['1.3.3 returns undefined when no repository is declared', undefined, undefined],
   ] as const)('%s', ([, repository, expected], { repositoryUrl }) => {
     expect(repositoryUrl(repository)).toBe(expected);
   });

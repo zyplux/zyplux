@@ -14,16 +14,16 @@ type PollCase = [
 ];
 
 const pollCases: PollCase[] = [
-  ['returns the first defined result without retrying', ATTEMPTS_WITH_ROOM_TO_SPARE, 1, 1, 'found'],
+  ['5.1.1 returns the first defined result without retrying', ATTEMPTS_WITH_ROOM_TO_SPARE, 1, 1, 'found'],
   [
-    'retries after undefined results until the probe returns a value',
+    '5.1.2 retries after undefined results until the probe returns a value',
     ATTEMPTS_WITH_ROOM_TO_SPARE,
     RESOLVES_ON_THIRD_ATTEMPT,
     RESOLVES_ON_THIRD_ATTEMPT,
     'found',
   ],
   [
-    'returns undefined once every attempt is exhausted',
+    '5.1.3 returns undefined once every attempt is exhausted',
     ATTEMPTS_UNTIL_EXHAUSTED,
     Infinity,
     ATTEMPTS_UNTIL_EXHAUSTED,

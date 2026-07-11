@@ -12,11 +12,11 @@
 
 ## 1.2 resolving a dependency name to its source repository
 
-- resolves a package to its source repo via deps dev
-- falls back to the npm registry when deps dev has no source repo
-- falls back to pypi project urls when deps dev has no source repo
-- reports the dependency as unresolved when no source repo is found anywhere
-- falls back to a deps dev links entry when there is no related project
+1. 1.2.1 resolves a package to its source repo via deps dev
+2. 1.2.2 falls back to the npm registry when deps dev has no source repo
+3. 1.2.3 falls back to pypi project urls when deps dev has no source repo
+4. 1.2.4 reports the dependency as unresolved when no source repo is found anywhere
+5. 1.2.5 falls back to a deps dev links entry when there is no related project
 
 ## 1.3 collecting the external repos a workspace depends on
 
