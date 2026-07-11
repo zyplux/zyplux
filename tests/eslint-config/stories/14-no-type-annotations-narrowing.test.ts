@@ -7,13 +7,17 @@ test.override({ ruleName: 'no-type-annotations' });
 const narrowingOnly = { options: [{ narrowing: true, redundant: false }] };
 
 type ApplySuggestion = (code: string, message: Linter.LintMessage) => string;
+type LintFixtures = { lintRule: RuleLint };
+type MessageId = 'narrowReturnType' | 'narrowVarType';
+type NarrowingCase = [shape: string, code: string, messageId: MessageId, unannotated: string];
+type NarrowingFixtures = { applySuggestion: ApplySuggestion; lintRule: RuleLint };
 type RuleLint = (code: string, lintOptions?: { options?: unknown[] }) => Linter.LintMessage[];
 
 const expectRemovableNarrowing = (
   lintRule: RuleLint,
   applySuggestion: ApplySuggestion,
   code: string,
-  messageId: 'narrowReturnType' | 'narrowVarType',
+  messageId: MessageId,
   unannotated: string,
 ) => {
   const messages = lintRule(code, narrowingOnly);
@@ -23,375 +27,271 @@ const expectRemovableNarrowing = (
   expect(applySuggestion(code, message)).toBe(unannotated);
 };
 
+const runNarrowingCase = ([, code, messageId, unannotated]: NarrowingCase, { applySuggestion, lintRule }: NarrowingFixtures) => {
+  expectRemovableNarrowing(lintRule, applySuggestion, code, messageId, unannotated);
+};
+
 describe('14.1 flagging variable annotations that hide members of their initializer', () => {
-  test('14.1.1 flags a variable type hiding one or several members, suggesting removal', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+  const cases: NarrowingCase[] = [
+    [
+      '14.1.1 flags a variable type hiding one member, suggesting removal',
       'declare const wide: { a: number; b: number }; const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; const slim = wide;',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.2 flags a variable type hiding several members, suggesting removal',
       'declare const wide: { a: number; b: number; c: number }; const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number; c: number }; const slim = wide;',
-    );
-  });
-
-  test('14.1.2 flags hiding a member declared on a named interface, in source or annotation position', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.3 flags hiding a member declared on a named interface in source position',
       'interface Wide { a: number; b: number } declare const w: Wide; const slim: { a: number } = w;',
       'narrowVarType',
       'interface Wide { a: number; b: number } declare const w: Wide; const slim = w;',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.4 flags hiding a member declared on a named interface in annotation position',
       'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s: Slim = w;',
       'narrowVarType',
       'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s = w;',
-    );
-  });
-
-  test('14.1.3 flags call-expression and member-access initializers', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.5 flags a call-expression initializer',
       'declare function make(): { a: number; b: number }; const slim: { a: number } = make();',
       'narrowVarType',
       'declare function make(): { a: number; b: number }; const slim = make();',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.6 flags a member-access initializer',
       'declare const box: { inner: { a: number; b: number } }; const slim: { a: number } = box.inner;',
       'narrowVarType',
       'declare const box: { inner: { a: number; b: number } }; const slim = box.inner;',
-    );
-  });
-
-  test('14.1.4 flags a never-reassigned let, which is effectively const', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.7 flags a never-reassigned let, which is effectively const',
       'declare const wide: { a: number; b: number }; let slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; let slim = wide;',
-    );
-  });
-
-  test('14.1.5 flags upcasting a class instance to a subset of its members', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.8 flags upcasting a class instance to a subset of its members',
       'class Cat { move() {} meow() {} } declare const c: Cat; const a: { move(): void } = c;',
       'narrowVarType',
       'class Cat { move() {} meow() {} } declare const c: Cat; const a = c;',
-    );
-  });
-
-  test('14.1.6 flags readonly fictions over fresh mutable collections', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.9 flags a readonly fiction over a fresh mutable Set',
       'const seen: ReadonlySet<string> = new Set(["a"]);',
       'narrowVarType',
       'const seen = new Set(["a"]);',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.10 flags a readonly fiction over a mutable array',
       'declare const arr: number[]; const ro: readonly number[] = arr;',
       'narrowVarType',
       'declare const arr: number[]; const ro = arr;',
-    );
-  });
-
-  test('14.1.7 flags a bare function-type annotation hiding a property of the callable value', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.1.11 flags a bare function-type annotation hiding a property of the callable value',
       'declare const wide: { (x: number): void; extra: number }; const f: (x: number) => void = wide;',
       'narrowVarType',
       'declare const wide: { (x: number): void; extra: number }; const f = wide;',
-    );
-  });
+    ],
+  ];
+
+  test.for(cases)('%s', runNarrowingCase);
 });
 
 describe('14.2 flagging return annotations that hide members of the returned value', () => {
-  test('14.2.1 flags concise and block-bodied arrow return types', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+  const cases: NarrowingCase[] = [
+    [
+      '14.2.1 flags a concise arrow return type',
       'declare const wide: { a: number; b: number }; const get = (): { a: number } => wide;',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; const get = () => wide;',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.2 flags a block-bodied arrow return type',
       'declare const wide: { a: number; b: number }; const f = (): { a: number } => { return wide; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; const f = () => { return wide; };',
-    );
-  });
-
-  test('14.2.2 flags function declaration and method return types', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.3 flags a function declaration return type',
       'declare const wide: { a: number; b: number }; function f(): { a: number } { return wide; }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; function f() { return wide; }',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.4 flags a method return type',
       'class A { m(w: { a: number; b: number }): { a: number } { return w; } }',
       'narrowReturnType',
       'class A { m(w: { a: number; b: number }) { return w; } }',
-    );
-  });
-
-  test('14.2.3 flags a member common to every return that the return type hides', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.5 flags a member common to every return that the return type hides',
       'declare const x: { a: number; b: number }; declare const y: { a: number; b: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
       'narrowReturnType',
       'declare const x: { a: number; b: number }; declare const y: { a: number; b: number }; const f = (cond: boolean) => { if (cond) return x; return y; };',
-    );
-  });
-
-  test('14.2.4 does not mistake the returns of a nested function for the outer return', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.6 does not mistake the returns of a nested function for the outer return',
       'declare const wide: { a: number; b: number }; declare const partial: { a: number }; const f = (): { a: number } => { const g = () => { return partial; }; return wide; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; declare const partial: { a: number }; const f = () => { const g = () => { return partial; }; return wide; };',
-    );
-  });
-
-  test('14.2.5 flags a nested arrow inside an exported boundary, which is still internal', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.7 flags a nested arrow inside an exported boundary, which is still internal',
       'declare const wide: { a: number; b: number }; export const outer = () => { const g = (): { a: number } => wide; return g; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export const outer = () => { const g = () => wide; return g; };',
-    );
-  });
-
-  test('14.2.6 flags a function-type return annotation hiding a property of the returned callable value', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.2.8 flags a function-type return annotation hiding a property of the returned callable value',
       'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = (): Fn => wide;',
       'narrowReturnType',
       'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = () => wide;',
-    );
-  });
+    ],
+  ];
+
+  test.for(cases)('%s', runNarrowingCase);
 });
 
 describe('14.3 flagging module boundaries all the same', () => {
-  test('14.3.1 flags exported arrows, variables, and re-exported variables', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+  const cases: NarrowingCase[] = [
+    [
+      '14.3.1 flags an exported arrow return type',
       'declare const wide: { a: number; b: number }; export const get = (): { a: number } => wide;',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export const get = () => wide;',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.3.2 flags an exported variable annotation',
       'declare const wide: { a: number; b: number }; export const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; export const slim = wide;',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.3.3 flags a re-exported variable annotation',
       'declare const wide: { a: number; b: number }; const slim: { a: number } = wide;\nexport { slim };',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; const slim = wide;\nexport { slim };',
-    );
-  });
-
-  test('14.3.2 flags exported function declarations and methods of exported classes', ({
-    applySuggestion,
-    lintRule,
-  }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.3.4 flags an exported function declaration return type',
       'declare const wide: { a: number; b: number }; export function f(): { a: number } { return wide; }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export function f() { return wide; }',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.3.5 flags a method return type of an exported class',
       'declare const wide: { a: number; b: number }; export class C { m(): { a: number } { return wide; } }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export class C { m() { return wide; } }',
-    );
-  });
+    ],
+  ];
+
+  test.for(cases)('%s', runNarrowingCase);
 });
 
 describe('14.4 flagging class field annotations that hide members of their initializer', () => {
-  test('14.4.1 flags mutable, readonly, and exported-class fields alike', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+  const cases: NarrowingCase[] = [
+    [
+      '14.4.1 flags a mutable class field',
       'declare const wide: { a: number; b: number }; class C { field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; class C { field = wide; }',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.4.2 flags a readonly class field',
       'declare const wide: { a: number; b: number }; class C { readonly field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; class C { readonly field = wide; }',
-    );
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.4.3 flags a field of an exported class',
       'declare const wide: { a: number; b: number }; export class C { field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; export class C { field = wide; }',
-    );
-  });
-
-  test('14.4.2 flags a class field typed as ReadonlySet over a fresh mutable Set', ({ applySuggestion, lintRule }) => {
-    expectRemovableNarrowing(
-      lintRule,
-      applySuggestion,
+    ],
+    [
+      '14.4.4 flags a class field typed as ReadonlySet over a fresh mutable Set',
       'class C { seen: ReadonlySet<string> = new Set(["a"]); }',
       'narrowVarType',
       'class C { seen = new Set(["a"]); }',
-    );
-  });
+    ],
+  ];
+
+  test.for(cases)('%s', runNarrowingCase);
 });
 
+type ReportNothingCase = [shape: string, code: string];
+
+const runReportNothingCase = ([, code]: ReportNothingCase, { lintRule }: LintFixtures) => {
+  expect(lintRule(code, narrowingOnly)).toReportNothing();
+};
+
 describe('14.5 permitting annotations that hide nothing', () => {
-  test('14.5.1 allows an annotation matching the value exactly, for variables and class fields', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'declare const exact: { a: number; b: number }; const x: { a: number; b: number } = exact;',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-    expect(
-      lintRule(
-        'declare const exact: { a: number; b: number }; class C { field: { a: number; b: number } = exact; }',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-  });
-
-  test('14.5.2 allows widening literals and array element types', ({ lintRule }) => {
-    expect(lintRule('const x: number = 5;', narrowingOnly)).toReportNothing();
-    expect(lintRule('declare const lit: "a"; const x: string = lit;', narrowingOnly)).toReportNothing();
-    expect(
-      lintRule('declare const arr: number[]; const widened: (number | string)[] = arr;', narrowingOnly),
-    ).toReportNothing();
-    expect(lintRule('class C { count: number = 5; }', narrowingOnly)).toReportNothing();
-  });
-
-  test('14.5.3 allows erasing to unknown and open index-signature dictionaries', ({ lintRule }) => {
-    expect(lintRule('const x: unknown = { a: 1, b: 2 };', narrowingOnly)).toReportNothing();
-    expect(
-      lintRule(
-        'declare const wide: { a: number; b: number }; const dict: { [k: string]: number } = wide;',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-  });
-
-  test('14.5.4 allows a member missing from some return branch, which is not common to all returns', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'declare const x: { a: number; b: number }; declare const y: { a: number; c: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-  });
-
-  test('14.5.5 leaves async return types alone, whose body type is the resolved value', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'declare const wide: { a: number; b: number }; const f = async (): Promise<{ a: number }> => wide;',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-  });
+  test.for<ReportNothingCase>([
+    [
+      '14.5.1 allows an annotation matching the value exactly for a variable',
+      'declare const exact: { a: number; b: number }; const x: { a: number; b: number } = exact;',
+    ],
+    [
+      '14.5.2 allows an annotation matching the value exactly for a class field',
+      'declare const exact: { a: number; b: number }; class C { field: { a: number; b: number } = exact; }',
+    ],
+    ['14.5.3 allows widening a literal type', 'const x: number = 5;'],
+    ['14.5.4 allows widening a literal initializer type', 'declare const lit: "a"; const x: string = lit;'],
+    [
+      '14.5.5 allows widening array element types',
+      'declare const arr: number[]; const widened: (number | string)[] = arr;',
+    ],
+    ['14.5.6 allows widening a class field literal type', 'class C { count: number = 5; }'],
+    ['14.5.7 allows erasing to unknown', 'const x: unknown = { a: 1, b: 2 };'],
+    [
+      '14.5.8 allows an open index-signature dictionary',
+      'declare const wide: { a: number; b: number }; const dict: { [k: string]: number } = wide;',
+    ],
+    [
+      '14.5.9 allows a member missing from some return branch, which is not common to all returns',
+      'declare const x: { a: number; b: number }; declare const y: { a: number; c: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
+    ],
+    [
+      '14.5.10 leaves async return types alone, whose body type is the resolved value',
+      'declare const wide: { a: number; b: number }; const f = async (): Promise<{ a: number }> => wide;',
+    ],
+  ])('%s', runReportNothingCase);
 });
 
 describe('14.6 permitting annotations the workaround cannot replace', () => {
-  test('14.6.1 allows a reassigned let and a class field reassigned to a narrower value', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'declare const wide: { a: number; b: number }; declare const slim: { a: number }; let x: { a: number } = wide; x = slim;',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-    expect(
-      lintRule(
-        'declare const wide: { a: number; b: number }; declare const slim: { a: number }; class C { field: { a: number } = wide; m() { this.field = slim; } }',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-  });
-
-  test('14.6.2 allows recursive arrows and generic returns referencing a type parameter', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'declare const wide: { a: number; b: number }; const f = (n: number): { a: number } => n > 0 ? wide : f(n - 1);',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-    expect(lintRule('const wrap = <T>(x: T): { value: T } => ({ value: x });', narrowingOnly)).toReportNothing();
-  });
-
-  test('14.6.3 allows an object literal that matches its annotation', ({ lintRule }) => {
-    expect(lintRule('const p: { x: number } = { x: 1 };', narrowingOnly)).toReportNothing();
-  });
-
-  test('14.6.4 allows function-type annotations over plain function values that hide nothing', ({ lintRule }) => {
-    expect(
-      lintRule(
-        'type Ctx = { id: string }; type StrictCreate = (context: Ctx) => Record<string, () => void>; const create: StrictCreate = context => ({});',
-        narrowingOnly,
-      ),
-    ).toReportNothing();
-    expect(
-      lintRule('declare const fn: (x: number) => void; const g: (x: number) => void = fn;', narrowingOnly),
-    ).toReportNothing();
-  });
+  test.for<ReportNothingCase>([
+    [
+      '14.6.1 allows a reassigned let',
+      'declare const wide: { a: number; b: number }; declare const slim: { a: number }; let x: { a: number } = wide; x = slim;',
+    ],
+    [
+      '14.6.2 allows a class field reassigned to a narrower value',
+      'declare const wide: { a: number; b: number }; declare const slim: { a: number }; class C { field: { a: number } = wide; m() { this.field = slim; } }',
+    ],
+    [
+      '14.6.3 allows a recursive arrow return',
+      'declare const wide: { a: number; b: number }; const f = (n: number): { a: number } => n > 0 ? wide : f(n - 1);',
+    ],
+    [
+      '14.6.4 allows a generic return referencing a type parameter',
+      'const wrap = <T>(x: T): { value: T } => ({ value: x });',
+    ],
+    ['14.6.5 allows an object literal that matches its annotation', 'const p: { x: number } = { x: 1 };'],
+    [
+      '14.6.6 allows a function-type annotation over a plain function value that hides nothing',
+      'type Ctx = { id: string }; type StrictCreate = (context: Ctx) => Record<string, () => void>; const create: StrictCreate = context => ({});',
+    ],
+    [
+      '14.6.7 allows a function-type annotation over an identical function type',
+      'declare const fn: (x: number) => void; const g: (x: number) => void = fn;',
+    ],
+  ])('%s', runReportNothingCase);
 });
