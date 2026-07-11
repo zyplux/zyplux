@@ -57,3 +57,17 @@ Fallow's report envelope carries several sibling fields alongside the actual iss
 A bare `bunx fallow` floats to npm's latest and drifts per machine; the check invokes the exact version pinned in cerberus's `tool_pins` module, so every run — local or CI, any repo — analyzes with the same tool.
 
 ### 29.7.1 invokes fallow at the pinned version
+
+## 29.8 capping inline itemization size for oversized reports
+
+Itemizing every offender inline is unreadable past a screenful, so both analyses cap how many lines they print: below the cap, itemization stays inline exactly as before; past it, the check stops itemizing and instead persists the already-parsed report to a gitignored `.reports/` directory under the repo root, failing with a single line that points at the file it wrote. Dead-code's `--verbose` gate still decides whether it itemizes at all — a non-verbose dead-code failure stays a bare count and rerun hint, and never writes a report, regardless of size.
+
+### 29.8.1 itemizes complexity offenders inline up to the cap
+
+### 29.8.2 persists the full health report and points to it once offenders exceed the cap
+
+### 29.8.3 itemizes dead-code issues inline up to the cap in verbose mode
+
+### 29.8.4 persists the full dead-code report and points to it once issues exceed the cap in verbose mode
+
+### 29.8.5 never persists a dead-code report without verbose even past the cap

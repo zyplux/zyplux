@@ -39,11 +39,7 @@ describe('18.1 rewriting interfaces into type aliases', () => {
       'type A = { a: string };\ninterface B extends A { b: string }',
       'type A = { a: string };\ntype B = { b: string } & A',
     ],
-    [
-      '18.1.5 keeps a type parameter on the fixed alias',
-      'interface Box<T> { value: T }',
-      'type Box<T> = { value: T }',
-    ],
+    ['18.1.5 keeps a type parameter on the fixed alias', 'interface Box<T> { value: T }', 'type Box<T> = { value: T }'],
     [
       '18.1.6 fixes multiple extends clauses into an intersection',
       'interface Pair extends Left, Right { id: string }',
@@ -95,9 +91,14 @@ describe('18.2 exempting declaration-merging interfaces', () => {
   test.for<ReportNothingCase>([
     [
       '18.2.3 allows an interface inside a declare module block',
-      ["declare module 'vitest' {", '  interface Matchers<T> {', '    toBeFlagged: () => T;', '  }', '}', 'export {};'].join(
-        '\n',
-      ),
+      [
+        "declare module 'vitest' {",
+        '  interface Matchers<T> {',
+        '    toBeFlagged: () => T;',
+        '  }',
+        '}',
+        'export {};',
+      ].join('\n'),
     ],
     [
       '18.2.4 allows an interface inside a declare global block',

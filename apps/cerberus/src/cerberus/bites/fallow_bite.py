@@ -24,6 +24,22 @@ off at an exact multiple of 64KiB), which produces unparseable JSON and
 would otherwise be indistinguishable from a genuine fallow crash. Writing
 to a file sidesteps that pipe entirely, matching the same file-based
 report convention `jscpd_bite` already uses for the same reason.
+
+The same size problem shows up again one layer up, in cerberus's own
+terminal output: itemizing every offender inline is unreadable past a
+screenful, and a report with hundreds of findings would swamp the rest of
+a `just c` run. Past `_MAX_INLINE_FINDINGS` itemized lines, an analysis
+stops itemizing inline and instead persists its already-parsed report to a
+gitignored `.reports/` directory under the repo root being checked
+(`.reports/fallow-health.json`, `.reports/fallow-dead-code.json`) and
+fails with one line pointing at that file — cheap to do because the report
+is already sitting in memory as the parsed dict `_load_report` returned,
+no re-read of the (by-then-deleted) shielded temp file required. Only the
+analysis that actually exceeds the cap gets persisted, and only when it
+would otherwise itemize at all: dead-code stays a bare count-and-rerun-hint
+unless `--verbose`, so a non-verbose dead-code failure never writes a
+report regardless of size. Below the cap, itemization stays inline exactly
+as before.
 """
 
 from __future__ import annotations
@@ -48,11 +64,16 @@ SCOPE = Scope.CONTENT
 
 _SHARED_FLAGS = ["--quiet", "--fail-on-issues", "--format", "json"]
 
+_MAX_INLINE_FINDINGS = 25
+_REPORTS_DIR_NAME = ".reports"
+_HEALTH_REPORT_FILENAME = "fallow-health.json"
+_DEAD_CODE_REPORT_FILENAME = "fallow-dead-code.json"
+
 
 def _load_report(report_path: Path) -> dict[str, Any] | None:
     try:
         parsed: dict[str, Any] = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return None
     return parsed
 
@@ -158,8 +179,18 @@ def _dead_code_issue_lines(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _persist_report(ctx: Context, report: dict[str, Any], filename: str) -> Path:
+    repo_root = ctx.source.root.resolve()
+    reports_dir = repo_root / _REPORTS_DIR_NAME
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = reports_dir / filename
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report_path.relative_to(repo_root)
+
+
 def _record_dead_code(
     res: CheckResult,
+    ctx: Context,
     outcome: subprocess.CompletedProcess[str],
     report: dict[str, Any] | None,
     *,
@@ -173,14 +204,17 @@ def _record_dead_code(
         res.fail(f"fallow dead-code exited {outcome.returncode}; {rerun_hint}")
         return
     issue_lines: list[str] = _dead_code_issue_lines(report) if verbose else []
-    if issue_lines:
-        res.fail("\n".join([f"fallow found {issue_count} dead-code issues", *issue_lines]))
-    else:
+    if not issue_lines:
         res.fail(f"fallow found {issue_count} dead-code issues; {rerun_hint}")
+    elif len(issue_lines) > _MAX_INLINE_FINDINGS:
+        report_path = _persist_report(ctx, report, _DEAD_CODE_REPORT_FILENAME)
+        res.fail(f"fallow found {issue_count} dead-code issues; see {report_path}")
+    else:
+        res.fail("\n".join([f"fallow found {issue_count} dead-code issues", *issue_lines]))
 
 
 def _record_complexity(
-    res: CheckResult, outcome: subprocess.CompletedProcess[str], report: dict[str, Any] | None
+    res: CheckResult, ctx: Context, outcome: subprocess.CompletedProcess[str], report: dict[str, Any] | None
 ) -> None:
     if outcome.returncode == 0:
         return
@@ -192,7 +226,11 @@ def _record_complexity(
         )
         return
     header = _health_status_line(report) or f"fallow found {len(offenders)} functions above its complexity thresholds"
-    res.fail("\n".join([header, *_complexity_lines(report)]))
+    if len(offenders) > _MAX_INLINE_FINDINGS:
+        report_path = _persist_report(ctx, report, _HEALTH_REPORT_FILENAME)
+        res.fail(f"{header}; see {report_path}")
+    else:
+        res.fail("\n".join([header, *_complexity_lines(report)]))
 
 
 def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
@@ -233,8 +271,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
                 res.error(str(exc))
                 return res
             reports[analysis] = _load_report(report_path)
-    _record_dead_code(res, outcomes["dead-code"], reports["dead-code"], verbose=ctx.verbose)
-    _record_complexity(res, outcomes["health"], reports["health"])
+    _record_dead_code(res, ctx, outcomes["dead-code"], reports["dead-code"], verbose=ctx.verbose)
+    _record_complexity(res, ctx, outcomes["health"], reports["health"])
     if not res.findings:
         if reports["health"] is not None:
             res.detail = _health_status_line(reports["health"])

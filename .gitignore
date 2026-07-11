@@ -20,6 +20,9 @@ htmlcov/
 
 reference_clones/
 
+# cerberus's persisted oversized-report output (fallow bite, over the inline cap)
+.reports/
+
 # Claude Code
 .claude/settings.local.json
 .claude/worktrees/

@@ -27,7 +27,10 @@ const expectRemovableNarrowing = (
   expect(applySuggestion(code, message)).toBe(unannotated);
 };
 
-const runNarrowingCase = ([, code, messageId, unannotated]: NarrowingCase, { applySuggestion, lintRule }: NarrowingFixtures) => {
+const runNarrowingCase = (
+  [, code, messageId, unannotated]: NarrowingCase,
+  { applySuggestion, lintRule }: NarrowingFixtures,
+) => {
   expectRemovableNarrowing(lintRule, applySuggestion, code, messageId, unannotated);
 };
 

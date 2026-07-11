@@ -11,9 +11,7 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
     expect(messages[0]?.message).toContain('JSON.parse(…)');
   });
 
-  test('11.1.2 flags an awaited json call returning an any promise, naming the api in the message', ({
-    lintRule,
-  }) => {
+  test('11.1.2 flags an awaited json call returning an any promise, naming the api in the message', ({ lintRule }) => {
     const code = ['declare const response: { json(): Promise<any> };', 'const body = await response.json();'].join(
       '\n',
     );
@@ -42,16 +40,12 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
 describe('11.2 permitting validated reads and non-boundary json calls', () => {
   test.for<Case>([
     ['11.2.1 allows a JSON parse flowing into schema parse', 'const parsed = Schema.parse(JSON.parse(text));'],
-    [
-      '11.2.2 allows a JSON parse flowing into schema safe parse',
-      'const parsed = Schema.safeParse(JSON.parse(text));',
-    ],
+    ['11.2.2 allows a JSON parse flowing into schema safe parse', 'const parsed = Schema.safeParse(JSON.parse(text));'],
     [
       '11.2.3 allows an awaited json call flowing into schema parse',
-      [
-        'declare const response: { json(): Promise<any> };',
-        'const body = Schema.parse(await response.json());',
-      ].join('\n'),
+      ['declare const response: { json(): Promise<any> };', 'const body = Schema.parse(await response.json());'].join(
+        '\n',
+      ),
     ],
     [
       '11.2.4 allows an awaited json call flowing into schema parse async',

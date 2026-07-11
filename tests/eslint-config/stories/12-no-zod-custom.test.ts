@@ -24,9 +24,7 @@ describe('12.1 flagging zod custom in every import shape', () => {
     ],
     [
       '12.1.5 flags z custom chained with parse',
-      ["import { z } from 'zod';", 'const result = z.custom<{ id: string }>(v => Boolean(v)).parse(input);'].join(
-        '\n',
-      ),
+      ["import { z } from 'zod';", 'const result = z.custom<{ id: string }>(v => Boolean(v)).parse(input);'].join('\n'),
     ],
   ])('%s', ([, code], { lintRule }) => {
     expect(lintRule(code)).toReport('noZodCustom');

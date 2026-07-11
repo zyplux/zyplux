@@ -26,11 +26,7 @@ describe('16.1 keeping schema construction in contracts', () => {
       ["import * as z from 'zod';", 'const TagsSchema = z.array(z.string()).optional();'].join('\n'),
       ['zodValueImport', 'schemaDeclaration'],
     ],
-    [
-      '16.1.4 flags a named value import that exposes a schema factory',
-      "import { z } from 'zod';",
-      ['zodValueImport'],
-    ],
+    ['16.1.4 flags a named value import that exposes a schema factory', "import { z } from 'zod';", ['zodValueImport']],
     [
       '16.1.5 flags a named object import that exposes a schema factory',
       "import { object } from 'zod';",
