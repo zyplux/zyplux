@@ -9,7 +9,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-export const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 
 export type LiveWorkspace = {
   root: string;

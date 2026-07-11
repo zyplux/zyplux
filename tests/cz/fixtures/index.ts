@@ -27,8 +27,8 @@ type CzFixtures = {
 };
 
 export const test = cliTest.extend<CzFixtures>({
-  catalog: async ({ cz, logs, tempDir }, use) => {
-    await use(createCatalog(cz, tempDir, logs));
+  catalog: async ({ cz, logs, network, tempDir }, use) => {
+    await use(createCatalog(cz, tempDir, logs, network));
   },
   cz: async ({}, use) => {
     await use(createCz());
@@ -77,5 +77,6 @@ export const tempCwdTest = test.extend<{ initRepo: InitRepo; tempCwd: undefined;
   },
 });
 
+export type { Catalog } from './act';
 export type { TempDir } from '@zyplux/tests-fixtures';
 export { describe, expect } from 'vitest';

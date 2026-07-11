@@ -66,8 +66,8 @@ describe('12.2 filtering by test name', () => {
       'stories/42-manifest.test.ts',
       `import { describe, expect, test } from 'vitest';
 
-describe('42 manifest', () => {
-  test('42.1.1 parses the manifest', () => {
+describe('manifest', () => {
+  test('parses the manifest', () => {
     expect(true).toBe(true);
   });
 });

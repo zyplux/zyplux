@@ -2,7 +2,10 @@
 
 ## 13.1 resolving a filter against real test files before running
 
-### 13.1.1 resolves %s
+1. resolves a filter matching only a file path
+2. resolves a filter matching only a test name
+3. resolves a filter matching nothing
+4. resolves a filter matching both the path and a test name of the same file
 
 ## 13.2 unioning matches across multiple files
 

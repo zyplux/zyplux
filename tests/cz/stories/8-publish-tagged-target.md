@@ -10,6 +10,7 @@
 
 ### 8.2.2 builds and publishes a pypi target
 
-### 8.2.3 requires GH_TOKEN and GITHUB_ACTOR before pushing a ghcr target
+1. requires GH_TOKEN before pushing a ghcr target
+2. requires GITHUB_ACTOR before pushing a ghcr target
 
 ### 8.2.4 tags and pushes a versioned and latest ghcr image

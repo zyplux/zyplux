@@ -2,8 +2,8 @@ import { describe, expect, tempCwdTest as test } from '#fixtures';
 
 const widgetShapeFile = `import { describe, expect, test } from 'vitest';
 
-describe('7 widget formatting', () => {
-  test('7.1.1 formats a widget', () => {
+describe('widget formatting', () => {
+  test('formats a widget', () => {
     expect(true).toBe(true);
   });
 });
@@ -11,8 +11,8 @@ describe('7 widget formatting', () => {
 
 const manifestParsingFile = `import { describe, expect, test } from 'vitest';
 
-describe('8 other thing', () => {
-  test('8.1.1 parses a manifest carefully', () => {
+describe('other thing', () => {
+  test('parses a manifest carefully', () => {
     expect(true).toBe(true);
   });
 });
@@ -20,8 +20,8 @@ describe('8 other thing', () => {
 
 const shapeValidationFile = `import { describe, expect, test } from 'vitest';
 
-describe('9 shape validation', () => {
-  test('9.1.1 validates a shape', () => {
+describe('shape validation', () => {
+  test('validates a shape', () => {
     expect(true).toBe(true);
   });
 });
@@ -37,22 +37,22 @@ type ResolutionCase = [
 
 const resolutionCases: ResolutionCase[] = [
   [
-    'a filter matching only a file path',
+    '1 resolves a filter matching only a file path',
     { 'stories/7-widget-shape.test.ts': widgetShapeFile },
     '7-widget-shape',
     ['stories/7-widget-shape.test.ts'],
     false,
   ],
   [
-    'a filter matching only a test name',
+    '2 resolves a filter matching only a test name',
     { 'stories/8-other-thing.test.ts': manifestParsingFile },
     'parses a manifest carefully',
     ['stories/8-other-thing.test.ts'],
     true,
   ],
-  ['a filter matching nothing', {}, 'nomatchxyz', [], false],
+  ['3 resolves a filter matching nothing', {}, 'nomatchxyz', [], false],
   [
-    'a filter matching both the path and a test name of the same file',
+    '4 resolves a filter matching both the path and a test name of the same file',
     { 'stories/9-shape.test.ts': shapeValidationFile },
     'shape',
     ['stories/9-shape.test.ts'],
@@ -61,25 +61,22 @@ const resolutionCases: ResolutionCase[] = [
 ];
 
 describe('13.1 resolving a filter against real test files before running', () => {
-  test.for(resolutionCases)(
-    '13.1.1 resolves %s',
-    async ([, files, filter, matchedFiles, scopeToName], { cz, shell, tempDir }) => {
-      await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
-      for (const [path, content] of Object.entries(files)) await tempDir.write(path, content);
-      shell.on('bun run test', 'JS: ok');
+  test.for(resolutionCases)('13.1.%s', async ([, files, filter, matchedFiles, scopeToName], { cz, shell, tempDir }) => {
+    await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
+    for (const [path, content] of Object.entries(files)) await tempDir.write(path, content);
+    shell.on('bun run test', 'JS: ok');
 
-      await cz.run('test', filter);
+    await cz.run('test', filter);
 
-      const [command] = shell.commandsMatching('bun run test');
-      if (matchedFiles.length > 0) {
-        for (const file of matchedFiles) expect(command).toContain(file);
-        if (scopeToName) expect(command).toContain(`-t ${filter}`);
-        else expect(command).not.toContain('-t ');
-      } else {
-        expect(shell.commandsMatching('bun run test')).toEqual([]);
-      }
-    },
-  );
+    const [command] = shell.commandsMatching('bun run test');
+    if (matchedFiles.length > 0) {
+      for (const file of matchedFiles) expect(command).toContain(file);
+      if (scopeToName) expect(command).toContain(`-t ${filter}`);
+      else expect(command).not.toContain('-t ');
+    } else {
+      expect(shell.commandsMatching('bun run test')).toEqual([]);
+    }
+  });
 });
 
 describe('13.2 unioning matches across multiple files', () => {
