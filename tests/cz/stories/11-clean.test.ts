@@ -1,3 +1,4 @@
+// unparametrized
 import { describe, expect, tempCwdTest as test } from '#fixtures';
 
 describe('11.1 cleaning a single repo', () => {

@@ -1,3 +1,4 @@
+// unparametrized
 import type { ZypluxConfig as Config } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';

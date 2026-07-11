@@ -8,5 +8,5 @@
 
 ## 7.2 resolving the output path
 
-1. 7.2.1 joins a relative --out under --dir
-2. 7.2.2 uses an absolute --out as-is
+1. joins a relative --out under --dir
+2. uses an absolute --out as-is

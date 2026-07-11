@@ -1,3 +1,4 @@
+// unparametrized
 import type { PrintedConfig } from '#fixtures';
 
 import { describe, expect, test } from '#fixtures';

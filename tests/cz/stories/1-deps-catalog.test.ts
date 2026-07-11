@@ -120,28 +120,28 @@ type ResolveCase = [
 
 const resolveCases: ResolveCase[] = [
   [
-    '1.2.1 resolves a package to its source repo via deps dev',
+    '1 resolves a package to its source repo via deps dev',
     'package.json',
     npmManifest('react'),
     reactViaDepsDev,
     ['https://github.com/facebook/react'],
   ],
   [
-    '1.2.2 falls back to the npm registry when deps dev has no source repo',
+    '2 falls back to the npm registry when deps dev has no source repo',
     'package.json',
     npmManifest('react'),
     reactViaNpmRegistry,
     ['https://github.com/facebook/react'],
   ],
   [
-    '1.2.3 falls back to pypi project urls when deps dev has no source repo',
+    '3 falls back to pypi project urls when deps dev has no source repo',
     'pyproject.toml',
     '[project]\nname = "scratch-app"\ndependencies = ["requests"]\n',
     requestsViaPypi,
     ['https://github.com/psf/requests'],
   ],
   [
-    '1.2.4 reports the dependency as unresolved when no source repo is found anywhere',
+    '4 reports the dependency as unresolved when no source repo is found anywhere',
     'package.json',
     npmManifest('does-not-exist'),
     nothingAnywhere,
@@ -149,7 +149,7 @@ const resolveCases: ResolveCase[] = [
     ['does-not-exist'],
   ],
   [
-    '1.2.5 falls back to a deps dev links entry when there is no related project',
+    '5 falls back to a deps dev links entry when there is no related project',
     'package.json',
     npmManifest('zod'),
     zodViaDepsDevLinks,
@@ -159,7 +159,7 @@ const resolveCases: ResolveCase[] = [
 
 describe('1.2 resolving a dependency name to its source repository', () => {
   test.for(resolveCases)(
-    '%s',
+    '1.2.%s',
     async ([, manifestPath, manifestText, route, expectedRepos, expectedUnresolvedNpm], { catalog, network }) => {
       await catalog.writeManifest(manifestPath, manifestText);
       network.otherwise(route);

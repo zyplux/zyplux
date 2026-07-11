@@ -37,197 +37,197 @@ const runNarrowingCase = (
 describe('14.1 flagging variable annotations that hide members of their initializer', () => {
   const cases: NarrowingCase[] = [
     [
-      '14.1.1 flags a variable type hiding one member, suggesting removal',
+      '1 flags a variable type hiding one member, suggesting removal',
       'declare const wide: { a: number; b: number }; const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; const slim = wide;',
     ],
     [
-      '14.1.2 flags a variable type hiding several members, suggesting removal',
+      '2 flags a variable type hiding several members, suggesting removal',
       'declare const wide: { a: number; b: number; c: number }; const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number; c: number }; const slim = wide;',
     ],
     [
-      '14.1.3 flags hiding a member declared on a named interface in source position',
+      '3 flags hiding a member declared on a named interface in source position',
       'interface Wide { a: number; b: number } declare const w: Wide; const slim: { a: number } = w;',
       'narrowVarType',
       'interface Wide { a: number; b: number } declare const w: Wide; const slim = w;',
     ],
     [
-      '14.1.4 flags hiding a member declared on a named interface in annotation position',
+      '4 flags hiding a member declared on a named interface in annotation position',
       'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s: Slim = w;',
       'narrowVarType',
       'interface Wide { a: number; b: number } interface Slim { a: number } declare const w: Wide; const s = w;',
     ],
     [
-      '14.1.5 flags a call-expression initializer',
+      '5 flags a call-expression initializer',
       'declare function make(): { a: number; b: number }; const slim: { a: number } = make();',
       'narrowVarType',
       'declare function make(): { a: number; b: number }; const slim = make();',
     ],
     [
-      '14.1.6 flags a member-access initializer',
+      '6 flags a member-access initializer',
       'declare const box: { inner: { a: number; b: number } }; const slim: { a: number } = box.inner;',
       'narrowVarType',
       'declare const box: { inner: { a: number; b: number } }; const slim = box.inner;',
     ],
     [
-      '14.1.7 flags a never-reassigned let, which is effectively const',
+      '7 flags a never-reassigned let, which is effectively const',
       'declare const wide: { a: number; b: number }; let slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; let slim = wide;',
     ],
     [
-      '14.1.8 flags upcasting a class instance to a subset of its members',
+      '8 flags upcasting a class instance to a subset of its members',
       'class Cat { move() {} meow() {} } declare const c: Cat; const a: { move(): void } = c;',
       'narrowVarType',
       'class Cat { move() {} meow() {} } declare const c: Cat; const a = c;',
     ],
     [
-      '14.1.9 flags a readonly fiction over a fresh mutable Set',
+      '9 flags a readonly fiction over a fresh mutable Set',
       'const seen: ReadonlySet<string> = new Set(["a"]);',
       'narrowVarType',
       'const seen = new Set(["a"]);',
     ],
     [
-      '14.1.10 flags a readonly fiction over a mutable array',
+      '10 flags a readonly fiction over a mutable array',
       'declare const arr: number[]; const ro: readonly number[] = arr;',
       'narrowVarType',
       'declare const arr: number[]; const ro = arr;',
     ],
     [
-      '14.1.11 flags a bare function-type annotation hiding a property of the callable value',
+      '11 flags a bare function-type annotation hiding a property of the callable value',
       'declare const wide: { (x: number): void; extra: number }; const f: (x: number) => void = wide;',
       'narrowVarType',
       'declare const wide: { (x: number): void; extra: number }; const f = wide;',
     ],
   ];
 
-  test.for(cases)('%s', runNarrowingCase);
+  test.for(cases)('14.1.%s', runNarrowingCase);
 });
 
 describe('14.2 flagging return annotations that hide members of the returned value', () => {
   const cases: NarrowingCase[] = [
     [
-      '14.2.1 flags a concise arrow return type',
+      '1 flags a concise arrow return type',
       'declare const wide: { a: number; b: number }; const get = (): { a: number } => wide;',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; const get = () => wide;',
     ],
     [
-      '14.2.2 flags a block-bodied arrow return type',
+      '2 flags a block-bodied arrow return type',
       'declare const wide: { a: number; b: number }; const f = (): { a: number } => { return wide; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; const f = () => { return wide; };',
     ],
     [
-      '14.2.3 flags a function declaration return type',
+      '3 flags a function declaration return type',
       'declare const wide: { a: number; b: number }; function f(): { a: number } { return wide; }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; function f() { return wide; }',
     ],
     [
-      '14.2.4 flags a method return type',
+      '4 flags a method return type',
       'class A { m(w: { a: number; b: number }): { a: number } { return w; } }',
       'narrowReturnType',
       'class A { m(w: { a: number; b: number }) { return w; } }',
     ],
     [
-      '14.2.5 flags a member common to every return that the return type hides',
+      '5 flags a member common to every return that the return type hides',
       'declare const x: { a: number; b: number }; declare const y: { a: number; b: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
       'narrowReturnType',
       'declare const x: { a: number; b: number }; declare const y: { a: number; b: number }; const f = (cond: boolean) => { if (cond) return x; return y; };',
     ],
     [
-      '14.2.6 does not mistake the returns of a nested function for the outer return',
+      '6 does not mistake the returns of a nested function for the outer return',
       'declare const wide: { a: number; b: number }; declare const partial: { a: number }; const f = (): { a: number } => { const g = () => { return partial; }; return wide; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; declare const partial: { a: number }; const f = () => { const g = () => { return partial; }; return wide; };',
     ],
     [
-      '14.2.7 flags a nested arrow inside an exported boundary, which is still internal',
+      '7 flags a nested arrow inside an exported boundary, which is still internal',
       'declare const wide: { a: number; b: number }; export const outer = () => { const g = (): { a: number } => wide; return g; };',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export const outer = () => { const g = () => wide; return g; };',
     ],
     [
-      '14.2.8 flags a function-type return annotation hiding a property of the returned callable value',
+      '8 flags a function-type return annotation hiding a property of the returned callable value',
       'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = (): Fn => wide;',
       'narrowReturnType',
       'type Fn = (x: number) => void; declare const wide: { (x: number): void; extra: number }; const get = () => wide;',
     ],
   ];
 
-  test.for(cases)('%s', runNarrowingCase);
+  test.for(cases)('14.2.%s', runNarrowingCase);
 });
 
 describe('14.3 flagging module boundaries all the same', () => {
   const cases: NarrowingCase[] = [
     [
-      '14.3.1 flags an exported arrow return type',
+      '1 flags an exported arrow return type',
       'declare const wide: { a: number; b: number }; export const get = (): { a: number } => wide;',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export const get = () => wide;',
     ],
     [
-      '14.3.2 flags an exported variable annotation',
+      '2 flags an exported variable annotation',
       'declare const wide: { a: number; b: number }; export const slim: { a: number } = wide;',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; export const slim = wide;',
     ],
     [
-      '14.3.3 flags a re-exported variable annotation',
+      '3 flags a re-exported variable annotation',
       'declare const wide: { a: number; b: number }; const slim: { a: number } = wide;\nexport { slim };',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; const slim = wide;\nexport { slim };',
     ],
     [
-      '14.3.4 flags an exported function declaration return type',
+      '4 flags an exported function declaration return type',
       'declare const wide: { a: number; b: number }; export function f(): { a: number } { return wide; }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export function f() { return wide; }',
     ],
     [
-      '14.3.5 flags a method return type of an exported class',
+      '5 flags a method return type of an exported class',
       'declare const wide: { a: number; b: number }; export class C { m(): { a: number } { return wide; } }',
       'narrowReturnType',
       'declare const wide: { a: number; b: number }; export class C { m() { return wide; } }',
     ],
   ];
 
-  test.for(cases)('%s', runNarrowingCase);
+  test.for(cases)('14.3.%s', runNarrowingCase);
 });
 
 describe('14.4 flagging class field annotations that hide members of their initializer', () => {
   const cases: NarrowingCase[] = [
     [
-      '14.4.1 flags a mutable class field',
+      '1 flags a mutable class field',
       'declare const wide: { a: number; b: number }; class C { field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; class C { field = wide; }',
     ],
     [
-      '14.4.2 flags a readonly class field',
+      '2 flags a readonly class field',
       'declare const wide: { a: number; b: number }; class C { readonly field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; class C { readonly field = wide; }',
     ],
     [
-      '14.4.3 flags a field of an exported class',
+      '3 flags a field of an exported class',
       'declare const wide: { a: number; b: number }; export class C { field: { a: number } = wide; }',
       'narrowVarType',
       'declare const wide: { a: number; b: number }; export class C { field = wide; }',
     ],
     [
-      '14.4.4 flags a class field typed as ReadonlySet over a fresh mutable Set',
+      '4 flags a class field typed as ReadonlySet over a fresh mutable Set',
       'class C { seen: ReadonlySet<string> = new Set(["a"]); }',
       'narrowVarType',
       'class C { seen = new Set(["a"]); }',
     ],
   ];
 
-  test.for(cases)('%s', runNarrowingCase);
+  test.for(cases)('14.4.%s', runNarrowingCase);
 });
 
 type ReportNothingCase = [shape: string, code: string];
@@ -239,62 +239,59 @@ const runReportNothingCase = ([, code]: ReportNothingCase, { lintRule }: LintFix
 describe('14.5 permitting annotations that hide nothing', () => {
   test.for<ReportNothingCase>([
     [
-      '14.5.1 allows an annotation matching the value exactly for a variable',
+      '1 allows an annotation matching the value exactly for a variable',
       'declare const exact: { a: number; b: number }; const x: { a: number; b: number } = exact;',
     ],
     [
-      '14.5.2 allows an annotation matching the value exactly for a class field',
+      '2 allows an annotation matching the value exactly for a class field',
       'declare const exact: { a: number; b: number }; class C { field: { a: number; b: number } = exact; }',
     ],
-    ['14.5.3 allows widening a literal type', 'const x: number = 5;'],
-    ['14.5.4 allows widening a literal initializer type', 'declare const lit: "a"; const x: string = lit;'],
+    ['3 allows widening a literal type', 'const x: number = 5;'],
+    ['4 allows widening a literal initializer type', 'declare const lit: "a"; const x: string = lit;'],
+    ['5 allows widening array element types', 'declare const arr: number[]; const widened: (number | string)[] = arr;'],
+    ['6 allows widening a class field literal type', 'class C { count: number = 5; }'],
+    ['7 allows erasing to unknown', 'const x: unknown = { a: 1, b: 2 };'],
     [
-      '14.5.5 allows widening array element types',
-      'declare const arr: number[]; const widened: (number | string)[] = arr;',
-    ],
-    ['14.5.6 allows widening a class field literal type', 'class C { count: number = 5; }'],
-    ['14.5.7 allows erasing to unknown', 'const x: unknown = { a: 1, b: 2 };'],
-    [
-      '14.5.8 allows an open index-signature dictionary',
+      '8 allows an open index-signature dictionary',
       'declare const wide: { a: number; b: number }; const dict: { [k: string]: number } = wide;',
     ],
     [
-      '14.5.9 allows a member missing from some return branch, which is not common to all returns',
+      '9 allows a member missing from some return branch, which is not common to all returns',
       'declare const x: { a: number; b: number }; declare const y: { a: number; c: number }; const f = (cond: boolean): { a: number } => { if (cond) return x; return y; };',
     ],
     [
-      '14.5.10 leaves async return types alone, whose body type is the resolved value',
+      '10 leaves async return types alone, whose body type is the resolved value',
       'declare const wide: { a: number; b: number }; const f = async (): Promise<{ a: number }> => wide;',
     ],
-  ])('%s', runReportNothingCase);
+  ])('14.5.%s', runReportNothingCase);
 });
 
 describe('14.6 permitting annotations the workaround cannot replace', () => {
   test.for<ReportNothingCase>([
     [
-      '14.6.1 allows a reassigned let',
+      '1 allows a reassigned let',
       'declare const wide: { a: number; b: number }; declare const slim: { a: number }; let x: { a: number } = wide; x = slim;',
     ],
     [
-      '14.6.2 allows a class field reassigned to a narrower value',
+      '2 allows a class field reassigned to a narrower value',
       'declare const wide: { a: number; b: number }; declare const slim: { a: number }; class C { field: { a: number } = wide; m() { this.field = slim; } }',
     ],
     [
-      '14.6.3 allows a recursive arrow return',
+      '3 allows a recursive arrow return',
       'declare const wide: { a: number; b: number }; const f = (n: number): { a: number } => n > 0 ? wide : f(n - 1);',
     ],
     [
-      '14.6.4 allows a generic return referencing a type parameter',
+      '4 allows a generic return referencing a type parameter',
       'const wrap = <T>(x: T): { value: T } => ({ value: x });',
     ],
-    ['14.6.5 allows an object literal that matches its annotation', 'const p: { x: number } = { x: 1 };'],
+    ['5 allows an object literal that matches its annotation', 'const p: { x: number } = { x: 1 };'],
     [
-      '14.6.6 allows a function-type annotation over a plain function value that hides nothing',
+      '6 allows a function-type annotation over a plain function value that hides nothing',
       'type Ctx = { id: string }; type StrictCreate = (context: Ctx) => Record<string, () => void>; const create: StrictCreate = context => ({});',
     ],
     [
-      '14.6.7 allows a function-type annotation over an identical function type',
+      '7 allows a function-type annotation over an identical function type',
       'declare const fn: (x: number) => void; const g: (x: number) => void = fn;',
     ],
-  ])('%s', runReportNothingCase);
+  ])('14.6.%s', runReportNothingCase);
 });

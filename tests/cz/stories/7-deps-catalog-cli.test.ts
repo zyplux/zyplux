@@ -57,12 +57,12 @@ describe('7.1 writing the resolved repos to the output file', () => {
 type OutPathCase = [shape: string, buildOut: (tempDir: TempDir) => string, expectedOutputPath: string];
 
 const outPathCases: OutPathCase[] = [
-  ['7.2.1 joins a relative --out under --dir', () => 'nested/catalog.json', 'nested/catalog.json'],
-  ['7.2.2 uses an absolute --out as-is', tempDir => `${tempDir.path}/elsewhere.json`, 'elsewhere.json'],
+  ['1 joins a relative --out under --dir', () => 'nested/catalog.json', 'nested/catalog.json'],
+  ['2 uses an absolute --out as-is', tempDir => `${tempDir.path}/elsewhere.json`, 'elsewhere.json'],
 ];
 
 describe('7.2 resolving the output path', () => {
-  test.for(outPathCases)('%s', async ([, buildOut, expectedOutputPath], { catalog, tempDir }) => {
+  test.for(outPathCases)('7.2.%s', async ([, buildOut, expectedOutputPath], { catalog, tempDir }) => {
     await catalog.writeManifest('package.json', NO_DEPS_MANIFEST);
 
     await catalog.run({ out: buildOut(tempDir) });

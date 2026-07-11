@@ -1,3 +1,4 @@
+// unparametrized
 import type { TempDir } from '#fixtures';
 
 import { describe, expect, tempCwdTest as test } from '#fixtures';

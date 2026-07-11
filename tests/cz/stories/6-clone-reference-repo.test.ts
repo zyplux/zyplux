@@ -4,22 +4,22 @@ type CloneCase = [shape: string, args: string[], expectedArgv: string[]];
 
 const cloneCases: CloneCase[] = [
   [
-    '6.1.1 builds a github url and destination from an owner/name shorthand',
+    '1 builds a github url and destination from an owner/name shorthand',
     ['zyplux/util'],
     ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    '6.1.2 uses a full url as-is and derives the destination from it',
+    '2 uses a full url as-is and derives the destination from it',
     ['https://github.com/zyplux/util.git'],
     ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    '6.1.3 derives the destination from a git@ ssh url, stripping the .git suffix',
+    '3 derives the destination from a git@ ssh url, stripping the .git suffix',
     ['git@github.com:zyplux/util.git'],
     ['clone', '--depth', '1', '--single-branch', 'git@github.com:zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    '6.1.4 passes a given ref as the branch flag',
+    '4 passes a given ref as the branch flag',
     ['zyplux/util', 'v2.0.0'],
     [
       'clone',
@@ -35,7 +35,7 @@ const cloneCases: CloneCase[] = [
 ];
 
 describe('6.1 building the clone url and destination', () => {
-  test.for(cloneCases)('%s', async ([, args, expectedArgv], { cz, shell }) => {
+  test.for(cloneCases)('6.1.%s', async ([, args, expectedArgv], { cz, shell }) => {
     shell.on('git clone', '');
 
     await cz.run('clone-reference-repo', ...args);

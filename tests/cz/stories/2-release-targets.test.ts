@@ -1,3 +1,4 @@
+// unparametrized
 import { describe, expect, targetsTest as test } from '#fixtures';
 
 const BROKEN_TARGET_MANIFEST = [

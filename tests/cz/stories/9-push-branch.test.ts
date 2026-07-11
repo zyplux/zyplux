@@ -1,3 +1,4 @@
+// unparametrized
 import { describe, expect, test } from '#fixtures';
 
 const PR_URL = 'https://github.com/zyplux/zyplux/pull/1';
