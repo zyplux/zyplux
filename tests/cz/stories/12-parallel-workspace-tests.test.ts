@@ -94,6 +94,15 @@ describe('manifest', () => {
 
     await cz.run('test', 'nomatchxyz');
   });
+
+  test('12.2.3 rejects a filter that reduces to an empty pytest keyword expression instead of silently matching everything', async ({
+    cz,
+    tempDir,
+  }) => {
+    await writePyWorkspace(tempDir);
+
+    await expect(cz.run('test', 'and')).rejects.toThrow("invalid test filter 'and'");
+  });
 });
 
 describe('12.3 workspace detection', () => {

@@ -16,6 +16,8 @@
 
 ### 12.2.2 passes when the filter matches nothing in either workspace
 
+### 12.2.3 rejects a filter that reduces to an empty pytest keyword expression instead of silently matching everything
+
 ## 12.3 workspace detection
 
 ### 12.3.1 runs only vitest when only package.json is present

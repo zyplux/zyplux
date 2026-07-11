@@ -55,12 +55,17 @@ const resolveJsFilters = async (name: string) => {
 
 const PYTEST_KEYWORD_RESERVED_WORDS = new Set(['and', 'not', 'or']);
 
-const toPytestKeywordExpr = (name: string) =>
-  name
+const toPytestKeywordExpr = (name: string) => {
+  const keywordExpr = name
     .split(/\s+/)
     .map(word => word.replaceAll(/[^\w:+.[\]\\/-]/g, ''))
     .filter(word => word.length > 0 && !PYTEST_KEYWORD_RESERVED_WORDS.has(word))
     .join(' and ');
+  if (keywordExpr.length === 0) {
+    throw new Error(`invalid test filter '${name}': no pytest keyword expression could be derived from it`);
+  }
+  return keywordExpr;
+};
 
 const RUNNERS: Runner[] = [
   {
