@@ -1,6 +1,8 @@
 preset = "strict"
 
 project-includes = ["apps/cerberus/src", "apps/totchef", "packages/util_py/src", "tests/cerberus", "tests/totchef"]
+disable-project-excludes-heuristics = true
+use-ignore-files = false
 search-path = [
     "apps/cerberus/src",
     "apps/totchef/src",

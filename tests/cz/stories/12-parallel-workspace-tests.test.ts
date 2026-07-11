@@ -82,7 +82,7 @@ describe('42 manifest', () => {
     expect(command).toContain('-t parses the manifest');
     expect(command).toContain('--passWithNoTests --coverage.enabled=false --reporter=tree --hideSkippedTests');
     expect(shell.commandsMatching('uv run pytest')).toEqual([
-      'uv run pytest --no-cov -v -k parses and the and manifest 2>&1',
+      'uv run pytest --color=yes --no-cov -v -k parses and the and manifest 2>&1',
     ]);
   });
 
@@ -111,10 +111,27 @@ describe('12.3 workspace detection', () => {
 
     await cz.run('test');
 
-    expect(shell.commands).toEqual(['uv run pytest 2>&1']);
+    expect(shell.commands).toEqual(['uv run pytest --color=yes 2>&1']);
   });
 
   test('12.3.3 fails when neither workspace manifest is present', async ({ cz }) => {
     await expect(cz.run('test')).rejects.toThrow('no test workspace found');
+  });
+});
+
+describe('12.4 keeping the JS runner colored despite AI-agent auto-detection', () => {
+  test('12.4.1 clears the env vars vitest uses to auto-disable color', async ({ cz, shell, tempDir }) => {
+    await writeJsWorkspace(tempDir);
+    shell.on('bun run test', 'JS: 12 passed');
+
+    await cz.run('test');
+
+    const [call] = shell.calls;
+    const undefinedEnvKeys = new Set(
+      Object.entries(call?.env ?? {})
+        .filter(([, value]) => value === undefined)
+        .map(([key]) => key),
+    );
+    expect(undefinedEnvKeys).toEqual(new Set(['AI_AGENT', 'CLAUDE_CODE', 'CLAUDECODE']));
   });
 });
