@@ -109,55 +109,69 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
   });
 });
 
+type ResolveCase = [
+  shape: string,
+  manifestPath: string,
+  manifestText: string,
+  route: FetchRoute,
+  expectedRepos: string[],
+  expectedUnresolvedNpm?: string[],
+];
+
+const resolveCases: ResolveCase[] = [
+  [
+    'resolves a package to its source repo via deps dev',
+    'package.json',
+    npmManifest('react'),
+    reactViaDepsDev,
+    ['https://github.com/facebook/react'],
+  ],
+  [
+    'falls back to the npm registry when deps dev has no source repo',
+    'package.json',
+    npmManifest('react'),
+    reactViaNpmRegistry,
+    ['https://github.com/facebook/react'],
+  ],
+  [
+    'falls back to pypi project urls when deps dev has no source repo',
+    'pyproject.toml',
+    '[project]\nname = "scratch-app"\ndependencies = ["requests"]\n',
+    requestsViaPypi,
+    ['https://github.com/psf/requests'],
+  ],
+  [
+    'reports the dependency as unresolved when no source repo is found anywhere',
+    'package.json',
+    npmManifest('does-not-exist'),
+    nothingAnywhere,
+    [],
+    ['does-not-exist'],
+  ],
+  [
+    'falls back to a deps dev links entry when there is no related project',
+    'package.json',
+    npmManifest('zod'),
+    zodViaDepsDevLinks,
+    ['https://github.com/colinhacks/zod'],
+  ],
+];
+
 describe('1.2 resolving a dependency name to its source repository', () => {
-  test('1.2.1 resolves a package to its source repo via deps dev', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('react'));
-    network.otherwise(reactViaDepsDev);
+  test.for(resolveCases)(
+    '%s',
+    async ([, manifestPath, manifestText, route, expectedRepos, expectedUnresolvedNpm], { catalog, network }) => {
+      await catalog.writeManifest(manifestPath, manifestText);
+      network.otherwise(route);
 
-    await catalog.run();
+      await catalog.run();
 
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/facebook/react']);
-  });
-
-  test('1.2.2 falls back to the npm registry when deps dev has no source repo', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('react'));
-    network.otherwise(reactViaNpmRegistry);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/facebook/react']);
-  });
-
-  test('1.2.3 falls back to pypi project urls when deps dev has no source repo', async ({ catalog, network }) => {
-    await catalog.writeManifest('pyproject.toml', '[project]\nname = "scratch-app"\ndependencies = ["requests"]\n');
-    network.otherwise(requestsViaPypi);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/psf/requests']);
-  });
-
-  test('1.2.4 reports the dependency as unresolved when no source repo is found anywhere', async ({
-    catalog,
-    network,
-  }) => {
-    await catalog.writeManifest('package.json', npmManifest('does-not-exist'));
-    network.otherwise(nothingAnywhere);
-
-    await catalog.run();
-
-    expect(catalog.unresolvedNames('npm')).toEqual(['does-not-exist']);
-    await expect(catalog.loadRepos()).resolves.toEqual([]);
-  });
-
-  test('1.2.5 falls back to a deps dev links entry when there is no related project', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('zod'));
-    network.otherwise(zodViaDepsDevLinks);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/colinhacks/zod']);
-  });
+      if (expectedUnresolvedNpm !== undefined) {
+        expect(catalog.unresolvedNames('npm')).toEqual(expectedUnresolvedNpm);
+      }
+      await expect(catalog.loadRepos()).resolves.toEqual(expectedRepos);
+    },
+  );
 });
 
 describe('1.3 collecting the external repos a workspace depends on', () => {

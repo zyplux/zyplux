@@ -1,3 +1,5 @@
+import type { TempDir } from '#fixtures';
+
 import { describe, expect, test } from '#fixtures';
 
 type FetchRoute = (url: string) => Response;
@@ -52,20 +54,19 @@ describe('7.1 writing the resolved repos to the output file', () => {
   });
 });
 
+type OutPathCase = [shape: string, buildOut: (tempDir: TempDir) => string, expectedOutputPath: string];
+
+const outPathCases: OutPathCase[] = [
+  ['joins a relative --out under --dir', () => 'nested/catalog.json', 'nested/catalog.json'],
+  ['uses an absolute --out as-is', tempDir => `${tempDir.path}/elsewhere.json`, 'elsewhere.json'],
+];
+
 describe('7.2 resolving the output path', () => {
-  test('7.2.1 joins a relative --out under --dir', async ({ catalog }) => {
+  test.for(outPathCases)('%s', async ([, buildOut, expectedOutputPath], { catalog, tempDir }) => {
     await catalog.writeManifest('package.json', NO_DEPS_MANIFEST);
 
-    await catalog.run({ out: 'nested/catalog.json' });
+    await catalog.run({ out: buildOut(tempDir) });
 
-    await expect(catalog.readOutput('nested/catalog.json')).resolves.toBe('[]\n');
-  });
-
-  test('7.2.2 uses an absolute --out as-is', async ({ catalog, tempDir }) => {
-    await catalog.writeManifest('package.json', NO_DEPS_MANIFEST);
-
-    await catalog.run({ out: `${tempDir.path}/elsewhere.json` });
-
-    await expect(catalog.readOutput('elsewhere.json')).resolves.toBe('[]\n');
+    await expect(catalog.readOutput(expectedOutputPath)).resolves.toBe('[]\n');
   });
 });
