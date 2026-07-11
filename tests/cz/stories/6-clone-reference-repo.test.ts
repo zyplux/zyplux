@@ -4,22 +4,22 @@ type CloneCase = [shape: string, args: string[], expectedArgv: string[]];
 
 const cloneCases: CloneCase[] = [
   [
-    'builds a github url and destination from an owner/name shorthand',
+    '6.1.1 builds a github url and destination from an owner/name shorthand',
     ['zyplux/util'],
     ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    'uses a full url as-is and derives the destination from it',
+    '6.1.2 uses a full url as-is and derives the destination from it',
     ['https://github.com/zyplux/util.git'],
     ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    'derives the destination from a git@ ssh url, stripping the .git suffix',
+    '6.1.3 derives the destination from a git@ ssh url, stripping the .git suffix',
     ['git@github.com:zyplux/util.git'],
     ['clone', '--depth', '1', '--single-branch', 'git@github.com:zyplux/util.git', 'reference_clones/util'],
   ],
   [
-    'passes a given ref as the branch flag',
+    '6.1.4 passes a given ref as the branch flag',
     ['zyplux/util', 'v2.0.0'],
     [
       'clone',

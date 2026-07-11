@@ -9,9 +9,9 @@ const schemaMismatchToml = '[project]\nname = 123';
 type SchemaCase = [shape: string, text: string, expectedFailure?: 'schema' | 'syntax'];
 
 const schemaCases: SchemaCase[] = [
-  ['returns the schema validated value for well formed toml', validToml],
-  ['throws on malformed toml syntax', malformedToml, 'syntax'],
-  ['throws a zod error when the parsed value does not match the schema', schemaMismatchToml, 'schema'],
+  ['4.1.1 returns the schema validated value for well formed toml', validToml],
+  ['4.1.2 throws on malformed toml syntax', malformedToml, 'syntax'],
+  ['4.1.3 throws a zod error when the parsed value does not match the schema', schemaMismatchToml, 'schema'],
 ];
 
 describe('4. Parsing TOML into schema-validated values', () => {
@@ -30,10 +30,10 @@ describe('4. Parsing TOML into schema-validated values', () => {
   type TryParseCase = [shape: string, text: string, expected: typeof validValue | undefined];
 
   const tryParseCases: TryParseCase[] = [
-    ['returns the schema validated value for well formed toml', validToml, validValue],
-    ['returns undefined instead of throwing on malformed toml syntax', malformedToml, undefined],
+    ['4.2.1 returns the schema validated value for well formed toml', validToml, validValue],
+    ['4.2.2 returns undefined instead of throwing on malformed toml syntax', malformedToml, undefined],
     [
-      'returns undefined instead of throwing when the parsed value does not match the schema',
+      '4.2.3 returns undefined instead of throwing when the parsed value does not match the schema',
       schemaMismatchToml,
       undefined,
     ],
