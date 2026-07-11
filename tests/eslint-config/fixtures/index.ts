@@ -14,10 +14,18 @@ import {
   printConfig,
   subjects,
 } from './act';
-import { applySuggestion, isAbsolutePath, tsconfigRootDirs } from './assert';
+import {
+  applySuggestion,
+  expectEachToReport,
+  expectEachToReportNothing,
+  isAbsolutePath,
+  tsconfigRootDirs,
+} from './assert';
 
 type EslintFixtures = {
   applySuggestion: typeof applySuggestion;
+  expectEachToReport: typeof expectEachToReport;
+  expectEachToReportNothing: typeof expectEachToReportNothing;
   fixRule: ReturnType<typeof createFixRule>;
   isAbsolutePath: typeof isAbsolutePath;
   lint: Awaited<ReturnType<typeof createMergedLint>>;
@@ -34,6 +42,8 @@ type EslintFixtures = {
 
 export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.extend<EslintFixtures>({
   applySuggestion: makeFixture(applySuggestion),
+  expectEachToReport: makeFixture(expectEachToReport),
+  expectEachToReportNothing: makeFixture(expectEachToReportNothing),
   fixRule: async ({ ruleName }, use) => {
     await use(createFixRule(ruleName));
   },

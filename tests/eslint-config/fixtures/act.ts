@@ -33,8 +33,8 @@ const suiteDir = fileURLToPath(new URL('../', import.meta.url));
 
 export type RuleLintOptions = { filename?: string; options?: unknown[] };
 
+export type RuleLintWithOptions = (code: string, lintOptions?: RuleLintOptions) => Linter.LintMessage[];
 type RuleLint = (code: string) => Linter.LintMessage[];
-type RuleLintWithOptions = (code: string, lintOptions?: RuleLintOptions) => Linter.LintMessage[];
 
 const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
   const rules: Linter.RulesRecord = {

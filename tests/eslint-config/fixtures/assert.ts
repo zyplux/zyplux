@@ -3,8 +3,9 @@ import type { Linter } from 'eslint';
 import { ParserOptionsSchema } from '@zyplux/eslint-config/contracts';
 import { registerMatchers } from '@zyplux/tests-fixtures';
 import path from 'node:path';
+import { expect } from 'vitest';
 
-import type { ZypluxConfig } from './act';
+import type { RuleLintWithOptions, ZypluxConfig } from './act';
 
 export const isAbsolutePath = (candidate: string) => path.isAbsolute(candidate);
 
@@ -45,3 +46,15 @@ declare module 'vitest' {
     toReportNothing: () => T;
   }
 }
+
+export const expectEachToReport = (
+  lintRule: RuleLintWithOptions,
+  codes: string[],
+  ...messageIds: [string, ...string[]]
+) => {
+  for (const code of codes) expect(lintRule(code)).toReport(...messageIds);
+};
+
+export const expectEachToReportNothing = (lintRule: RuleLintWithOptions, codes: string[]) => {
+  for (const code of codes) expect(lintRule(code)).toReportNothing();
+};
