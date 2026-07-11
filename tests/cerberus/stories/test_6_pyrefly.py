@@ -17,6 +17,8 @@ CHECK_ID = "pyrefly"
 _PYREFLY_STRICT = (
     'preset = "strict"\n\n'
     'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
+    "disable-project-excludes-heuristics = true\n"
+    "use-ignore-files = false\n"
     'search-path = ["apps/cerberus/src"]\n'
 )
 
@@ -147,3 +149,42 @@ def test_6_7_1_passes_when_preset_is_strict_coverage_is_complete_and_relaxations
     result = run_pyrefly()
 
     assert result.findings == [ok("all code strict, no relaxations (pyrefly.toml)")]
+
+
+def test_6_8_1_fails_when_the_exclude_heuristic_overrides_are_missing(
+    run_pyrefly: RunPyrefly, fail: MakeFinding
+) -> None:
+    pyrefly = (
+        'preset = "strict"\n\n'
+        'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
+        'search-path = ["apps/cerberus/src"]\n'
+    )
+
+    result = run_pyrefly(pyrefly=pyrefly)
+
+    assert result.findings == [
+        fail(
+            "pyrefly.toml must set disable-project-excludes-heuristics = true and use-ignore-files = false"
+            " (otherwise a gitignored agent worktree excludes every project-includes path):"
+            " disable-project-excludes-heuristics=None, use-ignore-files=None"
+        )
+    ]
+
+
+def test_6_8_2_fails_when_the_exclude_heuristic_overrides_are_set_to_the_wrong_values(
+    run_pyrefly: RunPyrefly, fail: MakeFinding
+) -> None:
+    pyrefly = _PYREFLY_STRICT.replace(
+        "disable-project-excludes-heuristics = true\nuse-ignore-files = false\n",
+        "disable-project-excludes-heuristics = false\nuse-ignore-files = true\n",
+    )
+
+    result = run_pyrefly(pyrefly=pyrefly)
+
+    assert result.findings == [
+        fail(
+            "pyrefly.toml must set disable-project-excludes-heuristics = true and use-ignore-files = false"
+            " (otherwise a gitignored agent worktree excludes every project-includes path):"
+            " disable-project-excludes-heuristics=False, use-ignore-files=True"
+        )
+    ]

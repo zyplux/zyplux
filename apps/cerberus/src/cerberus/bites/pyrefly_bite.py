@@ -15,6 +15,7 @@ SCOPE = Scope.CONTENT
 
 PATH = "pyrefly.toml"
 REQUIRED_PRESET = "strict"
+_REQUIRED_EXCLUDE_OVERRIDES = {"disable-project-excludes-heuristics": True, "use-ignore-files": False}
 
 _PRODUCTION_TOPS = ("apps", "packages")
 _TESTS_TOP = "tests"
@@ -73,6 +74,19 @@ def _check_coverage(config: dict[str, Any], production_roots: set[str], test_roo
         res.fail(f"{PATH} project-includes does not cover: {', '.join(uncovered)}")
 
 
+def _check_exclude_overrides(config: dict[str, Any], res: CheckResult) -> None:
+    wrong = sorted(
+        f"{key}={config.get(key)!r}"
+        for key, required in _REQUIRED_EXCLUDE_OVERRIDES.items()
+        if config.get(key) is not required
+    )
+    if wrong:
+        res.fail(
+            f"{PATH} must set disable-project-excludes-heuristics = true and use-ignore-files = false"
+            f" (otherwise a gitignored agent worktree excludes every project-includes path): {', '.join(wrong)}"
+        )
+
+
 def _check_sub_configs(config: dict[str, Any], res: CheckResult) -> None:
     for sub in _as_list(config.get("sub-config")):
         if not isinstance(sub, dict):
@@ -126,6 +140,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_top_level_errors(config, ctx.config.pyrefly_error_kinds, res)
     _check_coverage(config, production_roots, test_roots, res)
     _check_sub_configs(config, res)
+    _check_exclude_overrides(config, res)
 
     if not res.problems:
         res.ok(f"all code strict, no relaxations ({PATH})")
