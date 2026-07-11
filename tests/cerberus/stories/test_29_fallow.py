@@ -21,8 +21,16 @@ _PACKAGE_JSON = '{"name": "demo"}'
 _SHARED_FLAGS = ["--quiet", "--fail-on-issues", "--format", "json"]
 _SHIELD_DIR_PLACEHOLDER = "<shield-dir>"
 
-_CLEAN_DEAD_CODE = json.dumps({"total_issues": 0})
+_CLEAN_DEAD_CODE = json.dumps({
+    "kind": "dead-code",
+    "schema_version": 7,
+    "version": "3.3.0",
+    "total_issues": 0,
+})
 _CLEAN_HEALTH = json.dumps({
+    "kind": "health",
+    "schema_version": 7,
+    "version": "3.3.0",
     "elapsed_ms": 9,
     "findings": [],
     "summary": {
@@ -33,12 +41,16 @@ _CLEAN_HEALTH = json.dumps({
 })
 _CLEAN_HEALTH_STATUS = "✓ 0 above threshold · 941 analyzed · maintainability 92.1 (good) (0.01s)"
 _HEALTH_OVER_THRESHOLD = json.dumps({
+    "kind": "health",
+    "schema_version": 7,
+    "version": "3.3.0",
     "elapsed_ms": 9,
     "findings": [
         {
             "path": "src/rules/params.ts",
             "name": "planParameter",
             "line": 144,
+            "col": 21,
             "cyclomatic": 25,
             "cognitive": 30,
             "crap": 160.0,
@@ -47,6 +59,7 @@ _HEALTH_OVER_THRESHOLD = json.dumps({
             "path": "src/rules/types.ts",
             "name": "checkParams",
             "line": 292,
+            "col": 17,
             "cyclomatic": 13,
             "cognitive": 16,
             "crap": 49.5,
@@ -64,8 +77,10 @@ _HEALTH_OVER_THRESHOLD = json.dumps({
 
 
 def _serve_clean(fake_proc: FakeProc) -> None:
-    fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
-    fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
+    fake_proc.serve("fallow dead-code")
+    fake_proc.serve_report_file("fallow dead-code", _CLEAN_DEAD_CODE)
+    fake_proc.serve("fallow health")
+    fake_proc.serve_report_file("fallow health", _CLEAN_HEALTH)
 
 
 def _argv(spec: str, analysis: str, repo_root: Path) -> list[str]:
@@ -78,6 +93,8 @@ def _argv(spec: str, analysis: str, repo_root: Path) -> list[str]:
         str(repo_root.resolve()),
         "--config",
         f"{_SHIELD_DIR_PLACEHOLDER}/fallow.json",
+        "--output-file",
+        f"{_SHIELD_DIR_PLACEHOLDER}/{analysis}-report.json",
     ]
 
 
@@ -87,7 +104,9 @@ def _mask_shield_dir(calls: list[tuple[list[str], Path | None]]) -> list[tuple[l
         masked_argv = list(argv)
         config_idx = masked_argv.index("--config") + 1
         shield_dir = str(Path(masked_argv[config_idx]).parent)
-        masked_argv[config_idx] = masked_argv[config_idx].replace(shield_dir, _SHIELD_DIR_PLACEHOLDER)
+        for flag in ("--config", "--output-file"):
+            flag_idx = masked_argv.index(flag) + 1
+            masked_argv[flag_idx] = masked_argv[flag_idx].replace(shield_dir, _SHIELD_DIR_PLACEHOLDER)
         masked_cwd = Path(_SHIELD_DIR_PLACEHOLDER) if cwd == Path(shield_dir) else cwd
         masked.append((masked_argv, masked_cwd))
     return masked
@@ -142,8 +161,10 @@ def test_29_2_2_runs_fallow_dead_code_and_health_non_interactively_from_a_shield
 def test_29_2_3_fails_with_the_issue_count_when_fallow_dead_code_reports_issues(
     run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, npm_tool_spec: NpmToolSpec, fail: MakeFinding
 ) -> None:
-    fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
-    fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
+    fake_proc.serve("fallow dead-code", returncode=1)
+    fake_proc.serve_report_file("fallow dead-code", json.dumps({"total_issues": 3}))
+    fake_proc.serve("fallow health")
+    fake_proc.serve_report_file("fallow health", _CLEAN_HEALTH)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
         fail(f"fallow found 3 dead-code issues; run `bunx {npm_tool_spec('fallow')} dead-code` locally for details")
@@ -161,8 +182,10 @@ def test_29_2_4_errors_when_bunx_is_not_on_path(
 def test_29_3_1_fails_listing_each_function_fallow_health_flags_above_its_thresholds(
     run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, fail: MakeFinding
 ) -> None:
-    fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
-    fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)
+    fake_proc.serve("fallow dead-code")
+    fake_proc.serve_report_file("fallow dead-code", _CLEAN_DEAD_CODE)
+    fake_proc.serve("fallow health", returncode=1)
+    fake_proc.serve_report_file("fallow health", _HEALTH_OVER_THRESHOLD)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
         fail(
@@ -195,14 +218,28 @@ def test_29_3_2_fails_listing_only_the_metrics_fallow_reported_when_coverage_dat
             "max_crap_threshold": 30.0,
         },
     })
-    fake_proc.serve("fallow dead-code", stdout=_CLEAN_DEAD_CODE)
-    fake_proc.serve("fallow health", returncode=1, stdout=health_without_crap)
+    fake_proc.serve("fallow dead-code")
+    fake_proc.serve_report_file("fallow dead-code", _CLEAN_DEAD_CODE)
+    fake_proc.serve("fallow health", returncode=1)
+    fake_proc.serve_report_file("fallow health", health_without_crap)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.findings == [
         fail(
             "✗ 1 above threshold · 500 analyzed · maintainability 70.0 (moderate)\n"
             "    src/rules/params.ts:144 planParameter — cyclomatic 25/20, cognitive 30/15",
         )
+    ]
+
+
+def test_29_3_3_falls_back_to_the_rerun_hint_only_when_fallow_crashes_without_writing_a_report(
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, npm_tool_spec: NpmToolSpec, fail: MakeFinding
+) -> None:
+    fake_proc.serve("fallow dead-code")
+    fake_proc.serve_report_file("fallow dead-code", _CLEAN_DEAD_CODE)
+    fake_proc.serve("fallow health", returncode=2, stderr="fallow: internal error")
+    result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
+    assert result.findings == [
+        fail(f"fallow health exited 2; run `bunx {npm_tool_spec('fallow')} health` locally for details")
     ]
 
 
@@ -217,8 +254,10 @@ def test_29_4_1_reports_fallows_health_status_line_on_a_clean_run(
 def test_29_4_2_leaves_the_detail_unset_on_failure_so_the_status_line_appears_only_in_the_fail_line(
     run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc
 ) -> None:
-    fake_proc.serve("fallow dead-code", returncode=1, stdout=json.dumps({"total_issues": 3}))
-    fake_proc.serve("fallow health", returncode=1, stdout=_HEALTH_OVER_THRESHOLD)
+    fake_proc.serve("fallow dead-code", returncode=1)
+    fake_proc.serve_report_file("fallow dead-code", json.dumps({"total_issues": 3}))
+    fake_proc.serve("fallow health", returncode=1)
+    fake_proc.serve_report_file("fallow health", _HEALTH_OVER_THRESHOLD)
     result = run_check_with_files(CHECK_ID, {"package.json": _PACKAGE_JSON})
     assert result.detail is None
 
@@ -265,8 +304,10 @@ def test_29_5_3_switches_off_fallows_default_duplicate_ignores_so_test_files_cou
 
 
 def _run_dead_code_with_issues(run_fallow: RunFallow, fake_proc: FakeProc, *, verbose: bool) -> CheckResult:
-    fake_proc.serve("fallow dead-code", returncode=1, stdout=_DEAD_CODE_WITH_ISSUES)
-    fake_proc.serve("fallow health", stdout=_CLEAN_HEALTH)
+    fake_proc.serve("fallow dead-code", returncode=1)
+    fake_proc.serve_report_file("fallow dead-code", _DEAD_CODE_WITH_ISSUES)
+    fake_proc.serve("fallow health")
+    fake_proc.serve_report_file("fallow health", _CLEAN_HEALTH)
     return run_fallow({"package.json": _PACKAGE_JSON}, verbose=verbose)
 
 
@@ -289,6 +330,47 @@ def test_29_6_2_keeps_the_count_and_rerun_hint_failure_without_verbose(
     result = _run_dead_code_with_issues(run_fallow, fake_proc, verbose=False)
     assert result.findings == [
         fail(f"fallow found 2 dead-code issues; run `bunx {npm_tool_spec('fallow')} dead-code` locally for details")
+    ]
+
+
+_DEAD_CODE_WITH_DEPENDENCY_AND_ENVELOPE_NOISE = json.dumps({
+    "kind": "dead-code",
+    "schema_version": 7,
+    "version": "3.3.0",
+    "total_issues": 1,
+    "unused_dev_dependencies": [
+        {
+            "package_name": "@zyplux/cz",
+            "location": "devDependencies",
+            "path": "package.json",
+            "line": 51,
+        },
+    ],
+    "workspace_diagnostics": [
+        {
+            "path": "tests/pytools",
+            "kind": "glob-matched-no-package-json",
+            "pattern": "tests/*",
+            "message": "Glob 'tests/*' matched 'tests/pytools' but no package.json is present.",
+        },
+    ],
+    "entry_points": [{"path": "src/index.ts"}],
+    "next_steps": [{"id": "setup", "command": "fallow schema"}],
+})
+
+
+def test_29_6_3_itemizes_a_dependency_by_its_real_field_name_and_ignores_envelope_metadata(
+    run_fallow: RunFallow, fake_proc: FakeProc, fail: MakeFinding
+) -> None:
+    fake_proc.serve("fallow dead-code", returncode=1)
+    fake_proc.serve_report_file("fallow dead-code", _DEAD_CODE_WITH_DEPENDENCY_AND_ENVELOPE_NOISE)
+    fake_proc.serve("fallow health")
+    fake_proc.serve_report_file("fallow health", _CLEAN_HEALTH)
+    result = run_fallow({"package.json": _PACKAGE_JSON}, verbose=True)
+    assert result.findings == [
+        fail(
+            "fallow found 1 dead-code issues\n    unused_dev_dependencies: package.json:51 @zyplux/cz",
+        )
     ]
 
 

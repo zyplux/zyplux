@@ -234,13 +234,18 @@ class FakeProc:
     distinct subcommands can be served per subcommand via a `"tool subcommand"`
     key. `output_files` are written into the directory the invocation names
     after `--output`, mimicking tools that emit report files there.
-    `config_snapshots` captures the content of the file each invocation names
-    after `--config` — checks write that file into a temp dir that is gone by
-    the time a test can look, so the double reads it at call time.
+    `serve_report_file` writes to the single file path the invocation names
+    after `--output-file`, mimicking a tool that writes one named report file
+    rather than a directory of them — real fallow does this so a large report
+    never has to cross the subprocess stdout pipe. `config_snapshots` captures
+    the content of the file each invocation names after `--config` — checks
+    write that file into a temp dir that is gone by the time a test can look,
+    so the double reads it at call time.
     """
 
     outcomes: dict[str, subprocess.CompletedProcess[str]] = field(default_factory=dict)
     served_output_files: dict[str, dict[str, str]] = field(default_factory=dict)
+    served_report_files: dict[str, str] = field(default_factory=dict)
     calls: list[tuple[list[str], Path | None]] = field(default_factory=list)
     config_snapshots: list[str] = field(default_factory=list)
     missing: set[str] = field(default_factory=set)
@@ -258,6 +263,9 @@ class FakeProc:
         if output_files is not None:
             self.served_output_files[tool] = dict(output_files)
 
+    def serve_report_file(self, tool: str, content: str) -> None:
+        self.served_report_files[tool] = content
+
     def serve_missing(self, tool: str) -> None:
         self.missing.add(tool)
 
@@ -268,7 +276,15 @@ class FakeProc:
         out_dir = Path(argv[argv.index("--output") + 1])
         out_dir.mkdir(parents=True, exist_ok=True)
         for name, text in files.items():
-            (out_dir / name).write_text(text)
+            (out_dir / name).write_text(text, encoding="utf-8")
+
+    def _write_report_file(self, tool: str, argv: list[str]) -> None:
+        content = self.served_report_files.get(tool)
+        if content is None or "--output-file" not in argv:
+            return
+        out_path = Path(argv[argv.index("--output-file") + 1])
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(content, encoding="utf-8")
 
     def _snapshot_config_file(self, argv: list[str]) -> None:
         if "--config" in argv:
@@ -284,6 +300,7 @@ class FakeProc:
         subcommand_key = " ".join([launched_tool, *launched[1:2]])
         tool = subcommand_key if subcommand_key in self.outcomes else launched_tool
         self._write_output_files(tool, argv)
+        self._write_report_file(tool, argv)
         outcome = self.outcomes[tool]
         return subprocess.CompletedProcess(argv, outcome.returncode, outcome.stdout, outcome.stderr)
 
