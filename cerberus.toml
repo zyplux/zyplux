@@ -10,4 +10,4 @@ off = false
 
 # TEMPORARY: tests/cz/stories is mid-restructure, doc/test headings intentionally out of lockstep. Re-enable once settled.
 [story_tests_lockstep_ts]
-off = true
+off = false
