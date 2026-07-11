@@ -23,3 +23,7 @@
 ### 12.3.2 runs only pytest when only pyproject.toml is present
 
 ### 12.3.3 fails when neither workspace manifest is present
+
+## 12.4 keeping the JS runner colored despite AI-agent auto-detection
+
+### 12.4.1 clears the env vars vitest uses to auto-disable color

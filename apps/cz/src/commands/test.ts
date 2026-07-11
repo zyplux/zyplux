@@ -7,8 +7,15 @@ import { argument, command, constant, merge, message, object, optional, string }
 
 const PYTEST_NO_TESTS_COLLECTED = 5;
 
+const AGENT_COLOR_SUPPRESSION_ENV_KEYS = ['AI_AGENT', 'CLAUDECODE', 'CLAUDE_CODE'];
+
+const AGENT_COLOR_SUPPRESSION_OVERRIDE: Record<string, string | undefined> = Object.fromEntries(
+  AGENT_COLOR_SUPPRESSION_ENV_KEYS.map(key => [key, undefined]),
+);
+
 type Runner = {
   argv: (name: string | undefined) => Promise<string[]> | string[];
+  env?: Record<string, string | undefined>;
   label: string;
   manifest: string;
   toleratedExitCode?: number;
@@ -63,6 +70,7 @@ const RUNNERS: Runner[] = [
         '--hideSkippedTests',
       ];
     },
+    env: AGENT_COLOR_SUPPRESSION_OVERRIDE,
     label: 'JS',
     manifest: 'package.json',
   },
@@ -71,6 +79,7 @@ const RUNNERS: Runner[] = [
       'uv',
       'run',
       'pytest',
+      '--color=yes',
       ...(name === undefined ? [] : ['--no-cov', '-v', '-k', toPytestKeywordExpr(name)]),
     ],
     label: 'Python',
@@ -98,7 +107,7 @@ export const runTest = async ({ name }: TestConfig) => {
   const results = await Promise.all(
     runners.map(async runner => {
       const argv = await runner.argv(name);
-      const output = argv.length === 0 ? { exitCode: 0, text: () => '' } : await captureMerged(argv);
+      const output = argv.length === 0 ? { exitCode: 0, text: () => '' } : await captureMerged(argv, runner.env);
       return { output, runner };
     }),
   );

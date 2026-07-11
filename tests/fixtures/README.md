@@ -42,12 +42,12 @@ describe('1.1 pushing a branch', () => {
 
 ## Fakes
 
-- `createShellFake()` — routes commands (`on(pattern, ...replies)`, later routes win, the last reply repeats; `otherwise(reply)` sets a fallback, unrouted commands throw) and records `calls` (`{ argv, program }`), `commands` (rendered strings), `commandsMatching(pattern)`.
+- `createShellFake()` — routes commands (`on(pattern, ...replies)`, later routes win, the last reply repeats; `otherwise(reply)` sets a fallback, unrouted commands throw) and records `calls` (`{ argv, env?, program }`), `commands` (rendered strings), `commandsMatching(pattern)`.
 - `createConsoleCapture()` — records `logLines`/`warnLines`/`errorLines`.
 - `createFetchFake()` — routes urls (`on(prefixOrRegExp, reply)`, `otherwise(reply)`) and records `requests`; `okResponse()`/`notFoundResponse()` build replies.
 - `createPromptFake()` — accepts every `prompt()` call and records `messages`.
 - `createTempDir()` — `path`, `write(relativePath, content)`, `exists(relativePath)`, `remove()`.
-- `fakeShellOutput(stdout, exitCode?)`, `fakeShellPromise(result)`, `toArgv(values)` — raw `Bun.$` doubles behind `createShellFake`.
+- `fakeShellOutput(stdout, exitCode?)`, `fakeShellPromise(result, onEnv?)`, `toArgv(values)` — raw `Bun.$` doubles behind `createShellFake`.
 
 ## Matchers
 
