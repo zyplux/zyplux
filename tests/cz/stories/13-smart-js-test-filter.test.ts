@@ -118,3 +118,11 @@ describe('beta section', () => {
     expect(command).not.toContain('-t ');
   });
 });
+
+describe('13.3 rejecting an invalid filter pattern', () => {
+  test('13.3.1 rejects an invalid regex filter with a clear error instead of crashing', async ({ cz, tempDir }) => {
+    await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
+
+    await expect(cz.run('test', '[')).rejects.toThrow("invalid test filter '['");
+  });
+});

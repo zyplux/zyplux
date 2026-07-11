@@ -21,12 +21,22 @@ type Runner = {
   toleratedExitCode?: number;
 };
 
+const parseFilterPattern = (name: string) => {
+  try {
+    return new RegExp(name);
+  } catch (error) {
+    throw new Error(`invalid test filter '${name}': ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
+};
+
 const resolveJsFilters = async (name: string) => {
+  const pattern = parseFilterPattern(name);
   const { createVitest } = await import('vitest/node');
   const vitest = await createVitest('test', { passWithNoTests: true, watch: false });
   try {
     const { testModules } = await vitest.collect(undefined, { staticParse: true });
-    const pattern = new RegExp(name);
     const matches = testModules
       .map(testModule => ({
         moduleId: testModule.moduleId,

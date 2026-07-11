@@ -10,3 +10,7 @@
 ## 13.2 unioning matches across multiple files
 
 ### 13.2.1 runs every matched file together when different files match for different reasons
+
+## 13.3 rejecting an invalid filter pattern
+
+### 13.3.1 rejects an invalid regex filter with a clear error instead of crashing
