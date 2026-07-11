@@ -20,6 +20,10 @@
 
 ### 29.3.2 fails listing only the metrics fallow reported when coverage data is absent
 
+Each analysis writes its report to a file via fallow's own `--output-file` rather than being read off stdout: relaying a large JSON report through the `bunx` -> fallow subprocess pipe chain has been observed to truncate silently at a pipe-buffer-sized boundary on real-world repos, and a truncated report is unparseable JSON — indistinguishable, without this fix, from a genuine fallow crash. The rerun-hint fallback stays reserved for that genuine-crash case: a fallow exit with no readable report on disk at all.
+
+### 29.3.3 falls back to the rerun hint only when fallow crashes without writing a report
+
 ## 29.4 surfacing fallow's health status line
 
 ### 29.4.1 reports fallow's health status line on a clean run
@@ -43,6 +47,10 @@ By default a dead-code failure reports only the issue count and defers to a loca
 ### 29.6.1 fails itemizing each dead-code issue with its category and location in verbose mode
 
 ### 29.6.2 keeps the count-and-rerun-hint failure without verbose
+
+Fallow's report envelope carries several sibling fields alongside the actual issue-category arrays (`entry_points`, `workspace_diagnostics`, `next_steps`, and other run metadata); itemization only walks the real categories, and it names each entry by whichever field fallow actually uses for that category (`export_name`, `package_name`, or a `parent_name`/`member_name` pair), not just `name`.
+
+### 29.6.3 itemizes a dependency by its real field name and ignores envelope metadata
 
 ## 29.7 running fallow at the version pinned in cerberus source
 
