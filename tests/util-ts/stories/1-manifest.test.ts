@@ -92,29 +92,34 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
     expect(pythonRequirementNames(manifest).toSorted(byLocale)).toEqual(['httpx', 'pytest', 'ruff', 'urllib3']);
   });
 
-  test('1.2.3 normalizes a requirement name into its pep 503 canonical form', ({ normalizePythonName }) => {
-    expect(normalizePythonName('Flask_SQLAlchemy')).toBe('flask-sqlalchemy');
-    expect(normalizePythonName('ruamel.yaml >= 0.18')).toBe('ruamel-yaml');
-  });
+  type NormalizeCase = [shape: string, requirement: string, canonical: string | undefined];
 
-  test('1.2.4 returns undefined when no package name can be parsed from a requirement', ({ normalizePythonName }) => {
-    expect(normalizePythonName('\t \n')).toBeUndefined();
+  const normalizeCases: NormalizeCase[] = [
+    [
+      'normalizes an underscored requirement name into its pep 503 canonical form',
+      'Flask_SQLAlchemy',
+      'flask-sqlalchemy',
+    ],
+    ['normalizes a dotted requirement name with a version specifier', 'ruamel.yaml >= 0.18', 'ruamel-yaml'],
+    ['returns undefined when no package name can be parsed from a requirement', '\t \n', undefined],
+  ];
+
+  test.for(normalizeCases)('%s', ([, requirement, canonical], { normalizePythonName }) => {
+    expect(normalizePythonName(requirement)).toBe(canonical);
   });
 });
 
 describe("1.3 resolving a manifest's repository url", () => {
-  test('1.3.1 reads the url from a string repository field', ({ repositoryUrl }) => {
-    expect(repositoryUrl('https://github.com/owner/repo')).toBe('https://github.com/owner/repo');
-  });
-
-  test('1.3.2 reads the url from an object repository field', ({ repositoryUrl }) => {
-    expect(repositoryUrl({ url: 'git+https://github.com/owner/repo.git' })).toBe(
+  test.for([
+    ['reads the url from a string repository field', 'https://github.com/owner/repo', 'https://github.com/owner/repo'],
+    [
+      'reads the url from an object repository field',
+      { url: 'git+https://github.com/owner/repo.git' },
       'git+https://github.com/owner/repo.git',
-    );
-  });
-
-  test('1.3.3 returns undefined when no repository is declared', ({ repositoryUrl }) => {
-    expect(repositoryUrl(undefined)).toBeUndefined();
+    ],
+    ['returns undefined when no repository is declared', undefined, undefined],
+  ] as const)('%s', ([, repository, expected], { repositoryUrl }) => {
+    expect(repositoryUrl(repository)).toBe(expected);
   });
 });
 
