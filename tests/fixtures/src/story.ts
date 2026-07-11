@@ -91,15 +91,18 @@ export const cliTest = libraryTest.extend<CliFixtures>({
     },
     { auto: true },
   ],
-  network: async ({}, use) => {
-    const network = createFetchFake();
-    const restore = network.install();
-    try {
-      await use(network);
-    } finally {
-      restore();
-    }
-  },
+  network: [
+    async ({}, use) => {
+      const network = createFetchFake();
+      const restore = network.install();
+      try {
+        await use(network);
+      } finally {
+        restore();
+      }
+    },
+    { auto: true },
+  ],
   prompt: async ({}, use) => {
     const prompt = createPromptFake();
     const restore = prompt.install();

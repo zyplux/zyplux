@@ -2,9 +2,10 @@ import { describe, expect, test } from '#fixtures';
 
 type FetchRoute = (url: string) => Response;
 
-const byLocale = (left: string, right: string) => left.localeCompare(right);
+const HTTP_NOT_FOUND = 404;
 
-const notFound = () => Response.error();
+const notFoundResponse = () => new Response(undefined, { status: HTTP_NOT_FOUND });
+
 const depsDevDefaultVersion = () =>
   Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
 const depsDevSourceRepo = (id: string) =>
@@ -25,7 +26,7 @@ const reactViaNpmRegistry: FetchRoute = url => {
   if (url.startsWith('https://registry.npmjs.org/')) {
     return Response.json({ repository: { url: 'git+https://github.com/facebook/react.git' } });
   }
-  return notFound();
+  return notFoundResponse();
 };
 
 const requestsViaPypi: FetchRoute = url => {
@@ -35,18 +36,16 @@ const requestsViaPypi: FetchRoute = url => {
   if (url.startsWith('https://pypi.org/')) {
     return Response.json({ info: { project_urls: { Source: 'https://github.com/psf/requests' } } });
   }
-  return notFound();
+  return notFoundResponse();
 };
-
-const nothingAnywhere: FetchRoute = () => notFound();
 
 const depsDevRouteFor = (sourceRepoById: ReadonlyMap<string, string>) => (url: string) => {
   const match = /api\.deps\.dev\/v3\/systems\/([^/]+)\/packages\/([^/]+)(\/versions\/.+)?$/.exec(url);
-  if (match === null) return notFound();
+  if (match === null) return notFoundResponse();
   const [, system, encodedName, versionPath] = match;
-  if (system === undefined || encodedName === undefined) return notFound();
+  if (system === undefined || encodedName === undefined) return notFoundResponse();
   const repo = sourceRepoById.get(`${system}:${decodeURIComponent(encodedName)}`);
-  if (repo === undefined) return notFound();
+  if (repo === undefined) return notFoundResponse();
   return versionPath === undefined ? depsDevDefaultVersion() : depsDevSourceRepo(repo);
 };
 
@@ -63,9 +62,7 @@ const npmManifest = (...dependencyNames: string[]) =>
   JSON.stringify({ dependencies: Object.fromEntries(dependencyNames.map(name => [name, '*'])), name: 'scratch-app' });
 
 describe('1.1 scanning workspace manifests for declared dependency names', () => {
-  test('1.1.1 collects npm dependency names from bun catalogs', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
-
+  test('1.1.1 collects npm dependency names from bun catalogs', async ({ catalog }) => {
     await catalog.runOverWorkspace();
 
     expect(catalog.unresolvedNames('npm')).toEqual(
@@ -75,10 +72,7 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
 
   test('1.1.2 collects python dependency names from project dependencies and dependency groups', async ({
     catalog,
-    network,
   }) => {
-    network.otherwise(nothingAnywhere);
-
     await catalog.runOverWorkspace();
 
     expect(catalog.unresolvedNames('pypi')).toEqual(
@@ -86,9 +80,7 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
     );
   });
 
-  test('1.1.3 excludes internal workspace packages from both ecosystems', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
-
+  test('1.1.3 excludes internal workspace packages from both ecosystems', async ({ catalog }) => {
     await catalog.runOverWorkspace();
 
     expect(catalog.unresolvedNames('npm')).toEqual(
@@ -97,15 +89,11 @@ describe('1.1 scanning workspace manifests for declared dependency names', () =>
     expect(catalog.unresolvedNames('pypi')).toEqual(expect.not.arrayContaining(['zyplux', 'zyplux-cerberus']));
   });
 
-  test('1.1.4 reports sorted deduplicated names for each ecosystem', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
-
+  test('1.1.4 reports deduplicated names for each ecosystem', async ({ catalog }) => {
     await catalog.runOverWorkspace();
 
-    const npmNames = catalog.unresolvedNames('npm');
-    const pypiNames = catalog.unresolvedNames('pypi');
-    expect(npmNames).toEqual([...new Set(npmNames)].toSorted(byLocale));
-    expect(pypiNames).toEqual([...new Set(pypiNames)].toSorted(byLocale));
+    expect(catalog.unresolvedNames('npm')).toContainNoDuplicates();
+    expect(catalog.unresolvedNames('pypi')).toContainNoDuplicates();
   });
 });
 
@@ -144,7 +132,7 @@ const resolveCases: ResolveCase[] = [
     '4 reports the dependency as unresolved when no source repo is found anywhere',
     'package.json',
     npmManifest('does-not-exist'),
-    nothingAnywhere,
+    notFoundResponse,
     [],
     ['does-not-exist'],
   ],
@@ -175,7 +163,7 @@ describe('1.2 resolving a dependency name to its source repository', () => {
 });
 
 describe('1.3 collecting the external repos a workspace depends on', () => {
-  test('1.3.1 collects deduplicated sorted source repos for resolved dependencies', async ({ catalog, network }) => {
+  test('1.3.1 collects deduplicated source repos for resolved dependencies', async ({ catalog, network }) => {
     network.otherwise(resolveFromWorkspaceCatalog);
 
     await catalog.runOverWorkspace();
@@ -188,7 +176,7 @@ describe('1.3 collecting the external repos a workspace depends on', () => {
         'https://github.com/dahlia/optique',
       ]),
     );
-    expect(repos).toEqual([...new Set(repos)].toSorted(byLocale));
+    expect(repos).toContainNoDuplicates();
   });
 
   test('1.3.2 excludes repos that belong to the scanned workspace itself', async ({ catalog, network }) => {

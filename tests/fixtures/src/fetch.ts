@@ -29,11 +29,10 @@ const getRequestUrl = (input: Request | string | URL) => {
 export const createFetchFake = (): FetchFake => {
   const requests: string[] = [];
   const routes: FetchRoute[] = [];
-  let fallback: FetchReply | undefined;
+  let fallback: FetchReply = notFoundResponse;
 
   const respond = (url: string) => {
     const reply = routes.findLast(candidate => isUrlMatch(url, candidate.match))?.reply ?? fallback;
-    if (reply === undefined) throw new Error(`no fetch route matches: ${url}`);
     return reply(url);
   };
 

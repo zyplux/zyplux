@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import { expect } from 'vitest';
 
 import type { ConsoleCapture } from './console';
@@ -27,7 +28,37 @@ const lineListResult = (lines: string[], label: string, expected: LineMatch | un
   return { message: () => `${observation}\n${renderLines(label, lines)}`, pass: isPass };
 };
 
+const unmatchedElements = (received: readonly unknown[], expected: readonly unknown[]) => {
+  const remaining = [...expected];
+  return received.filter(item => {
+    const index = remaining.findIndex(candidate => isDeepStrictEqual(candidate, item));
+    if (index === -1) return true;
+    remaining.splice(index, 1);
+    return false;
+  });
+};
+
 export const storyMatchers = registerMatchers({
+  toContainExactElementsInAnyOrder: (received: readonly unknown[], expected: readonly unknown[]) => {
+    const extra = unmatchedElements(received, expected);
+    const missing = unmatchedElements(expected, received);
+    return {
+      message: () =>
+        `expected [${received.join(', ')}] to contain exactly [${expected.join(', ')}] in any order\n` +
+        `${renderLines('missing', missing.map(String))}\n${renderLines('extra', extra.map(String))}`,
+      pass: extra.length === 0 && missing.length === 0,
+    };
+  },
+  toContainNoDuplicates: (received: readonly unknown[]) => {
+    const duplicates = received.filter(
+      (item, index) => received.findIndex(candidate => isDeepStrictEqual(candidate, item)) !== index,
+    );
+    return {
+      message: () =>
+        `expected [${received.join(', ')}] to contain no duplicates\n${renderLines('duplicates', duplicates.map(String))}`,
+      pass: duplicates.length === 0,
+    };
+  },
   toHaveErrored: ({ errorLines }: ConsoleCapture, line?: LineMatch) =>
     lineListResult(errorLines, 'console.error lines', line),
   toHaveLogged: ({ logLines }: ConsoleCapture, line?: LineMatch) => lineListResult(logLines, 'console.log lines', line),
@@ -50,6 +81,8 @@ export const storyMatchers = registerMatchers({
 
 declare module 'vitest' {
   interface Matchers<T> {
+    toContainExactElementsInAnyOrder: (expected: readonly unknown[]) => T;
+    toContainNoDuplicates: () => T;
     toHaveErrored: (line?: LineMatch) => T;
     toHaveLogged: (line?: LineMatch) => T;
     toHaveRun: (command: string) => T;

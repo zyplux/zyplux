@@ -163,7 +163,6 @@ export const createRegistries = (network: FetchFake) =>
         return pypiEverVisible === false ? notFoundResponse() : okResponse();
       });
       network.on('https://registry.npmjs.org/', () => (npmPublished ? okResponse() : notFoundResponse()));
-      network.otherwise(() => notFoundResponse());
     },
   }) satisfies Registries;
 

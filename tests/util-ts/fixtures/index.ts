@@ -1,15 +1,14 @@
 import { libraryTest, makeFixture } from '@zyplux/tests-fixtures';
-import { ZodError } from 'zod';
 
 import type { Subjects } from './act';
 
 import { subjects } from './act';
 import { createNestedGitRepos, workspaceRoot } from './arrange';
+import './matchers';
 
 type ArrangeFixtures = {
   createNestedGitRepos: typeof createNestedGitRepos;
   workspaceRoot: string;
-  zodError: typeof ZodError;
 };
 
 export const test = libraryTest.extend<ArrangeFixtures & Subjects>({
@@ -30,9 +29,9 @@ export const test = libraryTest.extend<ArrangeFixtures & Subjects>({
   repositoryUrl: makeFixture(subjects.repositoryUrl),
   tryParseToml: makeFixture(subjects.tryParseToml),
   workspaceRoot,
-  zodError: makeFixture(ZodError),
 });
 
 export type { Shell } from './act';
+export type { TomlOutcome } from './matchers';
 export type { ShellFake } from '@zyplux/tests-fixtures';
 export { describe, expect } from 'vitest';

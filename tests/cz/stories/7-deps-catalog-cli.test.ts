@@ -4,27 +4,28 @@ import { describe, expect, test } from '#fixtures';
 
 type FetchRoute = (url: string) => Response;
 
+const HTTP_NOT_FOUND = 404;
 const JSON_INDENT = 2;
 
 const NO_DEPS_MANIFEST = JSON.stringify({ name: 'scratch-app' });
 const TWO_DEPS_MANIFEST = JSON.stringify({ dependencies: { react: '^19', zod: '^3' }, name: 'scratch-app' });
+
+const notFoundResponse = () => new Response(undefined, { status: HTTP_NOT_FOUND });
 
 const sourceRepoByName = new Map([
   ['react', 'github.com/facebook/react'],
   ['zod', 'github.com/colinhacks/zod'],
 ]);
 
-const notFound = () => Response.error();
-
 const depsDevDefaultVersion = () =>
   Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
 
 const resolveViaDepsDev: FetchRoute = url => {
   const match = /api\.deps\.dev\/v3\/systems\/npm\/packages\/([^/]+)(\/versions\/.+)?$/.exec(url);
-  if (match === null) return notFound();
+  if (match === null) return notFoundResponse();
   const [, encodedName, versionPath] = match;
   const repo = encodedName === undefined ? undefined : sourceRepoByName.get(decodeURIComponent(encodedName));
-  if (repo === undefined) return notFound();
+  if (repo === undefined) return notFoundResponse();
   return versionPath === undefined
     ? depsDevDefaultVersion()
     : Response.json({ relatedProjects: [{ projectKey: { id: repo }, relationType: 'SOURCE_REPO' }] });
@@ -42,9 +43,8 @@ describe('7.1 writing the resolved repos to the output file', () => {
     expect(logs).toHaveLogged(`Wrote 2 source repositories to ${catalog.outPath}`);
   });
 
-  test('7.1.2 reports unresolved dependencies alongside the written count', async ({ catalog, logs, network }) => {
+  test('7.1.2 reports unresolved dependencies alongside the written count', async ({ catalog, logs }) => {
     await catalog.writeManifest('package.json', TWO_DEPS_MANIFEST);
-    network.otherwise(notFound);
 
     await catalog.run();
 

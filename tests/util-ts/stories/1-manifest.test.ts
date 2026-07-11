@@ -1,7 +1,5 @@
 import { describe, expect, test } from '#fixtures';
 
-const byLocale = (left: string, right: string) => left.localeCompare(right);
-
 const packageJsonText = [
   '{',
   '  "name": "@scope/app",',
@@ -76,7 +74,7 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
       workspaces: { catalog: { zod: 'catalog:' }, catalogs: { build: { esbuild: '^0.21' } } },
     });
 
-    expect(npmDependencyNames(manifest).toSorted(byLocale)).toEqual(['esbuild', 'react', 'vitest', 'zod']);
+    expect(npmDependencyNames(manifest)).toContainExactElementsInAnyOrder(['esbuild', 'react', 'vitest', 'zod']);
   });
 
   test('1.2.2 collects python requirement names across every section while dropping python itself', ({
@@ -89,7 +87,7 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
       tool: { uv: { 'dev-dependencies': ['pytest>=8'] } },
     });
 
-    expect(pythonRequirementNames(manifest).toSorted(byLocale)).toEqual(['httpx', 'pytest', 'ruff', 'urllib3']);
+    expect(pythonRequirementNames(manifest)).toContainExactElementsInAnyOrder(['httpx', 'pytest', 'ruff', 'urllib3']);
   });
 
   type NormalizeCase = [shape: string, requirement: string, canonical: string | undefined];
@@ -150,6 +148,6 @@ describe('1.4 discovering manifests tracked by git', () => {
 
     const manifests = await findManifests(tempDir.path);
 
-    expect(manifests.toSorted(byLocale)).toEqual(expectedManifests.toSorted(byLocale));
+    expect(manifests).toContainExactElementsInAnyOrder(expectedManifests);
   });
 });
