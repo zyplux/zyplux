@@ -27,7 +27,13 @@ describe('9 shape validation', () => {
 });
 `;
 
-type ResolutionCase = [shape: string, files: Record<string, string>, filter: string, matchedFiles: string[]];
+type ResolutionCase = [
+  shape: string,
+  files: Record<string, string>,
+  filter: string,
+  matchedFiles: string[],
+  scopeToName: boolean,
+];
 
 const resolutionCases: ResolutionCase[] = [
   [
@@ -35,38 +41,45 @@ const resolutionCases: ResolutionCase[] = [
     { 'stories/7-widget-shape.test.ts': widgetShapeFile },
     '7-widget-shape',
     ['stories/7-widget-shape.test.ts'],
+    false,
   ],
   [
     'a filter matching only a test name',
     { 'stories/8-other-thing.test.ts': manifestParsingFile },
     'parses a manifest carefully',
     ['stories/8-other-thing.test.ts'],
+    true,
   ],
-  ['a filter matching nothing', {}, 'nomatchxyz', []],
+  ['a filter matching nothing', {}, 'nomatchxyz', [], false],
   [
     'a filter matching both the path and a test name of the same file',
     { 'stories/9-shape.test.ts': shapeValidationFile },
     'shape',
     ['stories/9-shape.test.ts'],
+    false,
   ],
 ];
 
 describe('13.1 resolving a filter against real test files before running', () => {
-  test.for(resolutionCases)('13.1.1 resolves %s', async ([, files, filter, matchedFiles], { cz, shell, tempDir }) => {
-    await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
-    for (const [path, content] of Object.entries(files)) await tempDir.write(path, content);
-    shell.on('bun run test', 'JS: ok');
+  test.for(resolutionCases)(
+    '13.1.1 resolves %s',
+    async ([, files, filter, matchedFiles, scopeToName], { cz, shell, tempDir }) => {
+      await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
+      for (const [path, content] of Object.entries(files)) await tempDir.write(path, content);
+      shell.on('bun run test', 'JS: ok');
 
-    await cz.run('test', filter);
+      await cz.run('test', filter);
 
-    const [command] = shell.commandsMatching('bun run test');
-    if (matchedFiles.length > 0) {
-      for (const file of matchedFiles) expect(command).toContain(file);
-      expect(command).not.toContain('-t ');
-    } else {
-      expect(command).toBe(`bun run test -t ${filter} --passWithNoTests --coverage.enabled=false 2>&1`);
-    }
-  });
+      const [command] = shell.commandsMatching('bun run test');
+      if (matchedFiles.length > 0) {
+        for (const file of matchedFiles) expect(command).toContain(file);
+        if (scopeToName) expect(command).toContain(`-t ${filter}`);
+        else expect(command).not.toContain('-t ');
+      } else {
+        expect(shell.commandsMatching('bun run test')).toEqual([]);
+      }
+    },
+  );
 });
 
 describe('13.2 unioning matches across multiple files', () => {

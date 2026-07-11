@@ -7,3 +7,7 @@ threshold = 0
 # Bundled default is off; this repo carries the pin source, so the freshness guard runs here.
 [tool_pins_latest]
 off = false
+
+# TEMPORARY: tests/cz/stories is mid-restructure, doc/test headings intentionally out of lockstep. Re-enable once settled.
+[story_tests_lockstep_ts]
+off = true

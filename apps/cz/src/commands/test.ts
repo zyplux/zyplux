@@ -20,31 +20,59 @@ const resolveJsFilters = async (name: string) => {
   try {
     const { testModules } = await vitest.collect(undefined, { staticParse: true });
     const pattern = new RegExp(name);
-    return testModules
-      .filter(
-        testModule =>
-          pattern.test(testModule.moduleId) ||
-          testModule.children.allTests().some(testCase => pattern.test(testCase.fullName)),
-      )
-      .map(testModule => testModule.moduleId);
+    const matches = testModules
+      .map(testModule => ({
+        moduleId: testModule.moduleId,
+        nameMatch: testModule.children.allTests().some(testCase => pattern.test(testCase.fullName)),
+        pathMatch: pattern.test(testModule.moduleId),
+      }))
+      .filter(match => match.pathMatch || match.nameMatch);
+    return {
+      moduleIds: matches.map(match => match.moduleId),
+      scopeToName: matches.length > 0 && matches.every(match => !match.pathMatch),
+    };
   } finally {
     await vitest.close();
   }
 };
 
+const PYTEST_KEYWORD_RESERVED_WORDS = new Set(['and', 'not', 'or']);
+
+const toPytestKeywordExpr = (name: string) =>
+  name
+    .split(/\s+/)
+    .map(word => word.replaceAll(/[^\w:+.[\]\\/-]/g, ''))
+    .filter(word => word.length > 0 && !PYTEST_KEYWORD_RESERVED_WORDS.has(word))
+    .join(' and ');
+
 const RUNNERS: Runner[] = [
   {
     argv: async name => {
       if (name === undefined) return ['bun', 'run', 'test'];
-      const filters = await resolveJsFilters(name);
-      const selectors = filters.length > 0 ? filters : ['-t', name];
-      return ['bun', 'run', 'test', ...selectors, '--passWithNoTests', '--coverage.enabled=false'];
+      const { moduleIds, scopeToName } = await resolveJsFilters(name);
+      if (moduleIds.length === 0) return [];
+      const selectors = scopeToName ? [...moduleIds, '-t', name] : moduleIds;
+      return [
+        'bun',
+        'run',
+        'test',
+        ...selectors,
+        '--passWithNoTests',
+        '--coverage.enabled=false',
+        '--reporter=tree',
+        '--hideSkippedTests',
+      ];
     },
     label: 'JS',
     manifest: 'package.json',
   },
   {
-    argv: name => ['uv', 'run', 'pytest', ...(name === undefined ? [] : ['--no-cov', '-k', name])],
+    argv: name => [
+      'uv',
+      'run',
+      'pytest',
+      ...(name === undefined ? [] : ['--no-cov', '-v', '-k', toPytestKeywordExpr(name)]),
+    ],
     label: 'Python',
     manifest: 'pyproject.toml',
     toleratedExitCode: PYTEST_NO_TESTS_COLLECTED,
@@ -68,7 +96,11 @@ export const runTest = async ({ name }: TestConfig) => {
   ensure(runners.length > 0, `no test workspace found: neither package.json nor pyproject.toml is in ${process.cwd()}`);
 
   const results = await Promise.all(
-    runners.map(async runner => ({ output: await captureMerged(await runner.argv(name)), runner })),
+    runners.map(async runner => {
+      const argv = await runner.argv(name);
+      const output = argv.length === 0 ? { exitCode: 0, text: () => '' } : await captureMerged(argv);
+      return { output, runner };
+    }),
   );
 
   const failedLabels: string[] = [];

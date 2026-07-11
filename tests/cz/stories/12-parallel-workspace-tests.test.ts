@@ -61,15 +61,29 @@ describe('12.1 running both workspaces in parallel', () => {
 describe('12.2 filtering by test name', () => {
   test('12.2.1 forwards the name filter and skips coverage on both runners', async ({ cz, shell, tempDir }) => {
     await writeBothWorkspaces(tempDir);
+    await tempDir.write(
+      'stories/42-manifest.test.ts',
+      `import { describe, expect, test } from 'vitest';
+
+describe('42 manifest', () => {
+  test('42.1.1 parses the manifest', () => {
+    expect(true).toBe(true);
+  });
+});
+`,
+    );
     shell.on('bun run test', 'JS: 2 passed');
     shell.on('uv run pytest', 'PY: 3 passed');
 
     await cz.run('test', 'parses the manifest');
 
-    expect(shell.commandsMatching('bun run test')).toEqual([
-      'bun run test -t parses the manifest --passWithNoTests --coverage.enabled=false 2>&1',
+    const [command] = shell.commandsMatching('bun run test');
+    expect(command).toContain('stories/42-manifest.test.ts');
+    expect(command).toContain('-t parses the manifest');
+    expect(command).toContain('--passWithNoTests --coverage.enabled=false --reporter=tree --hideSkippedTests');
+    expect(shell.commandsMatching('uv run pytest')).toEqual([
+      'uv run pytest --no-cov -v -k parses and the and manifest 2>&1',
     ]);
-    expect(shell.commandsMatching('uv run pytest')).toEqual(['uv run pytest --no-cov -k parses the manifest 2>&1']);
   });
 
   test('12.2.2 passes when the filter matches nothing in either workspace', async ({ cz, shell, tempDir }) => {
