@@ -34,6 +34,6 @@
 
 ### 1.4.1 a closed descriptor is reported as unwatchable
 
-### 1.4.2 an invalid master fd does not crash the winsize copy
+### 1.4.2 a non tty master fd does not crash the winsize copy
 
 ### 1.4.3 forwarded signals relay to the child's process group

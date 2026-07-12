@@ -5,7 +5,8 @@ import { registerMatchers } from '@zyplux/tests-fixtures';
 import path from 'node:path';
 import { expect } from 'vitest';
 
-import type { RuleLintWithOptions, ZypluxConfig } from './act';
+import type { PackageLint, RuleLintWithOptions } from './act';
+import type { ZypluxConfig } from './arrange';
 
 export const isAbsolutePath = (candidate: string) => path.isAbsolute(candidate);
 
@@ -57,4 +58,11 @@ export const expectEachToReport = (
 
 export const expectEachToReportNothing = (lintRule: RuleLintWithOptions, codes: string[]) => {
   for (const code of codes) expect(lintRule(code)).toReportNothing();
+};
+
+export const expectPackageOutcome = (lint: PackageLint, outcome: Record<string, string | undefined>) => {
+  for (const [filename, messageId] of Object.entries(outcome)) {
+    if (messageId === undefined) expect(lint(filename)).toReportNothing();
+    else expect(lint(filename)).toReport(messageId);
+  }
 };

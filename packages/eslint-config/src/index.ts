@@ -11,7 +11,7 @@ import { testSeamRules } from './configs/test-seam';
 import { typescript } from './configs/typescript';
 import { unicornConfig } from './configs/unicorn';
 import { vitestConfig } from './configs/vitest';
-import { zypluxRules } from './configs/zyplux';
+import { packageWideUnusedTypesRules, zypluxRules } from './configs/zyplux';
 
 export type { ReactRenderer, RendererGlobs } from './configs/react';
 export { plugin } from './plugin';
@@ -74,6 +74,7 @@ const create = (options: ZypluxOptions = {}) => {
     unicornConfig,
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
+    packageWideUnusedTypesRules,
     contractsRules,
     schemaBoundaryRules,
     testSeamRules,

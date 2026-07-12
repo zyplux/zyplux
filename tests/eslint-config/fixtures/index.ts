@@ -3,32 +3,35 @@ import type { TestAPI } from 'vitest';
 
 import { libraryTest, makeFixture } from '@zyplux/tests-fixtures';
 
-import type { PrintedConfig } from './act';
+import type { PackageLint, PrintedConfig } from './act';
 
 import {
   createFixRule,
   createLintRule,
   createMergedLint,
-  loadRulesSnapshot,
+  createPackageLint,
   parsePrintedConfig,
   printConfig,
-  subjects,
 } from './act';
+import { loadRulesSnapshot, subjects, writePackageSource } from './arrange';
 import {
   applySuggestion,
   expectEachToReport,
   expectEachToReportNothing,
+  expectPackageOutcome,
   isAbsolutePath,
   tsconfigRootDirs,
-} from './assert';
+} from './matchers';
 
 type EslintFixtures = {
   applySuggestion: typeof applySuggestion;
   expectEachToReport: typeof expectEachToReport;
   expectEachToReportNothing: typeof expectEachToReportNothing;
+  expectPackageOutcome: typeof expectPackageOutcome;
   fixRule: ReturnType<typeof createFixRule>;
   isAbsolutePath: typeof isAbsolutePath;
   lint: Awaited<ReturnType<typeof createMergedLint>>;
+  lintPackage: (packageSource: Record<string, string>) => PackageLint;
   lintRule: ReturnType<typeof createLintRule>;
   plugin: typeof subjects.plugin;
   printedConfig: string;
@@ -44,12 +47,22 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
   applySuggestion: makeFixture(applySuggestion),
   expectEachToReport: makeFixture(expectEachToReport),
   expectEachToReportNothing: makeFixture(expectEachToReportNothing),
+  expectPackageOutcome: makeFixture(expectPackageOutcome),
   fixRule: async ({ ruleName }, use) => {
     await use(createFixRule(ruleName));
   },
   isAbsolutePath: makeFixture(isAbsolutePath),
   lint: async ({ ruleId }, use) => {
     await use(await createMergedLint(ruleId));
+  },
+  lintPackage: async ({}, use) => {
+    const cleanups: (() => void)[] = [];
+    await use(packageSource => {
+      const { cleanup, tsconfigRootDir } = writePackageSource(packageSource);
+      cleanups.push(cleanup);
+      return createPackageLint(tsconfigRootDir, packageSource);
+    });
+    for (const cleanup of cleanups) cleanup();
   },
   lintRule: async ({ ruleName }, use) => {
     await use(createLintRule(ruleName));
@@ -73,7 +86,8 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
   zyplux: makeFixture(subjects.zyplux),
 });
 
-export type { PrintedConfig, ZypluxConfig } from './act';
-export { lintMatchers } from './assert';
+export type { PrintedConfig } from './act';
+export type { ZypluxConfig } from './arrange';
+export { lintMatchers } from './matchers';
 export type { Linter } from 'eslint';
 export { describe, expect } from 'vitest';
