@@ -10,6 +10,10 @@ Run `just c` to apply auto-fixes and verify the change. It is the full gate acro
 
 The `fallow` bite reads the istanbul coverage report, which only the full `bun run test` regenerates (`just t <name>`-filtered runs skip coverage entirely). `just c` always runs the full tests before cerberus; a standalone `uv run cerberus` after source changes may read stale coverage and report phantom complexity findings — run the full `bun run test` first.
 
+## Running `just` Recipes (for Claude)
+
+Use the `./just` wrapper (not bare `just`) — it runs the recipe under a PTY and streams an ANSI-free transcript to a per-run file `logs/just-<timestamp>-<pid>.log`, announced on stderr as `» log: …`; `logs/just.log` is a symlink to the latest run, and only the newest 20 run logs are kept. Recipes like `just c` are slow, so launch with Bash's `run_in_background: true` and continue other work; when notified of completion, grep/Read the run's announced log path (immune to overlap from concurrent runs, unlike the symlink) for failures (`error:`, `💢`, `ERROR`) instead of piping through `tail`, which truncates output and can hide an earlier failure that a later step's output pushes out of view. The transcript is cleaned as it streams, so it is safe to grep even mid-run; each log opens with `=== <start time> | <command>` and ends with `=== exit <status> | <end time> | <duration>` — a missing footer means the run is still going or was killed.
+
 ## Justfile BASELINE Region
 
 The justfile's `# BASELINE` region is owned by `apps/cerberus/src/cerberus/baseline.just` (cerberus is installed editable, so that file IS the packaged canonical). To change a baseline recipe, edit `baseline.just` and run `just c` — `cerberus --fix` rewrites this repo's justfile from it immediately; other org repos pick the change up after a cerberus release, once their bumped `cerberus --fix` runs. Never edit the justfile's BASELINE region directly: the next `just c` silently reverts it.

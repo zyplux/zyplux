@@ -45,3 +45,4 @@ Pre-publish checklist:
 
 - [ ] smooth experience fresh box (container or virtual box testing)
 - [ ] `totchef plan` should pass on fresh box when nothing installed
+/

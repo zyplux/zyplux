@@ -30,3 +30,7 @@ reference_clones/
 # OS
 .DS_Store
 graphify-out
+.fallow
+tmp
+logs
+out/

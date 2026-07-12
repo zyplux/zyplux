@@ -3,4 +3,5 @@
 !uv.lock
 !apps/totchef
 !apps/cerberus/pyproject.toml
+!apps/token_stats/pyproject.toml
 !packages/util_py/pyproject.toml
