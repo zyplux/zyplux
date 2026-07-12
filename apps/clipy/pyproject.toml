@@ -1,0 +1,24 @@
+[project]
+name = "clipy"
+version = "0.1.0"
+description = "Personal typer-based CLI tools, installed by totchef from this local checkout rather than PyPI."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "psutil>=7.2.2",
+    "rich>=15.0.0",
+    "typer>=0.26.8",
+    "websockets>=16.0",
+]
+
+[project.scripts]
+ctop = "clipy.ctop:app"
+justpty = "clipy.justpty:app"
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "clipy"
+module-root = "src"

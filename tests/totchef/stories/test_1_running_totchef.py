@@ -343,7 +343,7 @@ def test_1_4_1_cooks_lists_section_scope_and_origin(cli: Cli) -> None:
         """plugin:<dist> / local:<path>) for every resolvable cook."""
     )
     cli.run("--list-cooks").assert_output("""
-        [17]{section,scope,origin}:
+        [18]{section,scope,origin}:
           apt_pkg,root,built-in
           apt_repo,root,built-in
           bash,user,built-in
@@ -354,6 +354,7 @@ def test_1_4_1_cooks_lists_section_scope_and_origin(cli: Cli) -> None:
           desktop,user,built-in
           file,user,built-in
           local_bin,user,built-in
+          local_bin_dir,user,built-in
           settings,user,built-in
           skills,user,built-in
           snap,root,built-in

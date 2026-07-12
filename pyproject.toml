@@ -8,11 +8,11 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/cerberus", "apps/totchef", "apps/token_stats", "packages/util_py"]
+members = ["apps/cerberus", "apps/clipy", "apps/totchef", "apps/token_stats", "packages/util_py"]
 
 [tool.pytest.ini_options]
-addopts = "-n auto --cov=cerberus --cov=totchef --cov=token_stats --cov-report=term-missing"
-testpaths = ["tests/cerberus", "tests/totchef", "tests/token_stats"]
+addopts = "-n auto --cov=cerberus --cov=clipy --cov=totchef --cov=token_stats --cov-report=term-missing"
+testpaths = ["tests/cerberus", "tests/clipy", "tests/totchef", "tests/token_stats"]
 
 [tool.coverage.report]
 fail_under = 90
@@ -20,10 +20,12 @@ fail_under = 90
 [tool.vulture]
 paths = [
     "apps/cerberus/src",
+    "apps/clipy/src",
     "apps/totchef/src",
     "apps/token_stats/src",
     "packages/util_py/src",
     "tests/cerberus",
+    "tests/clipy",
     "tests/totchef",
     "tests/token_stats",
 ]
@@ -31,7 +33,7 @@ ignore_decorators = ["@app.command", "@app.callback", "@model_validator"]
 # Cooks are resolved by entry point / config-dir convention (totchef.registry), so vulture
 # sees no static reference and reports every cook class as dead — they're totchef's plugins,
 # not dead code. `model_config` is read by pydantic's model metaclass, never called by name.
-ignore_names = ["pytestmark", "*Cook", "model_config", "_fake_tokenizer_backend"]
+ignore_names = ["pytestmark", "*Cook", "model_config", "_fake_tokenizer_backend", "_restore_signal_handlers"]
 
 [dependency-groups]
 lint = [
@@ -49,10 +51,6 @@ type = [
     "pyrefly>=1.1.1",
     "types-networkx>=3.6.1.20260624",
     "types-pyyaml>=6.0.12.20260518",
-    # psutil/websockets back the standalone apps/totchef/examples/totchef_files/ctop.py script,
-    # which carries its own inline `# dependencies` and runs via `uv run --script`. They live
-    # here only so pyrefly can resolve ctop.py's imports; types-psutil supplies psutil's stubs.
-    "psutil>=7.2.2",
-    "websockets>=16.0",
+    # psutil ships no type stubs of its own; apps/clipy's ctop.py needs this to resolve them.
     "types-psutil>=7.2.2.20260518",
 ]

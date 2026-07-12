@@ -1,12 +1,17 @@
 #!/usr/bin/env -S uv run -q --script
 # /// script
 # requires-python = ">=3.14"
+# dependencies = ["typer>=0.26.8"]
 # ///
 """Run a `just` recipe under a PTY, teeing output to the terminal and an ANSI-free transcript to a per-run log.
 
 Each run writes `logs/just-<timestamp>-<pid>.log` (announced on stderr as `» log: …`), repoints the
 `logs/just.log` symlink at it, and prunes all but the newest KEPT_RUN_LOGS run logs. The transcript is
 cleaned as it streams, so it is greppable while the run is still going.
+
+Installed as `justpty` (to ~/.local/bin, via totchef) or invoked as `./just` inside this repo — a symlink
+to this file; either way it wraps whatever `just` it finds on PATH under the invoking directory, and logs
+land under that directory's `logs/`.
 """
 
 from __future__ import annotations
@@ -25,12 +30,16 @@ import tty
 from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
+
+import typer
 
 if TYPE_CHECKING:
     from collections.abc import Generator
     from types import FrameType
     from typing import Literal, TextIO
+
+__version__ = "0.1.0"
 
 STDIN_FD = 0
 STDOUT_FD = 1
@@ -45,6 +54,8 @@ ASCII_DEL = "\x7f"
 CURSOR_MOTION_FINALS = "ABEFHJSTfd"
 
 type ParserState = Literal["text", "esc", "csi", "osc", "osc_esc", "charset"]
+
+app = typer.Typer(add_completion=False)
 
 
 class TranscriptCleaner:
@@ -224,7 +235,7 @@ def spawn_just(just_binary: str, recipe_args: list[str]) -> tuple[int, int]:
 
 
 def copy_winsize(master_fd: int) -> None:
-    with suppress(OSError):
+    with suppress(OSError, termios.error):
         if os.isatty(STDOUT_FD):
             termios.tcsetwinsize(master_fd, termios.tcgetwinsize(STDOUT_FD))
         else:
@@ -288,29 +299,41 @@ def scrub_uv_script_venv() -> None:
         del os.environ["VIRTUAL_ENV"]
 
 
-def main() -> int:
+def run_just(recipe_args: list[str]) -> int:
     scrub_uv_script_venv()
     just_binary = shutil.which("just")
     if just_binary is None:
         sys.stderr.write("just not found on PATH\n")
         return JUST_MISSING_EXIT
-    repo_root = Path(__file__).resolve().parent
-    os.chdir(repo_root)
-    logs_dir = repo_root / "logs"
+    working_dir = Path.cwd()
+    logs_dir = working_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
     started = datetime.now(tz=UTC).astimezone()
     run_log_path = logs_dir / f"just-{started:%Y%m%d-%H%M%S}-{os.getpid()}.log"
-    sys.stderr.write(f"» log: {run_log_path.relative_to(repo_root)}\n")
+    sys.stderr.write(f"» log: {run_log_path.relative_to(working_dir)}\n")
     begun = time.monotonic()
     with run_log_path.open("w", buffering=1, encoding="utf-8") as log:
-        log.write(f"=== {started.isoformat(timespec='seconds')} | {shlex.join(['just', *sys.argv[1:]])}\n")
+        log.write(f"=== {started.isoformat(timespec='seconds')} | {shlex.join(['just', *recipe_args])}\n")
         link_latest(logs_dir, run_log_path)
-        status = run_under_pty(just_binary, sys.argv[1:], log)
+        status = run_under_pty(just_binary, recipe_args, log)
         ended = datetime.now(tz=UTC).astimezone()
         log.write(f"=== exit {status} | {ended.isoformat(timespec='seconds')} | {time.monotonic() - begun:.1f}s\n")
     prune_stale_logs(logs_dir)
     return status
 
 
+@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def main(
+    ctx: typer.Context,
+    *,
+    version: Annotated[bool, typer.Option("--version", help="print version and exit")] = False,
+) -> None:
+    """Run a `just` recipe under a PTY, teeing output to the terminal and a per-run log."""
+    if version:
+        typer.echo(__version__)
+        return
+    raise typer.Exit(run_just(ctx.args))
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    app()
