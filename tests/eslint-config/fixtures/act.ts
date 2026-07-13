@@ -1,4 +1,4 @@
-import { zyplux } from '@zyplux/eslint-config';
+import { plugin, zyplux } from '@zyplux/eslint-config';
 import { PrintedConfigSchema, ResolvedConfigSchema } from '@zyplux/eslint-config/contracts';
 import { parseJson } from '@zyplux/util';
 import { ESLint, Linter } from 'eslint';
@@ -8,7 +8,29 @@ import tseslint from 'typescript-eslint';
 
 import type { RuleLintOptions } from './arrange';
 
-import { eslintConfigDir, pluginRuleConfig, subjects, suiteDir } from './arrange';
+import { eslintConfigDir, suiteDir } from './arrange';
+
+export type ZypluxConfig = ReturnType<typeof zyplux>;
+
+export const subjects: { plugin: typeof plugin; zyplux: typeof zyplux } = { plugin, zyplux };
+
+const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
+  const rules: Linter.RulesRecord = {
+    [`@zyplux/${ruleName}`]: options === undefined ? ['error'] : ['error', ...options],
+  };
+  return {
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: { allowDefaultProject: ['*.ts*', 'src/*.ts*'], defaultProject: 'tsconfig.json' },
+        tsconfigRootDir: suiteDir,
+      },
+    },
+    plugins: { '@zyplux': plugin },
+    rules,
+  };
+};
 
 const resolveMergedRule = async (ruleId: string) => {
   const eslint = new ESLint({ overrideConfig: zyplux(), overrideConfigFile: true });
@@ -50,26 +72,6 @@ export const createLintRule = (ruleName: string): RuleLintWithOptions => {
   const linter = new Linter();
   return (code, { filename = 'file.ts', options }: RuleLintOptions = {}) =>
     linter.verify(code, pluginRuleConfig(ruleName, options), path.join(suiteDir, filename));
-};
-
-export type PackageLint = (filename: string) => Linter.LintMessage[];
-
-export const createPackageLint = (tsconfigRootDir: string, packageSource: Record<string, string>): PackageLint => {
-  const linter = new Linter({ cwd: tsconfigRootDir });
-  return filename =>
-    linter.verify(
-      packageSource[filename] ?? '',
-      {
-        files: ['**/*.ts'],
-        languageOptions: {
-          parser: tseslint.parser,
-          parserOptions: { project: './tsconfig.json', tsconfigRootDir },
-        },
-        plugins: { '@zyplux': subjects.plugin },
-        rules: { '@zyplux/no-package-wide-unused-types': 'error' },
-      },
-      path.join(tsconfigRootDir, filename),
-    );
 };
 
 export const printConfig = () =>

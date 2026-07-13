@@ -782,7 +782,6 @@
     ],
     "@zyplux/prefer-destructured-params": [2],
     "@zyplux/type-over-interface": [2],
-    "@zyplux/no-package-wide-unused-types": [2],
     "@zyplux/no-schemas-outside-contracts": [2],
     "curly": [0, "all"],
     "@stylistic/lines-around-comment": [0],

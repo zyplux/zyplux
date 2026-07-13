@@ -19,12 +19,3 @@ export const zypluxRules: ConfigWithExtends = {
     '@zyplux/type-over-interface': 'error',
   },
 };
-
-export const packageWideUnusedTypesRules: ConfigWithExtends = {
-  files: ['**/*.{ts,tsx}'],
-  ignores: ['**/src/contracts.ts'],
-  plugins: { '@zyplux': plugin },
-  rules: {
-    '@zyplux/no-package-wide-unused-types': 'error',
-  },
-};

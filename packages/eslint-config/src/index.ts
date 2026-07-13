@@ -2,6 +2,7 @@ import prettier from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 import { base } from './configs/base';
+import { fixtureRoleConfigs } from './configs/fixture-roles';
 import { gitignore } from './configs/gitignore';
 import { perfectionistConfig } from './configs/perfectionist';
 import { reactPresets, type RendererGlobs } from './configs/react';
@@ -11,7 +12,7 @@ import { testSeamRules } from './configs/test-seam';
 import { typescript } from './configs/typescript';
 import { unicornConfig } from './configs/unicorn';
 import { vitestConfig } from './configs/vitest';
-import { packageWideUnusedTypesRules, zypluxRules } from './configs/zyplux';
+import { zypluxRules } from './configs/zyplux';
 
 export type { ReactRenderer, RendererGlobs } from './configs/react';
 export { plugin } from './plugin';
@@ -74,10 +75,10 @@ const create = (options: ZypluxOptions = {}) => {
     unicornConfig,
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
-    packageWideUnusedTypesRules,
     contractsRules,
     schemaBoundaryRules,
     testSeamRules,
+    ...fixtureRoleConfigs(tsconfigRootDir),
     vitestConfig,
     prettier,
   );
