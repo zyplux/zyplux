@@ -13,6 +13,7 @@ members = ["apps/cerberus", "apps/clipy", "apps/totchef", "apps/token_stats", "p
 [tool.pytest.ini_options]
 addopts = "-n auto --cov=cerberus --cov=clipy --cov=totchef --cov=token_stats --cov-report=term-missing"
 testpaths = ["tests/cerberus", "tests/clipy", "tests/totchef", "tests/token_stats"]
+markers = ["no_xdist: run this test outside the xdist worker pool (see tests/conftest.py)"]
 
 [tool.coverage.report]
 fail_under = 90

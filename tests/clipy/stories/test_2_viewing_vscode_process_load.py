@@ -6,8 +6,8 @@ from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, cast, override
 
+import clipy.ctop
 import psutil
-from clipy import ctop
 from clipy.ctop import (
     ProcessRow,
     attribute_profile,
@@ -215,24 +215,24 @@ def test_2_5_1_finds_main_processes_by_excluding_ones_whose_own_parent_is_also_v
     main = FakeProcess(pid=100, process_name="code-insiders", ppid=1)
     renderer = FakeProcess(pid=101, process_name="code-insiders", ppid=100)
     registry = {1: shell, 100: main, 101: renderer}
-    monkeypatch.setattr(ctop.psutil, "process_iter", lambda _attrs: iter([shell, main, renderer]))
-    monkeypatch.setattr(ctop.psutil, "Process", lambda pid: registry[pid])
+    monkeypatch.setattr(clipy.ctop.psutil, "process_iter", lambda _attrs: iter([shell, main, renderer]))
+    monkeypatch.setattr(clipy.ctop.psutil, "Process", lambda pid: registry[pid])
 
-    mains = ctop.find_main_processes()
+    mains = clipy.ctop.find_main_processes()
 
     assert [proc.pid for proc in mains] == [100]
 
 
 def test_2_5_2_a_main_process_survives_a_failed_parent_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     main = FakeProcess(pid=100, process_name="code-insiders", ppid=1)
-    monkeypatch.setattr(ctop.psutil, "process_iter", lambda _attrs: iter([main]))
+    monkeypatch.setattr(clipy.ctop.psutil, "process_iter", lambda _attrs: iter([main]))
 
     def raise_no_such_process(pid: int) -> FakeProcess:
         raise psutil.NoSuchProcess(pid)
 
-    monkeypatch.setattr(ctop.psutil, "Process", raise_no_such_process)
+    monkeypatch.setattr(clipy.ctop.psutil, "Process", raise_no_such_process)
 
-    assert [proc.pid for proc in ctop.find_main_processes()] == [100]
+    assert [proc.pid for proc in clipy.ctop.find_main_processes()] == [100]
 
 
 def test_2_5_3_sample_processes_labels_sorts_by_cpu_and_forgets_dead_pids(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -255,11 +255,11 @@ def test_2_5_3_sample_processes_labels_sorts_by_cpu_and_forgets_dead_pids(monkey
         subtree=[child],
     )
     registry = {1: shell, 100: main, 101: child}
-    monkeypatch.setattr(ctop.psutil, "process_iter", lambda _attrs: iter([main]))
-    monkeypatch.setattr(ctop.psutil, "Process", lambda pid: registry[pid])
+    monkeypatch.setattr(clipy.ctop.psutil, "process_iter", lambda _attrs: iter([main]))
+    monkeypatch.setattr(clipy.ctop.psutil, "Process", lambda pid: registry[pid])
     tracked = cast("dict[int, psutil.Process]", {999: FakeProcess(pid=999, process_name="ghost")})
 
-    rows = ctop.sample_processes(tracked)
+    rows = clipy.ctop.sample_processes(tracked)
 
     assert [(row.pid, row.role) for row in rows] == [(101, "gpu"), (100, "main")]
     assert set(tracked) == {100, 101}
@@ -280,10 +280,10 @@ def test_2_5_4_a_process_that_dies_mid_sample_is_dropped_without_derailing_the_s
     dying_child = RacyProcess(pid=202, process_name="code-insiders", ppid=200)
     main = FakeProcess(pid=200, process_name="code-insiders", ppid=1, subtree=[ok_child, dying_child])
     registry = {1: FakeProcess(pid=1, process_name="bash"), 200: main}
-    monkeypatch.setattr(ctop.psutil, "process_iter", lambda _attrs: iter([main, main]))
-    monkeypatch.setattr(ctop.psutil, "Process", lambda pid: registry[pid])
+    monkeypatch.setattr(clipy.ctop.psutil, "process_iter", lambda _attrs: iter([main, main]))
+    monkeypatch.setattr(clipy.ctop.psutil, "Process", lambda pid: registry[pid])
 
-    rows = ctop.sample_processes({})
+    rows = clipy.ctop.sample_processes({})
 
     assert {row.pid for row in rows} == {200, 201}
 
@@ -296,10 +296,10 @@ def test_2_5_5_a_process_tree_that_vanishes_mid_scan_is_skipped(monkeypatch: pyt
 
     main = VanishingProcess(pid=300, process_name="code-insiders", ppid=1)
     registry = {1: FakeProcess(pid=1, process_name="bash")}
-    monkeypatch.setattr(ctop.psutil, "process_iter", lambda _attrs: iter([main]))
-    monkeypatch.setattr(ctop.psutil, "Process", lambda pid: registry[pid])
+    monkeypatch.setattr(clipy.ctop.psutil, "process_iter", lambda _attrs: iter([main]))
+    monkeypatch.setattr(clipy.ctop.psutil, "Process", lambda pid: registry[pid])
 
-    assert ctop.sample_processes({}) == []
+    assert clipy.ctop.sample_processes({}) == []
 
 
 def test_2_5_6_only_busy_extension_hosts_are_considered_for_profiling() -> None:
@@ -308,33 +308,33 @@ def test_2_5_6_only_busy_extension_hosts_are_considered_for_profiling() -> None:
         ProcessRow(pid=2, variant="insiders", role="extension host", cpu_percent=0.1, rss_bytes=1),
     ]
 
-    assert ctop.profile_busy_exthosts(rows) == {}
+    assert clipy.ctop.profile_busy_exthosts(rows) == {}
 
 
 def test_2_5_7_visible_row_capacity_never_drops_below_the_documented_floor() -> None:
     min_visible_rows = 5
-    assert ctop.get_visible_row_capacity() >= min_visible_rows
+    assert clipy.ctop.get_visible_row_capacity() >= min_visible_rows
 
 
 def test_2_5_8_raw_keyboard_and_read_key_are_no_ops_outside_a_real_tty() -> None:
-    with ctop.raw_keyboard():
+    with clipy.ctop.raw_keyboard():
         pass
 
-    assert ctop.read_key(0.01) is None
+    assert clipy.ctop.read_key(0.01) is None
 
 
 # 2.6 the cli
 
 
 def test_2_6_1_version_flag_prints_the_version_and_exits_cleanly(cli: CliRunner) -> None:
-    result = cli.invoke(ctop.app, ["--version"])
+    result = cli.invoke(clipy.ctop.app, ["--version"])
 
     assert result.exit_code == 0
-    assert result.output.strip() == ctop.__version__
+    assert result.output.strip() == clipy.ctop.__version__
 
 
 def test_2_6_2_a_single_snapshot_runs_end_to_end_against_the_real_machine(cli: CliRunner) -> None:
-    result = cli.invoke(ctop.app, ["--once"])
+    result = cli.invoke(clipy.ctop.app, ["--once"])
 
     assert result.exit_code == 0
     assert "ctop" in result.output
