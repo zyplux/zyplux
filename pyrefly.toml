@@ -6,13 +6,11 @@ project-includes = [
     "apps/totchef",
     "apps/token_stats/src",
     "packages/util_py/src",
-    "tests/cerberus",
-    "tests/clipy",
-    "tests/totchef",
-    "tests/token_stats",
+    "tests",
 ]
 # gitignored .claude/worktrees/ makes pyrefly's exclude-heuristics treat an agent worktree as fully excluded — trust project-includes literally instead.
 disable-project-excludes-heuristics = true
+project-excludes = ["**/node_modules"]
 use-ignore-files = false
 search-path = [
     "apps/cerberus/src",
