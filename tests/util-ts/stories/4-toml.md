@@ -15,3 +15,9 @@
 1. returns the schema validated value for well formed toml
 2. returns undefined instead of throwing on malformed toml syntax
 3. returns undefined instead of throwing when the parsed value does not match the schema
+
+## 4.3 confining outcome assertions to their own failure mode
+
+>`toParseTomlAs` distinguishes a genuine TOML syntax error from a schema mismatch — a schema-invalid parse must not satisfy a `syntaxError` assertion just because it also throws.
+
+### 4.3.1 a schema mismatch does not satisfy a syntaxError assertion

@@ -26,4 +26,10 @@ describe('4. Parsing TOML into schema-validated values', () => {
       expect(tryParseToml(text, pyProjectSchema)).toEqual(outcome === 'valid' ? validValue : undefined);
     });
   });
+
+  describe('4.3 confining outcome assertions to their own failure mode', () => {
+    test('4.3.1 a schema mismatch does not satisfy a syntaxError assertion', ({ parseToml, pyProjectSchema }) => {
+      expect(() => parseToml(schemaMismatchToml, pyProjectSchema)).not.toParseTomlAs('syntaxError', validValue);
+    });
+  });
 });
