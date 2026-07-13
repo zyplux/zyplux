@@ -28,9 +28,11 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     if not hasattr(config, "workerinput"):
         return
     deferred = [item for item in items if item.get_closest_marker(NO_XDIST_MARK)]
-    config.cache.set(_CACHE_KEY, sorted({item.nodeid.split("::", 1)[0] for item in deferred}))
     if not deferred:
         return
+    paths = {item.nodeid.split("::", 1)[0] for item in deferred}
+    existing = config.cache.get(_CACHE_KEY, [])
+    config.cache.set(_CACHE_KEY, sorted({*existing, *paths}))
     for item in deferred:
         items.remove(item)
     config.hook.pytest_deselected(items=deferred)

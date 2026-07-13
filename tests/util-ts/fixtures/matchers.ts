@@ -21,7 +21,7 @@ registerMatchers({
         ? thrown === undefined && isDeepStrictEqual(value, expectedValue)
         : outcome === 'schemaError'
           ? thrown instanceof ZodError
-          : thrown !== undefined;
+          : thrown !== undefined && !(thrown instanceof ZodError);
 
     return {
       message: () =>
