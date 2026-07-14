@@ -7,26 +7,96 @@ import { argument, command, constant, merge, message, object, optional, string }
 
 const PYTEST_NO_TESTS_COLLECTED = 5;
 
+const AGENT_COLOR_SUPPRESSION_ENV_KEYS = ['AI_AGENT', 'CLAUDECODE', 'CLAUDE_CODE'];
+
+const AGENT_COLOR_SUPPRESSION_OVERRIDE: Record<string, string | undefined> = Object.fromEntries(
+  AGENT_COLOR_SUPPRESSION_ENV_KEYS.map(key => [key, undefined]),
+);
+
 type Runner = {
-  argv: (name: string | undefined) => string[];
+  argv: (name: string | undefined) => Promise<string[]> | string[];
+  env?: Record<string, string | undefined>;
   label: string;
   manifest: string;
   toleratedExitCode?: number;
 };
 
+const parseFilterPattern = (name: string) => {
+  try {
+    return new RegExp(name);
+  } catch (error) {
+    throw new Error(`invalid test filter '${name}': ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
+};
+
+const resolveJsFilters = async (name: string) => {
+  const pattern = parseFilterPattern(name);
+  const { createVitest } = await import('vitest/node');
+  const vitest = await createVitest('test', { passWithNoTests: true, watch: false });
+  try {
+    const { testModules } = await vitest.collect(undefined, { staticParse: true });
+    const matches = testModules
+      .map(testModule => ({
+        moduleId: testModule.moduleId,
+        nameMatch: testModule.children.allTests().some(testCase => pattern.test(testCase.fullName)),
+        pathMatch: pattern.test(testModule.moduleId),
+      }))
+      .filter(match => match.pathMatch || match.nameMatch);
+    return {
+      moduleIds: matches.map(match => match.moduleId),
+      scopeToName: matches.length > 0 && matches.every(match => !match.pathMatch),
+    };
+  } finally {
+    await vitest.close();
+  }
+};
+
+const PYTEST_KEYWORD_RESERVED_WORDS = new Set(['and', 'not', 'or']);
+
+const toPytestKeywordExpr = (name: string) => {
+  const keywordExpr = name
+    .split(/\s+/)
+    .map(word => word.replaceAll(/[^\w:+.[\]\\/-]/g, ''))
+    .filter(word => word.length > 0 && !PYTEST_KEYWORD_RESERVED_WORDS.has(word))
+    .join(' and ');
+  if (keywordExpr.length === 0) {
+    throw new Error(`invalid test filter '${name}': no pytest keyword expression could be derived from it`);
+  }
+  return keywordExpr;
+};
+
 const RUNNERS: Runner[] = [
   {
-    argv: name => [
-      'bun',
-      'run',
-      'test',
-      ...(name === undefined ? [] : ['-t', name, '--passWithNoTests', '--coverage.enabled=false']),
-    ],
+    argv: async name => {
+      if (name === undefined) return ['bun', 'run', 'test'];
+      const { moduleIds, scopeToName } = await resolveJsFilters(name);
+      if (moduleIds.length === 0) return [];
+      const selectors = scopeToName ? [...moduleIds, '-t', name] : moduleIds;
+      return [
+        'bun',
+        'run',
+        'test',
+        ...selectors,
+        '--passWithNoTests',
+        '--coverage.enabled=false',
+        '--reporter=tree',
+        '--hideSkippedTests',
+      ];
+    },
+    env: AGENT_COLOR_SUPPRESSION_OVERRIDE,
     label: 'JS',
     manifest: 'package.json',
   },
   {
-    argv: name => ['uv', 'run', 'pytest', ...(name === undefined ? [] : ['--no-cov', '-k', name])],
+    argv: name => [
+      'uv',
+      'run',
+      'pytest',
+      '--color=yes',
+      ...(name === undefined ? [] : ['--no-cov', '-v', '-k', toPytestKeywordExpr(name)]),
+    ],
     label: 'Python',
     manifest: 'pyproject.toml',
     toleratedExitCode: PYTEST_NO_TESTS_COLLECTED,
@@ -50,7 +120,11 @@ export const runTest = async ({ name }: TestConfig) => {
   ensure(runners.length > 0, `no test workspace found: neither package.json nor pyproject.toml is in ${process.cwd()}`);
 
   const results = await Promise.all(
-    runners.map(async runner => ({ output: await captureMerged(runner.argv(name)), runner })),
+    runners.map(async runner => {
+      const argv = await runner.argv(name);
+      const output = argv.length === 0 ? { exitCode: 0, text: () => '' } : await captureMerged(argv, runner.env);
+      return { output, runner };
+    }),
   );
 
   const failedLabels: string[] = [];

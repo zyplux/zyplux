@@ -39,3 +39,9 @@
 ## 6.7 passing a fully compliant config
 
 ### 6.7.1 passes when preset is strict coverage is complete and relaxations are absent
+
+## 6.8 requiring the worktree-safe exclude heuristic overrides
+
+### 6.8.1 fails when the exclude heuristic overrides are missing
+
+### 6.8.2 fails when the exclude heuristic overrides are set to the wrong values

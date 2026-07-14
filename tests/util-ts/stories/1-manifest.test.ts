@@ -1,7 +1,5 @@
 import { describe, expect, test } from '#fixtures';
 
-const byLocale = (left: string, right: string) => left.localeCompare(right);
-
 const packageJsonText = [
   '{',
   '  "name": "@scope/app",',
@@ -76,7 +74,7 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
       workspaces: { catalog: { zod: 'catalog:' }, catalogs: { build: { esbuild: '^0.21' } } },
     });
 
-    expect(npmDependencyNames(manifest).toSorted(byLocale)).toEqual(['esbuild', 'react', 'vitest', 'zod']);
+    expect(npmDependencyNames(manifest)).toContainExactElementsInAnyOrder(['esbuild', 'react', 'vitest', 'zod']);
   });
 
   test('1.2.2 collects python requirement names across every section while dropping python itself', ({
@@ -89,32 +87,41 @@ describe('1.2 collecting and normalizing dependency names from a manifest', () =
       tool: { uv: { 'dev-dependencies': ['pytest>=8'] } },
     });
 
-    expect(pythonRequirementNames(manifest).toSorted(byLocale)).toEqual(['httpx', 'pytest', 'ruff', 'urllib3']);
+    expect(pythonRequirementNames(manifest)).toContainExactElementsInAnyOrder(['httpx', 'pytest', 'ruff', 'urllib3']);
   });
 
-  test('1.2.3 normalizes a requirement name into its pep 503 canonical form', ({ normalizePythonName }) => {
-    expect(normalizePythonName('Flask_SQLAlchemy')).toBe('flask-sqlalchemy');
-    expect(normalizePythonName('ruamel.yaml >= 0.18')).toBe('ruamel-yaml');
-  });
+  type NormalizeCase = [shape: string, requirement: string, canonical: string | undefined];
 
-  test('1.2.4 returns undefined when no package name can be parsed from a requirement', ({ normalizePythonName }) => {
-    expect(normalizePythonName('\t \n')).toBeUndefined();
+  const normalizeCases: NormalizeCase[] = [
+    [
+      '3 normalizes an underscored requirement name into its pep 503 canonical form',
+      'Flask_SQLAlchemy',
+      'flask-sqlalchemy',
+    ],
+    ['4 normalizes a dotted requirement name with a version specifier', 'ruamel.yaml >= 0.18', 'ruamel-yaml'],
+    ['5 returns undefined when no package name can be parsed from a requirement', '\t \n', undefined],
+  ];
+
+  test.for(normalizeCases)('1.2.%s', ([, requirement, canonical], { normalizePythonName }) => {
+    expect(normalizePythonName(requirement)).toBe(canonical);
   });
 });
 
 describe("1.3 resolving a manifest's repository url", () => {
-  test('1.3.1 reads the url from a string repository field', ({ repositoryUrl }) => {
-    expect(repositoryUrl('https://github.com/owner/repo')).toBe('https://github.com/owner/repo');
-  });
-
-  test('1.3.2 reads the url from an object repository field', ({ repositoryUrl }) => {
-    expect(repositoryUrl({ url: 'git+https://github.com/owner/repo.git' })).toBe(
+  test.for([
+    [
+      '1 reads the url from a string repository field',
+      'https://github.com/owner/repo',
+      'https://github.com/owner/repo',
+    ],
+    [
+      '2 reads the url from an object repository field',
+      { url: 'git+https://github.com/owner/repo.git' },
       'git+https://github.com/owner/repo.git',
-    );
-  });
-
-  test('1.3.3 returns undefined when no repository is declared', ({ repositoryUrl }) => {
-    expect(repositoryUrl(undefined)).toBeUndefined();
+    ],
+    ['3 returns undefined when no repository is declared', undefined, undefined],
+  ] as const)('1.3.%s', ([, repository, expected], { repositoryUrl }) => {
+    expect(repositoryUrl(repository)).toBe(expected);
   });
 });
 
@@ -141,6 +148,6 @@ describe('1.4 discovering manifests tracked by git', () => {
 
     const manifests = await findManifests(tempDir.path);
 
-    expect(manifests.toSorted(byLocale)).toEqual(expectedManifests.toSorted(byLocale));
+    expect(manifests).toContainExactElementsInAnyOrder(expectedManifests);
   });
 });

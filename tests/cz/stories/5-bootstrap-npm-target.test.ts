@@ -1,3 +1,4 @@
+// unparametrized
 import { describe, expect, targetsTest as test } from '#fixtures';
 
 describe('5.1 validating the target before bootstrapping', () => {

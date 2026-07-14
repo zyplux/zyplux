@@ -10,6 +10,8 @@ Do not flag code based on hedged claims about external API runtime behavior (e.g
 
 Before reporting that a regex matches (or misses) a given input, trace the match mechanically against the pattern's anchoring — do not infer a false positive from surface resemblance (e.g. a pattern requiring `sh` immediately after `\|\s*` cannot match `| ssh`). The same applies to claimed stdlib failure modes: verify the documented behavior first (e.g. `Path.touch()` with the default `exist_ok=True` succeeds on an existing directory via `os.utime`).
 
+`ast` node `col_offset`/`end_col_offset` attributes are UTF-8 *byte* offsets, not Unicode code-point offsets, in every currently supported CPython version — verify this empirically (`ast.parse(...)` on a source with multibyte characters) before flagging byte-based slicing of source lines against these offsets as a Unicode-corruption bug; it is the correct approach.
+
 The mandatory `ci` check runs the full quality gate on every push: ruff (`select = ["ALL"]`), pyrefly, vulture, knip, tsc, eslint, rumdl, and both test suites. Do not report syntax, typechecking and linting errors - leave these to the deterministic ci gate.
 
 Don't flag long lines or long docstrings — ruff's line-length check is enforced deterministically in `ci` and will catch anything that's actually too long; a style comment here is redundant noise.

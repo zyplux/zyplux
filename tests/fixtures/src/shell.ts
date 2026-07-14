@@ -23,13 +23,19 @@ export const fakeShellOutput = (stdout: string, exitCode = 0): ShellOutput => ({
   text: () => stdout,
 });
 
-export const fakeShellPromise = (result: ShellOutput): ShellPromise => {
+export const fakeShellPromise = (
+  result: ShellOutput,
+  onEnv?: (env: Record<string, string | undefined>) => void,
+): ShellPromise => {
   const chainMethod = () => promise;
   const promise: ShellPromise = Object.assign(Promise.resolve(result), {
     arrayBuffer: notImplemented('arrayBuffer'),
     blob: notImplemented('blob'),
     cwd: chainMethod,
-    env: chainMethod,
+    env: (newEnv?: Record<string, string | undefined>) => {
+      if (newEnv !== undefined) onEnv?.(newEnv);
+      return promise;
+    },
     json: notImplemented('json'),
     lines: notImplemented('lines'),
     nothrow: chainMethod,
@@ -61,7 +67,7 @@ const renderCommand = (strings: TemplateStringsArray, values: ShellValue[]) =>
     }, '')
     .trim();
 
-export type ShellCall = { argv: string[]; program: string };
+export type ShellCall = { argv: string[]; env?: Record<string, string | undefined>; program: string };
 export type ShellFake = {
   calls: ShellCall[];
   commands: string[];
@@ -107,13 +113,16 @@ export const createShellFake = (): ShellFake => {
   const shellFn = vi.fn<typeof Bun.$>();
   shellFn.mockImplementation((strings, ...values) => {
     const command = renderCommand(strings, values);
-    calls.push({ argv: toArgv(values), program: strings[0]?.trim().split(' ', 1)[0] ?? '' });
+    const call: ShellCall = { argv: toArgv(values), program: strings[0]?.trim().split(' ', 1)[0] ?? '' };
+    calls.push(call);
     commands.push(command);
     const reply = resolveReply(command);
     const resolved = typeof reply === 'function' ? reply(command) : reply;
     const output =
       typeof resolved === 'string' ? fakeShellOutput(resolved) : fakeShellOutput(resolved.stdout, resolved.exitCode);
-    return fakeShellPromise(output);
+    return fakeShellPromise(output, env => {
+      call.env = env;
+    });
   });
 
   return {

@@ -1,57 +1,46 @@
 import { describe, expect, tempCwdTest as test } from '#fixtures';
 
+type CloneCase = [shape: string, args: string[], expectedArgv: string[]];
+
+const cloneCases: CloneCase[] = [
+  [
+    '1 builds a github url and destination from an owner/name shorthand',
+    ['zyplux/util'],
+    ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
+  ],
+  [
+    '2 uses a full url as-is and derives the destination from it',
+    ['https://github.com/zyplux/util.git'],
+    ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
+  ],
+  [
+    '3 derives the destination from a git@ ssh url, stripping the .git suffix',
+    ['git@github.com:zyplux/util.git'],
+    ['clone', '--depth', '1', '--single-branch', 'git@github.com:zyplux/util.git', 'reference_clones/util'],
+  ],
+  [
+    '4 passes a given ref as the branch flag',
+    ['zyplux/util', 'v2.0.0'],
+    [
+      'clone',
+      '--depth',
+      '1',
+      '--single-branch',
+      '--branch',
+      'v2.0.0',
+      'https://github.com/zyplux/util.git',
+      'reference_clones/util',
+    ],
+  ],
+];
+
 describe('6.1 building the clone url and destination', () => {
-  test('6.1.1 builds a github url and destination from an owner/name shorthand', async ({ cz, shell }) => {
+  test.for(cloneCases)('6.1.%s', async ([, args, expectedArgv], { cz, shell }) => {
     shell.on('git clone', '');
 
-    await cz.run('clone-reference-repo', 'zyplux/util');
+    await cz.run('clone-reference-repo', ...args);
 
-    expect(shell.calls).toContainEqual({
-      argv: ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
-      program: 'git',
-    });
-  });
-
-  test('6.1.2 uses a full url as-is and derives the destination from it', async ({ cz, shell }) => {
-    shell.on('git clone', '');
-
-    await cz.run('clone-reference-repo', 'https://github.com/zyplux/util.git');
-
-    expect(shell.calls).toContainEqual({
-      argv: ['clone', '--depth', '1', '--single-branch', 'https://github.com/zyplux/util.git', 'reference_clones/util'],
-      program: 'git',
-    });
-  });
-
-  test('6.1.3 derives the destination from a git@ ssh url, stripping the .git suffix', async ({ cz, shell }) => {
-    shell.on('git clone', '');
-
-    await cz.run('clone-reference-repo', 'git@github.com:zyplux/util.git');
-
-    expect(shell.calls).toContainEqual({
-      argv: ['clone', '--depth', '1', '--single-branch', 'git@github.com:zyplux/util.git', 'reference_clones/util'],
-      program: 'git',
-    });
-  });
-
-  test('6.1.4 passes a given ref as the branch flag', async ({ cz, shell }) => {
-    shell.on('git clone', '');
-
-    await cz.run('clone-reference-repo', 'zyplux/util', 'v2.0.0');
-
-    expect(shell.calls).toContainEqual({
-      argv: [
-        'clone',
-        '--depth',
-        '1',
-        '--single-branch',
-        '--branch',
-        'v2.0.0',
-        'https://github.com/zyplux/util.git',
-        'reference_clones/util',
-      ],
-      program: 'git',
-    });
+    expect(shell.calls).toContainEqual({ argv: expectedArgv, program: 'git' });
   });
 });
 

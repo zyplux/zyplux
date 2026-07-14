@@ -1,8 +1,8 @@
 import { describe, expect, targetsTest as test } from '#fixtures';
 
-const MISSING_GHCR_CREDENTIALS: [missingName: string, ghToken: string, githubActor: string][] = [
-  ['GH_TOKEN', '', 'zyplux-bot'],
-  ['GITHUB_ACTOR', 'gh-token', ''],
+const MISSING_GHCR_CREDENTIALS: [shape: string, missingName: string, ghToken: string, githubActor: string][] = [
+  ['1 requires GH_TOKEN before pushing a ghcr target', 'GH_TOKEN', '', 'zyplux-bot'],
+  ['2 requires GITHUB_ACTOR before pushing a ghcr target', 'GITHUB_ACTOR', 'gh-token', ''],
 ];
 
 describe('8.1 skipping an already-published target', () => {
@@ -43,8 +43,8 @@ describe('8.2 publishing to each registry kind', () => {
   });
 
   test.for(MISSING_GHCR_CREDENTIALS)(
-    '8.2.3 requires GH_TOKEN and GITHUB_ACTOR before pushing a ghcr target',
-    async ([missingName, ghToken, githubActor], { cz, env, registries, shell }) => {
+    '8.2.%s',
+    async ([, missingName, ghToken, githubActor], { cz, env, registries, shell }) => {
       registries.setPublished({ ghcrPublished: false });
       env.set('GH_TOKEN', ghToken);
       env.set('GITHUB_ACTOR', githubActor);

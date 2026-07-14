@@ -5,19 +5,20 @@ import { libraryTest, makeFixture } from '@zyplux/tests-fixtures';
 
 import type { PrintedConfig } from './act';
 
+import { createFixRule, createLintRule, createMergedLint, parsePrintedConfig, printConfig, subjects } from './act';
+import { loadRulesSnapshot } from './arrange';
 import {
-  createFixRule,
-  createLintRule,
-  createMergedLint,
-  loadRulesSnapshot,
-  parsePrintedConfig,
-  printConfig,
-  subjects,
-} from './act';
-import { applySuggestion, isAbsolutePath, tsconfigRootDirs } from './assert';
+  applySuggestion,
+  expectEachToReport,
+  expectEachToReportNothing,
+  isAbsolutePath,
+  tsconfigRootDirs,
+} from './matchers';
 
 type EslintFixtures = {
   applySuggestion: typeof applySuggestion;
+  expectEachToReport: typeof expectEachToReport;
+  expectEachToReportNothing: typeof expectEachToReportNothing;
   fixRule: ReturnType<typeof createFixRule>;
   isAbsolutePath: typeof isAbsolutePath;
   lint: Awaited<ReturnType<typeof createMergedLint>>;
@@ -34,6 +35,8 @@ type EslintFixtures = {
 
 export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.extend<EslintFixtures>({
   applySuggestion: makeFixture(applySuggestion),
+  expectEachToReport: makeFixture(expectEachToReport),
+  expectEachToReportNothing: makeFixture(expectEachToReportNothing),
   fixRule: async ({ ruleName }, use) => {
     await use(createFixRule(ruleName));
   },
@@ -64,6 +67,6 @@ export const test: TestAPI<EslintFixtures & LibraryFixtures> = libraryTest.exten
 });
 
 export type { PrintedConfig, ZypluxConfig } from './act';
-export { lintMatchers } from './assert';
+export { lintMatchers } from './matchers';
 export type { Linter } from 'eslint';
 export { describe, expect } from 'vitest';

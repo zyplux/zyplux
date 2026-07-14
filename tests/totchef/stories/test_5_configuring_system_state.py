@@ -522,6 +522,119 @@ def test_5_4_6_usr_local_sbin_installs_admin_commands_always_as_root(
     cli.run("--list-cooks").assert_lists("usr_local_sbin", scope="root")
 
 
+def test_5_4_7_local_bin_dir_installs_every_qualifying_script_in_a_directory(
+    recipe: RecipeBuilder, home: Path, tmp_path: Path, totchef: Totchef
+) -> None:
+    (
+        """`[local_bin_dir] dirs=[...]` auto-discovers every script meeting the [local_bin] """
+        """version contract inside a directory and installs each — no per-script recipe entry."""
+    )
+    scripts_dir = tmp_path / "myscripts"
+    scripts_dir.mkdir()
+    for tool_name, version in (("alpha", "1.0.0"), ("beta", "2.0.0")):
+        (scripts_dir / f"{tool_name}.py").write_text(
+            f'#!/usr/bin/env python3\n__version__ = "{version}"\n'
+            'import sys\nif "--version" in sys.argv: print("ver")\nif "--help" in sys.argv: print("usage")\n'
+        )
+    recipe.declares("local_bin_dir", dirs=[str(scripts_dir)])
+
+    report = totchef.up()
+
+    report.assert_shows("local_bin_dir.alpha", "installed")
+    report.assert_shows("local_bin_dir.beta", "installed")
+    assert (home / ".local/bin/alpha").is_file()
+    assert (home / ".local/bin/beta").is_file()
+
+
+def test_5_4_8_a_script_failing_the_bin_contract_is_skipped_not_a_hard_failure(
+    recipe: RecipeBuilder, tmp_path: Path, totchef: Totchef
+) -> None:
+    """A `.py` file with no `__version__`/`--version`/`--help` is logged and skipped; the run still succeeds."""
+    scripts_dir = tmp_path / "myscripts"
+    scripts_dir.mkdir()
+    (scripts_dir / "broken.py").write_text("print('no contract here')\n")
+    recipe.declares("local_bin_dir", dirs=[str(scripts_dir)])
+
+    report = totchef.up()
+
+    report.assert_succeeded()
+    report.assert_logged("broken.py")
+    assert "local_bin_dir.broken" not in report.rows
+
+
+def test_5_4_9_dirs_may_be_recipe_relative_or_an_absolute_tilde_path(
+    recipe: RecipeBuilder, home: Path, bundled_files: Path, totchef: Totchef
+) -> None:
+    (
+        """A `dirs` entry resolves relative to totchef_files/ (the same convention a bundled """
+        """[local_bin] `source` follows) when it isn't already absolute or `~`-rooted."""
+    )
+    tool = '#!/bin/bash\n__version__="1.0.0"\ncase "$1" in --version) echo "$__version__";; --help) echo usage;; esac\n'
+    sibling_dir = bundled_files.parent / "sibling_scripts"
+    sibling_dir.mkdir()
+    (sibling_dir / "gamma.py").write_text(tool)
+    recipe.declares("local_bin_dir", dirs=["../sibling_scripts"])
+
+    totchef.up().assert_shows("local_bin_dir.gamma", "installed")
+
+    assert (home / ".local/bin/gamma").is_file()
+
+
+def test_5_4_10_a_script_removed_from_the_directory_drops_out_without_touching_its_binary(
+    recipe: RecipeBuilder, home: Path, tmp_path: Path, totchef: Totchef
+) -> None:
+    (
+        """Deleting a script from the directory just stops tracking it — its previously-installed """
+        """binary is left in place, never uninstalled."""
+    )
+    scripts_dir = tmp_path / "myscripts"
+    scripts_dir.mkdir()
+    source = scripts_dir / "delta.py"
+    source.write_text(
+        '#!/usr/bin/env python3\n__version__ = "1.0.0"\n'
+        'import sys\nif "--version" in sys.argv: print("ver")\nif "--help" in sys.argv: print("usage")\n'
+    )
+    recipe.declares("local_bin_dir", dirs=[str(scripts_dir)])
+    totchef.up().assert_shows("local_bin_dir.delta", "installed")
+    installed = home / ".local/bin/delta"
+    assert installed.is_file()
+
+    source.unlink()
+    report = totchef.up()
+
+    assert "local_bin_dir.delta" not in report.rows
+    assert installed.is_file()
+
+
+def test_5_4_11_a_missing_directory_is_logged_and_skipped_not_a_hard_failure(
+    recipe: RecipeBuilder, tmp_path: Path, totchef: Totchef
+) -> None:
+    """A configured dir that doesn't exist on this machine is logged and skipped; the run still succeeds."""
+    recipe.declares("local_bin_dir", dirs=[str(tmp_path / "does-not-exist")])
+
+    report = totchef.up()
+
+    report.assert_succeeded()
+    report.assert_logged("does not exist")
+    assert not report.rows
+
+
+def test_5_4_12_underscore_prefixed_files_are_never_discovered(
+    recipe: RecipeBuilder, tmp_path: Path, totchef: Totchef
+) -> None:
+    """`__init__.py` and other underscore-prefixed files are support modules, not installable scripts — skipped."""
+    scripts_dir = tmp_path / "myscripts"
+    scripts_dir.mkdir()
+    (scripts_dir / "__init__.py").write_text("")
+    (scripts_dir / "_helper.py").write_text("shared code, not a cli")
+    recipe.declares("local_bin_dir", dirs=[str(scripts_dir)])
+
+    report = totchef.up()
+
+    report.assert_succeeded()
+    assert not report.rows
+
+
 # 5.5 Set specific lines in a config file
 
 

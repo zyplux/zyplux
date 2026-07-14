@@ -2,6 +2,7 @@ import preferArrowFunctions from 'eslint-plugin-prefer-arrow-functions';
 
 import { castToEslintRule, type EslintRule } from '#create-rule';
 
+import { fixtureRoleImports } from './syntactic/fixture-role-imports';
 import { noAnonymousParamType } from './syntactic/no-anonymous-param-type';
 import { noIdentityCast } from './syntactic/no-identity-cast';
 import { noTypePredicate } from './syntactic/no-type-predicate';
@@ -23,6 +24,7 @@ if (!upstreamPreferArrowFunctions) {
 
 export const rules: Record<string, EslintRule> = {
   'contracts-only-schemas': contractsOnlySchemas,
+  'fixture-role-imports': fixtureRoleImports,
   'no-anonymous-param-type': noAnonymousParamType,
   'no-identity-cast': noIdentityCast,
   'no-return-array-push': noReturnArrayPush,

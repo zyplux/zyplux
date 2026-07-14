@@ -42,7 +42,7 @@ lint:
 
 # Run tests for both workspaces, JS and Python in parallel. Optional arg filters by test name, skipping coverage; never fails when nothing matches.
 test name='':
-    bun run --silent cz test {{ if name == '' { '' } else { quote(name) } }}
+    bun run {{ if name == '' { '--silent cz test' } else { 'cz test ' + quote(name) } }}
 
 # Verify org invariants with cerberus, over the coverage report `test` regenerates.
 cerberus:

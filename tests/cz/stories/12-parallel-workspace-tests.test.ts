@@ -1,3 +1,4 @@
+// unparametrized
 import type { TempDir } from '#fixtures';
 
 import { describe, expect, tempCwdTest as test } from '#fixtures';
@@ -61,15 +62,29 @@ describe('12.1 running both workspaces in parallel', () => {
 describe('12.2 filtering by test name', () => {
   test('12.2.1 forwards the name filter and skips coverage on both runners', async ({ cz, shell, tempDir }) => {
     await writeBothWorkspaces(tempDir);
+    await tempDir.write(
+      'stories/42-manifest.test.ts',
+      `import { describe, expect, test } from 'vitest';
+
+describe('manifest', () => {
+  test('parses the manifest', () => {
+    expect(true).toBe(true);
+  });
+});
+`,
+    );
     shell.on('bun run test', 'JS: 2 passed');
     shell.on('uv run pytest', 'PY: 3 passed');
 
     await cz.run('test', 'parses the manifest');
 
-    expect(shell.commandsMatching('bun run test')).toEqual([
-      'bun run test -t parses the manifest --passWithNoTests --coverage.enabled=false 2>&1',
+    const [command] = shell.commandsMatching('bun run test');
+    expect(command).toContain('stories/42-manifest.test.ts');
+    expect(command).toContain('-t parses the manifest');
+    expect(command).toContain('--passWithNoTests --coverage.enabled=false --reporter=tree --hideSkippedTests');
+    expect(shell.commandsMatching('uv run pytest')).toEqual([
+      'uv run pytest --color=yes --no-cov -v -k parses and the and manifest 2>&1',
     ]);
-    expect(shell.commandsMatching('uv run pytest')).toEqual(['uv run pytest --no-cov -k parses the manifest 2>&1']);
   });
 
   test('12.2.2 passes when the filter matches nothing in either workspace', async ({ cz, shell, tempDir }) => {
@@ -78,6 +93,15 @@ describe('12.2 filtering by test name', () => {
     shell.on('uv run pytest', { exitCode: 5, stdout: 'PY: no tests ran' });
 
     await cz.run('test', 'nomatchxyz');
+  });
+
+  test('12.2.3 rejects a filter that reduces to an empty pytest keyword expression instead of silently matching everything', async ({
+    cz,
+    tempDir,
+  }) => {
+    await writePyWorkspace(tempDir);
+
+    await expect(cz.run('test', 'and')).rejects.toThrow("invalid test filter 'and'");
   });
 });
 
@@ -97,10 +121,27 @@ describe('12.3 workspace detection', () => {
 
     await cz.run('test');
 
-    expect(shell.commands).toEqual(['uv run pytest 2>&1']);
+    expect(shell.commands).toEqual(['uv run pytest --color=yes 2>&1']);
   });
 
   test('12.3.3 fails when neither workspace manifest is present', async ({ cz }) => {
     await expect(cz.run('test')).rejects.toThrow('no test workspace found');
+  });
+});
+
+describe('12.4 keeping the JS runner colored despite AI-agent auto-detection', () => {
+  test('12.4.1 clears the env vars vitest uses to auto-disable color', async ({ cz, shell, tempDir }) => {
+    await writeJsWorkspace(tempDir);
+    shell.on('bun run test', 'JS: 12 passed');
+
+    await cz.run('test');
+
+    const [call] = shell.calls;
+    const undefinedEnvKeys = new Set(
+      Object.entries(call?.env ?? {})
+        .filter(([, value]) => value === undefined)
+        .map(([key]) => key),
+    );
+    expect(undefinedEnvKeys).toEqual(new Set(['AI_AGENT', 'CLAUDE_CODE', 'CLAUDECODE']));
   });
 });

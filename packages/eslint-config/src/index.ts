@@ -2,6 +2,7 @@ import prettier from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 import { base } from './configs/base';
+import { fixtureRoleConfigs } from './configs/fixture-roles';
 import { gitignore } from './configs/gitignore';
 import { perfectionistConfig } from './configs/perfectionist';
 import { reactPresets, type RendererGlobs } from './configs/react';
@@ -77,6 +78,7 @@ const create = (options: ZypluxOptions = {}) => {
     contractsRules,
     schemaBoundaryRules,
     testSeamRules,
+    ...fixtureRoleConfigs(tsconfigRootDir),
     vitestConfig,
     prettier,
   );

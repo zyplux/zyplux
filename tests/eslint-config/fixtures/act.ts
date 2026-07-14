@@ -1,40 +1,18 @@
 import { plugin, zyplux } from '@zyplux/eslint-config';
 import { PrintedConfigSchema, ResolvedConfigSchema } from '@zyplux/eslint-config/contracts';
-import { parseJson, readJsonSync } from '@zyplux/util';
+import { parseJson } from '@zyplux/util';
 import { ESLint, Linter } from 'eslint';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
 
-export const subjects: { plugin: typeof plugin; zyplux: typeof zyplux } = { plugin, zyplux };
+import type { RuleLintOptions } from './arrange';
+
+import { eslintConfigDir, suiteDir } from './arrange';
 
 export type ZypluxConfig = ReturnType<typeof zyplux>;
 
-const resolveMergedRule = async (ruleId: string) => {
-  const eslint = new ESLint({ overrideConfig: zyplux(), overrideConfigFile: true });
-  const resolved: unknown = await eslint.calculateConfigForFile('example.ts');
-  return ResolvedConfigSchema.parse(resolved).rules[ruleId] ?? 'off';
-};
-
-const mergedRuleCache = new Map<string, Promise<Linter.RuleEntry>>();
-
-const getMergedRule = (ruleId: string) => {
-  const cached = mergedRuleCache.get(ruleId);
-  if (cached !== undefined) return cached;
-  const pending = resolveMergedRule(ruleId);
-  mergedRuleCache.set(ruleId, pending);
-  return pending;
-};
-
-const eslintConfigDir = fileURLToPath(new URL('../../../packages/eslint-config/', import.meta.url));
-
-const suiteDir = fileURLToPath(new URL('../', import.meta.url));
-
-export type RuleLintOptions = { filename?: string; options?: unknown[] };
-
-type RuleLint = (code: string) => Linter.LintMessage[];
-type RuleLintWithOptions = (code: string, lintOptions?: RuleLintOptions) => Linter.LintMessage[];
+export const subjects: { plugin: typeof plugin; zyplux: typeof zyplux } = { plugin, zyplux };
 
 const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
   const rules: Linter.RulesRecord = {
@@ -53,6 +31,25 @@ const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
     rules,
   };
 };
+
+const resolveMergedRule = async (ruleId: string) => {
+  const eslint = new ESLint({ overrideConfig: zyplux(), overrideConfigFile: true });
+  const resolved: unknown = await eslint.calculateConfigForFile('example.ts');
+  return ResolvedConfigSchema.parse(resolved).rules[ruleId] ?? 'off';
+};
+
+const mergedRuleCache = new Map<string, Promise<Linter.RuleEntry>>();
+
+const getMergedRule = (ruleId: string) => {
+  const cached = mergedRuleCache.get(ruleId);
+  if (cached !== undefined) return cached;
+  const pending = resolveMergedRule(ruleId);
+  mergedRuleCache.set(ruleId, pending);
+  return pending;
+};
+
+export type RuleLintWithOptions = (code: string, lintOptions?: RuleLintOptions) => Linter.LintMessage[];
+type RuleLint = (code: string) => Linter.LintMessage[];
 
 export const createFixRule = (ruleName: string) => {
   const linter = new Linter();
@@ -81,9 +78,5 @@ export const printConfig = () =>
   execFileSync('eslint', ['--print-config', 'src/index.ts'], { cwd: eslintConfigDir, encoding: 'utf8' });
 
 export const parsePrintedConfig = (printedConfig: string) => parseJson(printedConfig, PrintedConfigSchema);
-
-const rulesSnapshotUrl = new URL('../../../packages/eslint-config/rules.json', import.meta.url);
-
-export const loadRulesSnapshot = () => readJsonSync(rulesSnapshotUrl, PrintedConfigSchema);
 
 export type { PrintedConfig } from '@zyplux/eslint-config/contracts';

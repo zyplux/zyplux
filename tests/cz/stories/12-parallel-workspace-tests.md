@@ -16,6 +16,8 @@
 
 ### 12.2.2 passes when the filter matches nothing in either workspace
 
+### 12.2.3 rejects a filter that reduces to an empty pytest keyword expression instead of silently matching everything
+
 ## 12.3 workspace detection
 
 ### 12.3.1 runs only vitest when only package.json is present
@@ -23,3 +25,7 @@
 ### 12.3.2 runs only pytest when only pyproject.toml is present
 
 ### 12.3.3 fails when neither workspace manifest is present
+
+## 12.4 keeping the JS runner colored despite AI-agent auto-detection
+
+### 12.4.1 clears the env vars vitest uses to auto-disable color

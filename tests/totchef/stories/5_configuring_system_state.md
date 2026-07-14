@@ -178,6 +178,41 @@ several matches fail lint, asking for an explicit `source`.
 and daemon helpers (e.g. a boot service's switch script), outside ordinary
 users' PATH — always as root, under the same version contract.
 
+### 5.4.7 local bin dir installs every qualifying script in a directory
+
+`[local_bin_dir] dirs=[...]` auto-discovers every script meeting the
+`[local_bin]` version contract inside one or more directories and installs
+each into `~/.local/bin`, keyed and version-diffed by its own filename stem —
+no per-script recipe entry, so a new script dropped into the directory lands
+on PATH on the next `up`.
+
+### 5.4.8 a script failing the bin contract is skipped not a hard failure
+
+A `.py` file with no `__version__`/`--version`/`--help` is logged and
+skipped, unlike a bad `[local_bin]` `source` (rejected at lint) — the
+directory scan degrades gracefully instead of failing the whole run.
+
+### 5.4.9 dirs may be recipe relative or an absolute tilde path
+
+A `dirs` entry resolves relative to `totchef_files/` — the same convention a
+bundled `[local_bin]` `source` follows — unless it's already absolute or
+`~`-rooted.
+
+### 5.4.10 a script removed from the directory drops out without touching its binary
+
+Deleting a script from the directory just stops tracking it; its
+previously-installed binary is left in place, never uninstalled.
+
+### 5.4.11 a missing directory is logged and skipped not a hard failure
+
+A configured dir that doesn't exist on this machine is logged and skipped;
+the run still succeeds.
+
+### 5.4.12 underscore prefixed files are never discovered
+
+`__init__.py` and other underscore-prefixed files are support modules, not
+installable scripts — skipped without a contract check.
+
 ## 5.5 Set specific lines in a config file
 
 > As an operator, I want to own specific settings inside a config file another

@@ -2,6 +2,8 @@ import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleName: 'no-unvalidated-json' });
 
+type Case = [shape: string, code: string];
+
 describe('11.1 flagging JSON reads that bypass schema validation', () => {
   test('11.1.1 flags a bare JSON parse assigned to a variable, naming the api in the message', ({ lintRule }) => {
     const messages = lintRule('const parsed = JSON.parse(text);');
@@ -9,13 +11,7 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
     expect(messages[0]?.message).toContain('JSON.parse(…)');
   });
 
-  test('11.1.2 flags a JSON parse annotated unknown, read off, or passed to a non-zod consumer', ({ lintRule }) => {
-    expect(lintRule('const parsed: unknown = JSON.parse(text);')).toReport('validateJson');
-    expect(lintRule('const version = JSON.parse(text).version;')).toReport('validateJson');
-    expect(lintRule('normalizeRules(JSON.parse(printed));')).toReport('validateJson');
-  });
-
-  test('11.1.3 flags an awaited json call returning an any promise, naming the api in the message', ({ lintRule }) => {
+  test('11.1.2 flags an awaited json call returning an any promise, naming the api in the message', ({ lintRule }) => {
     const code = ['declare const response: { json(): Promise<any> };', 'const body = await response.json();'].join(
       '\n',
     );
@@ -24,64 +20,57 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
     expect(messages[0]?.message).toContain('….json()');
   });
 
-  test('11.1.4 flags a non-awaited any promise json call, caught by type rather than syntax', ({ lintRule }) => {
-    expect(
-      lintRule(['declare const response: { json(): Promise<any> };', 'const pending = response.json();'].join('\n')),
-    ).toReport('validateJson');
-  });
-
-  test('11.1.5 flags a synchronous json call returning any', ({ lintRule }) => {
-    expect(
-      lintRule(['declare const reader: { json(): any };', 'const data = reader.json().version;'].join('\n')),
-    ).toReport('validateJson');
+  test.for<Case>([
+    ['3 flags a JSON parse annotated unknown', 'const parsed: unknown = JSON.parse(text);'],
+    ['4 flags a JSON parse read off before validation', 'const version = JSON.parse(text).version;'],
+    ['5 flags a JSON parse passed to a non-zod consumer', 'normalizeRules(JSON.parse(printed));'],
+    [
+      '6 flags a non-awaited any promise json call, caught by type rather than syntax',
+      ['declare const response: { json(): Promise<any> };', 'const pending = response.json();'].join('\n'),
+    ],
+    [
+      '7 flags a synchronous json call returning any',
+      ['declare const reader: { json(): any };', 'const data = reader.json().version;'].join('\n'),
+    ],
+  ])('11.1.%s', ([, code], { lintRule }) => {
+    expect(lintRule(code)).toReport('validateJson');
   });
 });
 
 describe('11.2 permitting validated reads and non-boundary json calls', () => {
-  test('11.2.1 allows a JSON parse flowing directly into schema parse or safe parse', ({ lintRule }) => {
-    expect(lintRule('const parsed = Schema.parse(JSON.parse(text));')).toReportNothing();
-    expect(lintRule('const parsed = Schema.safeParse(JSON.parse(text));')).toReportNothing();
-  });
-
-  test('11.2.2 allows an awaited json call flowing into schema parse or parse async', ({ lintRule }) => {
-    expect(
-      lintRule(
-        ['declare const response: { json(): Promise<any> };', 'const body = Schema.parse(await response.json());'].join(
-          '\n',
-        ),
+  test.for<Case>([
+    ['1 allows a JSON parse flowing into schema parse', 'const parsed = Schema.parse(JSON.parse(text));'],
+    ['2 allows a JSON parse flowing into schema safe parse', 'const parsed = Schema.safeParse(JSON.parse(text));'],
+    [
+      '3 allows an awaited json call flowing into schema parse',
+      ['declare const response: { json(): Promise<any> };', 'const body = Schema.parse(await response.json());'].join(
+        '\n',
       ),
-    ).toReportNothing();
-    expect(
-      lintRule(
-        [
-          'declare const response: { json(): Promise<any> };',
-          'const body = await Schema.parseAsync(await response.json());',
-        ].join('\n'),
-      ),
-    ).toReportNothing();
-  });
-
-  test('11.2.3 leaves JSON stringify alone, which is not a parse boundary', ({ lintRule }) => {
-    expect(lintRule('const text = JSON.stringify(value);')).toReportNothing();
-  });
-
-  test('11.2.4 leaves json calls returning concrete types alone', ({ lintRule }) => {
-    expect(
-      lintRule(
-        [
-          'type Config = { id: string };',
-          'declare const client: { json(): Promise<Config> };',
-          'const cfg = await client.json();',
-        ].join('\n'),
-      ),
-    ).toReportNothing();
-    expect(
-      lintRule(
-        [
-          'declare const builder: { json(body: unknown): { ok: boolean } };',
-          'const sent = builder.json({ ok: true });',
-        ].join('\n'),
-      ),
-    ).toReportNothing();
+    ],
+    [
+      '4 allows an awaited json call flowing into schema parse async',
+      [
+        'declare const response: { json(): Promise<any> };',
+        'const body = await Schema.parseAsync(await response.json());',
+      ].join('\n'),
+    ],
+    ['5 leaves JSON stringify alone, which is not a parse boundary', 'const text = JSON.stringify(value);'],
+    [
+      '6 leaves a json call returning a concrete type alone',
+      [
+        'type Config = { id: string };',
+        'declare const client: { json(): Promise<Config> };',
+        'const cfg = await client.json();',
+      ].join('\n'),
+    ],
+    [
+      '7 leaves a json call with a concrete return type built from an argument alone',
+      [
+        'declare const builder: { json(body: unknown): { ok: boolean } };',
+        'const sent = builder.json({ ok: true });',
+      ].join('\n'),
+    ],
+  ])('11.2.%s', ([, code], { lintRule }) => {
+    expect(lintRule(code)).toReportNothing();
   });
 });

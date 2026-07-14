@@ -14,6 +14,32 @@ verdict in the exit code, and fallow itself runs at the exact version
 pinned in `cerberus.tool_pins` so every run analyzes with the same tool.
 Fallow analyzes only TypeScript/JavaScript, so a repo without a
 `package.json` is out of scope.
+
+Each analysis writes its report to a file via fallow's own `--output-file`
+rather than being read off `outcome.stdout`: relaying a large JSON report
+through the `bunx` -> fallow subprocess pipe chain has been observed to
+truncate silently at a pipe-buffer-sized boundary on real-world repos
+(confirmed against `fallow@3.3.0` — a multi-hundred-KB health report cuts
+off at an exact multiple of 64KiB), which produces unparseable JSON and
+would otherwise be indistinguishable from a genuine fallow crash. Writing
+to a file sidesteps that pipe entirely, matching the same file-based
+report convention `jscpd_bite` already uses for the same reason.
+
+The same size problem shows up again one layer up, in cerberus's own
+terminal output: itemizing every offender inline is unreadable past a
+screenful, and a report with hundreds of findings would swamp the rest of
+a `just c` run. Past `_MAX_INLINE_FINDINGS` itemized lines, an analysis
+stops itemizing inline and instead persists its already-parsed report to a
+gitignored `.reports/` directory under the repo root being checked
+(`.reports/fallow-health.json`, `.reports/fallow-dead-code.json`) and
+fails with one line pointing at that file — cheap to do because the report
+is already sitting in memory as the parsed dict `_load_report` returned,
+no re-read of the (by-then-deleted) shielded temp file required. Only the
+analysis that actually exceeds the cap gets persisted, and only when it
+would otherwise itemize at all: dead-code stays a bare count-and-rerun-hint
+unless `--verbose`, so a non-verbose dead-code failure never writes a
+report regardless of size. Below the cap, itemization stays inline exactly
+as before.
 """
 
 from __future__ import annotations
@@ -38,11 +64,16 @@ SCOPE = Scope.CONTENT
 
 _SHARED_FLAGS = ["--quiet", "--fail-on-issues", "--format", "json"]
 
+_MAX_INLINE_FINDINGS = 25
+_REPORTS_DIR_NAME = ".reports"
+_HEALTH_REPORT_FILENAME = "fallow-health.json"
+_DEAD_CODE_REPORT_FILENAME = "fallow-dead-code.json"
 
-def _parse_report(outcome: subprocess.CompletedProcess[str]) -> dict[str, Any] | None:
+
+def _load_report(report_path: Path) -> dict[str, Any] | None:
     try:
-        parsed: dict[str, Any] = json.loads(outcome.stdout)
-    except ValueError:
+        parsed: dict[str, Any] = json.loads(report_path.read_text(encoding="utf-8"))
+    except OSError, ValueError:
         return None
     return parsed
 
@@ -96,39 +127,94 @@ def _complexity_lines(report: dict[str, Any]) -> list[str]:
     return lines
 
 
+# fallow's dead-code report envelope wraps the issue-category arrays (the
+# ones this function itemizes) in these sibling metadata fields — see
+# `CheckOutput` in fallow's own `crates/output/src/check.rs`. None of them
+# hold reportable issues, but several (`workspace_diagnostics`, in
+# particular) are lists of dicts with their own "path" key, so they must be
+# excluded by name rather than picked up as just another category.
+_DEAD_CODE_META_KEYS = frozenset({
+    "kind",
+    "schema_version",
+    "version",
+    "elapsed_ms",
+    "total_issues",
+    "entry_points",
+    "summary",
+    "baseline_deltas",
+    "baseline",
+    "regression",
+    "_meta",
+    "workspace_diagnostics",
+    "next_steps",
+})
+
+
+def _dead_code_entry_name(entry: dict[str, Any]) -> str | None:
+    parent_name = entry.get("parent_name")
+    member_name = entry.get("member_name")
+    if parent_name and member_name:
+        return f"{parent_name}.{member_name}"
+    return (
+        entry.get("export_name")
+        or entry.get("name")
+        or entry.get("package_name")
+        or member_name
+        or entry.get("specifier")
+    )
+
+
 def _dead_code_issue_lines(report: dict[str, Any]) -> list[str]:
     lines = []
     for category, entries in report.items():
-        if not isinstance(entries, list):
+        if category in _DEAD_CODE_META_KEYS or not isinstance(entries, list):
             continue
         for entry in entries:
             if not isinstance(entry, dict) or "path" not in entry:
                 continue
             location = entry["path"] + (f":{entry['line']}" if "line" in entry else "")
-            name = entry.get("export_name") or entry.get("name")
+            name = _dead_code_entry_name(entry)
             suffix = f" {name}" if name else ""
             lines.append(f"    {category}: {location}{suffix}")
     return lines
 
 
-def _record_dead_code(res: CheckResult, outcome: subprocess.CompletedProcess[str], *, verbose: bool) -> None:
+def _persist_report(ctx: Context, report: dict[str, Any], filename: str) -> Path:
+    repo_root = ctx.source.root.resolve()
+    reports_dir = repo_root / _REPORTS_DIR_NAME
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    report_path = reports_dir / filename
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report_path.relative_to(repo_root)
+
+
+def _record_dead_code(
+    res: CheckResult,
+    ctx: Context,
+    outcome: subprocess.CompletedProcess[str],
+    report: dict[str, Any] | None,
+    *,
+    verbose: bool,
+) -> None:
     if outcome.returncode == 0:
         return
     rerun_hint = f"run `bunx {tool_pins.format_spec('fallow')} dead-code` locally for details"
-    report = _parse_report(outcome)
     issue_count = report.get("total_issues") if report is not None else None
     if report is None or issue_count is None:
         res.fail(f"fallow dead-code exited {outcome.returncode}; {rerun_hint}")
         return
     issue_lines: list[str] = _dead_code_issue_lines(report) if verbose else []
-    if issue_lines:
-        res.fail("\n".join([f"fallow found {issue_count} dead-code issues", *issue_lines]))
-    else:
+    if not issue_lines:
         res.fail(f"fallow found {issue_count} dead-code issues; {rerun_hint}")
+    elif len(issue_lines) > _MAX_INLINE_FINDINGS:
+        report_path = _persist_report(ctx, report, _DEAD_CODE_REPORT_FILENAME)
+        res.fail(f"fallow found {issue_count} dead-code issues; see {report_path}")
+    else:
+        res.fail("\n".join([f"fallow found {issue_count} dead-code issues", *issue_lines]))
 
 
 def _record_complexity(
-    res: CheckResult, outcome: subprocess.CompletedProcess[str], report: dict[str, Any] | None
+    res: CheckResult, ctx: Context, outcome: subprocess.CompletedProcess[str], report: dict[str, Any] | None
 ) -> None:
     if outcome.returncode == 0:
         return
@@ -140,7 +226,11 @@ def _record_complexity(
         )
         return
     header = _health_status_line(report) or f"fallow found {len(offenders)} functions above its complexity thresholds"
-    res.fail("\n".join([header, *_complexity_lines(report)]))
+    if len(offenders) > _MAX_INLINE_FINDINGS:
+        report_path = _persist_report(ctx, report, _HEALTH_REPORT_FILENAME)
+        res.fail(f"{header}; see {report_path}")
+    else:
+        res.fail("\n".join([header, *_complexity_lines(report)]))
 
 
 def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
@@ -164,7 +254,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     except json.JSONDecodeError as exc:
         res.error(f"package.json is not valid JSON: {exc}")
         return res
-    outcomes = []
+    outcomes: dict[str, subprocess.CompletedProcess[str]] = {}
+    reports: dict[str, dict[str, Any] | None] = {}
     with tempfile.TemporaryDirectory(prefix="cerberus-fallow-") as shield_dir:
         config_path = Path(shield_dir) / "fallow.json"
         shield_config = {"ignorePatterns": ignored_dirs, "duplicates": {"ignoreDefaults": False}}
@@ -172,16 +263,18 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         flags = [*_SHARED_FLAGS, "--root", str(ctx.source.root.resolve()), "--config", str(config_path)]
         fallow_spec = tool_pins.format_spec("fallow")
         for analysis in ("dead-code", "health"):
+            report_path = Path(shield_dir) / f"{analysis}-report.json"
+            argv = ["bunx", fallow_spec, analysis, *flags, "--output-file", str(report_path)]
             try:
-                outcomes.append(proc.run(["bunx", fallow_spec, analysis, *flags], cwd=Path(shield_dir)))
+                outcomes[analysis] = proc.run(argv, cwd=Path(shield_dir))
             except proc.ToolNotFoundError as exc:
                 res.error(str(exc))
                 return res
-    _record_dead_code(res, outcomes[0], verbose=ctx.verbose)
-    health_report = _parse_report(outcomes[1])
-    _record_complexity(res, outcomes[1], health_report)
+            reports[analysis] = _load_report(report_path)
+    _record_dead_code(res, ctx, outcomes["dead-code"], reports["dead-code"], verbose=ctx.verbose)
+    _record_complexity(res, ctx, outcomes["health"], reports["health"])
     if not res.findings:
-        if health_report is not None:
-            res.detail = _health_status_line(health_report)
+        if reports["health"] is not None:
+            res.detail = _health_status_line(reports["health"])
         res.ok("fallow found no dead code, cycles, or complexity offenders")
     return res

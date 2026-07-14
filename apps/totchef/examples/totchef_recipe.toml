@@ -210,7 +210,12 @@ apply = 'uv tool install --force --reinstall "$(dirname "$(dirname "$TOTCHEF_REC
 # moves, as long as `totchef up` runs once from the new location to refresh it.
 post_hook = 'cfg="${XDG_CONFIG_HOME:-$HOME/.config}/totchef"; mkdir -p "$cfg" && ln -sfn "$TOTCHEF_RECIPE" "$cfg/recipe.toml" && totchef init "$cfg/recipe.toml"'
 
-[local_bin.ctop]
+# apps/clipy (a tested uv workspace member, not published to PyPI) is a folder of hand-written
+# CLI tools under active development — every script that lands there and meets the [local_bin]
+# contract (embeds __version__, offers --version/--help) is auto-discovered and kept on PATH,
+# with no further edit here when a new one is added (currently: ctop, justpty).
+[local_bin_dir]
+dirs = ["../../../clipy/src/clipy"]
 
 [file.grub_deep_sleep]
 needs_root = true

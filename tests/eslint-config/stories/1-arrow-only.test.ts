@@ -4,32 +4,28 @@ test.override({ ruleId: 'no-restricted-syntax' });
 
 const bannedSyntax = [{ ruleId: 'no-restricted-syntax' }];
 
+type ArrowCase = [shape: string, code: string];
+
 describe('1.1 banning ordinary function declarations and expressions', () => {
-  test('1.1.1 bans function declarations', ({ lint }) => {
-    expect(lint('function foo() {}')).toMatchObject(bannedSyntax);
-  });
+  const cases: ArrowCase[] = [
+    ['1 bans function declarations', 'function foo() {}'],
+    ['2 bans standalone function expressions', 'const f = function () {};'],
+  ];
 
-  test('1.1.2 bans standalone function expressions', ({ lint }) => {
-    expect(lint('const f = function () {};')).toMatchObject(bannedSyntax);
-  });
-});
-
-describe('1.2 exempting generator functions, which have no arrow equivalent', () => {
-  test('1.2.1 exempts generator function declarations', ({ lint }) => {
-    expect(lint('function* gen() { yield 1; }')).toReportNothing();
-  });
-
-  test('1.2.2 exempts generator function expressions', ({ lint }) => {
-    expect(lint('const stream = async function* () { yield 1; };')).toReportNothing();
+  test.for(cases)('1.1.%s', ([, code], { lint }) => {
+    expect(lint(code)).toMatchObject(bannedSyntax);
   });
 });
 
-describe('1.3 exempting class and object methods, which have their own shorthand syntax', () => {
-  test('1.3.1 exempts class methods', ({ lint }) => {
-    expect(lint('class Foo { method() {} }')).toReportNothing();
-  });
+describe('1.2 exempting syntax with no arrow equivalent or its own shorthand', () => {
+  const cases: ArrowCase[] = [
+    ['1 exempts generator function declarations', 'function* gen() { yield 1; }'],
+    ['2 exempts generator function expressions', 'const stream = async function* () { yield 1; };'],
+    ['3 exempts class methods', 'class Foo { method() {} }'],
+    ['4 exempts object literal shorthand methods', 'const obj = { method() {} };'],
+  ];
 
-  test('1.3.2 exempts object literal shorthand methods', ({ lint }) => {
-    expect(lint('const obj = { method() {} };')).toReportNothing();
+  test.for(cases)('1.2.%s', ([, code], { lint }) => {
+    expect(lint(code)).toReportNothing();
   });
 });

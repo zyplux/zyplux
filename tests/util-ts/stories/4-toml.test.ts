@@ -1,4 +1,4 @@
-import { describe, expect, test } from '#fixtures';
+import { describe, expect, test, type TomlOutcome } from '#fixtures';
 
 const validToml = ['[project]', 'name = "cerberus"', 'dependencies = ["httpx>=0.28"]'].join('\n');
 const validValue = { project: { dependencies: ['httpx>=0.28'], name: 'cerberus' } };
@@ -6,44 +6,30 @@ const validValue = { project: { dependencies: ['httpx>=0.28'], name: 'cerberus' 
 const malformedToml = 'name = ';
 const schemaMismatchToml = '[project]\nname = 123';
 
-describe('parseToml', () => {
+type TomlCase = [shape: string, text: string, outcome: TomlOutcome];
+
+const tomlCases: TomlCase[] = [
+  ['1 well formed toml matching the schema', validToml, 'valid'],
+  ['2 malformed toml syntax', malformedToml, 'syntaxError'],
+  ['3 toml that does not match the schema', schemaMismatchToml, 'schemaError'],
+];
+
+describe('4. Parsing TOML into schema-validated values', () => {
   describe('4.1 parsing toml text against a schema', () => {
-    test('4.1.1 returns the schema validated value for well formed toml', ({ parseToml, pyProjectSchema }) => {
-      expect(parseToml(validToml, pyProjectSchema)).toEqual(validValue);
-    });
-
-    test('4.1.2 throws on malformed toml syntax', ({ parseToml, pyProjectSchema }) => {
-      expect(() => parseToml(malformedToml, pyProjectSchema)).toThrow();
-    });
-
-    test('4.1.3 throws a zod error when the parsed value does not match the schema', ({
-      parseToml,
-      pyProjectSchema,
-      zodError,
-    }) => {
-      expect(() => parseToml(schemaMismatchToml, pyProjectSchema)).toThrow(zodError);
+    test.for(tomlCases)('4.1.%s', ([, text, outcome], { parseToml, pyProjectSchema }) => {
+      expect(() => parseToml(text, pyProjectSchema)).toParseTomlAs(outcome, validValue);
     });
   });
-});
 
-describe('tryParseToml', () => {
   describe('4.2 parsing toml text without throwing', () => {
-    test('4.2.1 returns the schema validated value for well formed toml', ({ pyProjectSchema, tryParseToml }) => {
-      expect(tryParseToml(validToml, pyProjectSchema)).toEqual(validValue);
+    test.for(tomlCases)('4.2.%s', ([, text, outcome], { pyProjectSchema, tryParseToml }) => {
+      expect(tryParseToml(text, pyProjectSchema)).toEqual(outcome === 'valid' ? validValue : undefined);
     });
+  });
 
-    test('4.2.2 returns undefined instead of throwing on malformed toml syntax', ({
-      pyProjectSchema,
-      tryParseToml,
-    }) => {
-      expect(tryParseToml(malformedToml, pyProjectSchema)).toBeUndefined();
-    });
-
-    test('4.2.3 returns undefined instead of throwing when the parsed value does not match the schema', ({
-      pyProjectSchema,
-      tryParseToml,
-    }) => {
-      expect(tryParseToml(schemaMismatchToml, pyProjectSchema)).toBeUndefined();
+  describe('4.3 confining outcome assertions to their own failure mode', () => {
+    test('4.3.1 a schema mismatch does not satisfy a syntaxError assertion', ({ parseToml, pyProjectSchema }) => {
+      expect(() => parseToml(schemaMismatchToml, pyProjectSchema)).not.toParseTomlAs('syntaxError', validValue);
     });
   });
 });

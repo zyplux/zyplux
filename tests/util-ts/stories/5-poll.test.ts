@@ -2,42 +2,46 @@ import { describe, expect, test } from '#fixtures';
 
 const intervalMs = 1;
 const RESOLVES_ON_THIRD_ATTEMPT = 3;
+const ATTEMPTS_WITH_ROOM_TO_SPARE = 5;
+const ATTEMPTS_UNTIL_EXHAUSTED = 4;
+
+type PollCase = [
+  shape: string,
+  attempts: number,
+  resolveAtCall: number,
+  expectedCalls: number,
+  expectedResult: string | undefined,
+];
+
+const pollCases: PollCase[] = [
+  ['1 returns the first defined result without retrying', ATTEMPTS_WITH_ROOM_TO_SPARE, 1, 1, 'found'],
+  [
+    '2 retries after undefined results until the probe returns a value',
+    ATTEMPTS_WITH_ROOM_TO_SPARE,
+    RESOLVES_ON_THIRD_ATTEMPT,
+    RESOLVES_ON_THIRD_ATTEMPT,
+    'found',
+  ],
+  [
+    '3 returns undefined once every attempt is exhausted',
+    ATTEMPTS_UNTIL_EXHAUSTED,
+    Infinity,
+    ATTEMPTS_UNTIL_EXHAUSTED,
+    undefined,
+  ],
+];
 
 describe('5.1 polling a probe until it returns a defined value', () => {
-  test('5.1.1 returns the first defined result without retrying', async ({ poll }) => {
+  test.for(pollCases)('5.1.%s', async ([, attempts, resolveAtCall, expectedCalls, expectedResult], { poll }) => {
     let calls = 0;
     const probe = () => {
       calls += 1;
-      return Promise.resolve('found');
+      return Promise.resolve(calls >= resolveAtCall ? 'found' : undefined);
     };
 
-    const result = await poll(probe, { attempts: 5, intervalMs });
+    const result = await poll<string>(probe, { attempts, intervalMs });
 
-    expect({ calls, result }).toEqual({ calls: 1, result: 'found' });
-  });
-
-  test('5.1.2 retries after undefined results until the probe returns a value', async ({ poll }) => {
-    let calls = 0;
-    const probe = () => {
-      calls += 1;
-      return Promise.resolve(calls < RESOLVES_ON_THIRD_ATTEMPT ? undefined : 'found');
-    };
-
-    const result = await poll(probe, { attempts: 5, intervalMs });
-
-    expect({ calls, result }).toEqual({ calls: RESOLVES_ON_THIRD_ATTEMPT, result: 'found' });
-  });
-
-  test('5.1.3 returns undefined once every attempt is exhausted', async ({ poll }) => {
-    let calls = 0;
-    const probe = () => {
-      calls += 1;
-      return Promise.resolve(undefined);
-    };
-
-    const result = await poll<string>(probe, { attempts: 4, intervalMs });
-
-    expect({ calls, result }).toEqual({ calls: 4, result: undefined });
+    expect({ calls, result }).toEqual({ calls: expectedCalls, result: expectedResult });
   });
 
   test('5.1.4 waits intervalMs between attempts', async ({ poll }) => {

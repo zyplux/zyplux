@@ -2,60 +2,74 @@ import { describe, expect, test } from '#fixtures';
 
 test.override({ ruleName: 'no-schemas-outside-contracts' });
 
+type ReportCase = [shape: string, code: string, ids: ReportIds];
+type ReportIds = readonly [string, ...string[]];
+type ReportNothingCase = [shape: string, code: string];
+
 describe('16.1 keeping schema construction in contracts', () => {
-  test('16.1.1 flags a zod value import and the schema const it builds', ({ lintRule }) => {
-    const code = ["import * as z from 'zod';", 'const UserSchema = z.object({ id: z.string() });'].join('\n');
-    expect(lintRule(code)).toReport('zodValueImport', 'schemaDeclaration');
-  });
-
-  test('16.1.2 flags a schema composed inline from an imported contracts schema', ({ lintRule }) => {
-    const code = [
-      "import { PackageJsonSchema } from '@zyplux/util/contracts';",
-      'export const readManifests = (raw: unknown) => PackageJsonSchema.array().parse(raw);',
-    ].join('\n');
-    expect(lintRule(code)).toReport('schemaConstruction');
-  });
-
-  test('16.1.3 reports a construction chain once at its declaration', ({ lintRule }) => {
-    const code = ["import * as z from 'zod';", 'const TagsSchema = z.array(z.string()).optional();'].join('\n');
-    expect(lintRule(code)).toReport('zodValueImport', 'schemaDeclaration');
-  });
-
-  test('16.1.4 flags named bindings that expose schema factories', ({ lintRule }) => {
-    expect(lintRule("import { z } from 'zod';")).toReport('zodValueImport');
-    expect(lintRule("import { object } from 'zod';")).toReport('zodValueImport');
+  test.for<ReportCase>([
+    [
+      '1 flags a zod value import and the schema const it builds',
+      ["import * as z from 'zod';", 'const UserSchema = z.object({ id: z.string() });'].join('\n'),
+      ['zodValueImport', 'schemaDeclaration'],
+    ],
+    [
+      '2 flags a schema composed inline from an imported contracts schema',
+      [
+        "import { PackageJsonSchema } from '@zyplux/util/contracts';",
+        'export const readManifests = (raw: unknown) => PackageJsonSchema.array().parse(raw);',
+      ].join('\n'),
+      ['schemaConstruction'],
+    ],
+    [
+      '3 reports a construction chain once at its declaration',
+      ["import * as z from 'zod';", 'const TagsSchema = z.array(z.string()).optional();'].join('\n'),
+      ['zodValueImport', 'schemaDeclaration'],
+    ],
+    ['4 flags a named value import that exposes a schema factory', "import { z } from 'zod';", ['zodValueImport']],
+    [
+      '5 flags a named object import that exposes a schema factory',
+      "import { object } from 'zod';",
+      ['zodValueImport'],
+    ],
+  ])('16.1.%s', ([, code, ids], { lintRule }) => {
+    expect(lintRule(code)).toReport(...ids);
   });
 });
 
 describe('16.2 allowing schema use outside contracts', () => {
-  test('16.2.1 allows importing a contracts schema and parsing with it', ({ lintRule }) => {
-    const code = [
-      "import { PackageJsonSchema } from '@zyplux/util/contracts';",
-      'export const readManifest = (raw: string) => PackageJsonSchema.parse(JSON.parse(raw));',
-    ].join('\n');
-    expect(lintRule(code)).toReportNothing();
-  });
-
-  test('16.2.2 allows type-only zod imports, schema-typed parameters, and inferred types', ({ lintRule }) => {
-    const code = [
-      "import type { ZodType } from 'zod';",
-      'export const parseWith = <Parsed>(schema: ZodType<Parsed>, raw: unknown) => schema.parse(raw);',
-    ].join('\n');
-    expect(lintRule(code)).toReportNothing();
-    expect(lintRule("import { type ZodType } from 'zod';")).toReportNothing();
-    const inferred = [
-      "import type * as z from 'zod';",
-      "import { PackageJsonSchema } from '@zyplux/util/contracts';",
-      'export type Manifest = z.infer<typeof PackageJsonSchema>;',
-    ].join('\n');
-    expect(lintRule(inferred)).toReportNothing();
-  });
-
-  test('16.2.3 allows named zod values that cannot build schemas', ({ lintRule }) => {
-    const code = [
-      "import { ZodError } from 'zod';",
-      'export const describeSchemaError = (error: unknown) => (error instanceof ZodError ? error.message : undefined);',
-    ].join('\n');
+  test.for<ReportNothingCase>([
+    [
+      '1 allows importing a contracts schema and parsing with it',
+      [
+        "import { PackageJsonSchema } from '@zyplux/util/contracts';",
+        'export const readManifest = (raw: string) => PackageJsonSchema.parse(JSON.parse(raw));',
+      ].join('\n'),
+    ],
+    [
+      '2 allows a schema-typed parameter and type-only zod import',
+      [
+        "import type { ZodType } from 'zod';",
+        'export const parseWith = <Parsed>(schema: ZodType<Parsed>, raw: unknown) => schema.parse(raw);',
+      ].join('\n'),
+    ],
+    ['3 allows a type-only import combined with a value import', "import { type ZodType } from 'zod';"],
+    [
+      '4 allows an inferred type from an imported contracts schema',
+      [
+        "import type * as z from 'zod';",
+        "import { PackageJsonSchema } from '@zyplux/util/contracts';",
+        'export type Manifest = z.infer<typeof PackageJsonSchema>;',
+      ].join('\n'),
+    ],
+    [
+      '5 allows named zod values that cannot build schemas',
+      [
+        "import { ZodError } from 'zod';",
+        'export const describeSchemaError = (error: unknown) => (error instanceof ZodError ? error.message : undefined);',
+      ].join('\n'),
+    ],
+  ])('16.2.%s', ([, code], { lintRule }) => {
     expect(lintRule(code)).toReportNothing();
   });
 });

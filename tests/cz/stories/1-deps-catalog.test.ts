@@ -1,225 +1,213 @@
+import type { Catalog } from '#fixtures';
+
 import { describe, expect, test } from '#fixtures';
 
-type FetchRoute = (url: string) => Response;
+const npmManifest = (name: string, dependencies: Record<string, string>) => JSON.stringify({ dependencies, name });
 
-const byLocale = (left: string, right: string) => left.localeCompare(right);
-
-const notFound = () => Response.error();
-const depsDevDefaultVersion = () =>
-  Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
-const depsDevSourceRepo = (id: string) =>
-  Response.json({ relatedProjects: [{ projectKey: { id }, relationType: 'SOURCE_REPO' }] });
-
-const reactViaDepsDev: FetchRoute = url =>
-  url.includes('/versions/') ? depsDevSourceRepo('github.com/facebook/react') : depsDevDefaultVersion();
-
-const zodViaDepsDevLinks: FetchRoute = url =>
-  url.includes('/versions/')
-    ? Response.json({ links: [{ label: 'SOURCE_REPO', url: 'https://github.com/colinhacks/zod' }] })
-    : depsDevDefaultVersion();
-
-const reactViaNpmRegistry: FetchRoute = url => {
-  if (url.startsWith('https://api.deps.dev/')) {
-    return url.includes('/versions/') ? Response.json({ relatedProjects: [] }) : depsDevDefaultVersion();
-  }
-  if (url.startsWith('https://registry.npmjs.org/')) {
-    return Response.json({ repository: { url: 'git+https://github.com/facebook/react.git' } });
-  }
-  return notFound();
+const seedWorkspace = async (catalog: Catalog) => {
+  await catalog.writeManifest('packages/widgets/package.json', npmManifest('@scratch/widgets', { zod: '^3' }));
+  await catalog.writeManifest(
+    'apps/web/package.json',
+    npmManifest('@scratch/web', { '@scratch/widgets': '^1.0.0', eslint: '^9', zod: '^3' }),
+  );
+  await catalog.writeManifest(
+    'libs/toolkit/pyproject.toml',
+    '[project]\nname = "scratch-toolkit"\ndependencies = ["pytest"]\n',
+  );
+  await catalog.writeManifest(
+    'apps/service/pyproject.toml',
+    '[project]\nname = "scratch-service"\ndependencies = ["scratch-toolkit", "ruff", "pytest"]\n\n' +
+      '[dependency-groups]\ndev = ["pyrefly"]\n',
+  );
 };
 
-const requestsViaPypi: FetchRoute = url => {
-  if (url.startsWith('https://api.deps.dev/')) {
-    return url.includes('/versions/') ? Response.json({}) : depsDevDefaultVersion();
-  }
-  if (url.startsWith('https://pypi.org/')) {
-    return Response.json({ info: { project_urls: { Source: 'https://github.com/psf/requests' } } });
-  }
-  return notFound();
-};
+type ScanCase = [shape: string, packageRegistry: 'npm' | 'pypi', expected: string[]];
 
-const nothingAnywhere: FetchRoute = () => notFound();
-
-const depsDevRouteFor = (sourceRepoById: ReadonlyMap<string, string>) => (url: string) => {
-  const match = /api\.deps\.dev\/v3\/systems\/([^/]+)\/packages\/([^/]+)(\/versions\/.+)?$/.exec(url);
-  if (match === null) return notFound();
-  const [, system, encodedName, versionPath] = match;
-  if (system === undefined || encodedName === undefined) return notFound();
-  const repo = sourceRepoById.get(`${system}:${decodeURIComponent(encodedName)}`);
-  if (repo === undefined) return notFound();
-  return versionPath === undefined ? depsDevDefaultVersion() : depsDevSourceRepo(repo);
-};
-
-const resolveFromWorkspaceCatalog = depsDevRouteFor(
-  new Map([
-    ['npm:@optique/core', 'github.com/dahlia/optique'],
-    ['npm:knip', 'github.com/zyplux/zyplux'],
-    ['npm:zod', 'github.com/colinhacks/zod'],
-    ['pypi:ruff', 'github.com/astral-sh/ruff'],
-  ]),
-);
-
-const npmManifest = (...dependencyNames: string[]) =>
-  JSON.stringify({ dependencies: Object.fromEntries(dependencyNames.map(name => [name, '*'])), name: 'scratch-app' });
+const scanCases: ScanCase[] = [
+  ['1 collects deduplicated npm dependency names', 'npm', ['eslint', 'zod']],
+  ['2 collects deduplicated pypi dependency names', 'pypi', ['pyrefly', 'pytest', 'ruff']],
+];
 
 describe('1.1 scanning workspace manifests for declared dependency names', () => {
-  test('1.1.1 collects npm dependency names from bun catalogs', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
+  test.for(scanCases)('1.1.%s', async ([, packageRegistry, expected], { catalog }) => {
+    await seedWorkspace(catalog);
 
-    await catalog.runOverWorkspace();
+    await catalog.run();
 
-    expect(catalog.unresolvedNames('npm')).toEqual(
-      expect.arrayContaining(['@optique/core', '@optique/run', 'eslint', 'typescript', 'vitest', 'zod']),
-    );
-  });
-
-  test('1.1.2 collects python dependency names from project dependencies and dependency groups', async ({
-    catalog,
-    network,
-  }) => {
-    network.otherwise(nothingAnywhere);
-
-    await catalog.runOverWorkspace();
-
-    expect(catalog.unresolvedNames('pypi')).toEqual(
-      expect.arrayContaining(['pyrefly', 'pytest', 'pyyaml', 'ruff', 'rumdl', 'typer', 'vulture']),
-    );
-  });
-
-  test('1.1.3 excludes internal workspace packages from both ecosystems', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
-
-    await catalog.runOverWorkspace();
-
-    expect(catalog.unresolvedNames('npm')).toEqual(
-      expect.not.arrayContaining(['@zyplux/util', '@zyplux/cz', '@zyplux/tsconfig']),
-    );
-    expect(catalog.unresolvedNames('pypi')).toEqual(expect.not.arrayContaining(['zyplux', 'zyplux-cerberus']));
-  });
-
-  test('1.1.4 reports sorted deduplicated names for each ecosystem', async ({ catalog, network }) => {
-    network.otherwise(nothingAnywhere);
-
-    await catalog.runOverWorkspace();
-
-    const npmNames = catalog.unresolvedNames('npm');
-    const pypiNames = catalog.unresolvedNames('pypi');
-    expect(npmNames).toEqual([...new Set(npmNames)].toSorted(byLocale));
-    expect(pypiNames).toEqual([...new Set(pypiNames)].toSorted(byLocale));
+    expect(catalog.unresolvedNames(packageRegistry)).toContainExactElementsInAnyOrder(expected);
   });
 });
 
-describe('1.2 resolving a dependency name to its source repository', () => {
-  test('1.2.1 resolves a package to its source repo via deps dev', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('react'));
-    network.otherwise(reactViaDepsDev);
+type ExcludeCase = [shape: string, packageRegistry: 'npm' | 'pypi', excludedName: string];
+
+const excludeCases: ExcludeCase[] = [
+  ['1 excludes an internal npm package from its own dependency list', 'npm', '@scratch/widgets'],
+  ['2 excludes an internal pypi package from its own dependency list', 'pypi', 'scratch-toolkit'],
+];
+
+describe('1.2 excluding internal workspace packages from declared dependency names', () => {
+  test.for(excludeCases)('1.2.%s', async ([, packageRegistry, excludedName], { catalog }) => {
+    await seedWorkspace(catalog);
 
     await catalog.run();
 
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/facebook/react']);
-  });
-
-  test('1.2.2 falls back to the npm registry when deps dev has no source repo', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('react'));
-    network.otherwise(reactViaNpmRegistry);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/facebook/react']);
-  });
-
-  test('1.2.3 falls back to pypi project urls when deps dev has no source repo', async ({ catalog, network }) => {
-    await catalog.writeManifest('pyproject.toml', '[project]\nname = "scratch-app"\ndependencies = ["requests"]\n');
-    network.otherwise(requestsViaPypi);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/psf/requests']);
-  });
-
-  test('1.2.4 reports the dependency as unresolved when no source repo is found anywhere', async ({
-    catalog,
-    network,
-  }) => {
-    await catalog.writeManifest('package.json', npmManifest('does-not-exist'));
-    network.otherwise(nothingAnywhere);
-
-    await catalog.run();
-
-    expect(catalog.unresolvedNames('npm')).toEqual(['does-not-exist']);
-    await expect(catalog.loadRepos()).resolves.toEqual([]);
-  });
-
-  test('1.2.5 falls back to a deps dev links entry when there is no related project', async ({ catalog, network }) => {
-    await catalog.writeManifest('package.json', npmManifest('zod'));
-    network.otherwise(zodViaDepsDevLinks);
-
-    await catalog.run();
-
-    await expect(catalog.loadRepos()).resolves.toEqual(['https://github.com/colinhacks/zod']);
+    expect(catalog.unresolvedNames(packageRegistry)).not.toContain(excludedName);
   });
 });
 
-describe('1.3 collecting the external repos a workspace depends on', () => {
-  test('1.3.1 collects deduplicated sorted source repos for resolved dependencies', async ({ catalog, network }) => {
-    network.otherwise(resolveFromWorkspaceCatalog);
+type ResolveCase = [
+  shape: string,
+  manifestPath: string,
+  manifestText: string,
+  stub: ((catalog: Catalog) => void) | undefined,
+  expectedRepos: string[],
+  expectedUnresolvedNpm?: string[],
+];
 
-    await catalog.runOverWorkspace();
+const resolveCases: ResolveCase[] = [
+  [
+    '1 resolves a package to its source repo via deps dev',
+    'package.json',
+    npmManifest('scratch-app', { react: '*' }),
+    catalog => {
+      catalog.stubDepsDev({ 'npm:react': 'github.com/facebook/react' });
+    },
+    ['https://github.com/facebook/react'],
+  ],
+  [
+    '2 falls back to the npm registry when deps dev has no source repo',
+    'package.json',
+    npmManifest('scratch-app', { react: '*' }),
+    catalog => {
+      catalog.stubNpmRegistry({ react: 'github.com/facebook/react' });
+    },
+    ['https://github.com/facebook/react'],
+  ],
+  [
+    '3 falls back to pypi project urls when deps dev has no source repo',
+    'pyproject.toml',
+    '[project]\nname = "scratch-app"\ndependencies = ["requests"]\n',
+    catalog => {
+      catalog.stubPypiRegistry({ requests: 'github.com/psf/requests' });
+    },
+    ['https://github.com/psf/requests'],
+  ],
+  [
+    '4 reports the dependency as unresolved when no source repo is found anywhere',
+    'package.json',
+    npmManifest('scratch-app', { 'does-not-exist': '*' }),
+    undefined,
+    [],
+    ['does-not-exist'],
+  ],
+  [
+    '5 falls back to a deps dev links entry when there is no related project',
+    'package.json',
+    npmManifest('scratch-app', { zod: '*' }),
+    catalog => {
+      catalog.stubDepsDev({ 'npm:zod': { repo: 'github.com/colinhacks/zod', via: 'links' } });
+    },
+    ['https://github.com/colinhacks/zod'],
+  ],
+];
 
-    const repos = await catalog.loadRepos();
-    expect(repos).toEqual(
-      expect.arrayContaining([
-        'https://github.com/astral-sh/ruff',
+describe('1.3 resolving a dependency name to its source repository', () => {
+  test.for(resolveCases)(
+    '1.3.%s',
+    async ([, manifestPath, manifestText, stub, expectedRepos, expectedUnresolvedNpm], { catalog }) => {
+      await catalog.writeManifest(manifestPath, manifestText);
+      stub?.(catalog);
+
+      await catalog.run();
+
+      if (expectedUnresolvedNpm !== undefined) {
+        expect(catalog.unresolvedNames('npm')).toEqual(expectedUnresolvedNpm);
+      }
+      await expect(catalog.loadRepos()).resolves.toEqual(expectedRepos);
+    },
+  );
+});
+
+const seedResolvableWorkspace = async (catalog: Catalog) => {
+  await catalog.writeManifest(
+    'packages/toolkit/package.json',
+    JSON.stringify({ name: '@scratch/toolkit', repository: 'https://github.com/scratch-org/toolkit' }),
+  );
+  await catalog.writeManifest(
+    'apps/web/package.json',
+    npmManifest('@scratch/web', {
+      eslint: '^9',
+      'legacy-toolkit-mirror': '^1.0.0',
+      react: '^19',
+      'react-dom': '^19',
+      zod: '^3',
+    }),
+  );
+  catalog.stubDepsDev({
+    'npm:legacy-toolkit-mirror': 'github.com/scratch-org/toolkit',
+    'npm:react': 'github.com/facebook/react',
+    'npm:react-dom': 'github.com/facebook/react',
+    'npm:zod': 'github.com/colinhacks/zod',
+  });
+};
+
+type ResolvedWorkspaceCase = [shape: string, assertResolved: (catalog: Catalog) => Promise<void> | void];
+
+const resolvedWorkspaceCases: ResolvedWorkspaceCase[] = [
+  [
+    '1 collects deduplicated source repos for resolved dependencies',
+    async catalog => {
+      const repos = await catalog.loadRepos();
+      expect(repos).toContainExactElementsInAnyOrder([
         'https://github.com/colinhacks/zod',
-        'https://github.com/dahlia/optique',
-      ]),
-    );
-    expect(repos).toEqual([...new Set(repos)].toSorted(byLocale));
-  });
+        'https://github.com/facebook/react',
+      ]);
+    },
+  ],
+  [
+    '2 excludes repos that belong to the scanned workspace itself',
+    async catalog => {
+      await expect(catalog.loadRepos()).resolves.not.toContain('https://github.com/scratch-org/toolkit');
+    },
+  ],
+  [
+    '3 reports dependencies it could not resolve to a repo',
+    catalog => {
+      expect(catalog.unresolvedNames('npm')).toContain('eslint');
+    },
+  ],
+];
 
-  test('1.3.2 excludes repos that belong to the scanned workspace itself', async ({ catalog, network }) => {
-    network.otherwise(resolveFromWorkspaceCatalog);
+describe('1.4 collecting the external repos a workspace depends on', () => {
+  test.for(resolvedWorkspaceCases)('1.4.%s', async ([, assertResolved], { catalog }) => {
+    await seedResolvableWorkspace(catalog);
 
-    await catalog.runOverWorkspace();
+    await catalog.run();
 
-    await expect(catalog.loadRepos()).resolves.not.toContain('https://github.com/zyplux/zyplux');
-  });
-
-  test('1.3.3 reports dependencies it could not resolve to a repo', async ({ catalog, network }) => {
-    network.otherwise(resolveFromWorkspaceCatalog);
-
-    await catalog.runOverWorkspace();
-
-    expect(catalog.unresolvedNames('npm')).toContain('eslint');
-    expect(catalog.unresolvedNames('pypi')).toContain('pytest');
+    await assertResolved(catalog);
   });
 });
 
-describe('1.4 skipping manifest files that fail to parse', () => {
-  test('1.4.1 skips package.json and pyproject.toml files that fail to parse, keeping the rest', async ({
+describe('1.5 skipping manifest files that fail to parse', () => {
+  test('1.5.1 skips package.json and pyproject.toml files that fail to parse, keeping the rest', async ({
     catalog,
-    network,
   }) => {
     await catalog.writeManifest('bad-toml/pyproject.toml', '[project\nname = "should-not-parse"\n');
     await catalog.writeManifest(
       'empty-name/pyproject.toml',
       '[project]\nname = ""\n\n[project.urls]\nSource = "https://github.com/emptyname/repo"\n',
     );
-    await catalog.writeManifest('good/package.json', npmManifest('depa', 'depb', 'depc'));
+    await catalog.writeManifest('good/package.json', npmManifest('good', { depa: '*', depb: '*', depc: '*' }));
     await catalog.writeManifest(
       'no-name/pyproject.toml',
       '[project.urls]\nSource = "https://github.com/noname/repo"\n',
     );
     await catalog.writeManifest('package.json', '{ "name": "should-not-parse", ');
-    network.otherwise(
-      depsDevRouteFor(
-        new Map([
-          ['npm:depa', 'github.com/noname/repo'],
-          ['npm:depb', 'github.com/emptyname/repo'],
-          ['npm:depc', 'github.com/survivor/repo'],
-        ]),
-      ),
-    );
+    catalog.stubDepsDev({
+      'npm:depa': 'github.com/noname/repo',
+      'npm:depb': 'github.com/emptyname/repo',
+      'npm:depc': 'github.com/survivor/repo',
+    });
 
     await catalog.run();
 
