@@ -1,5 +1,9 @@
 # Next.md
 
+## 0. Installed directly, need to re-install with totchef
+- flatpak, kde-config-flatpak: <https://flathub.org/en-GB/setup/Kubuntu>
+- podman desktop: <https://podman-desktop.io/downloads>
+- kubectl (with podman desktop)
 ## 1. CookBase needs_binaries, installs_binaries
 
 - (1) base cook should have needs_binaries and installs_binaries fields, which can be overridden/hardcoded in specific cooks
