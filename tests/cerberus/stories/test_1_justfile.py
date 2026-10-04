@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
 from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -405,3 +407,45 @@ def test_1_11_5_does_not_count_a_runner_wrapping_an_unrelated_command(
 def test_1_12_1_delegates_both_upgrade_modes_to_cz() -> None:
     assert "upgrade *args='':\n    pnpm run --silent cz upgrade {{ args }}" in BASELINE
     assert "upgrade-interactive:\n    @pnpm run --silent cz upgrade --interactive" in BASELINE
+
+
+@requires_just
+@pytest.mark.parametrize(
+    ("manifests", "runner_exits", "expected_calls", "is_success"),
+    [
+        ([], (0, 0), [], False),
+        (["package.json"], (0, 1), ["pnpm run test"], True),
+        (["pyproject.toml"], (1, 0), ["uv run pytest"], True),
+        (["package.json", "pyproject.toml"], (0, 0), ["pnpm run test", "uv run pytest"], True),
+        (["pyproject.toml"], (0, pytest.ExitCode.NO_TESTS_COLLECTED), ["uv run pytest"], True),
+        (["pyproject.toml"], (0, pytest.ExitCode.TESTS_FAILED), ["uv run pytest"], False),
+        (["pyproject.toml"], (0, pytest.ExitCode.INTERRUPTED), ["uv run pytest"], False),
+        (["pyproject.toml"], (0, pytest.ExitCode.INTERNAL_ERROR), ["uv run pytest"], False),
+        (["pyproject.toml"], (0, pytest.ExitCode.USAGE_ERROR), ["uv run pytest"], False),
+        (["package.json", "pyproject.toml"], (1, 0), ["pnpm run test"], False),
+        (["package.json", "pyproject.toml"], (pytest.ExitCode.NO_TESTS_COLLECTED, 0), ["pnpm run test"], False),
+    ],
+)
+def test_1_13_1_runs_present_workspaces_sequentially_and_preserves_failures(
+    tmp_path: Path, manifests: list[str], runner_exits: tuple[int, int], expected_calls: list[str], *, is_success: bool
+) -> None:
+    (tmp_path / "justfile").write_text(BASELINE)
+    for manifest in manifests:
+        (tmp_path / manifest).touch()
+    executables = tmp_path / "bin"
+    executables.mkdir()
+    calls = tmp_path / "suite-calls.log"
+    for runner, exit_code in zip(("pnpm", "uv"), runner_exits, strict=True):
+        executable = executables / runner
+        executable.write_text(f'#!/bin/sh\nprintf "%s\\n" "{runner} $*" >> "$ZYPLUX_SUITE_LOG"\nexit {exit_code}\n')
+        executable.chmod(0o755)
+    completed = subprocess.run(
+        ["just", "test"],
+        cwd=tmp_path,
+        env={**os.environ, "PATH": f"{executables}{os.pathsep}{os.environ['PATH']}", "ZYPLUX_SUITE_LOG": str(calls)},
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert (completed.returncode == 0) is is_success, completed.stderr
+    assert (calls.read_text().splitlines() if calls.exists() else []) == expected_calls

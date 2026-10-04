@@ -41,10 +41,11 @@ lint:
     uv run ruff check --fix
     uv run ruff format
 
-# Run JavaScript tests, then Python tests.
+# Run available JavaScript tests, then Python tests; pytest exit code 5 means no tests were collected.
 test:
-    pnpm run test
-    uv run pytest
+    test -f package.json || test -f pyproject.toml
+    if test -f package.json; then pnpm run test; fi
+    if test -f pyproject.toml; then uv run pytest || test "$?" -eq 5; fi
 
 # Verify org invariants with cerberus, over the coverage report `test` regenerates.
 cerberus:
