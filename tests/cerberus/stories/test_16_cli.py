@@ -361,3 +361,29 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
     verbose = invoke_lint("--check", "codeowners_coverage", "--verbose")
     assert verbose.exit_code == 0, verbose.output
     assert "src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]" in verbose.output
+
+
+@pytest.mark.parametrize("retired", ["cli_ts_test_seam", "lib_ts_test_seam", "fixture_roles_ts"])
+def test_16_4_3_explains_replacements_for_retired_bites(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    retired: str,
+) -> None:
+    result = invoke_lint("--check", retired)
+    assert result.exit_code == USAGE_ERROR_EXIT
+    assert f"retired bite `{retired}`" in result.output
+    assert "test-seam-only-imports/package-imports" in result.output
+    (conforming_repo / "cerberus.toml").write_text(f"[{retired}]\noff = true\n")
+    result = invoke_lint("--check", "codeowners_coverage")
+    assert result.exit_code == 0, result.output
+    assert f"retired bite {retired}; use" in result.output
+
+
+def test_16_5_3_explains_where_to_move_a_coverage_floor(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+) -> None:
+    (conforming_repo / "cerberus.toml").write_text("[vitest]\nmin_coverage = 95\n")
+    result = invoke_lint("--check", "vitest_coverage")
+    assert isinstance(result.exception, ValueError)
+    assert "Move [vitest].min_coverage to [vitest_coverage].min_coverage" in str(result.exception)

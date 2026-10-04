@@ -4,14 +4,13 @@ import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 
-import { hasZodBrand } from './zod-brand.ts';
+import { createSchemaDetector } from './zod-schema.ts';
 
 type MessageId = 'schemaExport';
 
 export const noSchemasOutsideContracts = createRule<[], MessageId>({
   create: context => {
-    const services = ESLintUtils.getParserServices(context);
-    const isSchema = (node: TSESTree.Node) => hasZodBrand(services.getTypeAtLocation(node));
+    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
     const reportSchema = (node: TSESTree.Node) => {
       if (isSchema(node)) context.report({ messageId: 'schemaExport', node });
     };
@@ -37,11 +36,12 @@ export const noSchemasOutsideContracts = createRule<[], MessageId>({
   meta: {
     docs: {
       description:
-        'Keep schema value exports on contracts modules while leaving implementation alone: zod imports, local schema declarations, schema composition, and schema use are unrestricted. Named and default schema exports from ordinary modules are reported through the Standard Schema brand (`~standard`/`_zod`). The shipped config exempts `src/contracts.ts` and its `src/contracts/**` child modules; repository-level package-boundary tests remain responsible for deciding which files are public.',
+        'Keep schema value exports on contracts modules while leaving implementation alone: zod imports, local schema declarations, schema composition, and schema use are unrestricted. Named and default exports of schemas or schema-only plain objects from ordinary modules are reported through the Standard Schema brand (`~standard`/`_zod`). The shipped config exempts `src/contracts.ts` and its `src/contracts/**` child modules; repository-level package-boundary tests remain responsible for deciding which files are public.',
       requiresTypeChecking: true,
     },
     messages: {
-      schemaExport: 'Export zod schemas through a contracts module, not an implementation module.',
+      schemaExport:
+        'Export Zod schemas and schema collections through a contracts module, not an implementation module.',
     },
     schema: [],
     type: 'problem',

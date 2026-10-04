@@ -1,4 +1,4 @@
-import { loadPackageVersion } from '@zyplux/util';
+import { loadPackageVersion } from '@zyplux/util/manifest';
 
 import { assertTagVersionCommand, runAssertTagVersion } from './commands/assert-tag-version.ts';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/bootstrap-npm-target.ts';
@@ -9,7 +9,6 @@ import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
 import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from './commands/release-bumped-targets.ts';
-import { runTest, testCommand } from './commands/test.ts';
 import { runUpgrade, upgradeCommand } from './commands/upgrade.ts';
 import { defineProgram, message, or, run } from './optique.ts';
 
@@ -31,7 +30,6 @@ const program = defineProgram({
     publishTaggedTargetCommand,
     printTagKindCommand,
     cleanCommand,
-    testCommand,
     upgradeCommand,
   ),
 });
@@ -84,9 +82,6 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'release-bumped-targets': {
       return runReleaseBumpedTargets();
-    }
-    case 'test': {
-      return runTest(result);
     }
     case 'upgrade': {
       return runUpgrade(result);

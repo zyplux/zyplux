@@ -1,0 +1,7 @@
+{
+  "extends": "@zyplux/tsconfig/node-pub.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

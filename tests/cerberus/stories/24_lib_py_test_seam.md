@@ -31,3 +31,5 @@
 ## 24.3 scoping to a package's own story tests
 
 ### 24.3.1 skips cleanly when a package has no story test files yet
+
+### 24.3.2 checks story tests nested under a domain

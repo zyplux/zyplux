@@ -157,3 +157,9 @@ def test_24_3_1_skips_cleanly_when_a_package_has_no_story_test_files_yet(
 ) -> None:
     result = run_lib_py_tests(_BASE_FILES)
     assert result.findings == [ok(_OK_MESSAGE)]
+
+
+def test_24_3_2_checks_story_tests_nested_under_a_domain(run_lib_py_tests: RunLibPyTests, fail: MakeFinding) -> None:
+    story = "packages/lib/tests/stories/api/test_1_first.py"
+    result = run_lib_py_tests({**_BASE_FILES, story: "from demolib.internal import Thing\n"})
+    assert result.findings == [fail(f"{story}: story test imports outside the seam — 'demolib.internal'")]

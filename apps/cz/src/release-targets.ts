@@ -1,4 +1,8 @@
-import { $, ensure, fetchJson, isHttpOk, parseJson, parseToml, readTrimmed } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { fetchJson, isHttpOk } from '@zyplux/util/http';
+import { parseJson } from '@zyplux/util/json';
+import { $, readTrimmed } from '@zyplux/util/shell';
+import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -54,10 +58,9 @@ const isPackagePublished = async ({ kind, label }: Target, version: string) => {
   if (kind === 'npm') {
     return isHttpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
   }
-  if (kind === 'pypi') {
-    return isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`);
-  }
-  return isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
+  return kind === 'pypi'
+    ? isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`)
+    : isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
 };
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {

@@ -7,12 +7,13 @@
     "test": "vitest run"
   },
   "imports": {
-    "#fixtures": "./fixtures/index.ts"
+    "#lint-engine": "./lint-engine.ts",
+    "#test-contracts": "./contracts.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/eslint-config": "workspace:*",
-    "@zyplux/tests-fixtures": "workspace:*",
+    "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
     "@zyplux/util": "workspace:*",
     "eslint": "catalog:",

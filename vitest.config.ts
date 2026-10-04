@@ -1,11 +1,17 @@
-import { defineConfig } from 'vitest/config';
+import { JournaldReporter } from '@zyplux/spectra/journald-reporter';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     coverage: {
       enabled: true,
       exclude: ['apps/cz/src/index.ts'],
-      include: ['apps/cz/src/**', 'packages/util-ts/src/**', 'packages/eslint-config/src/**'],
+      include: [
+        'apps/cz/src/**',
+        'packages/util-ts/src/**',
+        'packages/eslint-config/src/**',
+        'packages/spectra/src/**',
+      ],
       provider: 'istanbul',
       thresholds: {
         branches: 90,
@@ -15,7 +21,8 @@ export default defineConfig({
       },
     },
     isolate: false,
-    projects: ['tests/eslint-config', 'tests/cz', 'tests/util-ts'],
+    projects: ['tests/eslint-config', 'tests/cz', 'tests/util-ts', 'tests/spectra'],
+    reporters: [...configDefaults.reporters, new JournaldReporter({ identifier: 'zyplux' })],
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,

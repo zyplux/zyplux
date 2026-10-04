@@ -8,10 +8,8 @@ threshold = 0
 [tool_pins_latest]
 off = false
 
-# need to rearchitect the seam
-[cli_ts_test_seam]
-off = true
-
-# need to rearchitect the seam
-[lib_ts_test_seam]
-off = true
+[architecture.dependencies]
+"@zyplux/util" = ["@zyplux/tsconfig"]
+"@zyplux/spectra" = ["@zyplux/util", "@zyplux/tsconfig"]
+"@zyplux/cz" = ["@zyplux/util", "@zyplux/tsconfig"]
+"@zyplux/eslint-config" = ["@zyplux/util", "@zyplux/tsconfig"]

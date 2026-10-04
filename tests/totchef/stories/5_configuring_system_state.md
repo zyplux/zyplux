@@ -23,10 +23,9 @@ The operator declares `key_url`, with optional `url`, `uris`, `suites`,
 `suites` may contain `{release}`, which is substituted with the detected
 Ubuntu release codename — so the same recipe works across releases.
 
-### 5.1.4 repo configured only when keyring and sources both exist
+### 5.1.4 repo configured only when sources match recipe
 
-The repo is considered configured only when **both** the keyring and the
-`.sources` file exist; otherwise it's re-applied.
+The repo is configured when its keyring exists and its `.sources` content matches the recipe. Changed repository URLs and source options are applied in place; subsequent runs leave matching sources unchanged.
 
 ### 5.1.5 relative urls resolve against the repo url
 
@@ -46,12 +45,7 @@ suites = "xenial"
 
 ### 5.1.6 pin priority writes origin pin into preferences
 
-`pin_priority` writes `/etc/apt/preferences.d/<name>.pref` pinning the repo's
-origin host (derived from `uris`) to that priority, so a package the repo ships
-can outrank the Ubuntu-archive pin (`[bash.ubuntu_pin]`, priority 900) instead
-of apt silently keeping the older universe build. The repo counts as configured
-only once that pref file also exists, alongside the keyring and `.sources`. A
-`uris` with no derivable host (e.g. no hostname in the URL) fails the apply.
+`pin_priority` writes `/etc/apt/preferences.d/<name>.pref` with the repo's origin host and requested priority. The repo is configured only when the pin contents match the recipe, alongside the keyring and matching `.sources` file. An incorrect origin or priority is repaired; a missing pin is recreated. A `uris` with no derivable host fails the apply.
 
 ```toml
 [apt_repo.github-cli]
@@ -59,6 +53,10 @@ url = "cli.github.com/packages"
 key_url = "githubcli-archive-keyring.gpg"
 pin_priority = 1001
 ```
+
+### 5.1.7 removing pin priority removes only the managed pin
+
+Removing `pin_priority` removes this entry's preference file when it carries the totchef header. Planning reports the change without deleting the file; applying it keeps the signing key and source, and subsequent runs are unchanged. Preference files without that header are left alone.
 
 ## 5.2 Install files with exact content
 

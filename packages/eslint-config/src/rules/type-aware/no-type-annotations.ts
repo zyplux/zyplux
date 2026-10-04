@@ -89,16 +89,12 @@ const declarationContainers = new Set<TSESTree.Node['type']>([
   AST_NODE_TYPES.VariableDeclarator,
 ]);
 
-const hasExportedAncestor = ({ parent }: TSESTree.Node): boolean => {
-  if (!parent) return false;
-  if (
-    parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
-    parent.type === AST_NODE_TYPES.ExportDefaultDeclaration
-  ) {
-    return true;
-  }
-  return declarationContainers.has(parent.type) && hasExportedAncestor(parent);
-};
+const hasExportedAncestor = ({ parent }: TSESTree.Node): boolean =>
+  parent
+    ? parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
+      parent.type === AST_NODE_TYPES.ExportDefaultDeclaration ||
+      (declarationContainers.has(parent.type) && hasExportedAncestor(parent))
+    : false;
 
 const isTopLevel = ({ parent }: TSESTree.Node) => parent?.type === AST_NODE_TYPES.Program;
 
@@ -113,14 +109,11 @@ const isArrowAtModuleBoundary = (arrow: TSESTree.ArrowFunctionExpression, export
   );
 };
 
-const isDeclaratorAtModuleBoundary = (declarator: TSESTree.VariableDeclarator, exportedNames: ReadonlySet<string>) => {
-  if (hasExportedAncestor(declarator)) return true;
-  return (
-    declarator.id.type === AST_NODE_TYPES.Identifier &&
+const isDeclaratorAtModuleBoundary = (declarator: TSESTree.VariableDeclarator, exportedNames: ReadonlySet<string>) =>
+  hasExportedAncestor(declarator) ||
+  (declarator.id.type === AST_NODE_TYPES.Identifier &&
     isTopLevel(declarator.parent) &&
-    exportedNames.has(declarator.id.name)
-  );
-};
+    exportedNames.has(declarator.id.name));
 
 const collectExportedNames = ({ body }: TSESTree.Program) => {
   const names = new Set<string>();
@@ -241,9 +234,12 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
 
     const checkRedundantArrowReturn = (arrow: TSESTree.ArrowFunctionExpression) => {
       const returnAnnotation = arrow.returnType;
-      if (!returnAnnotation) return false;
-      if (returnAnnotation.typeAnnotation.type === AST_NODE_TYPES.TSTypePredicate) return false;
-      if (isArrowAtModuleBoundary(arrow, exportedNames)) return false;
+      if (
+        !returnAnnotation ||
+        returnAnnotation.typeAnnotation.type === AST_NODE_TYPES.TSTypePredicate ||
+        isArrowAtModuleBoundary(arrow, exportedNames)
+      )
+        return false;
 
       const typeParamNames = collectTypeParamNames(arrow.typeParameters);
       if (typeParamNames.size > 0 && hasTypeParamReference(returnAnnotation.typeAnnotation, typeParamNames)) {
@@ -308,9 +304,12 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       if (!binding?.typeAnnotation) return;
 
       const contextualParam = contextualParams[index];
-      if (!contextualParam) return;
-      if (isSelfReferentialContextualParam(contextualParam, ownParameters)) return;
-      if (isContextualParamInferredFromCallback(arrow, index)) return;
+      if (
+        !contextualParam ||
+        isSelfReferentialContextualParam(contextualParam, ownParameters) ||
+        isContextualParamInferredFromCallback(arrow, index)
+      )
+        return;
 
       const contextualParamType = checker.getTypeOfSymbolAtLocation(contextualParam, tsArrow);
       const annotatedType = services.getTypeAtLocation(binding);
@@ -349,17 +348,16 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       return true;
     };
 
-    const checkRedundantVariable = (declarator: TSESTree.VariableDeclarator) => {
-      if (declarator.id.type !== AST_NODE_TYPES.Identifier) return false;
-      if (isDeclaratorAtModuleBoundary(declarator, exportedNames)) return false;
-      return checkRedundantInitializer(declarator.id, declarator.id.typeAnnotation, declarator.init);
-    };
+    const didReportVariable = (declarator: TSESTree.VariableDeclarator) =>
+      declarator.id.type === AST_NODE_TYPES.Identifier &&
+      !isDeclaratorAtModuleBoundary(declarator, exportedNames) &&
+      checkRedundantInitializer(declarator.id, declarator.id.typeAnnotation, declarator.init);
 
-    const checkRedundantProperty = (property: TSESTree.PropertyDefinition) => {
-      if (property.computed || property.key.type !== AST_NODE_TYPES.Identifier) return false;
-      if (hasExportedAncestor(property)) return false;
-      return checkRedundantInitializer(property.key, property.typeAnnotation, property.value);
-    };
+    const didReportProperty = (property: TSESTree.PropertyDefinition) =>
+      !property.computed &&
+      property.key.type === AST_NODE_TYPES.Identifier &&
+      !hasExportedAncestor(property) &&
+      checkRedundantInitializer(property.key, property.typeAnnotation, property.value);
 
     const reportNarrowing = ({ annotationNode, annotationType, fix, messageId, valueTypes }: NarrowingReport) => {
       if (!isClosedShape(annotationType)) return;
@@ -384,8 +382,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
 
     const checkNarrowingReturn = (fn: FunctionNode) => {
       const returnAnnotation = fn.returnType;
-      if (!returnAnnotation) return;
-      if (returnAnnotation.typeAnnotation.type === AST_NODE_TYPES.TSTypePredicate) return;
+      if (!returnAnnotation || returnAnnotation.typeAnnotation.type === AST_NODE_TYPES.TSTypePredicate) return;
       if (fn.async || ('generator' in fn && fn.generator)) return;
 
       const typeParamNames = collectTypeParamNames(fn.typeParameters);
@@ -432,8 +429,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
     const checkNarrowingProperty = (property: TSESTree.PropertyDefinition) => {
       if (property.computed || property.key.type !== AST_NODE_TYPES.Identifier) return;
       const annotation = property.typeAnnotation;
-      if (!annotation || !property.value) return;
-      if (isReassignedField(property)) return;
+      if (!annotation || !property.value || isReassignedField(property)) return;
 
       reportNarrowing({
         annotationNode: annotation,
@@ -446,7 +442,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
 
     return {
       ArrowFunctionExpression: arrow => {
-        const didReportReturn = redundant ? checkRedundantArrowReturn(arrow) : false;
+        const didReportReturn = redundant && checkRedundantArrowReturn(arrow);
         if (redundant) checkParams(arrow);
         if (narrowing && !didReportReturn) checkNarrowingReturn(arrow);
       },
@@ -460,11 +456,11 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
         exportedNames = collectExportedNames(program);
       },
       PropertyDefinition: property => {
-        const didReport = redundant ? checkRedundantProperty(property) : false;
+        const didReport = redundant && didReportProperty(property);
         if (narrowing && !didReport) checkNarrowingProperty(property);
       },
       VariableDeclarator: declarator => {
-        const didReport = redundant ? checkRedundantVariable(declarator) : false;
+        const didReport = redundant && didReportVariable(declarator);
         if (narrowing && !didReport) checkNarrowingVariable(declarator);
       },
     };

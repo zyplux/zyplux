@@ -276,3 +276,9 @@ is not a `cz clean` invocation: only the exact shapes the org's repos use —
 ### 1.12.1 delegates both upgrade modes to cz
 
 The canonical recipes keep `just u` and `just ui` as the stable interface while `cz upgrade` owns toolchain, JavaScript, and Python dependency updates for every repository.
+
+## 1.13 running available test workspaces
+
+### 1.13.1 runs present workspaces sequentially and preserves failures
+
+The test recipe runs JavaScript tests when `package.json` exists, then Python tests when `pyproject.toml` exists. An empty pytest suite succeeds; other runner failures stop the recipe. A directory without either manifest fails.

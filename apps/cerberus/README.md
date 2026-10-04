@@ -40,14 +40,18 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `line_length`                  | content     | ruff `line-length` and prettier `printWidth` both match the configured width (120)   |
 | `rumdl`                        | content     | `.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)    |
 | `knip`                         | content     | knip config is standalone, never inline in `package.json`; `knip.prod.json` runs the entry-exports pass and exempts exactly the repo's published npm targets |
-| `vitest`                       | content     | TypeScript tests run on vitest, never bun's runner (package.json, justfile, CI), and the root `vitest.config.*` `coverage.thresholds` meet the floor (90%) |
+| `vitest`                       | content     | TypeScript tests use Vitest rather than Bun's test runner |
 | `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
-| `story_tests_lockstep_py`      | content     | `tests/**/stories/*.md` criteria have a matching, title-matched pytest test          |
-| `story_tests_lockstep_ts`      | content     | `tests/**/stories/*.md` criteria have a matching, title-matched vitest test          |
-| `cli_ts_test_seam`             | content     | CLI apps export only the root seam; story tests reach workspace code via fixture aliases |
-| `lib_ts_test_seam`             | content     | Libraries export only the root seam; story tests reach workspace code via fixture aliases |
-| `fixture_roles_ts`             | content     | Torn-out TS test suites compose fixtures from role modules: `#fixtures` targets `fixtures/index.ts` and only `act.ts` imports the subject package (its `./contracts` seam excepted) |
+| `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
+| `package_exports` | content | Libraries use a root barrel or named exports with matching source and publication keys |
+| `package_side_effects` | content | Library side-effect declarations include detected registration statements |
+| `contract_keepers` | content | Declared application scopes have one keeper with contract surfaces |
+| `dependency_direction` | content | Workspace manifest dependencies follow declared direction |
+| `project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
+| `worker_runtime` | content | First-party Worker runtime imports avoid filesystem builtins |
+| `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
+| `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
 | `lib_py_test_seam`             | content     | Libraries' story tests import only their root module                                |
 | `release_surface_version_bump` | git-history | A published target's version is bumped by exactly one step whenever its release surface changes |
@@ -105,3 +109,11 @@ scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
 `tool_pins_latest` guards the jscpd/fallow pins the same way, but runs only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos never see it (bundled `off = true`) and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.
+
+## Shared architecture policy
+
+Declare application contract keepers and allowed workspace dependencies in `[architecture]`. ESLint reads the same declaration; see [its configuration examples](../../packages/eslint-config/README.md#architecture).
+
+TypeScript seam checks use ESLint's resolved imports. The retired `cli_ts_test_seam`, `lib_ts_test_seam`, and `fixture_roles_ts` IDs report migration guidance when encountered in overlays. Their package policies are covered by the focused export, ownership, and reference checks.
+
+Worker traversal covers first-party static imports and literal dynamic imports. Computed imports, third-party modules, and framework-provided entries are reported as static coverage limits; production bundle validation covers those boundaries. Side-effect detection checks top-level registration statements and cannot prove an arbitrary dependency graph pure.

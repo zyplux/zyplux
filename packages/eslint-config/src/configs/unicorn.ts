@@ -7,6 +7,7 @@ export const unicornConfig: ConfigWithExtends = {
   files: ['**/*.{ts,tsx,js,mjs,cjs}'],
   rules: {
     'unicorn/catch-error-name': 'off',
+    'unicorn/consistent-class-member-order': 'off',
     'unicorn/name-replacements': 'off',
     'unicorn/no-return-array-push': 'off',
     'unicorn/prevent-abbreviations': 'off',

@@ -1,4 +1,4 @@
-import { ensure } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
 
 import type { InferValue } from '#optique';
 

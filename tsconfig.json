@@ -6,7 +6,8 @@
     { "path": "./packages/eslint-config" },
     { "path": "./packages/util-ts" },
     { "path": "./tests/eslint-config" },
-    { "path": "./tests/fixtures" },
+    { "path": "./packages/spectra" },
+    { "path": "./tests/spectra" },
     { "path": "./tests/cz" },
     { "path": "./tests/util-ts" }
   ]

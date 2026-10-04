@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "story_tests_lockstep_py"
-SUMMARY = "every ### criterion header in tests/**/stories/*.md has a matching, title-matched pytest test"
+SUMMARY = "every ### criterion header in tests/**/stories/**/*.md has a matching, title-matched pytest test"
 SCOPE = Scope.CONTENT
 
 

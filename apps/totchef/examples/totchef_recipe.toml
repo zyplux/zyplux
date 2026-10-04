@@ -60,12 +60,6 @@ lines = ["[Nala]", "full_upgrade = true", "update_show_packages = true"]
 [apt_repo]
 depends_on = ["bash.apt_prereqs"]
 
-[apt_repo.griffo]
-url = "debian.griffo.io"
-key_url = "EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc"
-uris = "apt"
-suites = "{release}"
-
 [apt_repo.brave-browser]
 url = "brave-browser-apt-release.s3.brave.com"
 key_url = "brave-browser-archive-keyring.gpg"
@@ -99,7 +93,6 @@ packages = [
     "vainfo",
     "linux-crashdump",
     "nvidia-vaapi-driver",
-    "zed",
     "brave-browser",
     "code",
     "code-insiders",
@@ -192,6 +185,10 @@ update_guard = "command -v herdr >/dev/null || exit 0; herdr server stop || true
 
 [url.agy]
 url = "antigravity.google/cli/install.sh"
+
+[url.zed]
+url = "zed.dev/install.sh"
+update_action = "rerun-installer"
 
 [url.chezmoi]
 url = "get.chezmoi.io/lb"

@@ -41,9 +41,11 @@ lint:
     uv run ruff check --fix
     uv run ruff format
 
-# Run tests for both workspaces, JS and Python in parallel. Optional arg filters by test name, skipping coverage; never fails when nothing matches.
-test name='':
-    pnpm run {{ if name == '' { '--silent cz test' } else { 'cz test ' + quote(name) } }}
+# Run available JavaScript tests, then Python tests; pytest exit code 5 means no tests were collected.
+test:
+    test -f package.json || test -f pyproject.toml
+    if test -f package.json; then pnpm run test; fi
+    if test -f pyproject.toml; then uv run pytest || test "$?" -eq 5; fi
 
 # Verify org invariants with cerberus, over the coverage report `test` regenerates.
 cerberus:

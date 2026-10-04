@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import TYPE_CHECKING, Any
 
+from cerberus.architecture import Architecture, parse_architecture
 from cerberus.source_scope import SourceScope
 
 if TYPE_CHECKING:
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Config:
+    architecture: Architecture
     source: SourceScope
     default_recipe_marker: str
     required_aliases: dict[str, str]
@@ -80,8 +82,12 @@ def _from_dict(data: dict[str, Any]) -> Config:
         if "prod_workspaces" in _table(data, section):
             msg = f"Move [{section}].prod_workspaces to [source].production_roots in cerberus.toml"
             raise ValueError(msg)
+    if "min_coverage" in _table(data, "vitest"):
+        message = "Move [vitest].min_coverage to [vitest_coverage].min_coverage in cerberus.toml"
+        raise ValueError(message)
     source = _table(data, "source")
     return Config(
+        architecture=parse_architecture(_table(data, "architecture")),
         source=SourceScope(tuple(source["production_roots"]), tuple(source["test_files"])),
         default_recipe_marker=justfile["default_recipe_marker"],
         required_aliases=_aliases(required),
@@ -103,7 +109,7 @@ def _from_dict(data: dict[str, Any]) -> Config:
             key: frozenset(names) for key, names in _table(knip, "allowed_customizations").items()
         },
         pytest_min_coverage=_table(data, "pytest")["min_coverage"],
-        vitest_min_coverage=_table(data, "vitest")["min_coverage"],
+        vitest_min_coverage=_table(data, "vitest_coverage")["min_coverage"],
         jscpd_threshold=jscpd["threshold"],
         jscpd_pattern=jscpd["pattern"],
         jscpd_ignore=tuple(jscpd["ignore"]),

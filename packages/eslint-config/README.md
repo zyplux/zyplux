@@ -69,7 +69,11 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 
 ## What's always on
 
-- Custom `@zyplux` rules: `contracts-only-schemas` (on `**/src/contracts.ts` only), `fixture-role-imports` (on each discovered `tests/<basename>/fixtures/*.{ts,tsx}` suite, excepting `arrange.ts`/`act.ts` — only those two fixture roles may import the suite's subject package, its `/contracts` seam excepted), `no-anonymous-param-type`, `no-identity-cast`, `no-return-array-push`, `no-schemas-outside-contracts` (schema exports outside contracts modules), `no-stray-pascal-const`, `no-type-annotations`, `no-type-predicate`, `no-unvalidated-json`, `no-zod-custom`, `prefer-arrow-functions`, `prefer-destructured-params`, `test-seam-only-imports` (on `**/stories/*.test.{ts,tsx}` — a story test imports only `describe`, `expect`, and `test` from `#fixtures`; everything else reaches it as a fixture on the test context), `type-over-interface`.
+- Contract modules and their child modules export schemas, schema collections, and types. Schema detection is shared with naming and nesting checks.
+- Public library root barrels and keeper contract/interface barrels contain re-exports. Constants export immutable primitives; type and interface modules contain type-level statements.
+- `package-imports` checks declared dependency direction and cross-package type ownership using TypeScript's resolved modules.
+- Story tests import Vitest API bindings and fixture types from Vitest or their resolved domain test API. `testApis` maps story globs to explicit API paths for colocated UI rigs.
+- Other custom rules enforce validated JSON, arrow functions, type declarations, clear parameter shapes, and nesting limits.
 - Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).
 - unicorn + perfectionist (natural sorting); prettier last, so formatting rules are off.
@@ -85,4 +89,32 @@ Flat config is last-wins — append an override after the preset:
 
 ```ts
 export default [...zyplux({ tsconfigRootDir: import.meta.dirname }), { rules: { 'unicorn/no-null': 'off' } }];
+```
+
+Schema detection is shared by contract boundaries, naming, and nesting checks. Nonempty plain objects containing only schemas (including nested collections) count as schemas. Mixed objects, empty objects, arrays, classes, callable objects, optional fields, and open dictionaries do not.
+
+## Architecture
+
+ESLint and Cerberus read package direction and scoped contract keepers from the same root `cerberus.toml` declaration:
+
+```toml
+[architecture.dependencies]
+"@example/domain" = []
+"@example/kernel" = ["@example/domain"]
+
+[[architecture.applications]]
+name = "service"
+keeper = "@example/domain"
+packages = ["@example/domain", "@example/kernel"]
+```
+
+A direction list names the workspace providers that a consumer may use. Independent libraries can retain their own API contracts. An application keeper owns shared domain contracts within its declared scope.
+
+Select a UI suite's test API relative to `tsconfigRootDir`:
+
+```ts
+export default zyplux({
+  testApis: { 'apps/web/tests/stories/**/*.test.tsx': 'apps/web/tests/web-rigs.ts' },
+  tsconfigRootDir: import.meta.dirname,
+});
 ```

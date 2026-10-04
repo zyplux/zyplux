@@ -9,8 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 _TS_SUFFIXES = (".ts", ".tsx")
-_DEFAULT_ENTRY = "src/index.ts"
-_EXPORT_TARGET_KEYS = ("import", "default", "types")
+_EXPORT_TARGET_KEYS = {"import", "default"}
 
 
 @dataclass(frozen=True)
@@ -40,41 +39,56 @@ def build_package_index(paths: list[str], read: Callable[[str], str | None]) -> 
     return index
 
 
-def _entry_from_exports(exports: object) -> str | None:
-    if isinstance(exports, str):
-        return exports
-    if not isinstance(exports, dict):
-        return None
-    target = exports.get(".")
-    if isinstance(target, str):
-        return target
-    if isinstance(target, dict):
-        for key in _EXPORT_TARGET_KEYS:
-            value = target.get(key)
-            if isinstance(value, str):
-                return value
+def select_target(exports: object, key: str = ".") -> str | None:
+    if not isinstance(exports, (dict, list)):
+        return exports if isinstance(exports, str) else None
+    if isinstance(exports, list):
+        return next((target for entry in exports if (target := select_target(entry, key)) is not None), None)
+    if any(name.startswith(".") for name in exports):
+        if key in exports:
+            return select_target(exports[key])
+        return _pattern_target(exports, key)
+    for condition, entry in exports.items():
+        if condition in _EXPORT_TARGET_KEYS:
+            return select_target(entry)
+
     return None
 
 
-def _entry_point(manifest: dict[str, Any]) -> str:
-    main = manifest.get("main")
-    return _entry_from_exports(manifest.get("exports")) or (main if isinstance(main, str) else None) or _DEFAULT_ENTRY
+def _pattern_target(exports: dict[str, Any], key: str) -> str | None:
+    for pattern in sorted(exports, key=len, reverse=True):
+        if "*" not in pattern:
+            continue
+        prefix, suffix = pattern.split("*", 1)
+        if key.startswith(prefix) and key.endswith(suffix):
+            match = key[len(prefix) : len(key) - len(suffix) if suffix else None]
+            target = select_target(exports[pattern])
+            return target.replace("*", match) if target is not None else None
+    return None
 
 
 def _resolve_relative(file_path: str, specifier: str, known_files: frozenset[str]) -> str | None:
     base = posixpath.normpath(posixpath.join(posixpath.dirname(file_path), specifier))
-    candidates = [f"{base}{suffix}" for suffix in _TS_SUFFIXES]
+    candidates = [base]
+    if base.endswith((".js", ".mjs")):
+        candidates += [base.rsplit(".", 1)[0] + suffix for suffix in _TS_SUFFIXES]
+    candidates += [f"{base}{suffix}" for suffix in _TS_SUFFIXES]
     candidates += [f"{base}/index{suffix}" for suffix in _TS_SUFFIXES]
     return next((candidate for candidate in candidates if candidate in known_files), None)
 
 
 def _resolve_alias(specifier: str, package_index: dict[str, PackageInfo], known_files: frozenset[str]) -> str | None:
-    info = package_index.get(specifier)
+    name = next((name for name in package_index if specifier == name or specifier.startswith(f"{name}/")), None)
+    info = package_index.get(name) if name is not None else None
     if info is None:
         return None
-    entry = _entry_point(info.manifest).removeprefix("./")
-    candidate = posixpath.normpath(f"{info.directory}/{entry}") if info.directory else entry
-    return candidate if candidate in known_files else None
+    key = "." + specifier[len(name) :] if name is not None else "."
+    entry = select_target(info.manifest.get("exports"), key)
+    if entry is None and "exports" not in info.manifest:
+        entry = info.manifest.get("main", "src/index.ts") if key == "." else key
+    if not isinstance(entry, str):
+        return None
+    return _resolve_relative(posixpath.join(info.directory, "package.json"), entry, known_files)
 
 
 def resolve(
@@ -82,4 +96,19 @@ def resolve(
 ) -> str | None:
     if specifier.startswith(("./", "../")):
         return _resolve_relative(file_path, specifier, known_files)
+    if specifier.startswith("#"):
+        owners = sorted(
+            (
+                info
+                for info in package_index.values()
+                if (not info.directory or file_path.startswith(f"{info.directory}/"))
+            ),
+            key=lambda info: len(info.directory),
+            reverse=True,
+        )
+        if owners:
+            imports = owners[0].manifest.get("imports", {})
+            target = select_target({f".{key}": value for key, value in imports.items()}, f".{specifier}")
+            if target is not None:
+                return _resolve_relative(posixpath.join(owners[0].directory, "package.json"), target, known_files)
     return _resolve_alias(specifier, package_index, known_files)

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "emitDeclarationOnly": true
   },
-  "include": ["."],
+  "include": ["stories", "*.ts"],
   "references": [
     {
       "path": "../../packages/eslint-config"
@@ -12,7 +12,7 @@
       "path": "../../packages/util-ts"
     },
     {
-      "path": "../fixtures"
+      "path": "../../packages/spectra"
     }
   ]
 }

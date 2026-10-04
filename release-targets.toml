@@ -29,10 +29,10 @@ surface = ["packages/util-ts/package.json", "packages/util-ts/README.md", "packa
 
 [[target]]
 kind = "npm"
-label = "@zyplux/tests-fixtures"
-tag_prefix = "tests-fixtures-v"
-version = { file = "tests/fixtures/package.json", json = "version" }
-surface = ["tests/fixtures/package.json", "tests/fixtures/README.md", "tests/fixtures/src"]
+label = "@zyplux/spectra"
+tag_prefix = "spectra-v"
+version = { file = "packages/spectra/package.json", json = "version" }
+surface = ["packages/spectra/package.json", "packages/spectra/README.md", "packages/spectra/src"]
 
 [[target]]
 kind = "npm"

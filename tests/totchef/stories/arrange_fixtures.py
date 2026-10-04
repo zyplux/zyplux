@@ -414,16 +414,59 @@ class FakeSkillsRepo:
         agent_entry.symlink_to(skill_dir)
 
 
-@pytest.fixture(autouse=True)
-def terminal(monkeypatch: pytest.MonkeyPatch) -> FakeTerminal:
-    (
-        """The single mocked bash surface: cooks call `shell.run`/`shell.stream`, so patching """
-        """these two names intercepts all bash execution."""
-    )
-    fake = FakeTerminal()
-    monkeypatch.setattr(shell, "run", fake.run)
-    monkeypatch.setattr(shell, "stream", fake.stream)
-    return fake
+@dataclass
+class FakeHost:
+    home: Path
+    system: FakeSystem
+    terminal: FakeTerminal
+    http: FakeHttp
+
+
+@pytest.fixture(name="_isolated_host")
+def isolated_host(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[FakeHost]:
+    """Keep CLI runs inside temporary home/bin directories with shell and network doubles."""
+    home_dir = tmp_path / "home"
+    home_dir.mkdir()
+    monkeypatch.setenv("HOME", str(home_dir))
+    for leaked in ("PNPM_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+        monkeypatch.delenv(leaked, raising=False)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    monkeypatch.setenv("PATH", str(bin_dir))
+    host = FakeHost(home_dir, FakeSystem(bin_dir), FakeTerminal(), FakeHttp())
+    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"VERSION_CODENAME": host.system.release})
+    monkeypatch.setattr(shell, "run", host.terminal.run)
+    monkeypatch.setattr(shell, "stream", host.terminal.stream)
+    monkeypatch.setattr(harness, "urlopen", host.http.urlopen)
+    monkeypatch.setattr(terminal_module, "_runner_colors", {})
+    monkeypatch.setattr(apt_repo_root_cook, "PREFERENCES_DIR", tmp_path / "preferences.d")
+    registry.set_recipe_cooks_dir(None)
+    harness.set_files_dir(None)
+    registry.cook_registry.cache_clear()
+    yield host
+    registry.set_recipe_cooks_dir(None)
+    harness.set_files_dir(None)
+    registry.cook_registry.cache_clear()
+
+
+@pytest.fixture
+def terminal(_isolated_host: FakeHost) -> FakeTerminal:
+    return _isolated_host.terminal
+
+
+@pytest.fixture
+def http(_isolated_host: FakeHost) -> FakeHttp:
+    return _isolated_host.http
+
+
+@pytest.fixture
+def home(_isolated_host: FakeHost) -> Path:
+    return _isolated_host.home
+
+
+@pytest.fixture
+def system(_isolated_host: FakeHost) -> FakeSystem:
+    return _isolated_host.system
 
 
 @pytest.fixture
@@ -433,73 +476,10 @@ def color_output(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TERM", "xterm-256color")
 
 
-@pytest.fixture(autouse=True)
-def http(monkeypatch: pytest.MonkeyPatch) -> FakeHttp:
-    (
-        """The single mocked network surface: `fetch_url` resolves `urlopen` at call time, so """
-        """patching `harness.urlopen` intercepts every fetch."""
-    )
-    fake = FakeHttp()
-    monkeypatch.setattr(harness, "urlopen", fake.urlopen)
-    return fake
-
-
 @pytest.fixture
 def totchef_version() -> str:
     """The installed distribution's version — the value every run banner and `--version` must state."""
     return __version__
-
-
-@pytest.fixture(autouse=True)
-def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    (
-        """Redirect `$HOME` to a temp dir so `Path.home()`/`~` land there. Also scrub """
-        """`PNPM_HOME`/`XDG_*_HOME`, which CI sets and production prefers."""
-    )
-    home_dir = tmp_path / "home"
-    home_dir.mkdir()
-    monkeypatch.setenv("HOME", str(home_dir))
-    for leaked in ("PNPM_HOME", "CLAUDE_CONFIG_DIR", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
-        monkeypatch.delenv(leaked, raising=False)
-    return home_dir
-
-
-@pytest.fixture(autouse=True)
-def system(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeSystem:
-    (
-        """Isolate the host: PATH is an empty bin dir, so `find_binary` sees only what a test """
-        """provisions; the OS release is pinned for apt_repo."""
-    )
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    monkeypatch.setenv("PATH", str(bin_dir))
-    fake = FakeSystem(bin_dir)
-    monkeypatch.setattr(platform, "freedesktop_os_release", lambda: {"VERSION_CODENAME": fake.release})
-    return fake
-
-
-@pytest.fixture(autouse=True)
-def fresh_registry() -> Generator[None]:
-    (
-        """Reset the per-run globals each test: the HOME-dependent cook registry, the recipe's """
-        """pinned custom-cooks dir, and its pinned assets dir."""
-    )
-    registry.set_recipe_cooks_dir(None)
-    harness.set_files_dir(None)
-    registry.cook_registry.cache_clear()
-    yield
-    registry.set_recipe_cooks_dir(None)
-    harness.set_files_dir(None)
-    registry.cook_registry.cache_clear()
-
-
-@pytest.fixture(autouse=True)
-def fresh_runner_colors(monkeypatch: pytest.MonkeyPatch) -> None:
-    (
-        """Per-cook colors are assigned into a module-global dict in first-seen order; reset """
-        """before every test so leftovers don't decide a hue."""
-    )
-    monkeypatch.setattr(terminal_module, "_runner_colors", {})
 
 
 @pytest.fixture

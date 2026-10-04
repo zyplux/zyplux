@@ -3,13 +3,13 @@
   "compilerOptions": {
     "emitDeclarationOnly": true
   },
-  "include": ["."],
+  "include": ["stories", "*.ts"],
   "references": [
     {
       "path": "../../packages/util-ts"
     },
     {
-      "path": "../fixtures"
+      "path": "../../packages/spectra"
     }
   ]
 }

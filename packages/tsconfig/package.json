@@ -1,6 +1,7 @@
 {
   "name": "@zyplux/tsconfig",
-  "version": "0.3.0",
+  "version": "0.3.1",
+  "type": "module",
   "description": "Shared TypeScript configs for the zyplux org",
   "keywords": [
     "tsconfig",
@@ -27,5 +28,11 @@
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "publint": "catalog:"
+  },
+  "scripts": {
+    "prepack": "publint --pack pnpm --strict"
   }
 }

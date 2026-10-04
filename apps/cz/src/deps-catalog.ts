@@ -1,16 +1,16 @@
+import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+import { fetchJson } from '@zyplux/util/http';
+import { tryParseJson } from '@zyplux/util/json';
 import {
-  fetchJson,
   findManifests,
-  mapWithConcurrency,
   normalizePythonName,
-  normalizeRepoUrl,
   npmDependencyNames,
   pythonRequirementNames,
   repositoryUrl,
-  tryParseJson,
-  tryParseToml,
-} from '@zyplux/util';
-import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+} from '@zyplux/util/manifest';
+import { mapWithConcurrency } from '@zyplux/util/map-with-concurrency';
+import { normalizeRepoUrl } from '@zyplux/util/repo-url';
+import { tryParseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 
 import type { DepsDevPackage } from './contracts.ts';
@@ -93,8 +93,7 @@ const resolveViaRegistry = async (system: PackageSystem, name: string) => {
 
 const resolveSourceRepo = async (system: PackageSystem, name: string) => {
   const viaDepsDev = await resolveViaDepsDev(system, name);
-  if (viaDepsDev !== undefined) return viaDepsDev;
-  return resolveViaRegistry(system, name);
+  return viaDepsDev ?? resolveViaRegistry(system, name);
 };
 
 export const collectDepRepos = async (dir: string): Promise<DepReposReport> => {

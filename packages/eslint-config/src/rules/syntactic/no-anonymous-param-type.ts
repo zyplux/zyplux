@@ -8,10 +8,9 @@ type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclarat
 
 const anonymousObjectTypesIn = (typeNode: TSESTree.TypeNode): TSESTree.TSTypeLiteral[] => {
   if (typeNode.type === AST_NODE_TYPES.TSTypeLiteral) return [typeNode];
-  if (typeNode.type === AST_NODE_TYPES.TSUnionType || typeNode.type === AST_NODE_TYPES.TSIntersectionType) {
-    return typeNode.types.flatMap(member => anonymousObjectTypesIn(member));
-  }
-  return [];
+  return typeNode.type === AST_NODE_TYPES.TSUnionType || typeNode.type === AST_NODE_TYPES.TSIntersectionType
+    ? typeNode.types.flatMap(member => anonymousObjectTypesIn(member))
+    : [];
 };
 
 const parameterAnnotation = (param: TSESTree.Parameter) => {

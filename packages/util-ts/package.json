@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/util",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Small utilities: assertions, polling, bounded-concurrency mapping, zod-validated JSON reads, repo-URL normalization, package.json/pyproject manifest schemas, and a git/gh shell harness",
   "keywords": [
     "utilities",
@@ -20,10 +20,23 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./contracts": "./src/contracts.ts",
+    "./assert": "./src/assert.ts",
     "./exec": "./src/exec.ts",
-    "./package.json": "./package.json"
+    "./http": "./src/http.ts",
+    "./json": "./src/json.ts",
+    "./lap-timer": "./src/lap-timer.ts",
+    "./manifest": "./src/manifest.ts",
+    "./map-with-concurrency": "./src/map-with-concurrency.ts",
+    "./poll": "./src/poll.ts",
+    "./repo-url": "./src/repo-url.ts",
+    "./result": "./src/result.ts",
+    "./shell": "./src/shell.ts",
+    "./toml": "./src/toml.ts",
+    "./contracts": "./src/contracts.ts",
+    "./module-references": "./src/module-references.ts",
+    "./type-dependencies": "./src/type-dependencies.ts",
+    "./package.json": "./package.json",
+    "./workspace-architecture": "./src/workspace-architecture.ts"
   },
   "files": [
     "README.md",
@@ -32,33 +45,95 @@
   "publishConfig": {
     "access": "public",
     "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./contracts": {
-        "types": "./dist/contracts.d.ts",
-        "default": "./dist/contracts.js"
+      "./assert": {
+        "types": "./dist/assert.d.ts",
+        "default": "./dist/assert.js"
       },
       "./exec": {
         "types": "./dist/exec.d.ts",
         "default": "./dist/exec.js"
       },
-      "./package.json": "./package.json"
+      "./http": {
+        "types": "./dist/http.d.ts",
+        "default": "./dist/http.js"
+      },
+      "./json": {
+        "types": "./dist/json.d.ts",
+        "default": "./dist/json.js"
+      },
+      "./lap-timer": {
+        "types": "./dist/lap-timer.d.ts",
+        "default": "./dist/lap-timer.js"
+      },
+      "./manifest": {
+        "types": "./dist/manifest.d.ts",
+        "default": "./dist/manifest.js"
+      },
+      "./map-with-concurrency": {
+        "types": "./dist/map-with-concurrency.d.ts",
+        "default": "./dist/map-with-concurrency.js"
+      },
+      "./poll": {
+        "types": "./dist/poll.d.ts",
+        "default": "./dist/poll.js"
+      },
+      "./repo-url": {
+        "types": "./dist/repo-url.d.ts",
+        "default": "./dist/repo-url.js"
+      },
+      "./result": {
+        "types": "./dist/result.d.ts",
+        "default": "./dist/result.js"
+      },
+      "./shell": {
+        "types": "./dist/shell.d.ts",
+        "default": "./dist/shell.js"
+      },
+      "./toml": {
+        "types": "./dist/toml.d.ts",
+        "default": "./dist/toml.js"
+      },
+      "./contracts": {
+        "types": "./dist/contracts.d.ts",
+        "default": "./dist/contracts.js"
+      },
+      "./module-references": {
+        "types": "./dist/module-references.d.ts",
+        "default": "./dist/module-references.js"
+      },
+      "./type-dependencies": {
+        "types": "./dist/type-dependencies.d.ts",
+        "default": "./dist/type-dependencies.js"
+      },
+      "./package.json": "./package.json",
+      "./workspace-architecture": {
+        "types": "./dist/workspace-architecture.d.ts",
+        "default": "./dist/workspace-architecture.js"
+      }
     }
   },
   "scripts": {
-    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json"
+    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
-    "smol-toml": "catalog:"
+    "smol-toml": "catalog:",
+    "yaml": "catalog:"
   },
   "peerDependencies": {
+    "typescript": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
+    "publint": "catalog:",
+    "typescript": "catalog:",
     "zod": "catalog:"
-  }
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "sideEffects": false
 }

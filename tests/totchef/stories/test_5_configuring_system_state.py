@@ -102,10 +102,10 @@ def test_5_1_3_suites_release_placeholder_substituted_with_codename(
     assert "Suites: plucky" in sources.read_text()
 
 
-def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(
-    recipe: RecipeBuilder, totchef: Totchef, tmp_path: Path
+def test_5_1_4_repo_configured_only_when_sources_match_recipe(
+    recipe: RecipeBuilder, http: FakeHttp, totchef: Totchef, tmp_path: Path
 ) -> None:
-    """Configured only when both the keyring and the .sources file exist; otherwise re-applied."""
+    """Existing sources converge to the recipe and remain unchanged on subsequent runs."""
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
     keyring.write_bytes(b"key")  # only the keyring exists so far
@@ -120,9 +120,14 @@ def test_5_1_4_repo_configured_only_when_keyring_and_sources_both_exist(
 
     totchef.plan().assert_shows("apt_repo.vendor", "would apply")
 
-    sources.write_text("Types: deb\n")  # now both exist
+    sources.write_text("Types: deb\nURIs: https://old.example/apt\n")
+    http.arrange("v/key", "key")
 
+    totchef.plan().assert_shows("apt_repo.vendor", "would apply")
+    totchef.up().assert_shows("apt_repo.vendor", "applied")
+    assert "URIs: https://v/apt" in sources.read_text()
     totchef.plan().assert_shows("apt_repo.vendor", "ok")
+    totchef.up().assert_shows("apt_repo.vendor", "unchanged")
 
 
 def test_5_1_5_relative_urls_resolve_against_the_repo_url(
@@ -155,7 +160,7 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(
 ) -> None:
     (
         """`pin_priority` writes a preferences.d pin for the repo's origin host, outranking """
-        """the Ubuntu-archive pin; configured only once that pref also exists."""
+        """the Ubuntu-archive pin; configured only when the pin contents match the recipe."""
     )
     keyring = tmp_path / "vendor.gpg"
     sources = tmp_path / "vendor.sources"
@@ -179,6 +184,12 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(
     assert "Pin: origin cli.github.test" in pin
     assert "Pin-Priority: 1001" in pin
 
+    prefs.write_text("Package: *\nPin: origin outdated.example\nPin-Priority: 500\n")
+    totchef.plan().assert_shows("apt_repo.vendor", "would apply")
+    totchef.up().assert_shows("apt_repo.vendor", "applied")
+    assert prefs.read_text() == pin
+    totchef.up().assert_shows("apt_repo.vendor", "unchanged")
+
     prefs.unlink()  # the pin is gone on disk → drift, even though keyring + sources remain
     totchef.plan().assert_shows("apt_repo.vendor", "would apply")
 
@@ -198,6 +209,40 @@ def test_5_1_6_pin_priority_writes_origin_pin_into_preferences(
     report.assert_hard_failed()
     report.assert_logged("cannot derive a pin origin host")
     assert "Traceback" not in report.logs, "an unpinnable origin should hard-fail cleanly, not crash"
+    prefs.write_text(pin)
+    retry = totchef.up()
+    retry.assert_hard_failed()
+    assert "Traceback" not in retry.logs
+
+
+def test_5_1_7_removing_pin_priority_removes_only_the_managed_pin(
+    apt_keyrings_dir: Path,
+    apt_sources_dir: Path,
+    http: FakeHttp,
+    totchef: Totchef,
+    tmp_path: Path,
+) -> None:
+    preferences = tmp_path / "vendor.pref"
+    fields = {"url": "vendor.example", "key_url": "key", "preferences_path": str(preferences)}
+    totchef.recipe.declares("apt_repo", "vendor", **fields, pin_priority=1001)
+    http.arrange("vendor.example/key", "raw-key")
+    totchef.up().assert_succeeded()
+    assert preferences.exists()
+
+    totchef.recipe.declares("apt_repo", "vendor", **fields)
+
+    totchef.plan().assert_shows("apt_repo.vendor", "would apply")
+    assert preferences.exists()
+    totchef.up().assert_shows("apt_repo.vendor", "applied")
+    assert not preferences.exists()
+    assert (apt_keyrings_dir / "vendor.gpg").exists()
+    assert (apt_sources_dir / "vendor.sources").exists()
+    totchef.up().assert_shows("apt_repo.vendor", "unchanged")
+
+    manual_pin = "Package: *\nPin: origin vendor.example\nPin-Priority: 500\n"
+    preferences.write_text(manual_pin)
+    totchef.up().assert_shows("apt_repo.vendor", "unchanged")
+    assert preferences.read_text() == manual_pin
 
 
 # 5.2 Install files with exact content

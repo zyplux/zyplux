@@ -1,8 +1,8 @@
-import { parseJson } from '@zyplux/util';
+import { parseJson } from '@zyplux/util/json';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { PrintedConfigSchema } from '#contracts';
+import { PrintedConfigSchema } from './contracts.ts';
 
 const ROOT_DIR_PLACEHOLDER = '<rootDir>';
 const packageDir = fileURLToPath(new URL('..', import.meta.url));

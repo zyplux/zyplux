@@ -1,4 +1,6 @@
-import { $, ensure, findGitRepos, isInsideWorkTree, readTrimmed } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { findGitRepos, isInsideWorkTree } from '@zyplux/util/manifest';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import path from 'node:path';
 
 import type { InferValue } from '#optique';

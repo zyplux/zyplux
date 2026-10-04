@@ -26,11 +26,15 @@
 
 ### 16.4.2 rejects an unknown check name given on the command line
 
+### 16.4.3 explains replacements for retired bites
+
 ## 16.5 pointing the linter at an alternate config file
 
 ### 16.5.1 uses the recipe requirements from the given config file instead of the bundled defaults
 
 ### 16.5.2 rejects a config file whose section is not a table
+
+### 16.5.3 explains where to move a coverage floor
 
 ## 16.6 switching bites off in configuration
 

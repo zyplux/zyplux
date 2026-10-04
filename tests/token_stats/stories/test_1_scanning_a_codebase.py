@@ -5,9 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import polars as pl
+import pytest
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+pytestmark = pytest.mark.usefixtures("_fake_tokenizer_backend")
 
 
 def test_1_1_1_writes_a_parquet_report_with_one_row_per_python_file(codebase: Path, scanned_rows: pl.DataFrame) -> None:

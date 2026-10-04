@@ -26,10 +26,13 @@ export const noIdentityCast = createRule({
       if (node.typeParameters) return;
 
       const [parameter, ...rest] = node.params;
-      if (rest.length > 0) return;
-      if (parameter?.type !== AST_NODE_TYPES.Identifier || !parameter.typeAnnotation) return;
-
-      if (!returnsParameterUnchanged(node, parameter.name)) return;
+      if (
+        rest.length > 0 ||
+        parameter?.type !== AST_NODE_TYPES.Identifier ||
+        !parameter.typeAnnotation ||
+        !returnsParameterUnchanged(node, parameter.name)
+      )
+        return;
 
       context.report({ messageId: 'noIdentityCast', node });
     };

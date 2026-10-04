@@ -40,8 +40,10 @@ export const runDepsCatalog = async ({ dir, out }: DepsCatalogConfig) => {
   await writeFile(outPath, `${JSON.stringify(repos, undefined, JSON_INDENT)}\n`);
 
   console.log(`Wrote ${repos.length} source repositories to ${outPath}`);
-  if (unresolved.length > 0) {
-    console.log(`Unresolved (${unresolved.length}) — no source repo found:`);
-    for (const { name, system } of unresolved) console.log(`  ${system}\t${name}`);
+  if (unresolved.length === 0) {
+    return;
   }
+
+  console.log(`Unresolved (${unresolved.length}) — no source repo found:`);
+  for (const { name, system } of unresolved) console.log(`  ${system}\t${name}`);
 };

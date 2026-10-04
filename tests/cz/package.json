@@ -7,12 +7,14 @@
     "test": "vitest run"
   },
   "imports": {
-    "#fixtures": "./fixtures/index.ts"
+    "#cli-test": "./cli-test.ts",
+    "#repository-fake": "./repository-fake.ts",
+    "#workspace-test": "./workspace-test.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/cz": "workspace:*",
-    "@zyplux/tests-fixtures": "workspace:*",
+    "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
     "@zyplux/util": "workspace:*",
     "vitest": "catalog:"

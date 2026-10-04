@@ -8,8 +8,7 @@ const toHttpsRepoUrl = (value: string) => {
   }
   const shorthand = /^github:(.+)$/i.exec(value);
   if (shorthand !== null) return `https://github.com/${shorthand[1]}`;
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) return value;
-  return `https://${value}`;
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
 };
 
 export const normalizeRepoUrl = (raw: string | undefined): string | undefined => {
@@ -22,6 +21,7 @@ export const normalizeRepoUrl = (raw: string | undefined): string | undefined =>
 
   const { hostname, pathname } = parsed.data;
   const [owner, repo] = pathname.split('/').filter(segment => segment !== '');
-  if (owner === undefined || repo === undefined) return undefined;
-  return `https://${hostname.toLowerCase()}/${owner}/${repo.replace(/\.git$/, '')}`;
+  return owner === undefined || repo === undefined
+    ? undefined
+    : `https://${hostname.toLowerCase()}/${owner}/${repo.replace(/\.git$/, '')}`;
 };

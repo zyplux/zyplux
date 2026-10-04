@@ -1,4 +1,6 @@
-import { $, ensure, poll, readTrimmed } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { poll } from '@zyplux/util/poll';
+import { $, readTrimmed } from '@zyplux/util/shell';
 
 import type { InferValue } from '#optique';
 
@@ -26,19 +28,16 @@ type PushBranchConfig = InferValue<typeof pushBranchCommand>;
 const SHORT_SHA_LENGTH = 7;
 const shortSha = (sha: string) => sha.slice(0, SHORT_SHA_LENGTH);
 
-const readPrField = async (json: string, jq: string) => readTrimmed($.gh.pr.view({ jq, json }));
-
 const readRemoteHead = async (branch: string) => {
   const refLine = await readTrimmed($.git.lsRemote('origin', `refs/heads/${branch}`));
   return refLine.split(/\s+/, 1)[0] ?? '';
 };
 
-const readCopilotReviewedHead = async (slug: string, number: string) =>
-  readTrimmed(
-    $.gh.api(`repos/${slug}/pulls/${number}/reviews?per_page=100`, {
-      jq: '[.[] | select((.user.login // "") | ascii_downcase | contains("copilot"))] | last | .commit_id // ""',
-    }),
-  );
+const readCopilotReviewedHead = async (slug: string, number: number) => {
+  // This workflow has at most ten reviews per PR, so one page is sufficient.
+  const reviews = await $.gh.pr.reviews(slug, number);
+  return reviews.findLast(review => review.user?.login.toLowerCase().includes('copilot'))?.commit_id;
+};
 
 export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   ensure(!hold || ready, '--hold requires --ready');
@@ -47,9 +46,8 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   ensure(branch.length > 0, 'not on any branch (detached HEAD?)');
   ensure(branch !== 'main', 'refusing to run on main');
 
-  const existing = await readTrimmed(
-    $.gh.pr.list({ head: branch, jq: '.[0].state // ""', json: 'state', state: 'all' }),
-  );
+  const [pr] = await $.gh.pr.list({ head: branch, json: ['state'], state: 'all' });
+  const existing = pr?.state;
   if (existing === 'MERGED') {
     console.log(`PR merged; switching to main and deleting local branch '${branch}'`);
     await $.git.checkout('main');
@@ -59,27 +57,25 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   }
 
   const localHead = await readTrimmed($.git.revParse('HEAD'));
-  const willFlipToDraft = ready && existing === 'OPEN' && (await readPrField('isDraft', '.isDraft')) === 'false';
+  const currentPr = ready && existing === 'OPEN' ? await $.gh.pr.view({ json: ['isDraft'] }) : undefined;
+  const willFlipToDraft = currentPr?.isDraft === false;
   if (willFlipToDraft) {
     const remoteHead = await readRemoteHead(branch);
     if (remoteHead === localHead) {
-      const slug = await readTrimmed($.gh.repo.view({ jq: '.nameWithOwner', json: 'nameWithOwner' }));
-      const number = await readPrField('number', '.number');
-      const reviewedHead = await readCopilotReviewedHead(slug, number);
+      const { nameWithOwner } = await $.gh.repo.view({ json: ['nameWithOwner'] });
+      const { number } = await $.gh.pr.view({ json: ['number'] });
+      const reviewedHead = await readCopilotReviewedHead(nameWithOwner, number);
       ensure(
         reviewedHead === localHead,
         'nothing to push and Copilot has not reviewed HEAD: a draft→ready flip would re-trigger neither Copilot nor a useful gate run. Commit your fix and let this command push it during the cycle — do not pre-push the branch.',
       );
     }
     await $.gh.pr.ready({ undo: true });
-    const draftApplied = await poll(
-      async () => ((await readPrField('isDraft', '.isDraft')) === 'true' ? true : undefined),
-      { attempts: 10, intervalMs: 500 },
-    );
-    ensure(
-      draftApplied === true,
-      'PR did not enter draft state before push; aborting so the push is not seen on a ready PR (Copilot needs flip→push→flip)',
-    );
+    await poll(() => $.gh.pr.view({ json: ['isDraft'] }), {
+      onExpiry:
+        'PR did not enter draft state before push; aborting so the push is not seen on a ready PR (Copilot needs flip→push→flip)',
+      until: ({ isDraft }) => isDraft,
+    });
     console.log(`flip: GitHub confirms PR is draft (was ready, HEAD ${shortSha(localHead)})`);
   }
 
@@ -95,18 +91,17 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
     await $.gh.pr.create({ base: 'main', body: '', draft: true, title: branch });
   }
 
-  const url = await readPrField('url', '.url');
+  const { url } = await $.gh.pr.view({ json: ['url'] });
   if (!ready) {
     console.log(`PR (draft): ${url}`);
     return;
   }
 
   await $.gh.pr.ready();
-  const readyApplied = await poll(
-    async () => ((await readPrField('isDraft', '.isDraft')) === 'false' ? true : undefined),
-    { attempts: 10, intervalMs: 500 },
-  );
-  ensure(readyApplied === true, 'PR did not return to ready state; check the PR on GitHub');
+  await poll(() => $.gh.pr.view({ json: ['isDraft'] }), {
+    onExpiry: 'PR did not return to ready state; check the PR on GitHub',
+    until: ({ isDraft }) => !isDraft,
+  });
   console.log(
     `flip: GitHub confirms PR is ready${willFlipToDraft ? ' (draft→push→ready done; Copilot re-review triggered)' : ''}`,
   );
@@ -117,22 +112,18 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
     return;
   }
 
-  const mergeState =
-    (await poll(
-      async () => {
-        const state = await readPrField('mergeStateStatus', '.mergeStateStatus');
-        return state === 'UNKNOWN' ? undefined : state;
-      },
-      { attempts: 10, intervalMs: 1000 },
-    )) ?? 'UNKNOWN';
-  ensure(mergeState !== 'UNKNOWN', 'merge state stayed UNKNOWN; check the PR on GitHub');
-  ensure(mergeState !== 'DIRTY', 'merge conflict with main — rebase or resolve, then retry');
+  const { mergeStateStatus } = await poll(() => $.gh.pr.view({ json: ['mergeStateStatus'] }), {
+    attempts: 10,
+    onExpiry: 'merge state stayed UNKNOWN; check the PR on GitHub',
+    while: pr => pr.mergeStateStatus === 'UNKNOWN',
+  });
+  ensure(mergeStateStatus !== 'DIRTY', 'merge conflict with main — rebase or resolve, then retry');
 
-  if (mergeState === 'CLEAN') {
+  if (mergeStateStatus === 'CLEAN') {
     await $.gh.pr.merge({ deleteBranch: true, squash: true });
     console.log(`PR merged: ${url}`);
   } else {
     await $.gh.pr.merge({ auto: true, deleteBranch: true, squash: true });
-    console.log(`PR ready, auto-merge scheduled (${mergeState}): ${url}`);
+    console.log(`PR ready, auto-merge scheduled (${mergeStateStatus}): ${url}`);
   }
 };

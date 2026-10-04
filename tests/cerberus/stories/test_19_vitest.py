@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 type RunCheckWithFiles = Callable[[str, Mapping[str, str | None]], CheckResult]
 type RunVitestCoverage = Callable[[Mapping[str, str | None]], CheckResult]
 
-CHECK_ID = "vitest"
+CHECK_ID = "vitest_coverage"
 
 _COMPLIANT_CONFIG = (
     "export default defineConfig({\n"
@@ -31,8 +31,10 @@ _COMPLIANT_CONFIG = (
     "});\n"
 )
 
-_SKIP_MESSAGE = "no package.json or root vitest.config"
-_NO_COVERAGE_MESSAGE = "vitest.config.ts has no `coverage` block; vitest coverage must enforce a floor of at least 90%"
+_SKIP_MESSAGE = "no root Vitest coverage configuration or TypeScript tests"
+_NO_COVERAGE_MESSAGE = (
+    "vitest.config.ts: exported test.coverage.thresholds must be a literal object enforcing at least 90%"
+)
 
 
 @pytest.fixture
@@ -65,7 +67,7 @@ def test_19_2_2_fails_when_the_coverage_block_is_unterminated(
 
     result = run_vitest_coverage(files)
 
-    assert result.findings == [fail(_NO_COVERAGE_MESSAGE)]
+    assert result.findings == [fail("vitest.config.ts: invalid TypeScript coverage configuration")]
 
 
 def test_19_3_1_fails_when_the_config_has_no_coverage_block(
@@ -87,8 +89,7 @@ def test_19_3_2_fails_when_the_coverage_block_has_no_thresholds(
 
     assert result.findings == [
         fail(
-            "vitest.config.ts `coverage` has no `thresholds`; "
-            "must set branches/functions/lines/statements to at least 90",
+            "vitest.config.ts: exported test.coverage.thresholds must be a literal object enforcing at least 90%",
         )
     ]
 
@@ -111,7 +112,7 @@ def test_19_4_2_fails_when_a_threshold_metric_is_missing(
     result = run_vitest_coverage(files)
 
     assert result.findings == [
-        fail("vitest.config.ts coverage.thresholds has no `branches`; must be set to at least 90")
+        fail("vitest.config.ts coverage.thresholds has no literal `branches`; must be set to at least 90")
     ]
 
 
@@ -120,4 +121,4 @@ def test_19_5_1_passes_when_every_threshold_metric_meets_the_required_floor(
 ) -> None:
     result = run_vitest_coverage({"vitest.config.ts": _COMPLIANT_CONFIG})
 
-    assert result.findings == [ok("vitest coverage gate enforces >= 90% (coverage.thresholds)")]
+    assert result.findings == [ok("Vitest coverage gate enforces >= 90%")]

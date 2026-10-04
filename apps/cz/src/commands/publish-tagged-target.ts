@@ -1,5 +1,6 @@
-import { $, ensure } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
 import { run } from '@zyplux/util/exec';
+import { $ } from '@zyplux/util/shell';
 
 import type { InferValue } from '#optique';
 
