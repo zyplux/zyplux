@@ -1,9 +1,10 @@
 import { plugin, zyplux } from '@zyplux/eslint-config';
-import { ResolvedConfigSchema } from '@zyplux/eslint-config/contracts';
 import { ESLint, Linter } from 'eslint';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
+
+import { ResolvedConfigSchema } from './contracts.ts';
 
 const suiteDir = fileURLToPath(new URL('./', import.meta.url));
 export type RuleLintOptions = { filename?: string; options?: unknown[] };

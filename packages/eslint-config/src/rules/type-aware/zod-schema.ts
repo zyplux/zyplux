@@ -36,3 +36,8 @@ export const createSchemaDetector = (services: ParserServicesWithTypeInformation
   return (node: TSESTree.Node) =>
     isZodSchema(services.getTypeAtLocation(node), checker, services.esTreeNodeToTSNodeMap.get(node));
 };
+
+export const createSchemaTypeDetector = ({ program }: ParserServicesWithTypeInformation) => {
+  const checker = program.getTypeChecker();
+  return (type: ts.Type, node: ts.Node) => isZodSchema(type, checker, node);
+};

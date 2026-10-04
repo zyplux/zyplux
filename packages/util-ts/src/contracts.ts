@@ -56,6 +56,7 @@ export const PackageJsonSchema = z.object({
   name: z.string().optional(),
   optionalDependencies: LooseRecordSchema.optional(),
   peerDependencies: LooseRecordSchema.optional(),
+  peerDependenciesMeta: z.record(z.string(), z.object({ optional: z.boolean().optional() })).optional(),
   repository: RepositorySchema.optional(),
   workspaces: WorkspacesSchema.optional(),
 });
@@ -78,3 +79,25 @@ export const PyProjectSchema = z.object({
 
 export type PackageJson = z.infer<typeof PackageJsonSchema>;
 export type PyProject = z.infer<typeof PyProjectSchema>;
+
+export const ArchitectureSchema = z.strictObject({
+  applications: z
+    .array(
+      z.strictObject({
+        keeper: z.string(),
+        name: z.string(),
+        packages: z.array(z.string()).min(1),
+      }),
+    )
+    .default([]),
+  dependencies: z.record(z.string(), z.array(z.string())).default({}),
+});
+export type Architecture = z.infer<typeof ArchitectureSchema>;
+export const ArchitectureConfigSchema = z.object({
+  architecture: ArchitectureSchema.default({ applications: [], dependencies: {} }),
+});
+export const ArchitecturePackageSchema = z.looseObject({
+  exports: z.unknown().optional(),
+  name: z.string(),
+});
+export const WorkspaceConfigSchema = z.object({ packages: z.array(z.string()).default([]) });

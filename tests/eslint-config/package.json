@@ -7,7 +7,8 @@
     "test": "vitest run"
   },
   "imports": {
-    "#lint-engine": "./lint-engine.ts"
+    "#lint-engine": "./lint-engine.ts",
+    "#test-contracts": "./contracts.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

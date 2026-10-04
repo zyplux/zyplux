@@ -21,7 +21,7 @@
 ## 17.3 flagging value bindings beyond describe, expect, and test
 
 1. flags another named value beyond the seam vocabulary
-2. flags a rename away from the seam vocabulary
+2. flags a helper renamed to test
 3. flags a default import of the fixtures alias
 4. flags a namespace import of the fixtures alias
 
@@ -37,7 +37,7 @@ Domain stories import their test API from the module named after their directory
 
 ### 17.5.1 allows the module named after the story directory
 
-### 17.5.2 allows types and a variant test from the domain module
+### 17.5.2 allows fixture types and aliases of actual API bindings
 
 ### 17.5.3 flags a helper imported directly into a domain story
 

@@ -1,27 +1,8 @@
-"""Shared machinery for the `story_tests_lockstep_py`/`story_tests_lockstep_ts` bites.
-
-A "package" is a uv/JS-TS workspace member, or the repo root when the language
-has no workspace (a single-project repo). A package needs user-story tests
-when it exposes a public interface — a CLI entry point, a published
-`exports`/`main` surface, or tests of its own already exist for it — and
-having none is a FAIL; not needing them is silently skipped. Docs already
-present are always validated for consistency, whether or not the package
-was judged to need them.
-
-Story docs live at `<package>/tests/stories/**/*.md`, or — when tests are torn
-out to a top-level `tests/<package-basename>/` directory, as some repos do —
-at `tests/<package-basename>/stories/**/*.md`. Numbered docs (`# N. Title` /
-`## N.M Title` / `### N.M.K Title`) pair with same-numbered test files in the
-same directory: `test_N_slug.py` for Python (underscores — a hyphen isn't a
-valid identifier character), `N-slug.test.ts` for TypeScript (kebab-case, per
-`unicorn/filename-case`). Each language's doc filename follows its own test
-filename's separator.
-"""
+"""Python user stories pair package-owned documentation with pytest criteria."""
 
 from __future__ import annotations
 
 import ast
-import json
 import re
 import tomllib
 from dataclasses import dataclass
@@ -36,7 +17,6 @@ if TYPE_CHECKING:
     from cerberus.model import CheckResult, Repo
 
 PY_TEST_NAME = re.compile(r"^test_(\d+)_[^/]+\.py$")
-TS_TEST_NAME = re.compile(r"^(\d+)-[^/]+\.(?:test|spec)\.tsx?$")
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _APOSTROPHE = re.compile(r"'")
@@ -49,14 +29,7 @@ _DOC_TITLE = re.compile(r"^# (\d+)\. (.+)$")
 _STORY_HEADER = re.compile(r"^## (\d+\.\d+) (.+)$")
 _CRITERION_HEADER = re.compile(r"^### (\d+(?:\.\d+)+) (.+)$")
 _LINKED_TITLE = re.compile(r"^\[(?P<title>.+)\]\((?P<target>[^)]+)\)$")
-_BALANCED_PARENS = r"\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)"
-_TS_TEST_CALL = re.compile(
-    rf"\b(?:test|it)(?:\.\w+)*(?:{_BALANCED_PARENS}\s*)?\(\s*"
-    rf"(?P<quote>['\"`])(?P<id>\d+(?:\.\d+)+)\s+(?P<title>(?:(?!(?P=quote)).)*?)(?P=quote)",
-    re.DOTALL,
-)
 _PY_ANY_TEST = re.compile(r"^test_.+\.py$")
-_TS_ANY_TEST = re.compile(r".+\.(?:test|spec)\.tsx?$")
 
 
 @dataclass(frozen=True)
@@ -176,16 +149,6 @@ def collect_py_tests(test_paths: list[str], read: Callable[[str], str | None]) -
     return tests
 
 
-def collect_ts_tests(test_paths: list[str], read: Callable[[str], str | None]) -> dict[str, StoryTest]:
-    tests: dict[str, StoryTest] = {}
-    for path, content in _read_sources(test_paths, read):
-        for match in _TS_TEST_CALL.finditer(content):
-            story_id = match.group("id")
-            title = match.group("title").strip()
-            tests[story_id] = StoryTest(story_id, title, path.rsplit("/", 1)[-1])
-    return tests
-
-
 def _package_prefixes(package: str) -> list[str]:
     """Where a package's own files may live: co-located, or torn out to a top-level tests/<basename>/."""
     if not package:
@@ -215,10 +178,6 @@ def _py_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     return [""] if isinstance(data.get("project"), dict) else []
 
 
-def _ts_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
-    return workspaces.without_test_harness(workspaces.ts_member_dirs(repo, ctx, paths))
-
-
 def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
     manifest_path = f"{package}/pyproject.toml" if package else "pyproject.toml"
     content = ctx.file(repo, manifest_path)
@@ -232,21 +191,7 @@ def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[st
     return any(under_package(path, package) and _PY_ANY_TEST.match(path.rsplit("/", 1)[-1]) for path in paths)
 
 
-def _ts_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
-    manifest_path = f"{package}/package.json" if package else "package.json"
-    content = ctx.file(repo, manifest_path)
-    if content is not None:
-        try:
-            data = json.loads(content)
-        except json.JSONDecodeError:
-            data = None
-        if isinstance(data, dict) and (data.get("bin") or data.get("exports") or data.get("main")):
-            return True
-    return any(under_package(path, package) and _TS_ANY_TEST.match(path.rsplit("/", 1)[-1]) for path in paths)
-
-
 PY = Language("Python", "pyproject.toml", PY_TEST_NAME, collect_py_tests, _py_package_dirs, _py_needs_story_tests)
-TS = Language("TypeScript", "package.json", TS_TEST_NAME, collect_ts_tests, _ts_package_dirs, _ts_needs_story_tests)
 
 
 def _grouped_by_stories_dir(paths: list[str], name: re.Pattern[str]) -> dict[str, list[str]]:

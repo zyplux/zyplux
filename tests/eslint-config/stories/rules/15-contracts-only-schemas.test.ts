@@ -89,7 +89,7 @@ describe('15.3 opening imports while holding the export surface', () => {
       '6 allows building and re-exporting a schema derived via a transform',
       [
         "import * as z from 'zod';",
-        "import { normalizeRepoUrl } from '@zyplux/util';",
+        "import { normalizeRepoUrl } from '@zyplux/util/repo-url';",
         'export const RepoUrlSchema = z.string().transform(url => normalizeRepoUrl(url));',
       ].join('\n'),
     ],
@@ -104,12 +104,12 @@ describe('15.3 opening imports while holding the export surface', () => {
     ],
     ['9 flags re-exporting a non-schema value from zod', "export { z } from 'zod';", 'nonSchemaExport'],
     ['10 allows a type-only re-export', "export type { ZodType } from 'zod';"],
-    ['11 flags a value star re-export from zod as unverifiable', "export * from 'zod';", 'nonSchemaExport'],
     [
-      '12 flags a value star re-export from a contracts module as unverifiable',
-      "export * from '@zyplux/util/contracts';",
+      '11 flags a value star re-export exposing runtime implementation from zod',
+      "export * from 'zod';",
       'nonSchemaExport',
     ],
+    ['12 allows a value star re-export from a contracts module', "export * from '@zyplux/util/contracts';"],
     ['13 allows a type-only star re-export', "export type * from 'zod';"],
   ])('15.3.%s', runMaybeReportCase);
 });
@@ -142,10 +142,10 @@ describe('15.4 freeing local statements while covering every export form', () =>
 });
 
 describe('15.5 scoping the rule to contracts files in the shipped config', () => {
-  test('15.5.1 enables the rule only for src contracts files', ({ zyplux }) => {
+  test('15.5.1 enables the rule for contracts entrypoints and child modules', ({ zyplux }) => {
     const config = zyplux();
     const contractEntries = config.filter(entry => entry.rules?.['@zyplux/contracts-only-schemas'] !== undefined);
-    expect(contractEntries.map(entry => entry.files)).toEqual([['**/src/contracts.ts']]);
+    expect(contractEntries.map(entry => entry.files)).toEqual([['**/contracts.ts', '**/contracts/**/*.ts']]);
   });
 });
 

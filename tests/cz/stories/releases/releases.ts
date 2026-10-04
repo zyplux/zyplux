@@ -1,4 +1,4 @@
-import { makeFixture } from '@zyplux/spectra';
+import { makeFixture } from '@zyplux/spectra/library-test-api';
 
 import { czTest } from '#cli-test';
 

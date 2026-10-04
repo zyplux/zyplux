@@ -1,4 +1,6 @@
-import { $, ensure, parseJson } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { parseJson } from '@zyplux/util/json';
+import { $ } from '@zyplux/util/shell';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';

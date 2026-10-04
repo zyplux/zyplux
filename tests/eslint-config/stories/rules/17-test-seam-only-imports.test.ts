@@ -39,7 +39,7 @@ describe('17.2 flagging any module beyond the fixtures alias', () => {
 describe('17.3 flagging value bindings beyond describe, expect, and test', () => {
   test.for<Case>([
     ['1 flags another named value beyond the seam vocabulary', "import { storyMatchers } from '#fixtures';"],
-    ['2 flags a rename away from the seam vocabulary', "import { describe as suite } from '#fixtures';"],
+    ['2 flags a helper renamed to test', "import { helper as test } from '#fixtures';"],
     ['3 flags a default import of the fixtures alias', "import fixtures from '#fixtures';"],
     ['4 flags a namespace import of the fixtures alias', "import * as fixtures from '#fixtures';"],
   ])('17.3.%s', ([, code], { lintRule }) => {
@@ -64,9 +64,9 @@ describe('17.5 using a local domain module', () => {
     ).toReportNothing();
   });
 
-  test('17.5.2 allows types and a variant test from the domain module', ({ lintRule }) => {
+  test('17.5.2 allows fixture types and aliases of actual API bindings', ({ lintRule }) => {
     expect(
-      lintRule("import { type Api, adminTest as test } from './api.ts';", {
+      lintRule("import { type Api, describe as suite, test } from './api.ts';", {
         filename: 'stories/api/1-contract.test.ts',
       }),
     ).toReportNothing();

@@ -1,4 +1,4 @@
-import { libraryTest } from '@zyplux/spectra';
+import { libraryTest } from '@zyplux/spectra/library-test-api';
 import { LapTimer } from '@zyplux/util/lap-timer';
 import { setImmediate } from 'node:timers/promises';
 import { format } from 'node:util';

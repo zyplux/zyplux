@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/eslint-config",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Shared ESLint flat config and custom rules",
   "keywords": [
     "eslint",
@@ -20,11 +20,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./contracts": "./src/contracts.ts",
     "./package.json": "./package.json"
   },
   "imports": {
-    "#contracts": "./src/contracts.ts",
     "#create-rule": "./src/create-rule.ts",
     "#plugin": "./src/plugin.ts"
   },
@@ -35,7 +33,6 @@
   "publishConfig": {
     "access": "public",
     "imports": {
-      "#contracts": "./dist/src/contracts.js",
       "#create-rule": "./dist/src/create-rule.js",
       "#plugin": "./dist/src/plugin.js"
     },
@@ -43,10 +40,6 @@
       ".": {
         "types": "./dist/src/index.d.ts",
         "default": "./dist/src/index.js"
-      },
-      "./contracts": {
-        "types": "./dist/src/contracts.d.ts",
-        "default": "./dist/src/contracts.js"
       },
       "./package.json": "./package.json"
     }
@@ -67,7 +60,6 @@
     "eslint-plugin-prefer-arrow-functions": "catalog:",
     "eslint-plugin-unicorn": "catalog:",
     "typescript-eslint": "catalog:",
-    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "peerDependencies": {
@@ -79,5 +71,6 @@
     "@zyplux/tsconfig": "workspace:*",
     "publint": "catalog:",
     "typescript": "catalog:"
-  }
+  },
+  "sideEffects": false
 }

@@ -28,7 +28,7 @@ Each story domain has a named fixture module, such as `stories/repositories/repo
 
 ```ts
 import { runPushBranch } from '@example/app';
-import { cliTest } from '@zyplux/spectra';
+import { cliTest } from '@zyplux/spectra/library-test-api';
 
 export const test = cliTest.extend('runPushBranch', () => runPushBranch);
 export { describe, expect } from 'vitest';
@@ -52,12 +52,16 @@ describe('1.1 pushing a branch', () => {
 
 ## Entry points
 
-Test tools share the root import. The reporter has a separate entry point because it loads in Vitest's configuration before the test context exists.
+Each tool has a named entry point. Import the Vitest bases from `/library-test-api`; load the reporter from `/journald-reporter` in Vitest configuration.
 
 | Import path after `@zyplux/spectra` | Purpose |
 | --- | --- |
-| Root | Vitest bases, fixtures, fakes, helpers, console capture, and matchers |
-| `/reporters` | Record Vitest results and console output in systemd's journal |
+| `/library-test-api` | Library and CLI Vitest bases |
+| `/shell-fake`, `/fetch-fake`, `/prompt-fake` | Fakes for subprocesses, HTTP, and prompts |
+| `/cli-runner`, `/temp-directory`, `/poll-until` | CLI execution, scratch directories, and test polling |
+| `/test-matchers` | Register shared Vitest matchers |
+| `/console-capture` | Capture console messages |
+| `/journald-reporter` | Record Vitest results and console output in systemd's journal |
 | `/package.json` | Package metadata |
 
 Internal helpers stay beside the tools that use them: pattern matching and module mock validation live in `helpers`; journal stream writing lives in `reporters`.
@@ -95,7 +99,7 @@ Importing a base registers domain matchers via `expect.extend`:
 Add the reporter alongside Vitest's normal terminal reporters:
 
 ```ts
-import { JournaldReporter } from '@zyplux/spectra/reporters';
+import { JournaldReporter } from '@zyplux/spectra/journald-reporter';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({

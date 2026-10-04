@@ -1,6 +1,6 @@
 import type { ESLint } from 'eslint';
 
-import { loadPackageVersion } from '@zyplux/util';
+import { loadPackageVersion } from '@zyplux/util/manifest';
 
 import { rules } from './rules/index.ts';
 

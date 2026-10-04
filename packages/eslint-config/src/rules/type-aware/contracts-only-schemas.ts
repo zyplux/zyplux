@@ -1,65 +1,57 @@
-import type { TSESTree } from '@typescript-eslint/utils';
-
-import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
+import { ESLintUtils } from '@typescript-eslint/utils';
+import ts from 'typescript';
 
 import { createRule } from '#create-rule';
 
-import { createSchemaDetector } from './zod-schema.ts';
+import { isMutableDeclaration, isTypeExport, listRuntimeReexports } from './export-symbols.ts';
+import { createSchemaTypeDetector } from './zod-schema.ts';
 
-type MessageId = 'nonSchemaExport';
-
-const typeDeclarationTypes = new Set<TSESTree.Node['type']>([
-  AST_NODE_TYPES.TSInterfaceDeclaration,
-  AST_NODE_TYPES.TSTypeAliasDeclaration,
-]);
-
-export const contractsOnlySchemas = createRule<[], MessageId>({
+export const contractsOnlySchemas = createRule({
   create: context => {
-    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
-
-    const checkDeclarators = (declaration: TSESTree.VariableDeclaration) => {
-      if (declaration.kind !== 'const') {
-        context.report({ messageId: 'nonSchemaExport', node: declaration });
-        return;
-      }
-      for (const declarator of declaration.declarations) {
-        if (!isSchema(declarator.id)) context.report({ messageId: 'nonSchemaExport', node: declarator.id });
-      }
+    const services = ESLintUtils.getParserServices(context);
+    const checker = services.program.getTypeChecker();
+    const isSchema = createSchemaTypeDetector(services);
+    const isSchemaExport = (symbol: ts.Symbol) => {
+      const declaration = symbol.valueDeclaration ?? symbol.declarations?.[0];
+      return (
+        declaration !== undefined &&
+        !isMutableDeclaration(declaration) &&
+        isSchema(checker.getTypeOfSymbolAtLocation(symbol, declaration), declaration)
+      );
     };
-
-    const checkNamedExport = (node: TSESTree.ExportNamedDeclaration) => {
-      if (node.exportKind === 'type') return;
-      const { declaration } = node;
-      if (declaration === null) {
-        for (const specifier of node.specifiers) {
-          if (specifier.exportKind === 'type') continue;
-          if (!isSchema(specifier.local)) context.report({ messageId: 'nonSchemaExport', node: specifier });
-        }
-        return;
-      }
-      if (typeDeclarationTypes.has(declaration.type)) return;
-      if (declaration.type === AST_NODE_TYPES.VariableDeclaration) {
-        checkDeclarators(declaration);
-        return;
-      }
-      context.report({ messageId: 'nonSchemaExport', node: declaration });
-    };
-
     return {
-      ExportAllDeclaration: node => {
-        if (node.exportKind !== 'type') context.report({ messageId: 'nonSchemaExport', node });
+      'Program:exit': node => {
+        const source = services.esTreeNodeToTSNodeMap.get(node);
+        const module = checker.getSymbolAtLocation(source);
+        if (module === undefined) return;
+        const runtimeReexports = listRuntimeReexports(source, checker);
+        const invalidExports = checker.getExportsOfModule(module).filter(exported => {
+          const symbol = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
+          return (
+            !isTypeExport(exported) &&
+            (symbol.flags & ts.SymbolFlags.Value) !== 0 &&
+            (exported.declarations?.some(declaration => declaration.getSourceFile() === source) === true ||
+              runtimeReexports.has(exported.name)) &&
+            !isSchemaExport(symbol)
+          );
+        });
+        const locations = new Set(
+          invalidExports.map(exported => {
+            const local =
+              exported.declarations?.find(item => item.getSourceFile() === source) ??
+              runtimeReexports.get(exported.name);
+            return local === undefined ? node : services.tsNodeToESTreeNodeMap.get(local);
+          }),
+        );
+        for (const location of locations) context.report({ messageId: 'nonSchemaExport', node: location });
       },
-      ExportDefaultDeclaration: node => {
-        if (!isSchema(node.declaration)) context.report({ messageId: 'nonSchemaExport', node });
-      },
-      ExportNamedDeclaration: checkNamedExport,
     };
   },
   defaultOptions: [],
   meta: {
     docs: {
       description:
-        'Keep a contracts module (`src/contracts.ts`) to a schemas-only export surface: every exported value — named, re-exported, or default — must be a Zod schema or a nonempty plain object whose properties are all schemas, verified through the type checker by the Standard Schema brand (`~standard`/`_zod`), so schemas built by composition, local helpers, or imported factories are recognized. Type(-only) exports are free. Everything non-exported is the module’s own business: imports from any module, local declarations, and statements go unchecked, so schemas may be computed from implementation vocabulary. A value `export *` is reported wholesale because its surface cannot be verified per name — use named re-exports; mutable exported bindings (`export let`) are reported since a contract must be stable. What this guarantees consumers: importing a contracts module only ever hands them schemas, schema collections, and types, never implementation.',
+        'Contracts export immutable Zod schemas, schema collections, and types, including resolved re-exports.',
       requiresTypeChecking: true,
     },
     messages: {

@@ -1,3 +1,3 @@
-import '@zyplux/spectra';
+import '@zyplux/spectra/test-matchers';
 
 export { describe, expect, test } from 'vitest';

@@ -1,5 +1,5 @@
-import { libraryTest } from '@zyplux/spectra';
-import { mapWithConcurrency } from '@zyplux/util';
+import { libraryTest } from '@zyplux/spectra/library-test-api';
+import { mapWithConcurrency } from '@zyplux/util/map-with-concurrency';
 
 export const test = libraryTest.extend('mapWithConcurrency', () => mapWithConcurrency);
 

@@ -1,5 +1,6 @@
-import { runCz } from '@zyplux/cz';
-import { cliTest, createCliRunner } from '@zyplux/spectra';
+import { runCz } from '@zyplux/cz/cli';
+import { createCliRunner } from '@zyplux/spectra/cli-runner';
+import { cliTest } from '@zyplux/spectra/library-test-api';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import type { Repo } from './repository-fake.ts';

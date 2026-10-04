@@ -26,8 +26,8 @@
 8. flags re-exporting a non-schema value from a relative module
 9. flags re-exporting a non-schema value from zod
 10. allows a type-only re-export
-11. flags a value star re-export from zod as unverifiable
-12. flags a value star re-export from a contracts module as unverifiable
+11. flags a value star re-export exposing runtime implementation from zod
+12. allows a value star re-export from a contracts module
 13. allows a type-only star re-export
 
 ## 15.4 freeing local statements while covering every export form
@@ -39,7 +39,7 @@
 
 ## 15.5 scoping the rule to contracts files in the shipped config
 
-### 15.5.1 enables the rule only for src contracts files
+### 15.5.1 enables the rule for contracts entrypoints and child modules
 
 ## 15.6 recognizing plain schema collections
 

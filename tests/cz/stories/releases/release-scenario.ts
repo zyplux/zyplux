@@ -1,8 +1,10 @@
-import type { FetchFake, ShellFake, TempDir } from '@zyplux/spectra';
+import type { FetchFake } from '@zyplux/spectra/fetch-fake';
+import type { ShellFake } from '@zyplux/spectra/shell-fake';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { ManifestSchema } from '@zyplux/cz/contracts';
-import { notFoundResponse, okResponse } from '@zyplux/spectra';
-import { parseToml } from '@zyplux/util';
+import { notFoundResponse, okResponse } from '@zyplux/spectra/fetch-fake';
+import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

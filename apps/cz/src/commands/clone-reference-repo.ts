@@ -1,4 +1,4 @@
-import { $ } from '@zyplux/util';
+import { $ } from '@zyplux/util/shell';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import path from 'node:path';

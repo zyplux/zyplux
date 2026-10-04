@@ -1,4 +1,5 @@
-import type { FetchFake, TempDir } from '@zyplux/spectra';
+import type { FetchFake } from '@zyplux/spectra/fetch-fake';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';

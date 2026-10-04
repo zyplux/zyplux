@@ -1,4 +1,5 @@
-import type { ShellFake, TempDir } from '@zyplux/spectra';
+import type { ShellFake } from '@zyplux/spectra/shell-fake';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 export type Repo = {
   queuePrFields: (

@@ -1,4 +1,6 @@
-import { $, ensure, poll, readTrimmed } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { poll } from '@zyplux/util/poll';
+import { $, readTrimmed } from '@zyplux/util/shell';
 
 import { command, constant, message, object } from '#optique';
 import { loadReleaseTargets } from '#release-targets';

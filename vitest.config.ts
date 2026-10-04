@@ -1,4 +1,4 @@
-import { JournaldReporter } from '@zyplux/spectra/reporters';
+import { JournaldReporter } from '@zyplux/spectra/journald-reporter';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({

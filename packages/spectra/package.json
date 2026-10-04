@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/spectra",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared Vitest fixtures, matchers, polling, and journal reporting.",
   "keywords": [
     "test",
@@ -19,8 +19,16 @@
   },
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./reporters": "./src/reporters/journald-reporter.ts",
+    "./fetch-fake": "./src/fakes/fetch-fake.ts",
+    "./prompt-fake": "./src/fakes/prompt-fake.ts",
+    "./shell-fake": "./src/fakes/shell-fake.ts",
+    "./cli-runner": "./src/helpers/cli-runner.ts",
+    "./poll-until": "./src/helpers/poll-until.ts",
+    "./temp-directory": "./src/helpers/temp-directory.ts",
+    "./library-test-api": "./src/library-test-api.ts",
+    "./console-capture": "./src/reporters/console-capture.ts",
+    "./test-matchers": "./src/test-matchers.ts",
+    "./journald-reporter": "./src/reporters/journald-reporter.ts",
     "./package.json": "./package.json"
   },
   "files": [
@@ -30,11 +38,43 @@
   "publishConfig": {
     "access": "public",
     "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+      "./fetch-fake": {
+        "types": "./dist/fakes/fetch-fake.d.ts",
+        "default": "./dist/fakes/fetch-fake.js"
       },
-      "./reporters": {
+      "./prompt-fake": {
+        "types": "./dist/fakes/prompt-fake.d.ts",
+        "default": "./dist/fakes/prompt-fake.js"
+      },
+      "./shell-fake": {
+        "types": "./dist/fakes/shell-fake.d.ts",
+        "default": "./dist/fakes/shell-fake.js"
+      },
+      "./cli-runner": {
+        "types": "./dist/helpers/cli-runner.d.ts",
+        "default": "./dist/helpers/cli-runner.js"
+      },
+      "./poll-until": {
+        "types": "./dist/helpers/poll-until.d.ts",
+        "default": "./dist/helpers/poll-until.js"
+      },
+      "./temp-directory": {
+        "types": "./dist/helpers/temp-directory.d.ts",
+        "default": "./dist/helpers/temp-directory.js"
+      },
+      "./library-test-api": {
+        "types": "./dist/library-test-api.d.ts",
+        "default": "./dist/library-test-api.js"
+      },
+      "./console-capture": {
+        "types": "./dist/reporters/console-capture.d.ts",
+        "default": "./dist/reporters/console-capture.js"
+      },
+      "./test-matchers": {
+        "types": "./dist/test-matchers.d.ts",
+        "default": "./dist/test-matchers.js"
+      },
+      "./journald-reporter": {
         "types": "./dist/reporters/journald-reporter.d.ts",
         "default": "./dist/reporters/journald-reporter.js"
       },
@@ -60,5 +100,9 @@
   "imports": {
     "#pattern-match": "./src/helpers/pattern-match.ts",
     "#require-mocked-module": "./src/helpers/require-mocked-module.ts"
-  }
+  },
+  "sideEffects": [
+    "./dist/library-test-api.js",
+    "./dist/test-matchers.js"
+  ]
 }

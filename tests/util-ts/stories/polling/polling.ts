@@ -1,5 +1,5 @@
-import { libraryTest } from '@zyplux/spectra';
-import { poll } from '@zyplux/util';
+import { libraryTest } from '@zyplux/spectra/library-test-api';
+import { poll } from '@zyplux/util/poll';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { vi } from 'vitest';
 

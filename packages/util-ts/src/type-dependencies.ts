@@ -2,9 +2,11 @@ import path from 'node:path';
 
 import type { ModuleReference } from './module-references.ts';
 
+import { findPackageOwner, hasPublicExport } from './workspace-architecture.ts';
+
 type SourcePackage = {
   directory: string;
-  exports?: Readonly<Record<string, string>> | undefined;
+  exports?: unknown;
   name: string;
 };
 
@@ -15,16 +17,14 @@ type TypeDependencyCheck = {
 };
 
 export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurfaces }: TypeDependencyCheck) => {
-  const findOwner = (filePath: string) =>
-    packages.find(({ directory }) => {
-      const relative = path.relative(directory, filePath);
-      return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-    });
   const references = imports.flatMap(reference => {
-    const consumer = findOwner(reference.filePath);
-    const provider = reference.specifier.startsWith('.')
-      ? findOwner(path.join(path.dirname(reference.filePath), reference.specifier))
-      : packages.find(item => reference.specifier === item.name || reference.specifier.startsWith(`${item.name}/`));
+    const consumer = findPackageOwner(reference.filePath, packages);
+    const provider =
+      reference.resolvedFile === undefined
+        ? reference.specifier.startsWith('.')
+          ? findPackageOwner(path.join(path.dirname(reference.filePath), reference.specifier), packages)
+          : packages.find(item => reference.specifier === item.name || reference.specifier.startsWith(`${item.name}/`))
+        : findPackageOwner(reference.resolvedFile, packages);
     if (consumer === undefined || provider === undefined || consumer === provider) return [];
     const exportKey = `.${reference.specifier.slice(provider.name.length)}`;
     return [{ ...reference, consumer, exportKey, provider }];
@@ -32,7 +32,7 @@ export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurf
   const runtimeDependencies = new Set(
     references
       .filter(
-        reference => reference.hasValueBindings && reference.provider.exports?.[reference.exportKey] !== undefined,
+        reference => reference.hasValueBindings && hasPublicExport(reference.provider.exports, reference.exportKey),
       )
       .map(({ consumer, provider }) => `${consumer.name}:${provider.name}`),
   );
@@ -42,7 +42,7 @@ export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurf
     .flatMap(reference => {
       const { consumer, exportKey, filePath, line, provider, specifier } = reference;
       const location = `${filePath}:${line} (${consumer.name} → ${provider.name}) '${specifier}'`;
-      if (provider.exports?.[exportKey] === undefined) return [`${location}: not a public package entry`];
+      if (!hasPublicExport(provider.exports, exportKey)) return [`${location}: not a public package entry`];
       if (sharedTypeSurfaces.has(exportKey.replace(/^\.\//, ''))) return [];
       return runtimeDependencies.has(`${consumer.name}:${provider.name}`)
         ? []

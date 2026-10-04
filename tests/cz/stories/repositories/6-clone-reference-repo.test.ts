@@ -1,4 +1,4 @@
-import { describe, expect, tempCwdTest as test } from './repositories.ts';
+import { describe, expect, test } from './repositories.ts';
 
 type CloneCase = [shape: string, args: string[], expectedArgv: string[]];
 

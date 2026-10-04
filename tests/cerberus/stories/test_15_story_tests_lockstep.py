@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 PY_CHECK_ID = "story_tests_lockstep_py"
-TS_CHECK_ID = "story_tests_lockstep_ts"
 
 DOC = (
     "# 1. Configuring a widget\n\n## 1.1 Widget setup\n\n"
@@ -22,24 +21,15 @@ DOC_PATH = "tests/stories/1_widget.md"
 PY_TEST_PATH = "tests/stories/test_1_widget.py"
 PY_TEST = "def test_1_1_1_shows_the_widget_name():\n    pass\n\n\ndef test_1_1_2_accepts_a_custom_color():\n    pass\n"
 
-TS_DOC_PATH = "tests/stories/1-widget.md"
-TS_TEST_PATH = "tests/stories/1-widget.test.ts"
-TS_TEST = "test('1.1.1 shows the widget name', () => {});\ntest('1.1.2 accepts a custom color', () => {});\n"
 
 _PY_PLAIN_PYPROJECT = '[project]\nname = "widget"\n'
 _PY_SCRIPTS_PYPROJECT = '[project]\nname = "widget"\n\n[project.scripts]\nwidget = "widget.cli:main"\n'
 _PY_UV_WORKSPACE_APPS = '[tool.uv.workspace]\nmembers = ["apps/*"]\n'
-_PY_UV_WORKSPACE_SERVICES = '[tool.uv.workspace]\nmembers = ["services/*"]\n'
 
-_TS_PLAIN_PKG = '{"name": "widget"}'
-_TS_BIN_PKG = '{"name": "widget", "bin": {"widget": "./src/index.ts"}}'
-_TS_WORKSPACE_APPS = {"package.json": "{}", "pnpm-workspace.yaml": "packages:\n  - apps/*\n"}
-_TS_WORKSPACE_WITH_TESTS_MEMBER = {"package.json": "{}", "pnpm-workspace.yaml": "packages:\n  - apps/*\n  - tests\n"}
 
 OK_MESSAGE = "every story criterion has a matching, title-matched test"
 NO_MATCHING_TEST_HEADER_MESSAGE = "tests/stories: story-doc ### header(s) with no matching test: 1.1.2"
 PY_STALE_LINK_MESSAGE = "tests/stories/1_widget.md: story header links are stale; run with --fix"
-TS_STALE_LINK_MESSAGE = "tests/stories/1-widget.md: story header links are stale; run with --fix"
 TITLE_DRIFT_MESSAGE = (
     "tests/stories: header/test title drift for 1.1.1 — header='shows the widget name' test='shows a different name'"
 )
@@ -63,13 +53,6 @@ def test_15_1_1_skips_a_repo_with_no_python_packages_at_all(
     assert result.findings == [skip("no Python packages")]
 
 
-def test_15_1_2_skips_a_repo_with_no_typescript_packages_at_all(
-    run_check_with_files: RunCheckWithFiles, skip: MakeFinding
-) -> None:
-    result = run_check_with_files(TS_CHECK_ID, {"README.md": "# demo\n"})
-    assert result.findings == [skip("no TypeScript packages")]
-
-
 def test_15_1_3_ignores_a_directory_outside_the_workspace_glob(
     run_check_with_files: RunCheckWithFiles, skip: MakeFinding
 ) -> None:
@@ -78,53 +61,10 @@ def test_15_1_3_ignores_a_directory_outside_the_workspace_glob(
     assert result.findings == [skip("no Python packages")]
 
 
-def test_15_1_4_excludes_the_top_level_tests_directory_from_being_treated_as_a_package(
-    run_check_with_files: RunCheckWithFiles, skip: MakeFinding
-) -> None:
-    files = {
-        **_TS_WORKSPACE_WITH_TESTS_MEMBER,
-        "tests/package.json": '{"name": "test-harness"}',
-        "tests/some.test.ts": "test('does nothing special', () => {});\n",
-    }
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [skip("no TypeScript packages")]
-
-
-def test_15_1_5_treats_a_nested_tests_directory_as_excluded_but_still_checks_its_sibling_package(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    files = {
-        "package.json": "{}",
-        "pnpm-workspace.yaml": "packages:\n  - apps/*\n  - tests/*\n",
-        "apps/cz/package.json": _TS_BIN_PKG,
-        "tests/cz/package.json": '{"name": "test-harness-cz"}',
-    }
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [fail(_needs_story_tests_message("apps/cz"))]
-
-
-def test_15_1_6_treats_a_pnpm_workspace_manifest_without_a_packages_list_as_a_single_root_package(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    files = {
-        "package.json": _TS_BIN_PKG,
-        "pnpm-workspace.yaml": "catalog:\n  eslint: 9.0.0\n",
-    }
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [fail(NEEDS_STORY_TESTS_MESSAGE)]
-
-
 def test_15_2_1_fails_a_python_package_that_exposes_a_cli_script_but_has_no_story_tests(
     run_check_with_files: RunCheckWithFiles, fail: MakeFinding
 ) -> None:
     result = run_check_with_files(PY_CHECK_ID, {"pyproject.toml": _PY_SCRIPTS_PYPROJECT})
-    assert result.findings == [fail(NEEDS_STORY_TESTS_MESSAGE)]
-
-
-def test_15_2_2_fails_a_typescript_package_that_exposes_a_bin_entry_but_has_no_story_tests(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    result = run_check_with_files(TS_CHECK_ID, {"package.json": _TS_BIN_PKG})
     assert result.findings == [fail(NEEDS_STORY_TESTS_MESSAGE)]
 
 
@@ -135,26 +75,11 @@ def test_15_2_3_skips_a_python_package_with_no_public_interface_and_no_tests(
     assert result.findings == [skip("no Python package needs story-based tests")]
 
 
-def test_15_2_4_skips_a_typescript_package_with_no_public_interface_and_no_tests(
-    run_check_with_files: RunCheckWithFiles, skip: MakeFinding
-) -> None:
-    result = run_check_with_files(TS_CHECK_ID, {"package.json": _TS_PLAIN_PKG})
-    assert result.findings == [skip("no TypeScript package needs story-based tests")]
-
-
 def test_15_2_5_fails_a_python_package_that_already_has_plain_tests_but_no_story_docs(
     run_check_with_files: RunCheckWithFiles, fail: MakeFinding
 ) -> None:
     files = {"pyproject.toml": _PY_PLAIN_PYPROJECT, "tests/test_widget.py": "def test_it():\n    pass\n"}
     result = run_check_with_files(PY_CHECK_ID, files)
-    assert result.findings == [fail(NEEDS_STORY_TESTS_MESSAGE)]
-
-
-def test_15_2_6_fails_a_typescript_package_that_already_has_plain_tests_but_no_story_docs(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    files = {"package.json": _TS_PLAIN_PKG, "tests/widget.test.ts": "test('does a thing', () => {});\n"}
-    result = run_check_with_files(TS_CHECK_ID, files)
     assert result.findings == [fail(NEEDS_STORY_TESTS_MESSAGE)]
 
 
@@ -168,50 +93,6 @@ def test_15_3_1_passes_a_python_workspace_member_with_colocated_story_tests(
         "apps/widget/tests/stories/test_1_widget.py": PY_TEST,
     }
     result = run_check_with_files(PY_CHECK_ID, files)
-    assert result.findings == [ok(OK_MESSAGE)]
-
-
-def test_15_3_2_passes_a_typescript_workspace_member_with_colocated_story_tests(
-    run_check_with_files: RunCheckWithFiles, ok: MakeFinding
-) -> None:
-    files = {
-        **_TS_WORKSPACE_APPS,
-        "apps/widget/package.json": _TS_BIN_PKG,
-        "apps/widget/tests/stories/1-widget.md": _linked("1-widget.test.ts"),
-        "apps/widget/tests/stories/1-widget.test.ts": TS_TEST,
-    }
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [ok(OK_MESSAGE)]
-
-
-@pytest.mark.parametrize(
-    ("check_id", "files"),
-    [
-        (
-            PY_CHECK_ID,
-            {
-                "pyproject.toml": _PY_UV_WORKSPACE_APPS,
-                "apps/widget/pyproject.toml": _PY_SCRIPTS_PYPROJECT,
-                "tests/widget/stories/1_widget.md": _linked("test_1_widget.py"),
-                "tests/widget/stories/test_1_widget.py": PY_TEST,
-            },
-        ),
-        (
-            TS_CHECK_ID,
-            {
-                **_TS_WORKSPACE_APPS,
-                "apps/widget/package.json": _TS_BIN_PKG,
-                "tests/widget/stories/1-widget.md": _linked("1-widget.test.ts"),
-                "tests/widget/stories/1-widget.test.ts": TS_TEST,
-            },
-        ),
-    ],
-    ids=["python", "typescript"],
-)
-def test_15_3_3_passes_a_workspace_member_whose_story_tests_are_torn_out_to_a_top_level_tests_directory(
-    run_check_with_files: RunCheckWithFiles, check_id: str, files: dict[str, str], ok: MakeFinding
-) -> None:
-    result = run_check_with_files(check_id, files)
     assert result.findings == [ok(OK_MESSAGE)]
 
 
@@ -231,19 +112,10 @@ _NO_MATCHING_TEST_CASES = [
         },
         PY_STALE_LINK_MESSAGE,
     ),
-    StaleHeaderCase(
-        TS_CHECK_ID,
-        {
-            "package.json": _TS_PLAIN_PKG,
-            TS_DOC_PATH: DOC,
-            TS_TEST_PATH: "test('1.1.1 shows the widget name', () => {});\n",
-        },
-        TS_STALE_LINK_MESSAGE,
-    ),
 ]
 
 
-@pytest.mark.parametrize("case", _NO_MATCHING_TEST_CASES, ids=["python", "typescript"])
+@pytest.mark.parametrize("case", _NO_MATCHING_TEST_CASES, ids=["python"])
 def test_15_4_1_flags_a_story_header_with_no_matching_test(
     run_check_with_files: RunCheckWithFiles, case: StaleHeaderCase, fail: MakeFinding
 ) -> None:
@@ -279,19 +151,10 @@ _TITLE_DRIFT_CASES = [
         },
         PY_STALE_LINK_MESSAGE,
     ),
-    StaleHeaderCase(
-        TS_CHECK_ID,
-        {
-            "package.json": _TS_PLAIN_PKG,
-            TS_DOC_PATH: DOC,
-            TS_TEST_PATH: TS_TEST.replace("shows the widget name", "shows a different name"),
-        },
-        TS_STALE_LINK_MESSAGE,
-    ),
 ]
 
 
-@pytest.mark.parametrize("case", _TITLE_DRIFT_CASES, ids=["python", "typescript"])
+@pytest.mark.parametrize("case", _TITLE_DRIFT_CASES, ids=["python"])
 def test_15_4_3_flags_a_title_that_has_drifted_between_the_header_and_its_test(
     run_check_with_files: RunCheckWithFiles, case: StaleHeaderCase, fail: MakeFinding
 ) -> None:
@@ -359,19 +222,10 @@ _STALE_LINK_CASES = [
         "1_widget.md",
         PY_CHECK_ID,
     ),
-    StaleLinkCase(
-        "package.json",
-        _TS_PLAIN_PKG,
-        "1-widget.test.ts",
-        TS_TEST,
-        "1-widget.test.ts",
-        "1-widget.md",
-        TS_CHECK_ID,
-    ),
 ]
 
 
-@pytest.mark.parametrize("case", _STALE_LINK_CASES, ids=["python", "typescript"])
+@pytest.mark.parametrize("case", _STALE_LINK_CASES, ids=["python"])
 def test_15_5_2_rewrites_a_stale_header_link_and_passes_on_the_next_run(
     run_check_on_disk: RunCheckOnDisk, tmp_path: Path, case: StaleLinkCase, ok: MakeFinding
 ) -> None:
@@ -420,112 +274,21 @@ def test_15_5_4_leaves_a_freshly_linked_doc_unchanged_on_a_fix_rerun(
     assert result.findings == [ok(OK_MESSAGE)]
 
 
-def test_15_6_1_recognizes_test_calls_written_with_chained_modifiers(
+def test_15_3_3_passes_a_workspace_member_with_torn_out_story_tests(
     run_check_with_files: RunCheckWithFiles, ok: MakeFinding
-) -> None:
-    test_content = (
-        "it.concurrent('1.1.1 shows the widget name', async () => {});\n"
-        "test.skip('1.1.2 accepts a custom color', () => {});\n"
-    )
-    files = {"package.json": _TS_PLAIN_PKG, TS_DOC_PATH: _linked("1-widget.test.ts"), TS_TEST_PATH: test_content}
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [ok(OK_MESSAGE)]
-
-
-def test_15_6_2_recognizes_test_calls_written_with_a_parametrized_each_table(
-    run_check_with_files: RunCheckWithFiles, ok: MakeFinding
-) -> None:
-    test_content = (
-        "test.each([\n"
-        "  ['red', () => paint('red', { intensity: 1 })],\n"
-        "  ['blue', () => paint('blue', { intensity: 2 })],\n"
-        "] as const)('1.1.1 shows the widget name', (_color, invoke) => {\n"
-        "  invoke();\n"
-        "});\n"
-        "test('1.1.2 accepts a custom color', () => {});\n"
-    )
-    files = {"package.json": _TS_PLAIN_PKG, TS_DOC_PATH: _linked("1-widget.test.ts"), TS_TEST_PATH: test_content}
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [ok(OK_MESSAGE)]
-
-
-def test_15_6_3_recognizes_a_title_that_contains_a_different_quote_character_than_its_delimiter(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    test_content = "it(\"1.1.1 shows the widget's name\", () => {});\ntest('1.1.2 accepts a custom color', () => {});\n"
-    files = {"package.json": _TS_PLAIN_PKG, TS_DOC_PATH: _linked("1-widget.test.ts"), TS_TEST_PATH: test_content}
-    result = run_check_with_files(TS_CHECK_ID, files)
-    assert result.findings == [
-        fail(
-            "tests/stories: header/test title drift for 1.1.1 — "
-            "header='shows the widget name' test=\"shows the widget's name\"",
-        )
-    ]
-
-
-def test_15_7_1_scopes_each_check_to_only_its_own_language_packages_in_a_mixed_repo(
-    run_check_with_files: RunCheckWithFiles, ok: MakeFinding, fail: MakeFinding
 ) -> None:
     files = {
-        **_TS_WORKSPACE_APPS,
-        "pyproject.toml": _PY_UV_WORKSPACE_SERVICES,
-        "apps/widget/package.json": _TS_BIN_PKG,
-        "apps/widget/tests/stories/1-widget.md": _linked("1-widget.test.ts"),
-        "apps/widget/tests/stories/1-widget.test.ts": TS_TEST,
-        "services/gizmo/pyproject.toml": _PY_SCRIPTS_PYPROJECT,
+        "pyproject.toml": _PY_UV_WORKSPACE_APPS,
+        "apps/widget/pyproject.toml": _PY_SCRIPTS_PYPROJECT,
+        "tests/widget/stories/1_widget.md": _linked("test_1_widget.py"),
+        "tests/widget/stories/test_1_widget.py": PY_TEST,
     }
-    ts_result = run_check_with_files(TS_CHECK_ID, files)
-    py_result = run_check_with_files(PY_CHECK_ID, files)
-    assert ts_result.findings == [ok(OK_MESSAGE)]
-    assert py_result.findings == [fail(_needs_story_tests_message("services/gizmo"))]
+    assert run_check_with_files(PY_CHECK_ID, files).findings == [ok(OK_MESSAGE)]
 
 
-@pytest.mark.parametrize(
-    ("check_id", "files"),
-    [
-        (
-            PY_CHECK_ID,
-            {
-                "pyproject.toml": _PY_SCRIPTS_PYPROJECT,
-                DOC_PATH: _linked("test_1_widget.py"),
-                PY_TEST_PATH: PY_TEST,
-            },
-        ),
-        (
-            TS_CHECK_ID,
-            {
-                "package.json": _TS_BIN_PKG,
-                TS_DOC_PATH: _linked("1-widget.test.ts"),
-                TS_TEST_PATH: TS_TEST,
-            },
-        ),
-    ],
-    ids=["python", "typescript"],
-)
-def test_15_8_1_checks_each_domain_independently_under_stories(
-    run_check_with_files: RunCheckWithFiles,
-    check_id: str,
-    files: dict[str, str],
-    ok: MakeFinding,
-) -> None:
-    domain_files = {
-        path.replace("/stories/", f"/stories/{domain}/"): content
-        for domain in ("api", "workflows")
-        for path, content in files.items()
-    }
-    result = run_check_with_files(check_id, domain_files)
-    assert result.findings == [ok(OK_MESSAGE)]
-
-
-def test_15_8_2_flags_a_nested_story_header_with_no_matching_test(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
-) -> None:
-    result = run_check_with_files(
-        TS_CHECK_ID,
-        {
-            "package.json": _TS_BIN_PKG,
-            "tests/stories/api/1-widget.md": _linked("1-widget.test.ts"),
-            "tests/stories/api/1-widget.test.ts": "test('1.1.1 shows the widget name', () => {});",
-        },
-    )
-    assert result.findings == [fail("tests/stories/api: story-doc ### header(s) with no matching test: 1.1.2")]
+def test_15_8_1_checks_each_domain_independently(run_check_with_files: RunCheckWithFiles, ok: MakeFinding) -> None:
+    files = {"pyproject.toml": _PY_SCRIPTS_PYPROJECT}
+    for domain in ("api", "workflows"):
+        files[f"tests/stories/{domain}/1_widget.md"] = _linked("test_1_widget.py")
+        files[f"tests/stories/{domain}/test_1_widget.py"] = PY_TEST
+    assert run_check_with_files(PY_CHECK_ID, files).findings == [ok(OK_MESSAGE)]

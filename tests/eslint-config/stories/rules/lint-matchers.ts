@@ -1,6 +1,6 @@
 import type { Linter } from 'eslint';
 
-import { registerMatchers } from '@zyplux/spectra';
+import { registerMatchers } from '@zyplux/spectra/test-matchers';
 import { expect } from 'vitest';
 
 import type { RuleLintWithOptions } from '#lint-engine';

@@ -1,4 +1,8 @@
-import { $, ensure, fetchJson, isHttpOk, parseJson, parseToml, readTrimmed } from '@zyplux/util';
+import { ensure } from '@zyplux/util/assert';
+import { fetchJson, isHttpOk } from '@zyplux/util/http';
+import { parseJson } from '@zyplux/util/json';
+import { $, readTrimmed } from '@zyplux/util/shell';
+import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 

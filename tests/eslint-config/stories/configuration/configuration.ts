@@ -1,14 +1,16 @@
-import type { PrintedConfig } from '@zyplux/eslint-config/contracts';
-import type { LibraryFixtures } from '@zyplux/spectra';
+import type { LibraryFixtures } from '@zyplux/spectra/library-test-api';
 import type { TestAPI } from 'vitest';
 
 import { plugin, zyplux } from '@zyplux/eslint-config';
-import { ParserOptionsSchema, PrintedConfigSchema } from '@zyplux/eslint-config/contracts';
-import { libraryTest, makeFixture } from '@zyplux/spectra';
-import { parseJson, readJsonSync } from '@zyplux/util';
+import { libraryTest, makeFixture } from '@zyplux/spectra/library-test-api';
+import { parseJson, readJsonSync } from '@zyplux/util/json';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import type { PrintedConfig } from '#test-contracts';
+
+import { ParserOptionsSchema, PrintedConfigSchema } from '#test-contracts';
 export type ZypluxConfig = ReturnType<typeof zyplux>;
 const eslintConfigDir = fileURLToPath(new URL('../../../../packages/eslint-config/', import.meta.url));
 const rulesSnapshotUrl = new URL('../../../../packages/eslint-config/rules.json', import.meta.url);
@@ -48,5 +50,5 @@ export const test: TestAPI<ConfigurationFixtures & LibraryFixtures> = libraryTes
   tsconfigRootDirs: makeFixture(tsconfigRootDirs),
   zyplux: makeFixture(zyplux),
 });
-export type { PrintedConfig } from '@zyplux/eslint-config/contracts';
+export type { PrintedConfig } from '#test-contracts';
 export { describe, expect } from 'vitest';

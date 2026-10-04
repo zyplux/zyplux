@@ -1,5 +1,5 @@
 import { zyplux } from '@zyplux/eslint-config';
-import { libraryTest, makeFixture } from '@zyplux/spectra';
+import { libraryTest, makeFixture } from '@zyplux/spectra/library-test-api';
 
 import { createFixRule, createLintRule, createMergedLint } from '#lint-engine';
 

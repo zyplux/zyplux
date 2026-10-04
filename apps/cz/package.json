@@ -22,9 +22,9 @@
     "cz": "./src/index.ts"
   },
   "exports": {
-    ".": "./src/cli.ts",
     "./contracts": "./src/contracts.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./cli": "./src/cli.ts"
   },
   "imports": {
     "#deps-catalog": "./src/deps-catalog.ts",
@@ -46,15 +46,15 @@
       "cz": "./dist/src/index.js"
     },
     "exports": {
-      ".": {
-        "types": "./dist/src/cli.d.ts",
-        "default": "./dist/src/cli.js"
-      },
       "./contracts": {
         "types": "./dist/src/contracts.d.ts",
         "default": "./dist/src/contracts.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./cli": {
+        "types": "./dist/src/cli.d.ts",
+        "default": "./dist/src/cli.js"
+      }
     }
   },
   "scripts": {

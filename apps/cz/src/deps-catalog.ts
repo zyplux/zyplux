@@ -1,16 +1,16 @@
+import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+import { fetchJson } from '@zyplux/util/http';
+import { tryParseJson } from '@zyplux/util/json';
 import {
-  fetchJson,
   findManifests,
-  mapWithConcurrency,
   normalizePythonName,
-  normalizeRepoUrl,
   npmDependencyNames,
   pythonRequirementNames,
   repositoryUrl,
-  tryParseJson,
-  tryParseToml,
-} from '@zyplux/util';
-import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+} from '@zyplux/util/manifest';
+import { mapWithConcurrency } from '@zyplux/util/map-with-concurrency';
+import { normalizeRepoUrl } from '@zyplux/util/repo-url';
+import { tryParseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 
 import type { DepsDevPackage } from './contracts.ts';

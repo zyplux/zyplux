@@ -1,7 +1,10 @@
-import type { CliRunner, ConsoleCapture, FetchFake, TempDir } from '@zyplux/spectra';
+import type { CliRunner } from '@zyplux/spectra/cli-runner';
+import type { ConsoleCapture } from '@zyplux/spectra/console-capture';
+import type { FetchFake } from '@zyplux/spectra/fetch-fake';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { DepsCatalogSchema } from '@zyplux/cz/contracts';
-import { parseJson } from '@zyplux/util';
+import { parseJson } from '@zyplux/util/json';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';

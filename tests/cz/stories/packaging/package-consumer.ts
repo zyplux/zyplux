@@ -1,8 +1,10 @@
-import type { TempDir } from '@zyplux/spectra';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { ManifestSchema, VersionFieldSchema } from '@zyplux/cz/contracts';
-import { ensure, parseJson, parseToml } from '@zyplux/util';
-import { LooseRecordSchema } from '@zyplux/util/contracts';
+import { ensure } from '@zyplux/util/assert';
+import { LooseRecordSchema, PackageJsonSchema } from '@zyplux/util/contracts';
+import { parseJson } from '@zyplux/util/json';
+import { parseToml } from '@zyplux/util/toml';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { mkdir, symlink } from 'node:fs/promises';
@@ -90,13 +92,24 @@ export const verifyUtilPackage = async (tempDir: TempDir) => {
   const packageDir = path.join(consumer, 'node_modules/@zyplux/util');
   await mkdir(packageDir, { recursive: true });
   execFileSync('tar', ['-xzf', packed.archive, '--strip-components=1', '-C', packageDir]);
-  for (const name of ['smol-toml', 'zod']) {
-    await symlink(path.join(packed.dir, 'node_modules', name), path.join(consumer, 'node_modules', name), 'dir');
+  const {
+    dependencies = {},
+    peerDependencies = {},
+    peerDependenciesMeta = {},
+  } = parseJson(readFileSync(path.join(packed.dir, 'package.json'), 'utf8'), PackageJsonSchema);
+  const requiredDependencies = new Set([
+    ...Object.keys(dependencies),
+    ...Object.keys(peerDependencies).filter(name => peerDependenciesMeta[name]?.optional !== true),
+  ]);
+  for (const name of requiredDependencies) {
+    const destination = path.join(consumer, 'node_modules', name);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await symlink(path.join(packed.dir, 'node_modules', name), destination, 'dir');
   }
   await tempDir.write('consumer/package.json', '{"type":"module"}');
   const script = `import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import '@zyplux/util';
+import '@zyplux/util/json';
 assert.throws(() => createRequire(import.meta.url).resolve('typescript'), { code: 'MODULE_NOT_FOUND' });`;
   execFileSync(process.execPath, ['--input-type=module', '--eval', script], { cwd: consumer, stdio: 'pipe' });
   await symlink(

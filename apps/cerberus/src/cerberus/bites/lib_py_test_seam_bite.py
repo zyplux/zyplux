@@ -1,11 +1,4 @@
-"""The Python library test seam: a library's public interface is its root
-module, so its story tests may only import that root module — never reach
-into its internals directly. Python has no manifest-level `exports` map to
-additionally police (see `py_test_seam` for why), so this check is narrower
-than `lib_ts_test_seam`: it polices story-test imports only. Libraries are the
-Python workspace members with no `[project.scripts]` — cli apps carry their
-own seam, with an extra entry-module allowance, under `cli_py_test_seam`.
-"""
+"""Python library stories exercise the package root."""
 
 from __future__ import annotations
 

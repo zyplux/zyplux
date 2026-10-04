@@ -5,7 +5,7 @@ from functools import cache
 
 import tree_sitter_python as tspython
 import tree_sitter_typescript as tstypescript
-from tree_sitter import Language, Node, Parser, Query, QueryCursor
+from tree_sitter import Language, Node, Parser, Query, QueryCursor, Tree
 
 _PY_SYMBOL_QUERY_SOURCE = """
 (module (function_definition name: (identifier) @function.name))
@@ -31,6 +31,7 @@ _TS_SYMBOL_QUERY_SOURCE = """
 _TS_IMPORT_QUERY_SOURCE = """
 (import_statement source: (string (string_fragment) @source))
 (export_statement source: (string (string_fragment) @source))
+(call_expression function: (import) arguments: (arguments (string (string_fragment) @source)))
 """
 
 
@@ -204,6 +205,10 @@ def _python_import_refs(root: Node, source: bytes) -> tuple[PyImportRef, ...]:
 def _ts_specifiers(root: Node, source: bytes, query: Query) -> tuple[str, ...]:
     captures = QueryCursor(query).captures(root)
     return tuple(_text(node, source) for node in captures.get("source", []))
+
+
+def parse_typescript(path: str, content: str) -> Tree:
+    return (_tsx_parser() if path.endswith(".tsx") else _ts_parser()).parse(content.encode("utf-8"))
 
 
 def extract(path: str, content: str) -> Extracted:

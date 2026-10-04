@@ -3,7 +3,7 @@ import { plugin } from '#plugin';
 import type { ConfigWithExtends } from './types.ts';
 
 export const contractsRules: ConfigWithExtends = {
-  files: ['**/src/contracts.ts'],
+  files: ['**/contracts.ts', '**/contracts/**/*.ts'],
   plugins: { '@zyplux': plugin },
   rules: {
     '@zyplux/contracts-only-schemas': 'error',
@@ -12,7 +12,7 @@ export const contractsRules: ConfigWithExtends = {
 
 export const schemaBoundaryRules: ConfigWithExtends = {
   files: ['**/*.{ts,tsx}'],
-  ignores: ['**/src/contracts.ts', '**/src/contracts/**/*.ts'],
+  ignores: ['**/contracts.ts', '**/contracts/**/*.ts'],
   plugins: { '@zyplux': plugin },
   rules: {
     '@zyplux/no-schemas-outside-contracts': 'error',

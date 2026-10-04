@@ -53,7 +53,7 @@ describe('16.3 scoping the rule to implementation files', () => {
     const config = zyplux();
     const entries = config.filter(entry => entry.rules?.['@zyplux/no-schemas-outside-contracts'] !== undefined);
     expect(entries.map(entry => [entry.files, entry.ignores])).toEqual([
-      [['**/*.{ts,tsx}'], ['**/src/contracts.ts', '**/src/contracts/**/*.ts']],
+      [['**/*.{ts,tsx}'], ['**/contracts.ts', '**/contracts/**/*.ts']],
     ]);
   });
 });

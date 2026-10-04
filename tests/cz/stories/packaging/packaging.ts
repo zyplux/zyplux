@@ -1,4 +1,4 @@
-import { libraryTest } from '@zyplux/spectra';
+import { libraryTest } from '@zyplux/spectra/library-test-api';
 
 import type { TsconfigPresets } from './package-consumer.ts';
 

@@ -129,6 +129,8 @@ ignoreBinaries = ["podman", "uv"]
 ignoreDependencies = ["cloudflare"]
 
 [vitest]
+
+[vitest_coverage]
 min_coverage = 90
 
 [tsc]
@@ -138,12 +140,6 @@ min_coverage = 90
 [story_tests_lockstep_py]
 
 [story_tests_lockstep_ts]
-
-[cli_ts_test_seam]
-
-[lib_ts_test_seam]
-
-[fixture_roles_ts]
 
 [cli_py_test_seam]
 
@@ -168,3 +164,8 @@ ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 # Only the repo carrying the pin source can act on a lagging pin; it switches this on in its overlay.
 [tool_pins_latest]
 off = true
+
+[architecture]
+applications = []
+
+[architecture.dependencies]

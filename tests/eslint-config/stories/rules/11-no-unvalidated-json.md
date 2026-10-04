@@ -6,11 +6,11 @@
 
 ### 11.1.2 flags an awaited json call returning an any promise, naming the api in the message
 
-1. flags a JSON parse annotated unknown
-2. flags a JSON parse read off before validation
-3. flags a JSON parse passed to a non-zod consumer
-4. flags a non-awaited any promise json call, caught by type rather than syntax
-5. flags a synchronous json call returning any
+### 11.1.3 flags a JSON parse annotated unknown
+### 11.1.4 flags a JSON parse read off before validation
+### 11.1.5 flags a JSON parse passed to a non-zod consumer
+### 11.1.6 flags a non-awaited any promise json call, caught by type rather than syntax
+### 11.1.7 flags a synchronous json call returning any
 
 ## 11.2 permitting validated reads and non-boundary json calls
 

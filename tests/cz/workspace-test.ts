@@ -1,4 +1,4 @@
-import type { TempDir } from '@zyplux/spectra';
+import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

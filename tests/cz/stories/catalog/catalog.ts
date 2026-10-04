@@ -9,5 +9,5 @@ export const test = czTest.extend<{ catalog: Catalog }>({
   },
 });
 export type { Catalog } from './catalog-workspace.ts';
-export type { TempDir } from '@zyplux/spectra';
+export type { TempDir } from '@zyplux/spectra/temp-directory';
 export { describe, expect } from 'vitest';

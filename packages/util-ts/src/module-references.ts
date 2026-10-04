@@ -6,6 +6,7 @@ export type ModuleReference = {
   hasValueBindings: boolean;
   isTypeOnly: boolean;
   line: number;
+  resolvedFile?: string | undefined;
   specifier: string;
 };
 
@@ -40,25 +41,40 @@ const getExportReference = ({ exportClause, isTypeOnly, moduleSpecifier }: ts.Ex
   };
 };
 
-const getModuleReference = (statement: ts.Statement) => {
+const getModuleReference = (statement: ts.Node) => {
   if (ts.isImportDeclaration(statement)) return getImportReference(statement);
   if (ts.isExportDeclaration(statement)) return getExportReference(statement);
+  if (ts.isImportTypeNode(statement) && ts.isLiteralTypeNode(statement.argument))
+    return {
+      hasTypeBindings: true,
+      hasValueBindings: false,
+      isTypeOnly: true,
+      specifierNode: statement.argument.literal,
+    };
+  if (
+    ts.isCallExpression(statement) &&
+    statement.expression.kind === ts.SyntaxKind.ImportKeyword &&
+    statement.arguments[0] !== undefined
+  )
+    return { hasTypeBindings: false, hasValueBindings: true, isTypeOnly: false, specifierNode: statement.arguments[0] };
   return;
 };
 
-export const collectModuleReferences = (sourceFile: ts.SourceFile) =>
-  sourceFile.statements.flatMap(statement => {
+export const collectModuleReferences = (sourceFile: ts.SourceFile) => {
+  const references: ModuleReference[] = [];
+  const visit = (statement: ts.Node) => {
     const reference = getModuleReference(statement);
-    if (reference === undefined || !ts.isStringLiteral(reference.specifierNode)) return [];
-    const specifier = reference.specifierNode.text;
-    return [
-      {
+    if (reference !== undefined && ts.isStringLiteral(reference.specifierNode))
+      references.push({
         filePath: sourceFile.fileName,
         hasTypeBindings: reference.hasTypeBindings,
         hasValueBindings: reference.hasValueBindings,
         isTypeOnly: reference.isTypeOnly,
         line: sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile)).line + 1,
-        specifier,
-      },
-    ];
-  });
+        specifier: reference.specifierNode.text,
+      });
+    ts.forEachChild(statement, visit);
+  };
+  visit(sourceFile);
+  return references;
+};

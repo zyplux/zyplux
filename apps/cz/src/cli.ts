@@ -1,4 +1,4 @@
-import { loadPackageVersion } from '@zyplux/util';
+import { loadPackageVersion } from '@zyplux/util/manifest';
 
 import { assertTagVersionCommand, runAssertTagVersion } from './commands/assert-tag-version.ts';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/bootstrap-npm-target.ts';

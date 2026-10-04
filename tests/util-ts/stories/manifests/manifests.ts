@@ -1,14 +1,14 @@
-import { libraryTest } from '@zyplux/spectra';
+import { libraryTest } from '@zyplux/spectra/library-test-api';
+import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+import { parseJson } from '@zyplux/util/json';
 import {
   findManifests,
   normalizePythonName,
   npmDependencyNames,
-  parseJson,
-  parseToml,
   pythonRequirementNames,
   repositoryUrl,
-} from '@zyplux/util';
-import { PackageJsonSchema, PyProjectSchema } from '@zyplux/util/contracts';
+} from '@zyplux/util/manifest';
+import { parseToml } from '@zyplux/util/toml';
 
 import { createNestedGitRepos, workspaceRoot } from './nested-repositories.ts';
 

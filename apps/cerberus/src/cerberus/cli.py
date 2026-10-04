@@ -66,7 +66,12 @@ CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to na
 
 class _UnknownCheckError(typer.BadParameter):
     def __init__(self, check_id: str) -> None:
-        super().__init__(f"unknown bite `{check_id}` (known: {', '.join(bites.BY_ID)})")
+        message = (
+            f"retired bite `{check_id}`; use {bites.RETIRED[check_id]}"
+            if check_id in bites.RETIRED
+            else f"unknown bite `{check_id}` (known: {', '.join(bites.BY_ID)})"
+        )
+        super().__init__(message)
 
 
 def _select_checks(only: list[str] | None) -> list[bites.Check]:
@@ -141,7 +146,9 @@ def lint(
     selected = _select_checks(check)
 
     off = ctx.config.disabled_bites
-    unknown_off = off - set(bites.BY_ID)
+    for retired in sorted(off & bites.RETIRED.keys()):
+        err.print(f"[yellow]retired bite {retired}; use {bites.RETIRED[retired]}[/yellow]")
+    unknown_off = off - bites.BY_ID.keys() - bites.RETIRED.keys()
     if unknown_off:
         err.print(f"[yellow]unknown off bites ignored: {', '.join(sorted(unknown_off))}[/yellow]")
     active = selected if check else [chk for chk in selected if chk.id not in off]
