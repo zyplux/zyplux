@@ -24,6 +24,10 @@
 
 ### 6.4.2 fails and names the uncovered test root
 
+### 6.4.3 requires coverage for flat and nested infrastructure source
+
+### 6.4.4 requires coverage for tests inside a production workspace
+
 ## 6.5 forbidding top level relaxations
 
 ### 6.5.1 fails when top level errors weaken strict for all code
@@ -49,3 +53,5 @@
 ## 6.9 sourcing the production workspaces from cerberus configuration
 
 ### 6.9.1 type checks a configured production workspace outside the default globs
+
+### 6.9.2 supports production roots at any directory depth

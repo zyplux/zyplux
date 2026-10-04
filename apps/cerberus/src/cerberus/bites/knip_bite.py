@@ -9,7 +9,7 @@ packages knip cannot see consumed. Knip's defaults are the baseline.
 by being consumed by other production code, never by tests alone.
 `includeEntryExports` puts a workspace's own `exports["."]` surface under
 scrutiny instead of trusting it as public API, and `ignoreWorkspaces` drops
-every member outside the configured `prod_workspaces` — test harnesses, dev
+every member outside `[source].production_roots` — test harnesses, dev
 tooling — so an export only they reach reads as unused. Any glob spelling
 will do: what is checked is the members it resolves to — every non-production
 workspace dropped, no production one with it. Published packages are the exception
@@ -151,24 +151,19 @@ def _check_workspace_exemptions(repo: Repo, ctx: Context, parsed: dict[str, Any]
         res.fail(f"{PROD_CONFIG} workspaces exempts non-published dir(s): {', '.join(extra)}")
 
 
-def _is_production(member_dir: str, prod_globs: tuple[str, ...]) -> bool:
-    """The repo root always ships; every other member ships when a `prod_workspaces` glob names it."""
-    return not member_dir or workspaces.matches_globs(member_dir, prod_globs)
-
-
 def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], res: CheckResult) -> None:
     """The declared globs must drop every non-production workspace and no production one — any spelling that does."""
     globs = parsed.get("ignoreWorkspaces")
     if not isinstance(globs, list) or not all(isinstance(glob, str) for glob in globs):
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" must be a JSON array of workspace globs')
         return
-    prod_globs = ctx.config.knip_prod_workspaces
     members = workspaces.ts_member_dirs(repo, ctx, ctx.paths(repo))
+    production = {m for m in members if not m or ctx.config.source.is_production_file(f"{m}/{PACKAGE_JSON}")}
     dropped = {member for member in members if workspaces.matches_globs(member, globs)}
-    kept = sorted(m for m in members if m not in dropped and not _is_production(m, prod_globs))
+    kept = sorted(set(members) - dropped - production)
     if kept:
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" leaves non-production workspace(s) in the graph: {", ".join(kept)}')
-    dropped_production = sorted(m for m in dropped if _is_production(m, prod_globs))
+    dropped_production = sorted(dropped & production)
     if dropped_production:
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" drops production workspace(s): {", ".join(dropped_production)}')
 

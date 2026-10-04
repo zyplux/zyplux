@@ -62,8 +62,19 @@ allowed_setup_actions = [
     "actions/setup-node",
 ]
 
+[source]
+production_roots = ["apps/*", "packages/*", "infra"]
+test_files = [
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/conftest.py",
+]
+
 [pyrefly]
-prod_workspaces = ["apps/*", "packages/*"]
 error_kinds = [
     "implicit-any",
     "implicit-any-parameter",
@@ -111,7 +122,6 @@ siblings-only = true
 '''
 
 [knip]
-prod_workspaces = ["apps/*", "packages/*"]
 prod_allowed_exclude = ["catalog"]
 
 [knip.allowed_customizations]

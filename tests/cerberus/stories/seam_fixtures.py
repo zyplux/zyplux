@@ -1,7 +1,7 @@
 """Trusted seam boundary for cerberus's own story tests.
 
 `cerberus.bites.py_test_seam` forbids a story test file from importing
-`cerberus` internals beyond the root package's public surface (`__version__`)
+`cerberus` internals beyond the root package's public surface
 and, for cli apps, `cerberus.cli`'s public surface — see that module's
 docstring for the exact rule. Only `test_*.py` story files are scanned, and
 their `if TYPE_CHECKING:` imports are exempt (mirroring how the TS seam check

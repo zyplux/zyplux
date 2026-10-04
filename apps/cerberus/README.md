@@ -64,9 +64,43 @@ Every repo's `justfile` must start with the line `# BASELINE`, carry the canonic
 
 ## Config
 
-Every bite default — required recipes and aliases, the canonical CI sequence, coverage floors, line width, sanctioned lint relaxations, the canonical rumdl config — lives in [`cerberus.toml`](src/cerberus/cerberus.toml), each setting under its bite's table (`[justfile]`, `[pytest]`, `[jscpd]`, …). That bundled file is part of the code: it is the single home of the defaults, the loader treats a missing key as an error rather than falling back to a value hidden in source, and every bite has a table — bites with nothing to configure carry an empty one, so the file doubles as the visible index of everything cerberus checks. A repo adjusts the defaults by shipping a `cerberus.toml` at its root: it overlays the bundled configuration key by key, so it only names what it overrides (e.g. a stricter `[jscpd] threshold`). An explicit `--config PATH` overlays the same way, standing in for the repo's own file.
+Every default lives in [`cerberus.toml`](src/cerberus/cerberus.toml): shared source ownership under `[source]`, and check settings under their bite's table (`[justfile]`, `[pytest]`, `[jscpd]`, …). The bundled file is the single home of the defaults; missing required keys are errors. A repo adjusts them with a root `cerberus.toml`, overlaid key by key. An explicit `--config PATH` stands in for that repository file. Lists replace the corresponding default list.
 
 Every bite table also takes a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
+
+### Shared source ownership
+
+```toml
+[source]
+production_roots = ["apps/*", "packages/*", "infra"]
+test_files = [
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/conftest.py",
+]
+```
+
+Production roots are repository-relative directory globs; their descendants belong to production, including source assets, build configuration, and deployment infrastructure. Test-file globs take precedence even inside a production root. `*` matches one path segment and `**` spans directories. Files outside both selections are other maintained files, such as development tooling. These conventions apply independently of which bites are enabled.
+
+Knip intersects this ownership with registered JavaScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
+
+Other tools can consume the public API without scanning files or invoking the CLI:
+
+```python
+from pathlib import Path
+from cerberus import load_source_scope
+
+scope = load_source_scope(Path("/path/to/repository"))
+scope.is_production_file("infra/deploy.py")  # True with bundled defaults
+scope.is_test_file("apps/widget/tests/widget.test.tsx")  # True
+scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
+```
+
+`load_source_scope` reads the defaults and repository overlay. The returned `SourceScope` classifies repository-relative POSIX paths without filesystem access; the caller owns file discovery and any generated-file filtering.
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 

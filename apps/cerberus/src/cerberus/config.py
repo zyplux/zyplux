@@ -5,12 +5,15 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import TYPE_CHECKING, Any
 
+from cerberus.source_scope import SourceScope
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 @dataclass(frozen=True)
 class Config:
+    source: SourceScope
     default_recipe_marker: str
     required_aliases: dict[str, str]
     recommended_aliases: dict[str, str]
@@ -22,12 +25,10 @@ class Config:
     ci_required_ts: tuple[str, ...]
     ci_required_python: tuple[str, ...]
     pyrefly_error_kinds: frozenset[str]
-    pyrefly_prod_workspaces: tuple[str, ...]
     ruff_sanctioned_ignore: frozenset[str]
     ruff_sanctioned_test_ignore: frozenset[str]
     line_width: int
     rumdl_canonical: str
-    knip_prod_workspaces: tuple[str, ...]
     knip_prod_allowed_exclude: list[str]
     knip_allowed_customizations: dict[str, frozenset[str]]
     pytest_min_coverage: int
@@ -61,7 +62,7 @@ def _recipes(entries: list[dict[str, str]]) -> tuple[str, ...]:
 
 
 def _from_dict(data: dict[str, Any]) -> Config:
-    """Build a Config from per-bite tables: every setting lives under `[<bite id>]`.
+    """Build a Config from shared source conventions and per-bite tables.
 
     Strict on purpose: every key is required, so the bundled cerberus.toml is
     the single home of every default and a missing key fails loudly instead of
@@ -75,7 +76,13 @@ def _from_dict(data: dict[str, Any]) -> Config:
     ruff = _table(data, "ruff")
     knip = _table(data, "knip")
     jscpd = _table(data, "jscpd")
+    for section in ("knip", "pyrefly"):
+        if "prod_workspaces" in _table(data, section):
+            msg = f"Move [{section}].prod_workspaces to [source].production_roots in cerberus.toml"
+            raise ValueError(msg)
+    source = _table(data, "source")
     return Config(
+        source=SourceScope(tuple(source["production_roots"]), tuple(source["test_files"])),
         default_recipe_marker=justfile["default_recipe_marker"],
         required_aliases=_aliases(required),
         recommended_aliases=_aliases(recommended),
@@ -87,12 +94,10 @@ def _from_dict(data: dict[str, Any]) -> Config:
         ci_required_ts=tuple(_table(ci, "required")["ts"]),
         ci_required_python=tuple(_table(ci, "required")["python"]),
         pyrefly_error_kinds=frozenset(pyrefly["error_kinds"]),
-        pyrefly_prod_workspaces=tuple(pyrefly["prod_workspaces"]),
         ruff_sanctioned_ignore=frozenset(ruff["sanctioned_ignore"]),
         ruff_sanctioned_test_ignore=frozenset(ruff["sanctioned_test_ignore"]),
         line_width=_table(data, "line_length")["width"],
         rumdl_canonical=_table(data, "rumdl")["canonical"],
-        knip_prod_workspaces=tuple(knip["prod_workspaces"]),
         knip_prod_allowed_exclude=list(knip["prod_allowed_exclude"]),
         knip_allowed_customizations={
             key: frozenset(names) for key, names in _table(knip, "allowed_customizations").items()
@@ -129,3 +134,8 @@ def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     if repo_toml is not None and repo_toml.is_file():
         data = _overlay(data, tomllib.loads(repo_toml.read_text()))
     return _from_dict(data)
+
+
+def load_source_scope(repo_root: Path) -> SourceScope:
+    """Load shared defaults overlaid by the repository's cerberus.toml."""
+    return load(repo_root=repo_root).source

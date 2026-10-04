@@ -103,7 +103,7 @@ _TOOLS_LAYOUT = {
     "tools/lint/package.json": '{"name": "@demo/lint"}',
 }
 
-_TOOLS_ARE_PRODUCTION = '[knip]\nprod_workspaces = ["apps/*", "packages/*", "tools/*"]\n'
+_TOOLS_ARE_PRODUCTION = '[source]\nproduction_roots = ["apps/*", "packages/*", "tools/*"]\n'
 
 
 @pytest.fixture

@@ -196,7 +196,32 @@ def test_6_9_1_type_checks_a_configured_production_workspace_outside_the_default
 ) -> None:
     result = run_pyrefly(
         paths=["tools/lint/src/lint/cli.py"],
-        config_toml='[pyrefly]\nprod_workspaces = ["tools/*"]\n',
+        config_toml='[source]\nproduction_roots = ["tools/*"]\n',
     )
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: tools/lint/src")]
+
+
+def test_6_4_3_requires_coverage_for_flat_and_nested_infrastructure_source(
+    run_pyrefly: RunPyrefly, fail: MakeFinding
+) -> None:
+    result = run_pyrefly(paths=["infra/deploy.py", "infra/hosts/vps/deploy.py"])
+
+    assert result.findings == [fail("pyrefly.toml project-includes does not cover: infra")]
+
+
+def test_6_4_4_requires_coverage_for_tests_inside_a_production_workspace(
+    run_pyrefly: RunPyrefly, fail: MakeFinding
+) -> None:
+    result = run_pyrefly(paths=["apps/cerberus/src/cli.py", "apps/cerberus/tests/test_cli.py"])
+
+    assert result.findings == [fail("pyrefly.toml project-includes does not cover: apps/cerberus/tests")]
+
+
+def test_6_9_2_supports_production_roots_at_any_directory_depth(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+    result = run_pyrefly(
+        paths=["services/internal/worker/src/worker.py"],
+        config_toml='[source]\nproduction_roots = ["services/internal/*"]\n',
+    )
+
+    assert result.findings == [fail("pyrefly.toml project-includes does not cover: services/internal/worker/src")]

@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from cerberus import workspaces
 from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
     from cerberus.context import Context
+    from cerberus.source_scope import SourceScope
 
 ID = "pyrefly"
 SUMMARY = "all code, tests included, type-checks under strict pyrefly with no relaxations"
@@ -20,27 +20,24 @@ _REQUIRED_EXCLUDE_OVERRIDES = {"disable-project-excludes-heuristics": True, "use
 
 _TESTS_TOP = "tests"
 _NAMESPACE_DEPTH = 2
-_SRC_LAYOUT_DEPTH = 3
 
 
-def _python_roots(paths: list[str], prod_globs: tuple[str, ...]) -> tuple[set[str], set[str]]:
-    """The repo's production and test Python roots, by org layout convention.
-
-    A member the `prod_workspaces` globs name is production — its `src` subtree
-    when it has one, the member dir itself when it doesn't; `tests/<name>` is tests.
-    """
+def _python_roots(paths: list[str], source: SourceScope) -> tuple[set[str], set[str]]:
     production: set[str] = set()
     tests: set[str] = set()
     for path in paths:
         if not path.endswith(".py"):
             continue
         seg = path.split("/")
-        if seg[0] == _TESTS_TOP:
-            tests.add("/".join(seg[:_NAMESPACE_DEPTH]) if len(seg) > _NAMESPACE_DEPTH else _TESTS_TOP)
-        elif len(seg) > _NAMESPACE_DEPTH and workspaces.matches_globs("/".join(seg[:_NAMESPACE_DEPTH]), prod_globs):
-            src_layout = len(seg) > _SRC_LAYOUT_DEPTH and seg[_NAMESPACE_DEPTH] == "src"
-            depth = _SRC_LAYOUT_DEPTH if src_layout else _NAMESPACE_DEPTH
-            production.add("/".join(seg[:depth]))
+        if source.is_test_file(path):
+            tests.add(
+                "/".join(seg[:_NAMESPACE_DEPTH])
+                if seg[0] == _TESTS_TOP and len(seg) > _NAMESPACE_DEPTH
+                else str(PurePosixPath(path).parent)
+            )
+        elif (root := source.find_production_root(path)) is not None:
+            src = PurePosixPath(root) / "src"
+            production.add(str(src) if PurePosixPath(path).is_relative_to(src) else root)
     return production, tests
 
 
@@ -125,7 +122,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if pyproject is None:
         return res
 
-    production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.pyrefly_prod_workspaces)
+    production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source)
     if not production_roots and not test_roots:
         res.skip("no Python source")
         return res
