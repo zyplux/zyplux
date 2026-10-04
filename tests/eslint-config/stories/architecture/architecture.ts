@@ -22,8 +22,10 @@ export const test = libraryTest.extend<ArchitectureFixtures>({
         {
           compilerOptions: {
             paths: {
+              '#private': ['./packages/provider/src/private.ts'],
               '@provider/*': ['./packages/provider/src/*'],
               '@sample/consumer/*': ['./packages/consumer/src/*'],
+              '@sample/provider': ['./packages/provider/src/api.ts'],
               '@sample/provider/*': ['./packages/provider/src/*'],
             },
             strict: true,

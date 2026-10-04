@@ -26,7 +26,10 @@ export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurf
           : packages.find(item => reference.specifier === item.name || reference.specifier.startsWith(`${item.name}/`))
         : findPackageOwner(reference.resolvedFile, packages);
     if (consumer === undefined || provider === undefined || consumer === provider) return [];
-    const exportKey = `.${reference.specifier.slice(provider.name.length)}`;
+    const exportKey =
+      reference.specifier === provider.name || reference.specifier.startsWith(`${provider.name}/`)
+        ? `.${reference.specifier.slice(provider.name.length)}`
+        : '';
     return [{ ...reference, consumer, exportKey, provider }];
   });
   const runtimeDependencies = new Set(

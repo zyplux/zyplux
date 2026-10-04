@@ -50,6 +50,10 @@
 
 ### 34.6.6 workers resolve child paths relative to their declaring config
 
+### 34.6.7 workers preserve or override base url across multiple parents
+
+### 34.6.8 workers replace parent path maps instead of merging aliases
+
 ## 34.7 validating architecture configuration
 
 ### 34.7.1 rejects invalid architecture declarations

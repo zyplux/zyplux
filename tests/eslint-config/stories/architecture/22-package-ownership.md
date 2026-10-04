@@ -25,3 +25,5 @@
 ### 22.2.5 domain contract types are shared without implementation imports
 
 ### 22.2.6 ordinary relative imports retain their existing semantics
+
+### 22.2.7 a resolved private alias cannot borrow the public root entry

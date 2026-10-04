@@ -172,17 +172,42 @@ def test_34_4_2_project_references_resolve_jsonc_and_inherited_workspace_configs
     ("side_effects", "has_failure"),
     [(False, True), (True, False), (["./dist/register.js"], False), (["./dist/other.js"], True), (None, True)],
 )
+@pytest.mark.parametrize(
+    "source",
+    [
+        "registerMatchers();",
+        "const registerMatchers = () => { expect.extend({}); return {}; }; export const matchers = registerMatchers();",
+        "function registerMatchers() { expect.extend({}); return {}; } export const matchers = registerMatchers();",
+        (
+            "const register = () => { expect.extend({}); }; "
+            "const initialize = () => register(); export const ready = initialize();"
+        ),
+    ],
+)
 def test_34_5_1_side_effect_metadata_preserves_registration_modules(
-    run_check_with_files: RunCheckWithFiles, side_effects: object, *, has_failure: bool
+    run_check_with_files: RunCheckWithFiles, side_effects: object, source: str, *, has_failure: bool
 ) -> None:
     files = _workspace({"library": {"exports": {"./register": "./src/register.ts"}, "sideEffects": side_effects}})
-    files["packages/library/src/register.ts"] = "registerMatchers();"
+    files["packages/library/src/register.ts"] = source
     assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
 
 
-def test_34_5_2_pure_libraries_may_declare_no_side_effects(run_check_with_files: RunCheckWithFiles) -> None:
+@pytest.mark.parametrize(
+    "source",
+    [
+        'export * from "./api.ts";',
+        "export const buildSchema = () => { const schema = z.object({}); return schema; };",
+        "export function register() { expect.extend({}); }",
+        'export class Reporter { record() { console.log("recording"); } }',
+        "export const schema = z.object({});",
+        "const collect = (depth = 0) => depth > 0 ? collect(depth - 1) : []; export const entries = collect();",
+    ],
+)
+def test_34_5_2_pure_libraries_may_declare_no_side_effects(
+    run_check_with_files: RunCheckWithFiles, source: str
+) -> None:
     files = _workspace({"library": {"exports": {".": "./src/index.ts"}, "sideEffects": False}})
-    files["packages/library/src/index.ts"] = 'export * from "./api.ts";'
+    files["packages/library/src/index.ts"] = source
     assert not run_check_with_files("package_side_effects", files).problems
 
 
@@ -317,4 +342,49 @@ def test_34_6_6_workers_resolve_child_paths_relative_to_their_declaring_config(
     }
     assert run_check_with_files("worker_runtime", files).problems
     files["apps/worker/src/entry.ts"] = "export const ready = true;"
+    assert not run_check_with_files("worker_runtime", files).problems
+
+
+@pytest.mark.parametrize("later_base", [None, "alternate"])
+@pytest.mark.parametrize("paths_owner", ["base", "worker"])
+def test_34_6_7_workers_preserve_or_override_base_url_across_multiple_parents(
+    run_check_with_files: RunCheckWithFiles, later_base: str | None, paths_owner: str
+) -> None:
+    entry = f"{later_base}/src/entry.ts" if later_base is not None else "src/entry.ts"
+    aliases = {"paths": {"shared": ["src/entry.ts"]}}
+    files = {
+        "tsconfig.base.json": json.dumps({
+            "compilerOptions": {"baseUrl": ".", **(aliases if paths_owner == "base" else {})}
+        }),
+        "tsconfig.strict.json": json.dumps({
+            "compilerOptions": {"strict": True, **({"baseUrl": later_base} if later_base is not None else {})}
+        }),
+        "apps/worker/tsconfig.json": json.dumps({
+            "extends": ["../../tsconfig.base.json", "../../tsconfig.strict.json"],
+            "compilerOptions": aliases if paths_owner == "worker" else {},
+        }),
+        "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
+        "apps/worker/src/index.ts": 'import "shared";',
+        "apps/worker/src/entry.ts": "export const ready = true;",
+        entry: 'import "node:fs";',
+    }
+    assert run_check_with_files("worker_runtime", files).problems
+    files[entry] = "export const ready = true;"
+    assert not run_check_with_files("worker_runtime", files).problems
+
+
+@pytest.mark.parametrize("later_paths", [{}, {"other": ["src/entry.ts"]}])
+def test_34_6_8_workers_replace_parent_path_maps_instead_of_merging_aliases(
+    run_check_with_files: RunCheckWithFiles, later_paths: dict[str, list[str]]
+) -> None:
+    files = _workspace({"shared": {"exports": {".": "./src/index.ts"}}})
+    files.update({
+        "tsconfig.base.json": '{"compilerOptions":{"baseUrl":".","paths":{"shared":["src/entry.ts"]}}}',
+        "tsconfig.strict.json": json.dumps({"compilerOptions": {"paths": later_paths}}),
+        "apps/worker/tsconfig.json": '{"extends":["../../tsconfig.base.json","../../tsconfig.strict.json"]}',
+        "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
+        "apps/worker/src/index.ts": 'import "shared";',
+        "packages/shared/src/index.ts": "export const ready = true;",
+        "src/entry.ts": 'import "node:fs";',
+    })
     assert not run_check_with_files("worker_runtime", files).problems

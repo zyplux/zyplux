@@ -6,8 +6,11 @@ from typing import TYPE_CHECKING
 from cerberus.architecture import is_library, run_package_policy
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import Scope
+from cerberus.ts_syntax import node_text
 
 if TYPE_CHECKING:
+    from tree_sitter import Node
+
     from cerberus.context import Context
     from cerberus.graph.resolve_ts import PackageInfo
     from cerberus.model import CheckResult, Repo
@@ -15,6 +18,47 @@ if TYPE_CHECKING:
 ID = "package_side_effects"
 SUMMARY = "Libraries declare side effects and preserve modules that execute registration or initialization"
 SCOPE = Scope.CONTENT
+
+
+def _executes_statement(node: Node, functions: dict[str, Node], active: frozenset[str] = frozenset()) -> bool:
+    if node.type == "expression_statement":
+        return True
+    if node.type in {
+        "arrow_function",
+        "function_expression",
+        "function_declaration",
+        "generator_function_declaration",
+        "method_definition",
+    }:
+        return False
+    if node.type == "call_expression":
+        callee = node.child_by_field_name("function")
+        name = node_text(callee) if callee is not None else ""
+        function = functions.get(name)
+        if function is not None and name not in active:
+            body = function.child_by_field_name("body")
+            if body is not None and _executes_statement(body, functions, active | {name}):
+                return True
+    return any(_executes_statement(child, functions, active) for child in node.named_children)
+
+
+def _executes_initialization(root: Node) -> bool:
+    functions = {}
+    for statement in root.named_children:
+        declaration = statement.child_by_field_name("declaration") or statement
+        if declaration.type == "function_declaration":
+            name = declaration.child_by_field_name("name")
+            if name is not None:
+                functions[node_text(name)] = declaration
+        for binding in declaration.named_children:
+            name, initializer = binding.child_by_field_name("name"), binding.child_by_field_name("value")
+            if (
+                name is not None
+                and initializer is not None
+                and initializer.type in {"arrow_function", "function_expression"}
+            ):
+                functions[node_text(name)] = initializer
+    return _executes_statement(root, functions)
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
@@ -39,7 +83,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             if content is None:
                 continue
             tree = parse_typescript(path, content)
-            if not any(node.type == "expression_statement" for node in tree.root_node.named_children):
+            if not _executes_initialization(tree.root_node):
                 continue
             built = "dist/" + path.removeprefix(prefix).rsplit(".", 1)[0] + ".js"
             if metadata is False or not any(

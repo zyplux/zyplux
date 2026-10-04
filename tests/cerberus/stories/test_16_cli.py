@@ -372,7 +372,7 @@ def test_16_4_3_explains_replacements_for_retired_bites(
     result = invoke_lint("--check", retired)
     assert result.exit_code == USAGE_ERROR_EXIT
     assert f"retired bite `{retired}`" in result.output
-    assert "ESLint test-seam-only-imports/package-imports" in result.output
+    assert "test-seam-only-imports/package-imports" in result.output
     (conforming_repo / "cerberus.toml").write_text(f"[{retired}]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output

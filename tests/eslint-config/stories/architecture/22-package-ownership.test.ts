@@ -71,4 +71,15 @@ describe('22.2 preserving type ownership', () => {
       }),
     ).toEqual([]);
   });
+
+  test('22.2.7 a resolved private alias cannot borrow the public root entry', async ({ lintArchitecture }) => {
+    const reports = await lintArchitecture({
+      ...workspace,
+      'packages/consumer/src/entry.ts':
+        'import { fetchResponse } from "@sample/provider"; import type { Secret } from "#private"; export const response: Secret = fetchResponse();',
+      'packages/provider/package.json': '{"name":"@sample/provider","exports":{".":"./src/api.ts"}}',
+      'packages/provider/src/private.ts': 'export type Secret = string;',
+    });
+    expect(reports.map(report => report.message)).toEqual([expect.stringContaining('not a public package entry')]);
+  });
 });
