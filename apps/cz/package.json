@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "cli",
@@ -64,6 +64,7 @@
     "@optique/core": "catalog:",
     "@optique/run": "catalog:",
     "@zyplux/util": "workspace:*",
+    "vitest": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

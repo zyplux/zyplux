@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from typer.testing import CliRunner
 
+pytestmark = pytest.mark.usefixtures("_restore_signal_handlers")
+
 FAKE_JUST_EXIT_CODE = 7
 
 # 1.1 wrapping just so every run is logged

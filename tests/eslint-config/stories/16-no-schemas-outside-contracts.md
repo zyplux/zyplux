@@ -17,3 +17,9 @@
 ## 16.3 scoping the rule to implementation files
 
 ### 16.3.1 enables the rule while exempting contracts entrypoints and child modules
+
+## 16.4 keeping schema collections in contracts
+
+### 16.4.1 rejects schema collection exports: %s
+
+### 16.4.2 permits ordinary configuration objects

@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import signal
 import stat
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -14,7 +15,6 @@ from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
-    from pathlib import Path
 
 RESTORED_SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGWINCH)
 
@@ -24,7 +24,7 @@ def cli() -> CliRunner:
     return CliRunner()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _restore_signal_handlers() -> Generator[None]:
     """justpty installs real SIGINT/SIGTERM/SIGHUP/SIGWINCH handlers around each PTY run; restore pytest's own."""
     saved = {sig: signal.getsignal(sig) for sig in RESTORED_SIGNALS}
@@ -48,3 +48,26 @@ def fake_just(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[[str]
         return just_path
 
     return install
+
+
+@pytest.fixture
+def serial_tests(pytester: pytest.Pytester) -> pytest.Pytester:
+    pytester.makeconftest((Path(__file__).parents[2] / "conftest.py").read_text())
+    pytester.makeini("[pytest]\naddopts = -n 2\nmarkers = no_xdist\n")
+    pytester.makepyfile(
+        test_jobs="""
+        from pathlib import Path
+        from clipy.justpty import watchable
+        import pytest
+
+        @pytest.mark.no_xdist
+        def test_serial():
+            assert not watchable(-1)
+            Path("serial-ran").touch()
+
+        def test_parallel():
+            __import__("totchef")
+            Path("parallel-ran").touch()
+    """
+    )
+    return pytester

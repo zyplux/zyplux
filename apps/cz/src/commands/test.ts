@@ -34,7 +34,7 @@ const parseFilterPattern = (name: string) => {
 const resolveJsFilters = async (name: string) => {
   const pattern = parseFilterPattern(name);
   const { createVitest } = await import('vitest/node');
-  const vitest = await createVitest('test', { passWithNoTests: true, watch: false });
+  const vitest = await createVitest({ passWithNoTests: true, watch: false });
   try {
     const { testModules } = await vitest.collect(undefined, { staticParse: true });
     const matches = testModules

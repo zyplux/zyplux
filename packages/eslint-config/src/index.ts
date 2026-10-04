@@ -46,10 +46,7 @@ export type ZypluxOptions = {
 
 const resolveRenderers = (react: ReactOption, domFiles: string[], nonDomFiles: string[]) => {
   if (react === false) return {};
-  if (react === true) {
-    return { dom: domFiles, ...(nonDomFiles.length > 0 && { opentui: nonDomFiles }) };
-  }
-  return react;
+  return react === true ? { dom: domFiles, ...(nonDomFiles.length > 0 && { opentui: nonDomFiles }) } : react;
 };
 
 const create = (options: ZypluxOptions = {}) => {

@@ -20,7 +20,7 @@ export type LiveWorkspace = {
 
 export type PendingCerberusOptions = {
   published?: RegistryPublishedState;
-  tagRunPolls?: [string, ...string[]];
+  tagRunPolls?: [string[], ...string[][]];
 };
 
 export type Registries = {
@@ -29,13 +29,17 @@ export type Registries = {
 };
 
 export type Release = {
+  completeRunAfter: (runId: string, predecessorId: string, conclusion: string) => void;
+  queueRun: (runId: string, first: RunState, ...later: RunState[]) => void;
   stageAllPublished: () => void;
   stagePendingCerberus: (options?: PendingCerberusOptions) => void;
   stagePendingCerberusAndCiImage: () => void;
 };
 
 export type Repo = {
-  queuePrFields: (fields: Record<string, [string, ...string[]] | string>) => void;
+  queuePrFields: (
+    fields: Record<string, [boolean | number | string, ...(boolean | number | string)[]] | boolean | number | string>,
+  ) => void;
   setCopilotReviewedHead: (sha: string) => void;
   setCurrentBranch: (branch: string) => void;
   setHeadSha: (sha: string) => void;
@@ -68,6 +72,8 @@ type RegistryPublishedState = {
   pypiEverVisible?: boolean;
   pypiPublished?: boolean;
 };
+
+type RunState = { conclusion?: string; status: string };
 
 type TargetFacts = { dir: string; label: string; tag: string; version: string };
 
@@ -112,22 +118,29 @@ export const createRepo = (shell: ShellFake, { path: tempPath }: TempDir) => {
   return {
     queuePrFields: fields => {
       for (const [field, values] of Object.entries(fields)) {
-        const queued: [string, ...string[]] = typeof values === 'string' ? [values] : values;
-        shell.on(`gh pr view --jq .${field}`, ...queued);
+        const [first, ...later] = Array.isArray(values) ? values : [values];
+        shell.on(
+          `gh pr view --json ${field}`,
+          JSON.stringify({ [field]: first }),
+          ...later.map(value => JSON.stringify({ [field]: value })),
+        );
       }
     },
     setCopilotReviewedHead: sha => {
-      shell.on('gh api', sha);
+      shell.on(
+        /^gh api repos\//,
+        JSON.stringify([{ commit_id: sha, user: { login: 'copilot-pull-request-reviewer[bot]' } }]),
+      );
     },
     setCurrentBranch,
     setHeadSha,
     setPrListState: state => {
-      shell.on('gh pr list', state);
+      shell.on('gh pr list', JSON.stringify(state ? [{ state }] : []));
     },
     setRemoteBranchSha,
     setRemoteMainSha,
     setRepoSlug: slug => {
-      shell.on('gh repo view --jq .nameWithOwner', slug);
+      shell.on('gh repo view --json nameWithOwner', JSON.stringify({ nameWithOwner: slug }));
     },
     setRoot,
     setWorkingTreeStatus,
@@ -174,8 +187,6 @@ export const createRegistries = (network: FetchFake) =>
     },
   }) satisfies Registries;
 
-const KNOWN_RUNS_PATTERN = /--json databaseId --workflow/;
-const TAG_RUNS_PATTERN = /--json databaseId,headBranch/;
 const NODE_INDEX_URL = 'https://nodejs.org/dist/index.json';
 const DOCKER_AUTH_URL = 'https://auth.docker.io/token?service=registry.docker.io&scope=repository:library/node:pull';
 const DOCKER_MANIFEST_URL = 'https://registry-1.docker.io/v2/library/node/manifests/';
@@ -209,28 +220,49 @@ export const createUpgradeWorkspace = (network: FetchFake, tempDir: TempDir): Up
   },
 });
 
-export const createRelease = (repo: Repo, registries: Registries, shell: ShellFake) =>
-  ({
+const renderRunIds = (ids: string[]) => JSON.stringify(ids.map(id => ({ databaseId: Number(id) })));
+
+const renderRun = ({ conclusion = '', status }: RunState) => JSON.stringify({ conclusion, status });
+
+export const createRelease = (repo: Repo, registries: Registries, shell: ShellFake) => {
+  const queueRun = (runId: string, first: RunState, ...later: RunState[]) => {
+    shell.on(`gh run view ${runId}`, renderRun(first), ...later.map(run => renderRun(run)));
+  };
+
+  return {
+    completeRunAfter: (runId, predecessorId, conclusion) => {
+      let isPredecessorCompleted = false;
+      shell.on(`gh run view ${predecessorId}`, () => {
+        isPredecessorCompleted = true;
+        return renderRun({ conclusion, status: 'completed' });
+      });
+      shell.on(`gh run view ${runId}`, () =>
+        renderRun({
+          conclusion,
+          status: isPredecessorCompleted ? 'completed' : 'in_progress',
+        }),
+      );
+    },
+    queueRun,
     stageAllPublished: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
     },
-    stagePendingCerberus: ({ published, tagRunPolls = ['100\n101\n999'] }: PendingCerberusOptions = {}) => {
+    stagePendingCerberus: ({ published, tagRunPolls = [['100', '101', '999']] }: PendingCerberusOptions = {}) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false, ...published });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100\n101');
-      shell.on(TAG_RUNS_PATTERN, ...tagRunPolls);
+      shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+      shell.on('gh run list', renderRunIds(['100', '101']), ...tagRunPolls.map(ids => renderRunIds(ids)));
     },
     stagePendingCerberusAndCiImage: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
-      shell.on('gh release list', 'false');
-      shell.on(KNOWN_RUNS_PATTERN, '100');
-      shell.on(/gh run list.*cerberus-v/, '100\n111');
-      shell.on(/gh run list.*ci-image-v/, '100\n222');
+      shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+      shell.on(/^gh run list --branch cerberus-v/, renderRunIds(['100']), renderRunIds(['100', '111']));
+      shell.on(/^gh run list --branch ci-image-v/, renderRunIds(['100']), renderRunIds(['100', '222']));
     },
-  }) satisfies Release;
+  } satisfies Release;
+};
 
 const SEEDED_MANIFEST = String.raw`[[target]]
 kind = "npm"

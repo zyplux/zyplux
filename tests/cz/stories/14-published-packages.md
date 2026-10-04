@@ -6,6 +6,10 @@
 
 An emitted nested manifest can shadow the publish-time exports and imports in the root manifest, so every npm release package contains only its root `package.json`. Every local path declared by `bin`, `exports`, or `imports` names a packed file. The workspace tests dogfood the ESLint config and `cz` through their public imports.
 
+### 14.1.2 filters tests from an isolated installation with only runtime dependencies
+
+The packed `cz` command accepts a test filter in a fresh project with no matching tests. Its installation has access to only the runtime dependencies declared in its packed manifest, so workspace development dependencies cannot hide missing imports.
+
 ## 14.2 selecting a module system
 
 ### 14.2.1 keeps module policy in environment presets

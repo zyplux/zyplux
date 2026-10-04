@@ -41,9 +41,9 @@ export const lintMatchers = registerMatchers({
 });
 
 declare module 'vitest' {
-  interface Matchers<T> {
-    toReport: (...messageIds: [string, ...string[]]) => T;
-    toReportNothing: () => T;
+  interface Matchers<R> {
+    toReport: (...messageIds: [string, ...string[]]) => R;
+    toReportNothing: () => R;
   }
 }
 

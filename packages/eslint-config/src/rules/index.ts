@@ -9,6 +9,7 @@ import { noTypePredicate } from './syntactic/no-type-predicate.ts';
 import { testSeamOnlyImports } from './syntactic/test-seam-only-imports.ts';
 import { typeOverInterface } from './syntactic/type-over-interface.ts';
 import { contractsOnlySchemas } from './type-aware/contracts-only-schemas.ts';
+import { maxNestedCalls } from './type-aware/max-nested-calls.ts';
 import { noReturnArrayPush } from './type-aware/no-return-array-push.ts';
 import { noSchemasOutsideContracts } from './type-aware/no-schemas-outside-contracts.ts';
 import { noStrayPascalConst } from './type-aware/no-stray-pascal-const.ts';
@@ -25,6 +26,7 @@ if (!upstreamPreferArrowFunctions) {
 export const rules: Record<string, EslintRule> = {
   'contracts-only-schemas': contractsOnlySchemas,
   'fixture-role-imports': fixtureRoleImports,
+  'max-nested-calls': maxNestedCalls,
   'no-anonymous-param-type': noAnonymousParamType,
   'no-identity-cast': noIdentityCast,
   'no-return-array-push': noReturnArrayPush,

@@ -34,7 +34,7 @@ registerMatchers({
 });
 
 declare module 'vitest' {
-  interface Matchers<T> {
-    toParseTomlAs: (outcome: TomlOutcome, expectedValue?: unknown) => T;
+  interface Matchers<R> {
+    toParseTomlAs: (outcome: TomlOutcome, expectedValue?: unknown) => R;
   }
 }

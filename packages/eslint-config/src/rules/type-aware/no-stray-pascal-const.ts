@@ -4,7 +4,7 @@ import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 
-import { hasZodBrand } from './zod-brand.ts';
+import { createSchemaDetector } from './zod-schema.ts';
 
 type ExpressionPredicate = (node: TSESTree.Expression) => boolean;
 
@@ -27,6 +27,7 @@ const schemaShapedTypes = new Set<TSESTree.Node['type']>([
   AST_NODE_TYPES.CallExpression,
   AST_NODE_TYPES.Identifier,
   AST_NODE_TYPES.MemberExpression,
+  AST_NODE_TYPES.ObjectExpression,
 ]);
 
 const defaultFactories = [
@@ -42,60 +43,41 @@ const defaultFactories = [
 const unwrapAssertion = (node: TSESTree.Expression): TSESTree.Expression => {
   if (node.type === AST_NODE_TYPES.TSAsExpression) return unwrapAssertion(node.expression);
   if (node.type === AST_NODE_TYPES.TSNonNullExpression) return unwrapAssertion(node.expression);
-  if (node.type === AST_NODE_TYPES.TSSatisfiesExpression) return unwrapAssertion(node.expression);
-  return node;
-};
-
-const calleeRoot = (node: TSESTree.Node): TSESTree.Node => {
-  if (node.type === AST_NODE_TYPES.CallExpression) return calleeRoot(node.callee);
-  if (node.type === AST_NODE_TYPES.MemberExpression) return calleeRoot(node.object);
-  return node;
-};
-
-const isZodRooted = (node: TSESTree.Expression) => {
-  const root = calleeRoot(node);
-  return root.type === AST_NODE_TYPES.Identifier && root.name === 'z';
+  return node.type === AST_NODE_TYPES.TSSatisfiesExpression ? unwrapAssertion(node.expression) : node;
 };
 
 const hasAllowedFactory: FactoryChainPredicate = (node, factories) => {
   if (node.type === AST_NODE_TYPES.CallExpression) return hasAllowedFactory(node.callee, factories);
   if (node.type === AST_NODE_TYPES.TaggedTemplateExpression) return hasAllowedFactory(node.tag, factories);
-  if (node.type === AST_NODE_TYPES.MemberExpression) {
-    if (!node.computed && node.property.type === AST_NODE_TYPES.Identifier && factories.has(node.property.name)) {
-      return true;
-    }
-    return hasAllowedFactory(node.object, factories);
-  }
-  return node.type === AST_NODE_TYPES.Identifier && factories.has(node.name);
+  return node.type === AST_NODE_TYPES.MemberExpression
+    ? (!node.computed && node.property.type === AST_NODE_TYPES.Identifier && factories.has(node.property.name)) ||
+        hasAllowedFactory(node.object, factories)
+    : node.type === AST_NODE_TYPES.Identifier && factories.has(node.name);
 };
 
 const isJsxProducing: ExpressionPredicate = node => {
   if (jsxTypes.has(node.type)) return true;
-  if (node.type === AST_NODE_TYPES.ConditionalExpression)
-    return isJsxProducing(node.consequent) || isJsxProducing(node.alternate);
-  if (node.type === AST_NODE_TYPES.LogicalExpression) return isJsxProducing(node.right);
-  return false;
+  return node.type === AST_NODE_TYPES.ConditionalExpression
+    ? isJsxProducing(node.consequent) || isJsxProducing(node.alternate)
+    : node.type === AST_NODE_TYPES.LogicalExpression && isJsxProducing(node.right);
 };
 
 const hasJsxReturn: StatementPredicate = statement => {
   if (statement.type === AST_NODE_TYPES.ReturnStatement) {
     return statement.argument !== null && isJsxProducing(statement.argument);
   }
-  if (statement.type === AST_NODE_TYPES.IfStatement) {
-    return hasJsxReturn(statement.consequent) || (statement.alternate !== null && hasJsxReturn(statement.alternate));
-  }
-  if (statement.type === AST_NODE_TYPES.BlockStatement) return statement.body.some(inner => hasJsxReturn(inner));
-  return false;
+  return statement.type === AST_NODE_TYPES.IfStatement
+    ? hasJsxReturn(statement.consequent) || (statement.alternate !== null && hasJsxReturn(statement.alternate))
+    : statement.type === AST_NODE_TYPES.BlockStatement && statement.body.some(inner => hasJsxReturn(inner));
 };
 
 const isComponentInit: ExpressionPredicate = node => {
   if (node.type === AST_NODE_TYPES.ArrowFunctionExpression) {
-    if (node.body.type === AST_NODE_TYPES.BlockStatement)
-      return node.body.body.some(statement => hasJsxReturn(statement));
-    return isJsxProducing(node.body);
+    return node.body.type === AST_NODE_TYPES.BlockStatement
+      ? node.body.body.some(statement => hasJsxReturn(statement))
+      : isJsxProducing(node.body);
   }
-  if (node.type === AST_NODE_TYPES.FunctionExpression) return node.body.body.some(statement => hasJsxReturn(statement));
-  return false;
+  return node.type === AST_NODE_TYPES.FunctionExpression && node.body.body.some(statement => hasJsxReturn(statement));
 };
 
 const isPascalCase = (name: string) => startsUppercaseExp.test(name) && lowercaseExp.test(name);
@@ -106,36 +88,28 @@ const isSchemaSuspectName = (name: string) => isPascalCase(name) || name.endsWit
 
 export const noStrayPascalConst = createRule<NoStrayPascalConstOptions, MessageId>({
   create: (context, [{ allowedFactories }]) => {
-    const services = ESLintUtils.getParserServices(context);
+    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
     const factories = new Set([...defaultFactories, ...allowedFactories]);
     const usedAsJsx = new Set<string>();
     const pendingStrays: { id: TSESTree.Identifier; name: string }[] = [];
-
-    const isZodSchemaValue = (value: TSESTree.Expression, isSuspect: boolean) =>
-      isZodRooted(value) || (isSuspect && hasZodBrand(services.getTypeAtLocation(value)));
 
     const checkConst = (id: TSESTree.Identifier, init: TSESTree.Expression) => {
       const { name } = id;
       const value = unwrapAssertion(init);
 
-      if (schemaShapedTypes.has(value.type)) {
-        if (isValidSchemaName(name)) return;
-        if (isZodSchemaValue(value, isSchemaSuspectName(name))) {
-          context.report({ data: { name }, messageId: 'schemaName', node: id });
-          return;
-        }
+      if (schemaShapedTypes.has(value.type) && isSchema(value)) {
+        if (!isValidSchemaName(name)) context.report({ data: { name }, messageId: 'schemaName', node: id });
+        return;
       }
 
-      if (!isPascalCase(name)) return;
-      if (hasAllowedFactory(value, factories)) return;
-      if (isComponentInit(value)) return;
+      if (!isPascalCase(name) || hasAllowedFactory(value, factories) || isComponentInit(value)) return;
       pendingStrays.push({ id, name });
     };
 
     const checkDestructuredBinding = (id: TSESTree.Identifier) => {
       const { name } = id;
       if (isValidSchemaName(name) || !isSchemaSuspectName(name)) return;
-      if (hasZodBrand(services.getTypeAtLocation(id))) {
+      if (isSchema(id)) {
         context.report({ data: { name }, messageId: 'schemaName', node: id });
       }
     };
@@ -173,7 +147,7 @@ export const noStrayPascalConst = createRule<NoStrayPascalConstOptions, MessageI
   meta: {
     docs: {
       description:
-        'Restrict PascalCase `const` declarations to the things that warrant them — zod schemas (which must additionally be named `XxxSchema`), React components, and a configurable allowlist of factory calls — and fold in zod schema naming. Type-aware: a value is recognized as a zod schema by its Standard Schema brand (`~standard`/`_zod`) through the type checker, so schemas built by a custom factory, by composition (`Base.partial()`), through an aliased import, or pulled out by destructuring are detected — not only literal `z.…()` construction. Cheap syntactic checks gate the type query: the checker is consulted only for a schema-shaped initializer whose name is already PascalCase- or `Schema`-suspect and is not literally rooted at `z` (recognized syntactically, so every `z.…` schema is caught regardless of name). Any PascalCase const that is not a schema, not a component (an arrow/function returning JSX, or used as a JSX element in the same file), and not produced by an allowed factory (defaults: `createContext`, `createFileRoute`, `createRootRoute`, `createServerFn`, `forwardRef`, `lazy`, `memo`; extend with `allowedFactories`) is reported as a stray. `naming-convention` stays permissive on PascalCase variables; this rule is the semantic gate.',
+        'Reserve PascalCase constants for Zod schemas, schema-only plain objects, React components, and allowed factory results. Schemas and schema collections use a Schema suffix. Shared type-aware detection recognizes composition, factories, aliases, and destructured schema values.',
       requiresTypeChecking: true,
     },
     messages: {

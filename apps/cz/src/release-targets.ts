@@ -54,10 +54,9 @@ const isPackagePublished = async ({ kind, label }: Target, version: string) => {
   if (kind === 'npm') {
     return isHttpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
   }
-  if (kind === 'pypi') {
-    return isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`);
-  }
-  return isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
+  return kind === 'pypi'
+    ? isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`)
+    : isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
 };
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {

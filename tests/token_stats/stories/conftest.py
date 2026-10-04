@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _fake_tokenizer_backend(monkeypatch: pytest.MonkeyPatch) -> None:
     def count_words(_encoding_key: str, text: str) -> int:
         return len(text.split())

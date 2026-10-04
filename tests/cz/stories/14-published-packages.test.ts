@@ -17,6 +17,15 @@ describe('14.1 packing release targets', () => {
       ).toEqual([]);
     }
   });
+
+  test('14.1.2 filters tests from an isolated installation with only runtime dependencies', async ({
+    packagedCz,
+    tempDir,
+  }) => {
+    await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
+
+    await expect(packagedCz.run('test', 'no-matching-tests')).resolves.toBeUndefined();
+  });
 });
 
 describe('14.2 selecting a module system', () => {

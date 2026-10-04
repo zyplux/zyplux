@@ -80,13 +80,13 @@ export const storyMatchers = registerMatchers({
 });
 
 declare module 'vitest' {
-  interface Matchers<T> {
-    toContainExactElementsInAnyOrder: (expected: readonly unknown[]) => T;
-    toContainNoDuplicates: () => T;
-    toHaveErrored: (line?: LineMatch) => T;
-    toHaveLogged: (line?: LineMatch) => T;
-    toHaveRun: (command: string) => T;
-    toHaveRunMatching: (pattern: RegExp | string) => T;
-    toHaveWarned: (line?: LineMatch) => T;
+  interface Matchers<R> {
+    toContainExactElementsInAnyOrder: (expected: readonly unknown[]) => R;
+    toContainNoDuplicates: () => R;
+    toHaveErrored: (line?: LineMatch) => R;
+    toHaveLogged: (line?: LineMatch) => R;
+    toHaveRun: (command: string) => R;
+    toHaveRunMatching: (pattern: RegExp | string) => R;
+    toHaveWarned: (line?: LineMatch) => R;
   }
 }

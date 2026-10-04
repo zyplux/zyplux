@@ -42,11 +42,15 @@ export const noReturnArrayPush = createRule({
     return {
       CallExpression: node => {
         const callee = node.callee;
-        if (callee.type !== AST_NODE_TYPES.MemberExpression || callee.computed) return;
-        if (callee.property.type !== AST_NODE_TYPES.Identifier || !lengthReturningMethods.has(callee.property.name)) {
+        if (
+          callee.type !== AST_NODE_TYPES.MemberExpression ||
+          callee.computed ||
+          callee.property.type !== AST_NODE_TYPES.Identifier ||
+          !lengthReturningMethods.has(callee.property.name) ||
+          node.arguments.length === 0 ||
+          isDiscarded(node)
+        )
           return;
-        }
-        if (node.arguments.length === 0 || isDiscarded(node)) return;
 
         const receiverType = getConstrainedTypeAtLocation(services, callee.object);
         if (!isTypeArrayTypeOrUnionOfArrayTypes(receiverType, checker)) return;

@@ -40,3 +40,9 @@
 ## 15.5 scoping the rule to contracts files in the shipped config
 
 ### 15.5.1 enables the rule only for src contracts files
+
+## 15.6 recognizing plain schema collections
+
+### 15.6.1 accepts a %s
+
+### 15.6.2 rejects a %s

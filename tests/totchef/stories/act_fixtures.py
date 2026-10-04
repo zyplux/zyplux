@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from arrange_fixtures import RecipeBuilder
+    from arrange_fixtures import FakeHost, RecipeBuilder
 
 REPORT_MARKER = "##totchef-report##"
 
@@ -94,7 +94,7 @@ class Totchef:
 
 
 @pytest.fixture
-def totchef(recipe: RecipeBuilder, tmp_path: Path) -> Totchef:
+def totchef(recipe: RecipeBuilder, tmp_path: Path, _isolated_host: FakeHost) -> Totchef:
     return Totchef(recipe, tmp_path)
 
 
@@ -113,12 +113,12 @@ class Cli:
 
 
 @pytest.fixture
-def cli() -> Cli:
+def cli(_isolated_host: FakeHost) -> Cli:
     return Cli()
 
 
 @pytest.fixture
-def chef(tmp_path: Path) -> Callable[[RecipeBuilder], Totchef]:
+def chef(tmp_path: Path, _isolated_host: FakeHost) -> Callable[[RecipeBuilder], Totchef]:
     (
         """Run totchef against an independently arranged recipe, for a test exercising several """
         """recipes malformed differently. Pairs with `scenario`."""

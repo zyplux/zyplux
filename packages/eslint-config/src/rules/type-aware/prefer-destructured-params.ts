@@ -95,8 +95,8 @@ const isPlainPropertyRead = (member: TSESTree.MemberExpression) => {
 
 const propertyReadOf = (identifier: TSESTree.Node) => {
   const member = identifier.parent;
-  if (member?.type !== AST_NODE_TYPES.MemberExpression) return;
   if (
+    member?.type !== AST_NODE_TYPES.MemberExpression ||
     member.object !== identifier ||
     member.computed ||
     member.optional ||
@@ -221,8 +221,10 @@ export const preferDestructuredParams = createRule({
 
     const bindsDeclaredProperties = (param: TSESTree.Identifier, propertyNames: readonly string[]) => {
       const paramType = services.getTypeAtLocation(param);
-      if (isTypeAnyType(paramType)) return true;
-      return propertyNames.every(name => checker.getPropertyOfType(paramType, name) !== undefined);
+      return (
+        isTypeAnyType(paramType) ||
+        propertyNames.every(name => checker.getPropertyOfType(paramType, name) !== undefined)
+      );
     };
 
     const planParameter = (param: TSESTree.Parameter, declaredVariables: readonly TSESLint.Scope.Variable[]) => {
@@ -238,8 +240,7 @@ export const preferDestructuredParams = createRule({
       const partition = partitionReads(sourceCode, reads);
       if (!partition) return;
       const { aliasAbsorptions, directReads, propertyNames } = partition;
-      if (hasAliasRenameConflict(aliasAbsorptions)) return;
-      if (!bindsDeclaredProperties(param, propertyNames)) return;
+      if (hasAliasRenameConflict(aliasAbsorptions) || !bindsDeclaredProperties(param, propertyNames)) return;
 
       const introducedNames = new Set(propertyNames);
       const functionScope = paramVariable.scope;

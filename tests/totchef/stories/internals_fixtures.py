@@ -14,22 +14,24 @@ import totchef.terminal as terminal_module
 if TYPE_CHECKING:
     from types import ModuleType
 
+    from arrange_fixtures import FakeHost
+
 
 @pytest.fixture
-def log_internals() -> ModuleType:
+def log_internals(_isolated_host: FakeHost) -> ModuleType:
     return logs_module
 
 
 @pytest.fixture
-def log_pump() -> ModuleType:
+def log_pump(_isolated_host: FakeHost) -> ModuleType:
     return log_pump_module
 
 
 @pytest.fixture
-def terminal_internals() -> ModuleType:
+def terminal_internals(_isolated_host: FakeHost) -> ModuleType:
     return terminal_module
 
 
 @pytest.fixture
-def cook_runner_internals() -> ModuleType:
+def cook_runner_internals(_isolated_host: FakeHost) -> ModuleType:
     return cook_runner_module

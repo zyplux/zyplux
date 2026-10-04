@@ -9,16 +9,16 @@ describe('10.1 flagging misnamed zod schemas', () => {
     [
       '1 flags a z-rooted schema missing the Schema suffix or written in camelCase',
       [
-        'const User = z.object({ id: z.string() });',
-        'const userSchema = z.object({ id: z.string() });',
-        'const severity = z.union([a, b]);',
+        'import { z } from "zod"; const User = z.object({ id: z.string() });',
+        'import { z } from "zod"; const userSchema = z.object({ id: z.string() });',
+        'import { z } from "zod"; const severity = z.union([z.string(), z.number()]);',
       ],
     ],
     [
       '2 flags a chained z-rooted schema and one behind a satisfies annotation',
       [
-        'const Profile = z.object({}).refine(Boolean);',
-        'const ruleEntry = z.union([a, b]) satisfies z.ZodType<Entry>;',
+        'import { z } from "zod"; const Profile = z.object({}).refine(Boolean);',
+        'import { z } from "zod"; const ruleEntry = z.union([z.string(), z.number()]) satisfies z.ZodType<string | number>;',
       ],
     ],
     [
@@ -46,8 +46,8 @@ describe('10.1 flagging misnamed zod schemas', () => {
       [
         [
           "import { z } from 'zod';",
-          'const registry = { User: z.object({ id: z.string() }) };',
-          'const { User } = registry;',
+          'const RegistrySchema = { User: z.object({ id: z.string() }) };',
+          'const { User } = RegistrySchema;',
         ].join('\n'),
       ],
     ],
@@ -70,9 +70,9 @@ describe('10.3 permitting well-named schemas', () => {
     [
       '1 allows PascalCase schemas with the Schema suffix, plain or chained',
       [
-        'const UserSchema = z.object({ id: z.string() });',
-        'const OcrJobRowSchema = z.looseObject({ id: z.string() });',
-        'const ResponseSchema = z.array(z.string()).min(1);',
+        'import { z } from "zod"; const UserSchema = z.object({ id: z.string() });',
+        'import { z } from "zod"; const OcrJobRowSchema = z.looseObject({ id: z.string() });',
+        'import { z } from "zod"; const ResponseSchema = z.array(z.string()).min(1);',
       ],
     ],
     [
@@ -90,8 +90,8 @@ describe('10.3 permitting well-named schemas', () => {
       [
         [
           "import { z } from 'zod';",
-          'const registry = { User: z.object({ id: z.string() }) };',
-          'const { User: UserSchema } = registry;',
+          'const RegistrySchema = { User: z.object({ id: z.string() }) };',
+          'const { User: UserSchema } = RegistrySchema;',
         ].join('\n'),
       ],
     ],
@@ -113,7 +113,7 @@ describe('10.4 permitting non-schema names that are not PascalCase or not stray'
         ['const config = loadConfig();'],
         ['const total = items.length;'],
         ['const MAX_RETRIES = 3;'],
-        ['const { User } = registry;'],
+        ['const { User } = RegistrySchema;'],
       ],
     ],
     [
@@ -141,5 +141,17 @@ describe('10.4 permitting non-schema names that are not PascalCase or not stray'
 
   test.for(cases)('10.4.%s', ([, entries], { lintRule }) => {
     for (const [code, options] of entries) expect(lintRule(code, options)).toReportNothing();
+  });
+});
+
+describe('10.5 sharing schema collection detection', () => {
+  test('10.5.1 requires schema names for plain schema collections', ({ lintRule }) => {
+    expect(lintRule('import * as z from "zod"; const registry = { text: z.string() };')).toReport('schemaName');
+    expect(lintRule('import * as z from "zod"; const RegistrySchema = { text: z.string() };')).toReportNothing();
+  });
+
+  test('10.5.2 does not confuse parsing or an unrelated z object with a schema', ({ lintRule }) => {
+    expect(lintRule('import * as z from "zod"; const text = z.string().parse("text");')).toReportNothing();
+    expect(lintRule('const z = { object: () => 1 }; const count = z.object();')).toReportNothing();
   });
 });

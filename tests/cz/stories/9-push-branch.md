@@ -28,6 +28,8 @@
 
 ### 9.4.4 rejects when the PR never reports draft state
 
+### 9.4.5 uses the latest Copilot review despite other authors and deleted accounts
+
 ## 9.5 flipping a draft PR back to ready
 
 ### 9.5.1 flips an existing draft PR to ready after pushing
@@ -45,3 +47,5 @@
 ### 9.6.3 schedules auto-merge for any other mergeable state
 
 ### 9.6.4 rejects when the merge state stays UNKNOWN
+
+Check at most ten times, one second apart, to allow GitHub to calculate mergeability.

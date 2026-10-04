@@ -93,11 +93,16 @@ def build_pin_origin(repo: AptRepoEntry) -> str:
     return host
 
 
+def render_pin_header(name: str) -> str:
+    return f"# {name}: prefer this origin's packages (overrides totchef's Ubuntu-archive pin).\n"
+
+
 def render_pin(name: str, origin: str, priority: int) -> str:
-    return (
-        f"# {name}: prefer this origin's packages (overrides totchef's Ubuntu-archive pin).\n"
-        f"Package: *\nPin: origin {origin}\nPin-Priority: {priority}\n"
-    )
+    return f"{render_pin_header(name)}Package: *\nPin: origin {origin}\nPin-Priority: {priority}\n"
+
+
+def is_managed_pin(name: str, preferences: Path) -> bool:
+    return preferences.is_file() and preferences.read_text(encoding="utf-8").startswith(render_pin_header(name))
 
 
 def install_repo_key(name: str, key_url: str, keyring: Path) -> bool:
@@ -109,9 +114,8 @@ def install_repo_key(name: str, key_url: str, keyring: Path) -> bool:
     return write_if_changed(keyring, data, note=f"{name} GPG key")
 
 
-def configure_repo(name: str, repo: AptRepoEntry, release: str) -> bool:
+def render_source(name: str, repo: AptRepoEntry, release: str) -> str:
     keyring = build_keyring_path(name, repo)
-    changed = install_repo_key(name, repo.key_url, keyring)
     lines = [
         "Types: deb",
         f"URIs: {repo.uris}",
@@ -123,10 +127,19 @@ def configure_repo(name: str, repo: AptRepoEntry, release: str) -> bool:
     if repo.architectures:
         lines.append(f"Architectures: {repo.architectures}")
     lines.append(f"Signed-By: {keyring}")
-    changed |= write_if_changed(build_source_path(name, repo), "\n".join(lines) + "\n")
+    return "\n".join(lines) + "\n"
+
+
+def configure_repo(name: str, repo: AptRepoEntry, release: str) -> bool:
+    changed = install_repo_key(name, repo.key_url, build_keyring_path(name, repo))
+    changed |= write_if_changed(build_source_path(name, repo), render_source(name, repo, release))
+    preferences = build_preferences_path(name, repo)
     if repo.pin_priority is not None:
         pin = render_pin(name, build_pin_origin(repo), repo.pin_priority)
-        changed |= write_if_changed(build_preferences_path(name, repo), pin)
+        changed |= write_if_changed(preferences, pin)
+    elif is_managed_pin(name, preferences):
+        preferences.unlink()
+        changed = True
     return changed
 
 
@@ -138,10 +151,25 @@ class AptRepoCook(StateCook[AptRepoEntry]):
     def get_current_state(self) -> dict[str, str]:
         states: dict[str, str] = {}
         for name, repo in self.entries.items():
-            present = build_keyring_path(name, repo).exists() and build_source_path(name, repo).exists()
-            if repo.pin_priority is not None:
-                present = present and build_preferences_path(name, repo).exists()
-            states[name] = "configured" if present else "absent"
+            source = build_source_path(name, repo)
+            present = (
+                build_keyring_path(name, repo).exists()
+                and source.exists()
+                and source.read_text() == render_source(name, repo, detect_release())
+            )
+            preferences = build_preferences_path(name, repo)
+            if repo.pin_priority is None:
+                present = present and not is_managed_pin(name, preferences)
+            else:
+                try:
+                    present = (
+                        present
+                        and preferences.exists()
+                        and preferences.read_text() == render_pin(name, build_pin_origin(repo), repo.pin_priority)
+                    )
+                except ValueError:
+                    present = False
+            states[name] = "configured" if present else "differs"
         return states
 
     @override

@@ -148,3 +148,48 @@ describe('15.5 scoping the rule to contracts files in the shipped config', () =>
     expect(contractEntries.map(entry => entry.files)).toEqual([['**/src/contracts.ts']]);
   });
 });
+
+const collectionCases: Case[] = [
+  ['direct collection', 'export const Schema = { text: z.string(), count: z.number() };'],
+  ['nested collection', 'export const Schema = { user: { name: z.string() }, id: z.string() };'],
+  [
+    'shared members',
+    'const ChildSchema = { text: z.string() }; export const Schema = { first: ChildSchema, second: ChildSchema };',
+  ],
+  ['frozen collection', 'export const Schema = Object.freeze({ text: z.string() });'],
+  [
+    'spread collection',
+    'const BaseSchema = { text: z.string() }; export const Schema = { ...BaseSchema, count: z.number() };',
+  ],
+  ['default collection', 'export default { text: z.string() };'],
+  ['named collection export', 'const Schema = { text: z.string() }; export { Schema };'],
+  ['imported collection', 'export { GhSchema } from "@zyplux/util/contracts";'],
+  ['schema union', 'declare const Schema: z.ZodString | z.ZodNumber; export { Schema };'],
+];
+
+const invalidCollections: Case[] = [
+  ['empty object', 'export const Schema = {};'],
+  ['mixed values', 'export const Schema = { text: z.string(), retries: 3 };'],
+  ['mixed nested values', 'export const Schema = { child: { text: z.string(), retries: 3 } };'],
+  ['mixed union', 'declare const Schema: z.ZodString | string; export { Schema };'],
+  ['mixed field union', 'declare const Schema: { text: z.ZodString | string }; export { Schema };'],
+  ['optional field', 'declare const Schema: { text?: z.ZodString }; export { Schema };'],
+  ['open record', 'declare const Schema: Record<string, z.ZodString>; export { Schema };'],
+  ['schema array', 'export const Schema = [z.string()];'],
+  ['class instance', 'class Registry { text = z.string(); } export const Schema = new Registry();'],
+  ['callable object', 'export const Schema = Object.assign(() => 1, { text: z.string() });'],
+  ['constructor', 'declare const Schema: { new(): object; text: z.ZodString }; export { Schema };'],
+  ['unknown', 'declare const Schema: unknown; export { Schema };'],
+  ['any', 'declare const Schema: any; export { Schema };'],
+  ['recursive object', 'type Recursive = { next: Recursive }; declare const Schema: Recursive; export { Schema };'],
+];
+
+describe('15.6 recognizing plain schema collections', () => {
+  test.for(collectionCases)('15.6.1 accepts a %s', ([, code], { lintRule }) => {
+    expect(lintRule(`import * as z from "zod"; ${code}`, contractsFile)).toReportNothing();
+  });
+
+  test.for(invalidCollections)('15.6.2 rejects a %s', ([, code], { lintRule }) => {
+    expect(lintRule(`import * as z from "zod"; ${code}`, contractsFile)).toReport('nonSchemaExport');
+  });
+});

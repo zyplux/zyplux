@@ -4,7 +4,7 @@ import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 
-import { hasZodBrand } from './zod-brand.ts';
+import { createSchemaDetector } from './zod-schema.ts';
 
 type MessageId = 'nonSchemaExport';
 
@@ -15,9 +15,7 @@ const typeDeclarationTypes = new Set<TSESTree.Node['type']>([
 
 export const contractsOnlySchemas = createRule<[], MessageId>({
   create: context => {
-    const services = ESLintUtils.getParserServices(context);
-
-    const isSchema = (node: TSESTree.Node) => hasZodBrand(services.getTypeAtLocation(node));
+    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
 
     const checkDeclarators = (declaration: TSESTree.VariableDeclaration) => {
       if (declaration.kind !== 'const') {
@@ -61,11 +59,12 @@ export const contractsOnlySchemas = createRule<[], MessageId>({
   meta: {
     docs: {
       description:
-        'Keep a contracts module (`src/contracts.ts`) to a schemas-only export surface: every exported value — named, re-exported, or default — must be a zod schema, verified through the type checker by the Standard Schema brand (`~standard`/`_zod`), so schemas built by composition, local helpers, or imported factories are recognized. Type(-only) exports are free. Everything non-exported is the module’s own business: imports from any module, local declarations, and statements go unchecked, so schemas may be computed from implementation vocabulary. A value `export *` is reported wholesale because its surface cannot be verified per name — use named re-exports; mutable exported bindings (`export let`) are reported since a contract must be stable. What this guarantees consumers: importing a contracts module only ever hands them schemas and types, never implementation.',
+        'Keep a contracts module (`src/contracts.ts`) to a schemas-only export surface: every exported value — named, re-exported, or default — must be a Zod schema or a nonempty plain object whose properties are all schemas, verified through the type checker by the Standard Schema brand (`~standard`/`_zod`), so schemas built by composition, local helpers, or imported factories are recognized. Type(-only) exports are free. Everything non-exported is the module’s own business: imports from any module, local declarations, and statements go unchecked, so schemas may be computed from implementation vocabulary. A value `export *` is reported wholesale because its surface cannot be verified per name — use named re-exports; mutable exported bindings (`export let`) are reported since a contract must be stable. What this guarantees consumers: importing a contracts module only ever hands them schemas, schema collections, and types, never implementation.',
       requiresTypeChecking: true,
     },
     messages: {
-      nonSchemaExport: 'A contracts module exports only zod schemas and types — move this export out of the contract.',
+      nonSchemaExport:
+        'A contracts module exports only Zod schemas, schema collections, and types — move this export out of the contract.',
     },
     schema: [],
     type: 'problem',

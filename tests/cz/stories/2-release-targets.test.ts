@@ -18,7 +18,9 @@ describe('2.1 loading release targets from the manifest', () => {
   }) => {
     release.stageAllPublished();
 
-    await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
+    await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      'nothing to release; all configured versions are already published or have a GitHub release',
+    );
 
     expect(logs).toHaveLogged('Skipping @zyplux/util 1.2.3 (already published)');
     expect(logs).toHaveLogged('Skipping zyplux-cerberus 2.3.4 (already published)');
@@ -45,9 +47,11 @@ describe('2.3 checking whether the ghcr image target is published', () => {
   }) => {
     release.stageAllPublished();
     registries.denyGhcrAuth();
-    shell.on('gh release list', 'true');
+    shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
 
-    await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
+    await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      'nothing to release; all configured versions are already published or have a GitHub release',
+    );
 
     expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (release ci-image-v3.4.5 already exists)');
     expect(logs).not.toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
@@ -65,7 +69,9 @@ describe("2.4 conforming the repo's own release manifest", () => {
     repo.setRoot(liveWorkspace.root);
     release.stageAllPublished();
 
-    await expect(cz.run('release-bumped-targets')).rejects.toThrow('nothing to release; bump a version first');
+    await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      'nothing to release; all configured versions are already published or have a GitHub release',
+    );
 
     const labels = await liveWorkspace.targetLabels();
     expect(labels).not.toHaveLength(0);

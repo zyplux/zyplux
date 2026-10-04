@@ -1,6 +1,7 @@
 import type { CliRunner } from '@zyplux/tests-fixtures/cli';
 
 import { cliTest, makeFixture } from '@zyplux/tests-fixtures/story';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import type { Catalog, PublishedPackage, TsconfigPresets } from './act.ts';
 import type {
@@ -14,7 +15,7 @@ import type {
   WriteArtifacts,
 } from './arrange.ts';
 
-import { createCatalog, createCz, loadPublishedPackages, loadTsconfigPresets } from './act.ts';
+import { createCatalog, createCz, createPackagedCz, loadPublishedPackages, loadTsconfigPresets } from './act.ts';
 import {
   createInitRepo,
   createLiveWorkspace,
@@ -32,10 +33,12 @@ type CzFixtures = {
   catalog: Catalog;
   cz: CliRunner;
   liveWorkspace: LiveWorkspace;
+  packagedCz: CliRunner;
   publishedPackages: PublishedPackage[];
   registries: Registries;
   release: Release;
   repo: Repo;
+  sleep: typeof sleep;
   tsconfigPresets: TsconfigPresets;
   upgradeWorkspace: UpgradeWorkspace;
 };
@@ -50,6 +53,9 @@ export const test = cliTest.extend<CzFixtures>({
   liveWorkspace: async ({}, use) => {
     await use(createLiveWorkspace());
   },
+  packagedCz: async ({ tempDir }, use) => {
+    await use(await createPackagedCz(tempDir));
+  },
   publishedPackages: async ({}, use) => {
     await use(loadPublishedPackages());
   },
@@ -62,6 +68,7 @@ export const test = cliTest.extend<CzFixtures>({
   repo: async ({ shell, tempDir }, use) => {
     await use(createRepo(shell, tempDir));
   },
+  sleep: makeFixture(sleep),
   tsconfigPresets: async ({}, use) => {
     await use(loadTsconfigPresets());
   },

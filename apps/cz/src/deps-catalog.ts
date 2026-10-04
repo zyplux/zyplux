@@ -93,8 +93,7 @@ const resolveViaRegistry = async (system: PackageSystem, name: string) => {
 
 const resolveSourceRepo = async (system: PackageSystem, name: string) => {
   const viaDepsDev = await resolveViaDepsDev(system, name);
-  if (viaDepsDev !== undefined) return viaDepsDev;
-  return resolveViaRegistry(system, name);
+  return viaDepsDev ?? resolveViaRegistry(system, name);
 };
 
 export const collectDepRepos = async (dir: string): Promise<DepReposReport> => {

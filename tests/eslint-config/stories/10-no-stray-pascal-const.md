@@ -24,3 +24,9 @@
 2. allows results of the default factory allowlist
 3. allows a factory added through the allowed factories option
 4. allows React components returning JSX or used as a JSX element in the same file
+
+## 10.5 sharing schema collection detection
+
+### 10.5.1 requires schema names for plain schema collections
+
+### 10.5.2 does not confuse parsing or an unrelated z object with a schema

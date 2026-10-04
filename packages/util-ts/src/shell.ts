@@ -1,6 +1,11 @@
+import type { ZodObject, ZodRawShape, ZodType } from 'zod';
+
+import type { GhPr, GhRelease, GhRepo, GhRun } from './contracts.ts';
 import type { ExecPromise } from './exec.ts';
 
+import { GhSchema } from './contracts.ts';
 import { run } from './exec.ts';
+import { parseJson } from './json.ts';
 
 type ShArg = (number | string)[] | number | string | undefined;
 
@@ -21,8 +26,6 @@ const sh = (strings: TemplateStringsArray, ...values: ShArg[]) => {
   return run(argv);
 };
 
-type ApiFlags = { input?: string; jq?: string; method?: string; paginate?: boolean };
-
 type BranchFlags = { delete?: boolean; force?: boolean };
 
 type CleanFlags = { dryRun?: boolean; protect?: string[] };
@@ -33,15 +36,18 @@ type CommandOutput = Awaited<ExecPromise>;
 
 type FlagValue = boolean | number | string | undefined;
 
+type JsonFields<Field extends string> = { jq?: never; json: readonly [Field, ...Field[]] };
+
 type PrCreateFlags = { base: string; body: string; draft?: boolean; title: string };
 
-type PrListFlags = { head?: string; jq?: string; json?: string; state?: string };
+type PrListFlags<Field extends keyof GhPr> = JsonFields<Field> & {
+  head?: string;
+  state?: 'all' | 'closed' | 'merged' | 'open';
+};
 
 type PrMergeFlags = { auto?: boolean; deleteBranch?: boolean; squash?: boolean };
 
 type PrReadyFlags = { undo?: boolean };
-
-type PrViewFlags = { jq?: string; json?: string };
 
 type PullFlags = { ffOnly?: boolean };
 
@@ -51,15 +57,13 @@ type ReleaseCreateFlags = { generateNotes?: boolean; target?: string; title?: st
 
 type ReleaseDeleteFlags = { cleanupTag?: boolean; yes?: boolean };
 
-type ReleaseListFlags = { jq?: string; json?: string };
-
-type RepoViewFlags = { jq?: string; json?: string };
-
 type RevParseFlags = { abbrevRef?: boolean };
 
-type RunListFlags = { event?: string; jq?: string; json?: string; workflow?: string };
-
-type RunViewFlags = { jq?: string; json?: string };
+type RunListFlags<Field extends keyof GhRun> = JsonFields<Field> & {
+  branch?: string;
+  event?: string;
+  workflow?: string;
+};
 
 type StatusFlags = { porcelain?: boolean };
 
@@ -67,36 +71,72 @@ const toKebab = (name: string) => name.replaceAll(/[A-Z]/g, char => `-${char.toL
 
 const flag = (name: string, value: FlagValue) => {
   if (value === undefined || value === false) return [];
-  if (value === true) return [`--${toKebab(name)}`];
-  return [`--${toKebab(name)}`, String(value)];
+  return value === true ? [`--${toKebab(name)}`] : [`--${toKebab(name)}`, String(value)];
 };
 
 const toArgs = (flags: Record<string, FlagValue>) =>
   Object.entries(flags).flatMap(([name, value]) => flag(name, value));
 
+const pickFields = <Shape extends ZodRawShape>(schema: ZodObject<Shape>, fields: readonly (keyof Shape)[]) => {
+  const mask: Parameters<typeof schema.pick>[0] = {};
+  for (const field of fields) Object.assign(mask, { [field]: true });
+  return schema.pick(mask);
+};
+
+const readGh = async <T>(argv: string[], schema: ZodType<T>) => {
+  const response = await sh`gh ${argv}`.quiet();
+  return parseJson(response.text(), schema);
+};
+
 const gh = {
-  api: async (endpoint: string, flags: ApiFlags = {}) => sh`gh ${['api', ...toArgs(flags), endpoint]}`.quiet(),
   pr: {
-    create: async (flags: PrCreateFlags) => sh`gh ${['pr', 'create', ...toArgs(flags)]}`,
-    disableAutoMerge: async () => sh`gh ${['pr', 'merge', '--disable-auto']}`.nothrow().quiet(),
-    list: async (flags: PrListFlags = {}) => sh`gh ${['pr', 'list', ...toArgs(flags)]}`.quiet(),
-    merge: async (flags: PrMergeFlags = {}) => sh`gh ${['pr', 'merge', ...toArgs(flags)]}`,
-    ready: async (flags: PrReadyFlags = {}) => sh`gh ${['pr', 'ready', ...toArgs(flags)]}`,
-    view: async (flags: PrViewFlags = {}) => sh`gh ${['pr', 'view', ...toArgs(flags)]}`.quiet(),
+    create: async (flags: PrCreateFlags) => {
+      await sh`gh ${['pr', 'create', ...toArgs(flags)]}`;
+    },
+    disableAutoMerge: async () => {
+      await sh`gh pr merge --disable-auto`.nothrow().quiet();
+    },
+    list: async <Field extends keyof GhPr>({ json, ...flags }: PrListFlags<Field>): Promise<Pick<GhPr, Field>[]> =>
+      readGh(['pr', 'list', ...toArgs(flags), '--json', json.join(',')], pickFields(GhSchema.pr, json).array()),
+    merge: async (flags: PrMergeFlags = {}) => {
+      await sh`gh ${['pr', 'merge', ...toArgs(flags)]}`;
+    },
+    ready: async (flags: PrReadyFlags = {}) => {
+      await sh`gh ${['pr', 'ready', ...toArgs(flags)]}`;
+    },
+    reviews: async (slug: string, number: number) =>
+      readGh(['api', `repos/${slug}/pulls/${number}/reviews?per_page=100`], GhSchema.reviews),
+    view: async <Field extends keyof GhPr>({ json }: JsonFields<Field>): Promise<Pick<GhPr, Field>> =>
+      readGh(['pr', 'view', '--json', json.join(',')], pickFields(GhSchema.pr, json)),
   },
   release: {
-    create: async (tag: string, flags: ReleaseCreateFlags = {}) =>
-      sh`gh ${['release', 'create', tag, ...toArgs(flags)]}`,
-    delete: async (tag: string, flags: ReleaseDeleteFlags = {}) =>
-      sh`gh ${['release', 'delete', tag, ...toArgs(flags)]}`,
-    list: async (flags: ReleaseListFlags = {}) => sh`gh ${['release', 'list', ...toArgs(flags)]}`.quiet(),
+    create: async (tag: string, flags: ReleaseCreateFlags = {}) => {
+      await sh`gh ${['release', 'create', tag, ...toArgs(flags)]}`;
+    },
+    delete: async (tag: string, flags: ReleaseDeleteFlags = {}) => {
+      await sh`gh ${['release', 'delete', tag, ...toArgs(flags)]}`;
+    },
+    exists: async (tag: string) => {
+      const query =
+        'query($owner: String!, $name: String!, $tag: String!) { repository(owner: $owner, name: $name) { release(tagName: $tag) { id } } }';
+      const { data } = await readGh(
+        ['api', 'graphql', '-F', 'owner={owner}', '-F', 'name={repo}', '-f', `tag=${tag}`, '-f', `query=${query}`],
+        GhSchema.releaseLookup,
+      );
+      return data.repository.release !== null;
+    },
+    list: async <Field extends keyof GhRelease>({ json }: JsonFields<Field>): Promise<Pick<GhRelease, Field>[]> =>
+      readGh(['release', 'list', '--json', json.join(',')], pickFields(GhSchema.release, json).array()),
   },
   repo: {
-    view: async (flags: RepoViewFlags = {}) => sh`gh ${['repo', 'view', ...toArgs(flags)]}`.quiet(),
+    view: async <Field extends keyof GhRepo>({ json }: JsonFields<Field>): Promise<Pick<GhRepo, Field>> =>
+      readGh(['repo', 'view', '--json', json.join(',')], pickFields(GhSchema.repo, json)),
   },
   run: {
-    list: async (flags: RunListFlags = {}) => sh`gh ${['run', 'list', ...toArgs(flags)]}`.quiet(),
-    view: async (runId: string, flags: RunViewFlags = {}) => sh`gh ${['run', 'view', runId, ...toArgs(flags)]}`.quiet(),
+    list: async <Field extends keyof GhRun>({ json, ...flags }: RunListFlags<Field>): Promise<Pick<GhRun, Field>[]> =>
+      readGh(['run', 'list', ...toArgs(flags), '--json', json.join(',')], pickFields(GhSchema.run, json).array()),
+    view: async <Field extends keyof GhRun>(runId: number, { json }: JsonFields<Field>): Promise<Pick<GhRun, Field>> =>
+      readGh(['run', 'view', String(runId), '--json', json.join(',')], pickFields(GhSchema.run, json)),
   },
 };
 

@@ -66,6 +66,23 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
   });
 
   describe('9.4 flipping an already-ready PR to draft before pushing', () => {
+    test('9.4.5 uses the latest Copilot review despite other authors and deleted accounts', async ({
+      cz,
+      repo,
+      shell,
+    }) => {
+      repo.syncFeatureBranch('feat-x', 'sha-local');
+      repo.setPrListState('OPEN');
+      repo.queuePrFields({ isDraft: [false, true, false], mergeStateStatus: 'CLEAN', number: 7, url: PR_URL });
+      repo.setRepoSlug('zyplux/zyplux');
+      shell.on(
+        'gh api',
+        '[{"commit_id":"old","user":{"login":"copilot"}},{"commit_id":"sha-local","user":{"login":"Copilot[bot]"}},{"commit_id":"other","user":{"login":"human"}},{"commit_id":"deleted","user":null}]',
+      );
+      await cz.run('push-branch', '--ready');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
+    });
+
     test('9.4.1 rejects the flip when nothing new to push and Copilot has not reviewed HEAD', async ({
       cz,
       repo,
@@ -73,7 +90,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: 'false', number: '7' });
+      repo.queuePrFields({ isDraft: false, number: 7 });
       repo.setRepoSlug('zyplux/zyplux');
       repo.setCopilotReviewedHead('sha-different');
 
@@ -86,9 +103,9 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('OPEN');
       repo.queuePrFields({
-        isDraft: ['false', 'true', 'false'],
+        isDraft: [false, true, false],
         mergeStateStatus: 'CLEAN',
-        number: '7',
+        number: 7,
         url: PR_URL,
       });
       repo.setRepoSlug('zyplux/zyplux');
@@ -109,7 +126,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.setCurrentBranch('feat-x');
       repo.setHeadSha('sha-local');
       repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: ['false', 'true', 'false'], mergeStateStatus: 'CLEAN', url: PR_URL });
+      repo.queuePrFields({ isDraft: [false, true, false], mergeStateStatus: 'CLEAN', url: PR_URL });
       repo.setRemoteBranchSha('feat-x', 'sha-remote-old', 'sha-local');
 
       await cz.run('push-branch', '--ready');
@@ -123,7 +140,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       repo.setCurrentBranch('feat-x');
       repo.setHeadSha('sha-local');
       repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: 'false' });
+      repo.queuePrFields({ isDraft: false });
       repo.setRemoteBranchSha('feat-x', 'sha-remote-old');
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('PR did not enter draft state before push');
@@ -135,7 +152,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.5.1 flips an existing draft PR to ready after pushing', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: ['true', 'false'], mergeStateStatus: 'CLEAN', url: PR_URL });
+      repo.queuePrFields({ isDraft: [true, false], mergeStateStatus: 'CLEAN', url: PR_URL });
 
       await cz.run('push-branch', '--ready');
 
@@ -148,7 +165,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.5.2 holds auto-merge when --hold is set', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: ['true', 'false'], url: PR_URL });
+      repo.queuePrFields({ isDraft: [true, false], url: PR_URL });
 
       await cz.run('push-branch', '--hold', '--ready');
 
@@ -159,7 +176,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.5.3 rejects when the PR never returns to ready state', async ({ cz, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
-      repo.queuePrFields({ isDraft: 'true', url: PR_URL });
+      repo.queuePrFields({ isDraft: true, url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
         'PR did not return to ready state; check the PR on GitHub',
@@ -172,7 +189,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.6.1 merges immediately when the merge state is clean', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
-      repo.queuePrFields({ isDraft: 'false', mergeStateStatus: 'CLEAN', url: PR_URL });
+      repo.queuePrFields({ isDraft: false, mergeStateStatus: 'CLEAN', url: PR_URL });
 
       await cz.run('push-branch', '--ready');
 
@@ -183,7 +200,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.6.2 rejects a dirty merge state', async ({ cz, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
-      repo.queuePrFields({ isDraft: 'false', mergeStateStatus: 'DIRTY', url: PR_URL });
+      repo.queuePrFields({ isDraft: false, mergeStateStatus: 'DIRTY', url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('merge conflict');
       expect(shell).not.toHaveRunMatching('gh pr merge');
@@ -192,7 +209,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     test('9.6.3 schedules auto-merge for any other mergeable state', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
-      repo.queuePrFields({ isDraft: 'false', mergeStateStatus: 'BEHIND', url: PR_URL });
+      repo.queuePrFields({ isDraft: false, mergeStateStatus: 'BEHIND', url: PR_URL });
 
       await cz.run('push-branch', '--ready');
 
@@ -200,15 +217,19 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       expect(logs).toHaveLogged(`PR ready, auto-merge scheduled (BEHIND): ${PR_URL}`);
     });
 
-    test('9.6.4 rejects when the merge state stays UNKNOWN', async ({ cz, repo, shell }) => {
+    test('9.6.4 rejects when the merge state stays UNKNOWN', async ({ cz, repo, shell, sleep }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
-      repo.queuePrFields({ isDraft: 'false', mergeStateStatus: 'UNKNOWN', url: PR_URL });
+      repo.queuePrFields({ isDraft: false, mergeStateStatus: 'UNKNOWN', url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
         'merge state stayed UNKNOWN; check the PR on GitHub',
       );
       expect(shell).not.toHaveRunMatching('gh pr merge');
+      const attempts = 10;
+      const intervalMs = 1000;
+      expect(sleep).toHaveBeenCalledTimes(attempts - 1);
+      expect(sleep).toHaveBeenLastCalledWith(intervalMs);
     });
   });
 });

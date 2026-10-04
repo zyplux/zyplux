@@ -26,8 +26,8 @@ RESULT_MARKER = "@@@RESULT@@@"
 
 podman = shutil.which("podman")
 
-# Captured before any test runs. The story suite's autouse fixtures redirect $HOME and
-# isolate $PATH in-process; rootless podman keys its image store off $HOME and needs its
+# Captured before any test runs. The story suite's isolation fixture redirects $HOME and
+# isolates $PATH in-process; rootless podman keys its image store off $HOME and needs its
 # runtime helpers on $PATH, so podman must run with the real environment, not the test's.
 CLEAN_ENV = dict(os.environ)
 

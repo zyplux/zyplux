@@ -57,3 +57,20 @@ describe('16.3 scoping the rule to implementation files', () => {
     ]);
   });
 });
+
+describe('16.4 keeping schema collections in contracts', () => {
+  test.for([
+    'export const Schema = { text: z.string() };',
+    'export default { nested: { text: z.string() } };',
+    'const Schema = { text: z.string() }; export { Schema };',
+    'export { GhSchema } from "@zyplux/util/contracts";',
+  ])('16.4.1 rejects schema collection exports: %s', (code, { lintRule }) => {
+    expect(lintRule(`import * as z from "zod"; ${code}`)).toReport('schemaExport');
+  });
+
+  test('16.4.2 permits ordinary configuration objects', ({ lintRule }) => {
+    expect(
+      lintRule('import * as z from "zod"; export const config = { text: z.string(), retries: 3 };'),
+    ).toReportNothing();
+  });
+});

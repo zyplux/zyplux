@@ -8,11 +8,12 @@ import { DepsCatalogSchema, ManifestSchema, VersionFieldSchema } from '@zyplux/c
 import { createCliRunner } from '@zyplux/tests-fixtures/cli';
 import { ensure, parseJson, parseToml } from '@zyplux/util';
 import { LooseRecordSchema } from '@zyplux/util/contracts';
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, symlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const configDir = path.join(workspaceRoot, 'packages/tsconfig');
@@ -57,8 +58,9 @@ const loadRecord = (file: string) => parseJson(readFileSync(file, 'utf8'), Loose
 
 const listPathTargets = (field: unknown): string[] => {
   if (typeof field === 'string') return field.startsWith('./') && !field.includes('*') ? [field] : [];
-  if (typeof field !== 'object' || field === null) return [];
-  return Object.values(field).flatMap(value => listPathTargets(value));
+  return typeof field !== 'object' || field === null
+    ? []
+    : Object.values(field).flatMap(value => listPathTargets(value));
 };
 
 const depsDevDefaultVersion = () =>
@@ -70,6 +72,27 @@ const depsDevSourceRepoResponse = (sourceRepo: DepsDevSourceRepo) =>
     : Response.json({ links: [{ label: 'SOURCE_REPO', url: `https://${sourceRepo.repo}` }] });
 
 export const createCz = () => createCliRunner(runCz);
+
+export const createPackagedCz = async (tempDir: TempDir) => {
+  const sourceDir = path.join(workspaceRoot, 'apps/cz');
+  const archive = path.join(tempDir.path, 'cz.tgz');
+  execFileSync('pnpm', ['pack', '--out', archive], { cwd: sourceDir, stdio: 'pipe' });
+  execFileSync('tar', ['-xzf', archive, '-C', tempDir.path]);
+  const packageDir = path.join(tempDir.path, 'package');
+  const manifest = loadRecord(path.join(packageDir, 'package.json'));
+  const dependencyNames = Object.keys(LooseRecordSchema.parse(manifest['dependencies']));
+  for (const name of dependencyNames) {
+    const dependency = path.join(packageDir, 'node_modules', name);
+    await mkdir(path.dirname(dependency), { recursive: true });
+    await symlink(path.join(sourceDir, 'node_modules', name), dependency, 'dir');
+  }
+  const entry = VersionFieldSchema.parse(LooseRecordSchema.parse(manifest['bin'])['cz']);
+  return {
+    run: async (...args) => {
+      await promisify(execFile)(process.execPath, [path.join(packageDir, entry), ...args], { cwd: tempDir.path });
+    },
+  } satisfies CliRunner;
+};
 
 const loadBoolean = (record: Record<string, unknown>, key: string) => {
   const value = record[key];

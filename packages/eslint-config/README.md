@@ -69,7 +69,7 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 
 ## What's always on
 
-- Custom `@zyplux` rules: `contracts-only-schemas` (on `**/src/contracts.ts` only), `fixture-role-imports` (on each discovered `tests/<basename>/fixtures/*.{ts,tsx}` suite, excepting `arrange.ts`/`act.ts` — only those two fixture roles may import the suite's subject package, its `/contracts` seam excepted), `no-anonymous-param-type`, `no-identity-cast`, `no-return-array-push`, `no-schemas-outside-contracts` (schema exports outside contracts modules), `no-stray-pascal-const`, `no-type-annotations`, `no-type-predicate`, `no-unvalidated-json`, `no-zod-custom`, `prefer-arrow-functions`, `prefer-destructured-params`, `test-seam-only-imports` (on `**/stories/*.test.{ts,tsx}` — a story test imports only `describe`, `expect`, and `test` from `#fixtures`; everything else reaches it as a fixture on the test context), `type-over-interface`.
+- Custom `@zyplux` rules: `contracts-only-schemas` (on `**/src/contracts.ts` only), `fixture-role-imports` (on each discovered `tests/<basename>/fixtures/*.{ts,tsx}` suite, excepting `arrange.ts`/`act.ts` — only those two fixture roles may import the suite's subject package, its `/contracts` seam excepted), `max-nested-calls` (wraps Unicorn with a limit of three; calls returning schemas or schema-only plain objects are exempt), `no-anonymous-param-type`, `no-identity-cast`, `no-return-array-push`, `no-schemas-outside-contracts` (schema exports outside contracts modules), `no-stray-pascal-const`, `no-type-annotations`, `no-type-predicate`, `no-unvalidated-json`, `no-zod-custom`, `prefer-arrow-functions`, `prefer-destructured-params`, `test-seam-only-imports` (on `**/stories/*.test.{ts,tsx}` — a story test imports only `describe`, `expect`, and `test` from `#fixtures`; everything else reaches it as a fixture on the test context), `type-over-interface`.
 - Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).
 - unicorn + perfectionist (natural sorting); prettier last, so formatting rules are off.
@@ -86,3 +86,5 @@ Flat config is last-wins — append an override after the preset:
 ```ts
 export default [...zyplux({ tsconfigRootDir: import.meta.dirname }), { rules: { 'unicorn/no-null': 'off' } }];
 ```
+
+Schema detection is shared by contract boundaries, naming, and nesting checks. Nonempty plain objects containing only schemas (including nested collections) count as schemas. Mixed objects, empty objects, arrays, classes, callable objects, optional fields, and open dictionaries do not.

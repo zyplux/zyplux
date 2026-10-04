@@ -22,8 +22,7 @@ const isUrlMatch = (url: string, match: RegExp | string) =>
 
 const getRequestUrl = (input: Request | string | URL) => {
   if (typeof input === 'string') return input;
-  if (input instanceof URL) return input.href;
-  return input.url;
+  return input instanceof URL ? input.href : input.url;
 };
 
 export const createFetchFake = (): FetchFake => {

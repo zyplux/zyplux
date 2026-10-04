@@ -30,13 +30,10 @@ type ShellRoute = { pattern: RegExp | string; replies: ShellReply[] };
 
 type SpawnedReply = { exitCode: number; stdout: string };
 
-const isCommandMatch = (command: string, pattern: RegExp | string) => {
-  if (typeof pattern === 'string') {
-    if (!command.startsWith(pattern)) return false;
-    return command.length === pattern.length || command[pattern.length] === ' ';
-  }
-  return isPatternMatch(command, pattern);
-};
+const isCommandMatch = (command: string, pattern: RegExp | string) =>
+  typeof pattern === 'string'
+    ? command.startsWith(pattern) && (command.length === pattern.length || command[pattern.length] === ' ')
+    : isPatternMatch(command, pattern);
 
 const takeReply = ({ replies }: ShellRoute) => {
   const reply = replies.length > 1 ? replies.shift() : replies[0];
