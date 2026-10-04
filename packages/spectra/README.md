@@ -24,20 +24,21 @@ Each factory wraps the original, so the module stays fully live until a fake ins
 
 ## Use
 
-Pick a base per app type, extend it with suite fixtures, and keep the binding named `test`:
+Each story domain has a named fixture module, such as `stories/repositories/repositories.ts`. Extend a base with the subjects that its tests need:
 
 ```ts
-import { cliTest } from '@zyplux/spectra/library-test-api';
+import { runPushBranch } from '@example/app';
+import { cliTest } from '@zyplux/spectra';
 
-export const test = cliTest;
+export const test = cliTest.extend('runPushBranch', () => runPushBranch);
 export { describe, expect } from 'vitest';
 ```
 
 ```ts
-import { describe, expect, test } from '#fixtures';
+import { describe, expect, test } from './repositories.ts';
 
 describe('1.1 pushing a branch', () => {
-  test('1.1.1 pushes and reports the PR url', async ({ logs, shell }) => {
+  test('1.1.1 pushes and reports the PR url', async ({ logs, runPushBranch, shell }) => {
     shell.on('git rev-parse --abbrev-ref HEAD', 'feat-x');
     shell.on('git push', '');
 
@@ -51,20 +52,13 @@ describe('1.1 pushing a branch', () => {
 
 ## Entry points
 
-Each public path describes its role:
+Test tools share the root import. The reporter has a separate entry point because it loads in Vitest's configuration before the test context exists.
 
 | Import path after `@zyplux/spectra` | Purpose |
 | --- | --- |
-| `/library-test-api` | Vitest bases and `makeFixture` |
-| `/test-matchers` | Console, shell, and collection assertions |
-| `/fakes/shell-fake` | Scripted shell commands and recorded calls |
-| `/fakes/fetch-fake` | Scripted HTTP responses and recorded requests |
-| `/fakes/prompt-fake` | Recorded terminal questions with immediate empty answers |
-| `/helpers/cli-runner` | Invoke a CLI and report its exit code |
-| `/helpers/temp-directory` | Create and remove scratch directories |
-| `/helpers/poll-until` | Wait for asynchronous test conditions |
-| `/reporters/console-capture` | Captured and silenced console messages |
-| `/reporters/journald-reporter` | Record Vitest results and console output in systemd's journal |
+| Root | Vitest bases, fixtures, fakes, helpers, console capture, and matchers |
+| `/reporters` | Record Vitest results and console output in systemd's journal |
+| `/package.json` | Package metadata |
 
 Internal helpers stay beside the tools that use them: pattern matching and module mock validation live in `helpers`; journal stream writing lives in `reporters`.
 
@@ -101,7 +95,7 @@ Importing a base registers domain matchers via `expect.extend`:
 Add the reporter alongside Vitest's normal terminal reporters:
 
 ```ts
-import { JournaldReporter } from '@zyplux/spectra/reporters/journald-reporter';
+import { JournaldReporter } from '@zyplux/spectra/reporters';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({

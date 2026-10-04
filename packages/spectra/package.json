@@ -19,16 +19,8 @@
   },
   "type": "module",
   "exports": {
-    "./library-test-api": "./src/library-test-api.ts",
-    "./test-matchers": "./src/test-matchers.ts",
-    "./reporters/console-capture": "./src/reporters/console-capture.ts",
-    "./fakes/fetch-fake": "./src/fakes/fetch-fake.ts",
-    "./fakes/prompt-fake": "./src/fakes/prompt-fake.ts",
-    "./fakes/shell-fake": "./src/fakes/shell-fake.ts",
-    "./helpers/cli-runner": "./src/helpers/cli-runner.ts",
-    "./helpers/poll-until": "./src/helpers/poll-until.ts",
-    "./helpers/temp-directory": "./src/helpers/temp-directory.ts",
-    "./reporters/journald-reporter": "./src/reporters/journald-reporter.ts",
+    ".": "./src/index.ts",
+    "./reporters": "./src/reporters/journald-reporter.ts",
     "./package.json": "./package.json"
   },
   "files": [
@@ -38,43 +30,11 @@
   "publishConfig": {
     "access": "public",
     "exports": {
-      "./library-test-api": {
-        "types": "./dist/library-test-api.d.ts",
-        "default": "./dist/library-test-api.js"
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       },
-      "./test-matchers": {
-        "types": "./dist/test-matchers.d.ts",
-        "default": "./dist/test-matchers.js"
-      },
-      "./reporters/console-capture": {
-        "types": "./dist/reporters/console-capture.d.ts",
-        "default": "./dist/reporters/console-capture.js"
-      },
-      "./fakes/fetch-fake": {
-        "types": "./dist/fakes/fetch-fake.d.ts",
-        "default": "./dist/fakes/fetch-fake.js"
-      },
-      "./fakes/prompt-fake": {
-        "types": "./dist/fakes/prompt-fake.d.ts",
-        "default": "./dist/fakes/prompt-fake.js"
-      },
-      "./fakes/shell-fake": {
-        "types": "./dist/fakes/shell-fake.d.ts",
-        "default": "./dist/fakes/shell-fake.js"
-      },
-      "./helpers/cli-runner": {
-        "types": "./dist/helpers/cli-runner.d.ts",
-        "default": "./dist/helpers/cli-runner.js"
-      },
-      "./helpers/poll-until": {
-        "types": "./dist/helpers/poll-until.d.ts",
-        "default": "./dist/helpers/poll-until.js"
-      },
-      "./helpers/temp-directory": {
-        "types": "./dist/helpers/temp-directory.d.ts",
-        "default": "./dist/helpers/temp-directory.js"
-      },
-      "./reporters/journald-reporter": {
+      "./reporters": {
         "types": "./dist/reporters/journald-reporter.d.ts",
         "default": "./dist/reporters/journald-reporter.js"
       },
@@ -86,7 +46,7 @@
     }
   },
   "scripts": {
-    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json"
+    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "peerDependencies": {
     "vitest": "catalog:"
@@ -94,6 +54,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
+    "publint": "catalog:",
     "vitest": "catalog:"
   },
   "imports": {

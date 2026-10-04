@@ -6,9 +6,6 @@
   "scripts": {
     "test": "vitest run"
   },
-  "imports": {
-    "#fixtures": "./fixtures/index.ts"
-  },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/spectra": "workspace:*",

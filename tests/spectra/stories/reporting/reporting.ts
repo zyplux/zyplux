@@ -1,4 +1,4 @@
-import { JournaldReporter } from '@zyplux/spectra/reporters/journald-reporter';
+import { JournaldReporter } from '@zyplux/spectra/reporters';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';

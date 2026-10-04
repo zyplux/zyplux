@@ -7,7 +7,9 @@
     "test": "vitest run"
   },
   "imports": {
-    "#fixtures": "./fixtures/index.ts"
+    "#cli-test": "./cli-test.ts",
+    "#repository-fake": "./repository-fake.ts",
+    "#workspace-test": "./workspace-test.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -1,5 +1,6 @@
 # eslint-config tests
 
-Black-box tests that exercise the **published** `@zyplux/eslint-config` surface — `zyplux()`, `plugin`, and the committed `rules.json` snapshot — exactly as a downstream project would.
+Story tests exercise the public `@zyplux/eslint-config` API. Each domain contains Markdown stories, tests, and a named fixture module.
 
-All tests are user stories in `stories/`: preset behaviour reads off the public `zyplux()` array or the `eslint --print-config` output, and custom-rule behaviour drives each rule through a one-rule `Linter` configured with the public `plugin` export. No package internals are imported — everything goes through `#fixtures`.
+- `stories/configuration`: presets, public options, and the committed rules snapshot.
+- `stories/rules`: rule behavior through ESLint's public `Linter` API, using `lint-engine.ts` and local matchers.

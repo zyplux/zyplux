@@ -1,4 +1,4 @@
-import { pollUntil } from '@zyplux/spectra/helpers/poll-until';
+import { pollUntil } from '@zyplux/spectra';
 import { test as base } from 'vitest';
 
 export const test = base.extend('pollUntil', () => pollUntil);

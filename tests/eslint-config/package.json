@@ -7,7 +7,7 @@
     "test": "vitest run"
   },
   "imports": {
-    "#fixtures": "./fixtures/index.ts"
+    "#lint-engine": "./lint-engine.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",

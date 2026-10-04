@@ -58,7 +58,7 @@
     }
   },
   "scripts": {
-    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json"
+    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
     "@optique/core": "catalog:",
@@ -68,6 +68,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@zyplux/tsconfig": "workspace:*"
+    "@zyplux/tsconfig": "workspace:*",
+    "publint": "catalog:"
   }
 }

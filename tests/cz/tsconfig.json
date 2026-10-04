@@ -3,7 +3,7 @@
   "compilerOptions": {
     "emitDeclarationOnly": true
   },
-  "include": ["fixtures", "stories", "vitest.config.ts"],
+  "include": ["stories", "*.ts"],
   "references": [
     {
       "path": "../../apps/cz"

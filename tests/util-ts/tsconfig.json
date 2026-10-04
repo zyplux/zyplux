@@ -3,7 +3,7 @@
   "compilerOptions": {
     "emitDeclarationOnly": true
   },
-  "include": ["fixtures", "stories", "*.ts"],
+  "include": ["stories", "*.ts"],
   "references": [
     {
       "path": "../../packages/util-ts"

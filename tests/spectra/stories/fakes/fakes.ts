@@ -1,9 +1,11 @@
-import { createFetchFake } from '@zyplux/spectra/fakes/fetch-fake';
-import { createPromptFake } from '@zyplux/spectra/fakes/prompt-fake';
-import { createShellFake } from '@zyplux/spectra/fakes/shell-fake';
-import { CliExitError, createCliRunner } from '@zyplux/spectra/helpers/cli-runner';
-import { createConsoleCapture } from '@zyplux/spectra/reporters/console-capture';
-import '@zyplux/spectra/test-matchers';
+import {
+  CliExitError,
+  createCliRunner,
+  createConsoleCapture,
+  createFetchFake,
+  createPromptFake,
+  createShellFake,
+} from '@zyplux/spectra';
 import { createInterface } from 'node:readline/promises';
 import { test as base } from 'vitest';
 

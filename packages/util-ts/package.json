@@ -63,20 +63,21 @@
     }
   },
   "scripts": {
-    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json"
+    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
     "smol-toml": "catalog:"
   },
   "peerDependencies": {
-    "zod": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
-    "zod": "catalog:",
-    "typescript": "catalog:"
+    "publint": "catalog:",
+    "typescript": "catalog:",
+    "zod": "catalog:"
   },
   "peerDependenciesMeta": {
     "typescript": {
