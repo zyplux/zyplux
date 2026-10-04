@@ -4,8 +4,8 @@ import { ChildProcess, spawn } from 'node:child_process';
 import { PassThrough, Writable } from 'node:stream';
 import { vi } from 'vitest';
 
-import { isPatternMatch } from './pattern-match.ts';
-import { requireMockedModule } from './require-mocked-module.ts';
+import { isPatternMatch } from '#pattern-match';
+import { requireMockedModule } from '#require-mocked-module';
 
 export type ShellCall = {
   argv: string[];

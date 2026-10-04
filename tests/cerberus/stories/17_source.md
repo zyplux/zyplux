@@ -14,11 +14,17 @@
 
 ### 17.2.3 writes content to a file at a given path
 
-## 17.3 listing the tracked files in a checkout
+## 17.3 listing files in a checkout
 
 ### 17.3.1 lists tracked files and skips gitignored paths
 
 ### 17.3.2 falls back to walking the filesystem when git is unavailable
+
+### 17.3.3 includes untracked story files before they are staged
+
+Local checks include new story files before they enter Git's index, while standard Git exclusions keep ignored files out of the scan.
+
+### 17.3.4 lists only current files after an unstaged move
 
 ## 17.4 listing ci workflow files
 

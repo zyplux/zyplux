@@ -3,13 +3,13 @@
   "compilerOptions": {
     "emitDeclarationOnly": true
   },
-  "include": ["fixtures", "stories", "vitest.config.ts"],
+  "include": ["fixtures", "stories", "*.ts"],
   "references": [
     {
       "path": "../../packages/util-ts"
     },
     {
-      "path": "../fixtures"
+      "path": "../../packages/spectra"
     }
   ]
 }

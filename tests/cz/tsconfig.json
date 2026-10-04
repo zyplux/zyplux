@@ -9,7 +9,7 @@
       "path": "../../apps/cz"
     },
     {
-      "path": "../fixtures"
+      "path": "../../packages/spectra"
     }
   ]
 }

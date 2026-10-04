@@ -18,13 +18,12 @@ describe('14.1 packing release targets', () => {
     }
   });
 
-  test('14.1.2 filters tests from an isolated installation with only runtime dependencies', async ({
-    packagedCz,
-    tempDir,
-  }) => {
-    await tempDir.write('package.json', '{"scripts":{"test":"vitest run"}}');
+  test('14.1.2 supports Spectra tools through published imports', async ({ verifySpectraPackage }) => {
+    await verifySpectraPackage();
+  });
 
-    await expect(packagedCz.run('test', 'no-matching-tests')).resolves.toBeUndefined();
+  test('14.1.3 supports util imports with an optional TypeScript peer', async ({ verifyUtilPackage }) => {
+    await verifyUtilPackage();
   });
 });
 

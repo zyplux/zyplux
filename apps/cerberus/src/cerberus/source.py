@@ -46,18 +46,27 @@ class LocalSource:
             return None
 
     def list_paths(self, _repo: Repo) -> list[str]:
-        tracked = self._git_tracked()
-        return tracked if tracked is not None else self._walk_files()
+        paths = self._list_git_paths()
+        return paths if paths is not None else self._walk_files()
 
-    def _git_tracked(self) -> list[str] | None:
-        """Tracked file paths via git — mirrors the GitHub tree (honours .gitignore)."""
+    def _list_git_paths(self) -> list[str] | None:
+        """Existing tracked and untracked files using Git's standard exclusions."""
         try:
-            result = proc.run(["git", "-C", str(self.root), "ls-files", "-z"])
+            result = proc.run([
+                "git",
+                "-C",
+                str(self.root),
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+            ])
         except proc.ToolNotFoundError:
             return None
         if result.returncode != 0:
             return None
-        return sorted(path for path in result.stdout.split("\0") if path)
+        return sorted(path for path in result.stdout.split("\0") if path and (self.root / path).is_file())
 
     def _git(self, args: list[str]) -> str:
         try:

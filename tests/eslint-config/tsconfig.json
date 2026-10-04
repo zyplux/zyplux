@@ -12,7 +12,7 @@
       "path": "../../packages/util-ts"
     },
     {
-      "path": "../fixtures"
+      "path": "../../packages/spectra"
     }
   ]
 }

@@ -53,3 +53,11 @@
 ## 21.4 keeping test package import aliases inside the package
 
 ### 21.4.1 fails an imports alias that escapes the test package
+
+## 21.5 checking domain suites
+
+### 21.5.1 passes a story importing its domain test module
+
+### 21.5.2 fails a nested story importing package internals
+
+### 21.5.3 fails a nested story importing a helper directly

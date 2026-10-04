@@ -28,3 +28,21 @@
 ## 17.4 scoping the rule to story tests in the shipped config
 
 ### 17.4.1 enables the rule only for story test files
+
+The shipped config covers both flat and nested story directories.
+
+## 17.5 using a local domain module
+
+Domain stories import their test API from the module named after their directory: `stories/api` uses `./api.ts`. Helpers and subject packages remain behind that test API.
+
+### 17.5.1 allows the module named after the story directory
+
+### 17.5.2 allows types and a variant test from the domain module
+
+### 17.5.3 flags a helper imported directly into a domain story
+
+### 17.5.4 flags extra value bindings from a domain module
+
+### 17.5.5 flags a module named after a parent domain
+
+### 17.5.6 flags dynamic imports of a domain helper

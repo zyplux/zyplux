@@ -12,7 +12,7 @@ pnpm add @zyplux/util zod
 
 ```ts
 import { ensure, FetchError, http, mapWithConcurrency, normalizeRepoUrl, parseJson, poll, readJson, readJsonSync } from '@zyplux/util';
-import { $, readTrimmed } from '@zyplux/util/shell';
+import { $, readTrimmed } from '@zyplux/util';
 import * as z from 'zod';
 
 const Pkg = z.object({ version: z.string() });
@@ -47,5 +47,17 @@ ensure(branch !== 'main', 'refusing to run on main');
 - `$` is a small shell-command harness with typed `git`/`gh` helpers.
 - `$.gh` reads return Zod-validated objects or arrays. Select supported fields with a nonempty `json` array, such as `$.gh.run.view(id, { json: ['status', 'conclusion'] })`; only those fields appear in the inferred result. PR draft flags are booleans, PR numbers and run IDs are numbers. Run conclusions preserve the empty string while pending.
 - `$.gh.pr.reviews(slug, number)` returns reviews with author logins and commit IDs. `$.gh.release.exists(tag)` checks an exact tag, returning `false` for a missing release and propagating lookup errors. Actions return `Promise<void>`. Raw CLI commands remain available through `$`.
-- `@zyplux/util/schema` exports reusable structural zod primitives (`StringRecordSchema`, `LooseRecordSchema`, `StringArraySchema`, `UnknownArraySchema`, `UnknownArrayRecordSchema`, `IdSchema`, `VersionKeySchema`) that other schema modules compose from.
-- `@zyplux/util/manifest` exports tolerant zod schemas (`PackageJsonSchema`, `PyProjectSchema`) and inferred types for reading `package.json` (incl. pnpm workspace/catalog) and `pyproject.toml` (PEP 621 + PEP 735 + uv) manifests, dependency-name extractors (`npmDependencyNames`, `pythonRequirementNames`, `repositoryUrl`, `normalizePythonName`), and `findManifests(dir)`, which lists `git`-tracked manifests across one or many repos under `dir` (so `.gitignore` decides what is skipped — no node_modules, no build output, no untracked clones).
+- `@zyplux/util/contracts` exports reusable structural zod primitives (`StringRecordSchema`, `LooseRecordSchema`, `StringArraySchema`, `UnknownArraySchema`, `UnknownArrayRecordSchema`, `IdSchema`, `VersionKeySchema`) that other schema modules compose from.
+- `@zyplux/util/contracts` exports tolerant zod schemas (`PackageJsonSchema`, `PyProjectSchema`) and inferred types for reading `package.json` (incl. pnpm workspace/catalog) and `pyproject.toml` (PEP 621 + PEP 735 + uv) manifests; the root entry exports dependency-name extractors (`npmDependencyNames`, `pythonRequirementNames`, `repositoryUrl`, `normalizePythonName`), and `findManifests(dir)`, which lists `git`-tracked manifests across one or many repos under `dir` (so `.gitignore` decides what is skipped — no node_modules, no build output, no untracked clones).
+
+## Timing and source analysis
+
+`LapTimer` is available from the root entry or `@zyplux/util/lap-timer`. It measures named operations, nested laps, and concurrent operation arrays, preserving durations on failure. `timings` contains the named measurements; `timingsWithTotal` adds the elapsed total. `lapAndStop` completes a timer, and `importTimings` incorporates externally measured durations.
+
+`@zyplux/util/module-references` exports `collectModuleReferences(sourceFile)`, which reads TypeScript imports and re-exports, including type-only and value bindings. Install the optional TypeScript peer to use it:
+
+```sh
+pnpm add typescript
+```
+
+`@zyplux/util/type-dependencies` exports `findTypeDependencyViolations({ imports, packages, sharedTypeSurfaces })`. It checks public package entries and type ownership using caller-supplied module references and package declarations. Repository-specific architecture policy stays with the consumer.

@@ -1,4 +1,4 @@
-import { libraryTest, makeFixture } from '@zyplux/tests-fixtures/story';
+import { libraryTest, makeFixture } from '@zyplux/spectra/library-test-api';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { vi } from 'vitest';
 
@@ -48,5 +48,5 @@ export const test = libraryTest.extend<ArrangeFixtures & Subjects>({
 
 export type { Shell } from './act.ts';
 export type { TomlOutcome } from './matchers.ts';
-export type { ShellFake } from '@zyplux/tests-fixtures/shell';
+export type { ShellFake } from '@zyplux/spectra/fakes/shell-fake';
 export { describe, expect } from 'vitest';

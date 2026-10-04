@@ -384,7 +384,7 @@
       }
     ],
     "unicorn/consistent-class-member-order": [
-      2,
+      0,
       {
         "order": [
           "static-field",

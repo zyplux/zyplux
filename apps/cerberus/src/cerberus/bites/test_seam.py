@@ -7,8 +7,8 @@ the package's file and wire formats) and `./exec` mapping to `./src/exec.ts`
 module addressable by a bare specifier). Three facts enforce that
 together, whatever the package type: the package's `exports` map exposes
 nothing beyond those seams, its user-story tests reach workspace code only
-through `#` fixture aliases (third-party modules and node builtins are fair
-game — they cannot touch package internals), and the governing test
+through fixture aliases or local domain test modules (third-party modules
+and node builtins are fair game — they cannot touch package internals), and the governing test
 package's `imports` aliases stay inside the package so an alias cannot
 tunnel back into package internals.
 """
@@ -31,7 +31,7 @@ _SEAM_TARGETS = {"./contracts": "./src/contracts.ts", "./exec": "./src/exec.ts"}
 _SEAM_EXPORT_KEYS = frozenset({".", "./package.json", *_SEAM_TARGETS})
 _SEAM_SPECIFIER_PREFIXES = ("#", "node:")
 _PATH_SPECIFIER_PREFIXES = (".", "/")
-_STORY_TEST_PATH = re.compile(r"(?:^|/)stories/[^/]+\.test\.tsx?$")
+_STORY_TEST_PATH = re.compile(r"(?:^|/)stories/(?:[^/]+/)*[^/]+\.test\.tsx?$")
 _STATIC_IMPORT = re.compile(r"^(?:import|export)\b[^;]*?\bfrom\s+'([^']+)'", re.MULTILINE | re.DOTALL)
 _SIDE_EFFECT_IMPORT = re.compile(r"^import\s+'([^']+)'", re.MULTILINE)
 
@@ -144,10 +144,14 @@ class Seam:
         if content is None:
             return
         for specifier in import_specifiers(content):
-            if self._is_outside_seam(specifier):
+            if self._is_outside_seam(specifier, story_file):
                 res.fail(f"{story_file}: story test imports outside the fixtures seam — {specifier!r}")
 
-    def _is_outside_seam(self, specifier: str) -> bool:
+    def _is_outside_seam(self, specifier: str, story_file: str) -> bool:
+        directory = story_file.rsplit("/", 1)[0]
+        domain = directory.rsplit("/", 1)[-1]
+        if domain != "stories" and specifier == f"./{domain}.ts":
+            return False
         if specifier.startswith(_SEAM_SPECIFIER_PREFIXES):
             return False
         if specifier.startswith(_PATH_SPECIFIER_PREFIXES):

@@ -384,3 +384,48 @@ def test_21_4_1_fails_an_imports_alias_that_escapes_the_test_package(
             "'#tunnel' -> '../../packages/lib/src/other.ts'",
         ),
     ]
+
+
+def test_21_5_1_passes_a_story_importing_its_domain_test_module(
+    run_lib_ts_tests: RunLibTsTests, ok: MakeFinding
+) -> None:
+    result = run_lib_ts_tests({
+        **_SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB,
+        "packages/lib/src/index.ts": "",
+        "tests/lib/package.json": _SEAM_TESTS_PKG,
+        "tests/lib/stories/api/1-first.test.ts": "import { test } from './api.ts';",
+    })
+    assert result.findings == [ok(_SEAM_OK)]
+
+
+def test_21_5_2_fails_a_nested_story_importing_package_internals(
+    run_lib_ts_tests: RunLibTsTests, fail: MakeFinding
+) -> None:
+    result = run_lib_ts_tests({
+        **_SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB,
+        "packages/lib/src/index.ts": "",
+        "tests/lib/package.json": _SEAM_TESTS_PKG,
+        "tests/lib/stories/api/1-first.test.ts": "import { internal } from '@demo/lib/internal';",
+    })
+    assert result.findings == [
+        fail(
+            "tests/lib/stories/api/1-first.test.ts: story test imports outside the fixtures seam — '@demo/lib/internal'"
+        )
+    ]
+
+
+def test_21_5_3_fails_a_nested_story_importing_a_helper_directly(
+    run_lib_ts_tests: RunLibTsTests, fail: MakeFinding
+) -> None:
+    result = run_lib_ts_tests({
+        **_SEAM_ROOT_WS,
+        "packages/lib/package.json": _SEAM_LIB,
+        "packages/lib/src/index.ts": "",
+        "tests/lib/package.json": _SEAM_TESTS_PKG,
+        "tests/lib/stories/api/1-first.test.ts": "import { runScenario } from './helpers.ts';",
+    })
+    assert result.findings == [
+        fail("tests/lib/stories/api/1-first.test.ts: story test imports outside the fixtures seam — './helpers.ts'")
+    ]

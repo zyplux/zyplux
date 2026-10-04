@@ -12,7 +12,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/cz": "workspace:*",
-    "@zyplux/tests-fixtures": "workspace:*",
+    "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
     "@zyplux/util": "workspace:*",
     "vitest": "catalog:"

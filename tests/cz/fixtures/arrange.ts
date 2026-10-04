@@ -1,9 +1,9 @@
-import type { FetchFake } from '@zyplux/tests-fixtures/fetch';
-import type { TempDir } from '@zyplux/tests-fixtures/fs';
-import type { ShellFake } from '@zyplux/tests-fixtures/shell';
+import type { FetchFake } from '@zyplux/spectra/fakes/fetch-fake';
+import type { ShellFake } from '@zyplux/spectra/fakes/shell-fake';
+import type { TempDir } from '@zyplux/spectra/helpers/temp-directory';
 
 import { ManifestSchema } from '@zyplux/cz/contracts';
-import { notFoundResponse, okResponse } from '@zyplux/tests-fixtures/fetch';
+import { notFoundResponse, okResponse } from '@zyplux/spectra/fakes/fetch-fake';
 import { parseToml } from '@zyplux/util';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';

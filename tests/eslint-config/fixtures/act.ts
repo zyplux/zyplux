@@ -15,6 +15,8 @@ export type ZypluxConfig = ReturnType<typeof zyplux>;
 export const subjects: { plugin: typeof plugin; zyplux: typeof zyplux } = { plugin, zyplux };
 
 const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
+  const docs = plugin.rules?.[ruleName]?.meta?.docs;
+  const isTypeAware = docs !== undefined && 'requiresTypeChecking' in docs && docs.requiresTypeChecking === true;
   const rules: Linter.RulesRecord = {
     [`@zyplux/${ruleName}`]: options === undefined ? ['error'] : ['error', ...options],
   };
@@ -23,8 +25,10 @@ const pluginRuleConfig = (ruleName: string, options: undefined | unknown[]) => {
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        projectService: { allowDefaultProject: ['*.ts*', 'src/*.ts*'], defaultProject: 'tsconfig.json' },
-        tsconfigRootDir: suiteDir,
+        ...(isTypeAware && {
+          projectService: { allowDefaultProject: ['*.ts*', 'src/*.ts*'], defaultProject: 'tsconfig.json' },
+          tsconfigRootDir: suiteDir,
+        }),
       },
     },
     plugins: { '@zyplux': plugin },

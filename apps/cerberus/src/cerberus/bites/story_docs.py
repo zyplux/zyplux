@@ -8,9 +8,9 @@ having none is a FAIL; not needing them is silently skipped. Docs already
 present are always validated for consistency, whether or not the package
 was judged to need them.
 
-Story docs live at `<package>/tests/stories/*.md`, or — when tests are torn
+Story docs live at `<package>/tests/stories/**/*.md`, or — when tests are torn
 out to a top-level `tests/<package-basename>/` directory, as some repos do —
-at `tests/<package-basename>/stories/*.md`. Numbered docs (`# N. Title` /
+at `tests/<package-basename>/stories/**/*.md`. Numbered docs (`# N. Title` /
 `## N.M Title` / `### N.M.K Title`) pair with same-numbered test files in the
 same directory: `test_N_slug.py` for Python (underscores — a hyphen isn't a
 valid identifier character), `N-slug.test.ts` for TypeScript (kebab-case, per
@@ -253,7 +253,7 @@ def _grouped_by_stories_dir(paths: list[str], name: re.Pattern[str]) -> dict[str
     dirs: dict[str, list[str]] = {}
     for path in paths:
         parts = path.split("/")
-        if len(parts) < _STORIES_PATH_PARTS or parts[-2] != "stories" or "node_modules" in parts:
+        if len(parts) < _STORIES_PATH_PARTS or "stories" not in parts[:-1] or "node_modules" in parts:
             continue
         if name.match(parts[-1]):
             dirs.setdefault("/".join(parts[:-1]), []).append(path)
@@ -336,7 +336,7 @@ def run_story_check(repo: Repo, ctx: Context, res: CheckResult, language: Langua
         if not owned:
             if language.needs_story_tests(package, repo, ctx, paths):
                 res.fail(
-                    f"{package or '.'}: exposes a public interface but has no tests/**/stories/*.md user-story tests"
+                    f"{package or '.'}: exposes a public interface but has no tests/**/stories/**/*.md user-story tests"
                 )
                 did_something = True
             continue

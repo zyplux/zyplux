@@ -255,6 +255,9 @@ importers:
       '@zyplux/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config
+      '@zyplux/spectra':
+        specifier: workspace:*
+        version: link:packages/spectra
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:packages/tsconfig
@@ -288,9 +291,6 @@ importers:
       '@zyplux/util':
         specifier: workspace:*
         version: link:../../packages/util-ts
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.3(@types/node@26.6.3)(@vitest/coverage-istanbul@5.0.3)(vite@8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.0))
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -357,6 +357,18 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/spectra:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.3
+      '@zyplux/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@types/node@26.6.3)(@vitest/coverage-istanbul@5.0.3)(vite@8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/tsconfig: {}
 
   packages/util-ts:
@@ -371,6 +383,9 @@ importers:
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -383,9 +398,9 @@ importers:
       '@zyplux/cz':
         specifier: workspace:*
         version: link:../../apps/cz
-      '@zyplux/tests-fixtures':
+      '@zyplux/spectra':
         specifier: workspace:*
-        version: link:../fixtures
+        version: link:../../packages/spectra
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -404,9 +419,9 @@ importers:
       '@zyplux/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      '@zyplux/tests-fixtures':
+      '@zyplux/spectra':
         specifier: workspace:*
-        version: link:../fixtures
+        version: link:../../packages/spectra
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -426,26 +441,29 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
 
-  tests/fixtures:
+  tests/spectra:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
+      '@zyplux/spectra':
+        specifier: workspace:*
+        version: link:../../packages/spectra
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
       vitest:
         specifier: 'catalog:'
-        version: 5.0.3(@types/node@26.6.3)(@vitest/coverage-istanbul@5.0.3)(vite@8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.0))
+        version: 5.0.3(@types/node@26.6.3)(@vitest/coverage-istanbul@5.0.3)(vite@8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.1))
 
   tests/util-ts:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
-      '@zyplux/tests-fixtures':
+      '@zyplux/spectra':
         specifier: workspace:*
-        version: link:../fixtures
+        version: link:../../packages/spectra
       '@zyplux/tsconfig':
         specifier: workspace:*
         version: link:../../packages/tsconfig
@@ -3366,7 +3384,6 @@ snapshots:
       magic-string: 1.4.2
     optionalDependencies:
       vite: 8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.1)
-    optional: true
 
   '@vitest/spy@5.0.3': {}
 
@@ -4144,7 +4161,6 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       yaml: 2.9.1
-    optional: true
 
   vitest@5.0.3(@types/node@26.6.3)(@vitest/coverage-istanbul@5.0.3)(vite@8.1.5(@types/node@26.6.3)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:
@@ -4189,7 +4205,6 @@ snapshots:
       '@vitest/coverage-istanbul': 5.0.3(vitest@5.0.3)
     transitivePeerDependencies:
       - msw
-    optional: true
 
   walk-up-path@4.0.0: {}
 

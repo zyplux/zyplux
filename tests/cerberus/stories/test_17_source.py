@@ -116,6 +116,29 @@ def test_17_3_2_falls_back_to_walking_the_filesystem_when_git_is_unavailable(
     assert paths == ["a.txt", "nested/b.txt"]
 
 
+@requires_git
+def test_17_3_3_includes_untracked_story_files_before_they_are_staged(
+    git_checkout: Path, repo: Repo, local_source: type[LocalSource]
+) -> None:
+    story = git_checkout / "tests/widget/stories/1-widget.md"
+    story.parent.mkdir(parents=True)
+    story.write_text("# A user story\n")
+
+    assert local_source(git_checkout).list_paths(repo) == ["tests/widget/stories/1-widget.md"]
+
+
+@requires_git
+def test_17_3_4_lists_only_current_files_after_an_unstaged_move(
+    git_checkout: Path, repo: Repo, local_source: type[LocalSource]
+) -> None:
+    original = git_checkout / "original.txt"
+    original.write_text("content")
+    _git(git_checkout, "add", "-A")
+    original.rename(git_checkout / "renamed.txt")
+
+    assert local_source(git_checkout).list_paths(repo) == ["renamed.txt"]
+
+
 def test_17_4_1_lists_yaml_workflow_files_under_github_workflows_by_name(
     tmp_path: Path, repo: Repo, local_source: type[LocalSource]
 ) -> None:

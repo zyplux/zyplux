@@ -8,6 +8,6 @@
     "packages/eslint-config": { "includeEntryExports": false },
     "packages/tsconfig": { "includeEntryExports": false },
     "packages/util-ts": { "includeEntryExports": false },
-    "tests/fixtures": { "includeEntryExports": false }
+    "packages/spectra": { "includeEntryExports": false }
   }
 }

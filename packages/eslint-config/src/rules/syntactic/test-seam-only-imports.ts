@@ -1,6 +1,7 @@
 import type { TSESTree } from '@typescript-eslint/utils';
 
 import { AST_NODE_TYPES } from '@typescript-eslint/utils';
+import path from 'node:path';
 
 import { createRule } from '#create-rule';
 
@@ -15,8 +16,12 @@ const isSeamBinding = (specifier: TSESTree.ImportClause) =>
 
 export const testSeamOnlyImports = createRule<[], MessageId>({
   create: context => {
+    const directory = path.dirname(context.filename);
+    const domain = path.basename(directory);
+    const domainSeam =
+      domain !== 'stories' && directory.split(path.sep).includes('stories') ? `./${domain}.ts` : undefined;
     const reportsOutsideSeam = (source: null | TSESTree.StringLiteral) => {
-      if (source === null || source.value === FIXTURES_ALIAS) return false;
+      if (source === null || source.value === FIXTURES_ALIAS || source.value === domainSeam) return false;
       context.report({ messageId: 'moduleOutsideSeam', node: source });
       return true;
     };
@@ -43,13 +48,13 @@ export const testSeamOnlyImports = createRule<[], MessageId>({
   meta: {
     docs: {
       description:
-        'Keep story tests behind the test seam: a story test imports only from `#fixtures`, and its value bindings are only `describe`, `expect`, and `test` (a variant test aliased to `test`, like `targetsTest as test`, counts), so the test exercises the public interface through fixture context and survives refactors. Type-only imports from `#fixtures` are free — the fixture types are part of the seam surface. Everything else is reported: any other module (node builtins, third-party, workspace packages, file paths — static, dynamic, or re-exported) and any other value binding from `#fixtures`; helpers, sample data, and matchers reach a story as fixtures on the test context instead. In-editor complement of the cerberus `cli_ts_test_seam`/`lib_ts_test_seam` bites; the shipped config scopes this rule to `**/stories/*.test.{ts,tsx}`.',
+        'Story tests import describe, expect, and test through #fixtures or their local domain module: stories/api tests use ./api.ts. Type imports from that same seam are allowed. Helpers and subjects reach stories through fixture context. Variant tests may be aliased to test. The shipped config covers flat and nested story tests.',
     },
     messages: {
       bindingOutsideSeam:
-        'A story test imports only `describe`, `expect`, and `test` from `#fixtures` — expose this as a fixture on the test context instead.',
+        'A story test imports only describe, expect, and test from its test seam — expose this as a fixture on the test context instead.',
       moduleOutsideSeam:
-        'A story test imports only from `#fixtures` — expose what this module provides as a fixture on the test context instead.',
+        'A story test imports only from #fixtures or its local domain module (stories/api uses ./api.ts) — expose this through fixture context instead.',
     },
     schema: [],
     type: 'problem',

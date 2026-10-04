@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from 'node:util';
 import { expect } from 'vitest';
 
-import type { ConsoleCapture } from './console.ts';
-import type { ShellFake } from './shell.ts';
+import { isPatternMatch } from '#pattern-match';
 
-import { isPatternMatch } from './pattern-match.ts';
+import type { ShellFake } from './fakes/shell-fake.ts';
+import type { ConsoleCapture } from './reporters/console-capture.ts';
 
 export type LineMatch = RegExp | string;
 
@@ -38,7 +38,7 @@ const unmatchedElements = (received: readonly unknown[], expected: readonly unkn
   });
 };
 
-export const storyMatchers = registerMatchers({
+export const testMatchers = registerMatchers({
   toContainExactElementsInAnyOrder: (received: readonly unknown[], expected: readonly unknown[]) => {
     const extra = unmatchedElements(received, expected);
     const missing = unmatchedElements(expected, received);
@@ -62,6 +62,10 @@ export const storyMatchers = registerMatchers({
   toHaveErrored: ({ errorLines }: ConsoleCapture, line?: LineMatch) =>
     lineListResult(errorLines, 'console.error lines', line),
   toHaveLogged: ({ logLines }: ConsoleCapture, line?: LineMatch) => lineListResult(logLines, 'console.log lines', line),
+  toHaveNumberOfElements: (received: readonly unknown[], expected: number) => ({
+    message: () => `expected [${received.join(', ')}] (${received.length} elements) to have ${expected} elements`,
+    pass: received.length === expected,
+  }),
   toHaveRun: ({ commands }: ShellFake, command: string) => ({
     message: () =>
       `the shell ${commands.includes(command) ? 'ran' : 'never ran'} ${command}\n${renderLines('commands', commands)}`,
@@ -80,11 +84,12 @@ export const storyMatchers = registerMatchers({
 });
 
 declare module 'vitest' {
-  interface Matchers<R> {
+  interface Matchers<R, T> {
     toContainExactElementsInAnyOrder: (expected: readonly unknown[]) => R;
     toContainNoDuplicates: () => R;
     toHaveErrored: (line?: LineMatch) => R;
     toHaveLogged: (line?: LineMatch) => R;
+    toHaveNumberOfElements: T extends readonly unknown[] ? (expected: number) => R : never;
     toHaveRun: (command: string) => R;
     toHaveRunMatching: (pattern: RegExp | string) => R;
     toHaveWarned: (line?: LineMatch) => R;

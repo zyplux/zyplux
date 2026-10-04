@@ -46,7 +46,7 @@ TITLE_DRIFT_MESSAGE = (
 
 
 def _needs_story_tests_message(package: str) -> str:
-    return f"{package}: exposes a public interface but has no tests/**/stories/*.md user-story tests"
+    return f"{package}: exposes a public interface but has no tests/**/stories/**/*.md user-story tests"
 
 
 NEEDS_STORY_TESTS_MESSAGE = _needs_story_tests_message(".")
@@ -478,3 +478,54 @@ def test_15_7_1_scopes_each_check_to_only_its_own_language_packages_in_a_mixed_r
     py_result = run_check_with_files(PY_CHECK_ID, files)
     assert ts_result.findings == [ok(OK_MESSAGE)]
     assert py_result.findings == [fail(_needs_story_tests_message("services/gizmo"))]
+
+
+@pytest.mark.parametrize(
+    ("check_id", "files"),
+    [
+        (
+            PY_CHECK_ID,
+            {
+                "pyproject.toml": _PY_SCRIPTS_PYPROJECT,
+                DOC_PATH: _linked("test_1_widget.py"),
+                PY_TEST_PATH: PY_TEST,
+            },
+        ),
+        (
+            TS_CHECK_ID,
+            {
+                "package.json": _TS_BIN_PKG,
+                TS_DOC_PATH: _linked("1-widget.test.ts"),
+                TS_TEST_PATH: TS_TEST,
+            },
+        ),
+    ],
+    ids=["python", "typescript"],
+)
+def test_15_8_1_checks_each_domain_independently_under_stories(
+    run_check_with_files: RunCheckWithFiles,
+    check_id: str,
+    files: dict[str, str],
+    ok: MakeFinding,
+) -> None:
+    domain_files = {
+        path.replace("/stories/", f"/stories/{domain}/"): content
+        for domain in ("api", "workflows")
+        for path, content in files.items()
+    }
+    result = run_check_with_files(check_id, domain_files)
+    assert result.findings == [ok(OK_MESSAGE)]
+
+
+def test_15_8_2_flags_a_nested_story_header_with_no_matching_test(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    result = run_check_with_files(
+        TS_CHECK_ID,
+        {
+            "package.json": _TS_BIN_PKG,
+            "tests/stories/api/1-widget.md": _linked("1-widget.test.ts"),
+            "tests/stories/api/1-widget.test.ts": "test('1.1.1 shows the widget name', () => {});",
+        },
+    )
+    assert result.findings == [fail("tests/stories/api: story-doc ### header(s) with no matching test: 1.1.2")]

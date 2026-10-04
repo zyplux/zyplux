@@ -81,9 +81,7 @@ plugin source and empirically against each repo, entry overrides stripped):
   `test_21_1_4`, relies on this staying exempt). The correct fix: for members
   **outside** `tests/`, `private` no longer matters (a workspace-internal deep
   import doesn't care whether the target is private); for members **inside**
-  `tests/`, keep the existing `not private` logic unchanged (`tests/fixtures`,
-  a genuinely published library that happens to live under `tests/`, stays
-  checked; harness-only packages stay exempt). Verified against the real repo:
+  `tests/`, keep the existing `not private` logic unchanged (harness-only packages stay exempt; published libraries such as `packages/spectra` stay checked). Verified against the real repo:
   zyplux has no private packages outside `tests/` today, so this is a pure
   mechanism fix with zero behavior change for `zyplux` itself — it only bites
   once rolled out to repos like `zyp-vps`.

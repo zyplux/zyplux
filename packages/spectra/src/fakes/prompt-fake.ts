@@ -2,7 +2,7 @@ import { createInterface, Interface } from 'node:readline/promises';
 import { PassThrough } from 'node:stream';
 import { vi } from 'vitest';
 
-import { requireMockedModule } from './require-mocked-module.ts';
+import { requireMockedModule } from '#require-mocked-module';
 
 export type PromptFake = {
   install: () => () => void;

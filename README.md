@@ -13,13 +13,13 @@
 | Package                                          | Registry | What it is                                                                       |
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
 | [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Org-invariant linter: CI workflows, justfiles, CODEOWNERS, coverage, releases |
-| [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: releases, PR flow, parallel tests, cleanup                  |
+| [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: releases, PR flow, cleanup                  |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |
 | [@zyplux/eslint-config](packages/eslint-config)  | npm      | Shared ESLint flat config and custom rules                                       |
 | [@zyplux/tsconfig](packages/tsconfig)            | npm      | Shared TypeScript presets                                                        |
 | [@zyplux/util](packages/util-ts)                 | npm      | Node utilities: assertions, polling, zod-validated parsing, git/gh shell harness |
 | [zyplux-util](packages/util_py)                  | PyPI     | Python counterpart of the shared utilities                                       |
-| [@zyplux/tests-fixtures](tests/fixtures)         | npm      | Test doubles (shell fake, CLI runner) for story tests                            |
+| [@zyplux/spectra](packages/spectra)         | npm      | Vitest fixtures, matchers, polling, and journal reporting                            |
 
 Each package's README covers usage. Releases are cut per package from [release-targets.toml](release-targets.toml) via `cz release-bumped-targets`.
 

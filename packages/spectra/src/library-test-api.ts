@@ -1,19 +1,21 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { test as base, vi } from 'vitest';
 
-import type { ConsoleCapture } from './console.ts';
-import type { FetchFake } from './fetch.ts';
-import type { TempDir } from './fs.ts';
-import type { PromptFake } from './prompt.ts';
-import type { ShellFake } from './shell.ts';
+import { requireMockedModule } from '#require-mocked-module';
 
-import './matchers.ts';
-import { createConsoleCapture } from './console.ts';
-import { createFetchFake } from './fetch.ts';
-import { createTempDir } from './fs.ts';
-import { createPromptFake } from './prompt.ts';
-import { requireMockedModule } from './require-mocked-module.ts';
-import { createShellFake } from './shell.ts';
+import type { FetchFake } from './fakes/fetch-fake.ts';
+import type { PromptFake } from './fakes/prompt-fake.ts';
+import type { ShellFake } from './fakes/shell-fake.ts';
+import type { TempDir } from './helpers/temp-directory.ts';
+
+import './test-matchers.ts';
+import type { ConsoleCapture } from './reporters/console-capture.ts';
+
+import { createFetchFake } from './fakes/fetch-fake.ts';
+import { createPromptFake } from './fakes/prompt-fake.ts';
+import { createShellFake } from './fakes/shell-fake.ts';
+import { createTempDir } from './helpers/temp-directory.ts';
+import { createConsoleCapture } from './reporters/console-capture.ts';
 
 export type EnvStub = {
   set: (name: string, value: string) => void;

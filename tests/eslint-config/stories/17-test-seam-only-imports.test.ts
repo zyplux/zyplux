@@ -51,6 +51,50 @@ describe('17.4 scoping the rule to story tests in the shipped config', () => {
   test('17.4.1 enables the rule only for story test files', ({ zyplux }) => {
     const config = zyplux();
     const entries = config.filter(entry => entry.rules?.['@zyplux/test-seam-only-imports'] !== undefined);
-    expect(entries.map(entry => entry.files)).toEqual([['**/stories/*.test.{ts,tsx}']]);
+    expect(entries.map(entry => entry.files)).toEqual([['**/stories/**/*.test.{ts,tsx}']]);
+  });
+});
+
+describe('17.5 using a local domain module', () => {
+  test('17.5.1 allows the module named after the story directory', ({ lintRule }) => {
+    expect(
+      lintRule("import { describe, expect, test } from './api.ts';", {
+        filename: 'stories/api/1-contract.test.ts',
+      }),
+    ).toReportNothing();
+  });
+
+  test('17.5.2 allows types and a variant test from the domain module', ({ lintRule }) => {
+    expect(
+      lintRule("import { type Api, adminTest as test } from './api.ts';", {
+        filename: 'stories/api/1-contract.test.ts',
+      }),
+    ).toReportNothing();
+  });
+
+  test('17.5.3 flags a helper imported directly into a domain story', ({ lintRule }) => {
+    expect(
+      lintRule("import { runScenario } from './helpers.ts';", { filename: 'stories/api/1-contract.test.ts' }),
+    ).toReport('moduleOutsideSeam');
+  });
+
+  test('17.5.4 flags extra value bindings from a domain module', ({ lintRule }) => {
+    expect(
+      lintRule("import { runScenario } from './api.ts';", { filename: 'stories/api/1-contract.test.ts' }),
+    ).toReport('bindingOutsideSeam');
+  });
+
+  test('17.5.5 flags a module named after a parent domain', ({ lintRule }) => {
+    expect(lintRule("import { test } from './api.ts';", { filename: 'stories/api/admin/1-contract.test.ts' })).toReport(
+      'moduleOutsideSeam',
+    );
+  });
+
+  test('17.5.6 flags dynamic imports of a domain helper', ({ lintRule }) => {
+    expect(
+      lintRule("export const load = () => import('./helpers.ts');", {
+        filename: 'stories/api/1-contract.test.ts',
+      }),
+    ).toReport('moduleOutsideSeam');
   });
 });

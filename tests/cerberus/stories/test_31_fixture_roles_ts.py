@@ -28,7 +28,7 @@ _ROLES_ACT = "import { run } from '@demo/app';\n"
 _ROLES_INDEX = "import { createRun } from './act';\n"
 _ROLES_ARRANGE_PLAIN = "export const seedWidgets = 1;\n"
 
-_ROLES_OK = "every suite's #fixtures alias targets fixtures/index.ts with fixtures/act.ts present"
+_ROLES_OK = "every story directory has a fixture entry point"
 
 
 def _suite_files(arrange: str = _ROLES_ARRANGE_PLAIN, suite_manifest: str = _ROLES_SUITE) -> dict[str, str]:
@@ -99,3 +99,55 @@ def test_31_2_4_fails_a_suite_missing_the_act_module(
     assert result.findings == [
         fail("tests/app/fixtures/act.ts: missing — act.ts is the fixture module that drives the subject package")
     ]
+
+
+def test_31_3_1_passes_a_domain_suite_without_a_fixtures_alias(
+    run_fixture_roles_tests: RunFixtureRolesTests, ok: MakeFinding
+) -> None:
+    result = run_fixture_roles_tests({
+        **_ROLES_ROOT_WS,
+        "apps/app/package.json": _ROLES_SUBJECT,
+        "tests/app/package.json": _ROLES_SUITE_NO_ALIAS,
+        "tests/app/stories/api/1-run.test.ts": "import { test } from './api.ts';",
+        "tests/app/stories/api/api.ts": "export { test } from 'vitest';",
+    })
+    assert result.findings == [ok(_ROLES_OK)]
+
+
+def test_31_3_2_fails_a_domain_missing_its_test_module(
+    run_fixture_roles_tests: RunFixtureRolesTests, fail: MakeFinding
+) -> None:
+    result = run_fixture_roles_tests({
+        **_ROLES_ROOT_WS,
+        "apps/app/package.json": _ROLES_SUBJECT,
+        "tests/app/package.json": _ROLES_SUITE_NO_ALIAS,
+        "tests/app/stories/api/1-run.test.ts": "import { test } from './api.ts';",
+        "tests/app/stories/api/helpers.ts": "",
+    })
+    assert result.findings == [fail("tests/app/stories/api/api.ts: missing — each story domain owns its test module")]
+
+
+def test_31_3_3_requires_a_test_module_for_each_nested_domain(
+    run_fixture_roles_tests: RunFixtureRolesTests, fail: MakeFinding
+) -> None:
+    result = run_fixture_roles_tests({
+        **_ROLES_ROOT_WS,
+        "apps/app/package.json": _ROLES_SUBJECT,
+        "tests/app/package.json": _ROLES_SUITE_NO_ALIAS,
+        "tests/app/stories/api/admin/1-run.test.ts": "import { test } from './admin.ts';",
+        "tests/app/stories/api/api.ts": "export { test } from 'vitest';",
+    })
+    assert result.findings == [
+        fail("tests/app/stories/api/admin/admin.ts: missing — each story domain owns its test module")
+    ]
+
+
+def test_31_3_4_checks_flat_and_domain_layouts_in_the_same_suite(
+    run_fixture_roles_tests: RunFixtureRolesTests, ok: MakeFinding
+) -> None:
+    result = run_fixture_roles_tests({
+        **_suite_files(),
+        "tests/app/stories/api/1-run.test.ts": "import { test } from './api.ts';",
+        "tests/app/stories/api/api.ts": "export { test } from 'vitest';",
+    })
+    assert result.findings == [ok(_ROLES_OK)]

@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/util",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Small utilities: assertions, polling, bounded-concurrency mapping, zod-validated JSON reads, repo-URL normalization, package.json/pyproject manifest schemas, and a git/gh shell harness",
   "keywords": [
     "utilities",
@@ -23,7 +23,10 @@
     ".": "./src/index.ts",
     "./contracts": "./src/contracts.ts",
     "./exec": "./src/exec.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./lap-timer": "./src/lap-timer.ts",
+    "./module-references": "./src/module-references.ts",
+    "./type-dependencies": "./src/type-dependencies.ts"
   },
   "files": [
     "README.md",
@@ -44,7 +47,19 @@
         "types": "./dist/exec.d.ts",
         "default": "./dist/exec.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./lap-timer": {
+        "types": "./dist/lap-timer.d.ts",
+        "default": "./dist/lap-timer.js"
+      },
+      "./module-references": {
+        "types": "./dist/module-references.d.ts",
+        "default": "./dist/module-references.js"
+      },
+      "./type-dependencies": {
+        "types": "./dist/type-dependencies.d.ts",
+        "default": "./dist/type-dependencies.js"
+      }
     }
   },
   "scripts": {
@@ -54,11 +69,18 @@
     "smol-toml": "catalog:"
   },
   "peerDependencies": {
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "typescript": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   }
 }

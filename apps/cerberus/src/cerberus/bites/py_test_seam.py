@@ -19,7 +19,7 @@ story test in existence would trivially fail the seam check, which does not
 match real-world convention. Libraries — packages with no `[project.scripts]`
 — get no extra modules, just the root.
 
-Story test files are found by `story_docs.PY_TEST_NAME` under a `stories/`
+Story test files are found by `story_docs.PY_TEST_NAME` anywhere under a `stories/`
 directory belonging to the package (`story_docs.under_package`); `conftest.py`
 is deliberately never scanned. This mirrors the TS design's trust of the alias
 target: the TS check verifies a story test only reaches product code through a
@@ -231,7 +231,7 @@ def _story_test_files(package: str, paths: list[str]) -> list[str]:
     files = []
     for path in paths:
         parts = path.split("/")
-        if len(parts) < _MIN_PATH_SEGMENTS or parts[-2] != "stories":
+        if len(parts) < _MIN_PATH_SEGMENTS or "stories" not in parts[:-1]:
             continue
         if story_docs.PY_TEST_NAME.match(parts[-1]) and story_docs.under_package(path, package):
             files.append(path)

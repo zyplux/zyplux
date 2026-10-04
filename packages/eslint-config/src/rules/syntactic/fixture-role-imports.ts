@@ -42,7 +42,7 @@ export const fixtureRoleImports = createRule<Options, MessageId>({
   meta: {
     docs: {
       description:
-        "Keep a torn-out test suite's subject package behind its arrange/act fixtures: only fixtures/arrange.ts and fixtures/act.ts may import the subject (world-building and driving are both legitimate reasons to reach it), every other module under fixtures/ is reported, and the subject's `/contracts` seam stays importable from any role module since it carries no behavior. The subject package name comes from the `subject` option, resolved once per suite by the shipped `zyplux()` config: it pairs each `tests/<basename>` suite with the workspace member directory of the same basename outside `tests/` (`tests/util-ts` pairs with `packages/util-ts`, whatever that package calls itself) and reads the subject's name from that member's own package.json. In-editor complement of the cerberus `fixture_roles_ts` bite, which now only pins the suite's manifest shape (`#fixtures` targets fixtures/index.ts, fixtures/act.ts is present).",
+        "Keep a flat test suite's subject package behind its arrange/act fixtures: only fixtures/arrange.ts and fixtures/act.ts may import the subject. Other modules under fixtures/ are reported, except imports of the subject's behavior-free `/contracts` seam. The shipped config discovers the subject by pairing tests/<basename> with its workspace package. Cerberus's fixture_roles_ts bite checks fixture entry points for flat and domain suites.",
     },
     messages: {
       subjectOutsideRole:

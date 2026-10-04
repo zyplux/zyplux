@@ -69,3 +69,9 @@
 ## 15.7 running the python and typescript checks independently
 
 ### 15.7.1 scopes each check to only its own language packages in a mixed repo
+
+## 15.8 grouping stories by domain
+
+### 15.8.1 checks each domain independently under stories
+
+### 15.8.2 flags a nested story header with no matching test

@@ -1,6 +1,6 @@
-import type { CliRunner } from '@zyplux/tests-fixtures/cli';
+import type { CliRunner } from '@zyplux/spectra/helpers/cli-runner';
 
-import { cliTest, makeFixture } from '@zyplux/tests-fixtures/story';
+import { cliTest, makeFixture } from '@zyplux/spectra/library-test-api';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import type { Catalog, PublishedPackage, TsconfigPresets } from './act.ts';
@@ -15,7 +15,14 @@ import type {
   WriteArtifacts,
 } from './arrange.ts';
 
-import { createCatalog, createCz, createPackagedCz, loadPublishedPackages, loadTsconfigPresets } from './act.ts';
+import {
+  createCatalog,
+  createCz,
+  loadPublishedPackages,
+  loadTsconfigPresets,
+  verifySpectraPackage,
+  verifyUtilPackage,
+} from './act.ts';
 import {
   createInitRepo,
   createLiveWorkspace,
@@ -33,7 +40,6 @@ type CzFixtures = {
   catalog: Catalog;
   cz: CliRunner;
   liveWorkspace: LiveWorkspace;
-  packagedCz: CliRunner;
   publishedPackages: PublishedPackage[];
   registries: Registries;
   release: Release;
@@ -41,6 +47,8 @@ type CzFixtures = {
   sleep: typeof sleep;
   tsconfigPresets: TsconfigPresets;
   upgradeWorkspace: UpgradeWorkspace;
+  verifySpectraPackage: () => Promise<void>;
+  verifyUtilPackage: () => Promise<void>;
 };
 
 export const test = cliTest.extend<CzFixtures>({
@@ -53,11 +61,8 @@ export const test = cliTest.extend<CzFixtures>({
   liveWorkspace: async ({}, use) => {
     await use(createLiveWorkspace());
   },
-  packagedCz: async ({ tempDir }, use) => {
-    await use(await createPackagedCz(tempDir));
-  },
-  publishedPackages: async ({}, use) => {
-    await use(loadPublishedPackages());
+  publishedPackages: async ({ tempDir }, use) => {
+    await use(loadPublishedPackages(tempDir));
   },
   registries: async ({ network }, use) => {
     await use(createRegistries(network));
@@ -74,6 +79,12 @@ export const test = cliTest.extend<CzFixtures>({
   },
   upgradeWorkspace: async ({ network, tempDir }, use) => {
     await use(createUpgradeWorkspace(network, tempDir));
+  },
+  verifySpectraPackage: async ({ tempDir }, use) => {
+    await use(() => verifySpectraPackage(tempDir));
+  },
+  verifyUtilPackage: async ({ tempDir }, use) => {
+    await use(() => verifyUtilPackage(tempDir));
   },
 });
 
@@ -112,5 +123,5 @@ export const tempCwdTest = test.extend<{ initRepo: InitRepo; tempCwd: undefined;
 });
 
 export type { Catalog } from './act.ts';
-export type { TempDir } from '@zyplux/tests-fixtures/fs';
+export type { TempDir } from '@zyplux/spectra/helpers/temp-directory';
 export { describe, expect } from 'vitest';

@@ -1,4 +1,4 @@
-import type { ShellFake } from '@zyplux/tests-fixtures/shell';
+import type { ShellFake } from '@zyplux/spectra/fakes/shell-fake';
 
 import { expect } from 'vitest';
 

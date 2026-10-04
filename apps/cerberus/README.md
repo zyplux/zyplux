@@ -43,8 +43,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `vitest`                       | content     | TypeScript tests run on vitest, never bun's runner (package.json, justfile, CI), and the root `vitest.config.*` `coverage.thresholds` meet the floor (90%) |
 | `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
-| `story_tests_lockstep_py`      | content     | `tests/**/stories/*.md` criteria have a matching, title-matched pytest test          |
-| `story_tests_lockstep_ts`      | content     | `tests/**/stories/*.md` criteria have a matching, title-matched vitest test          |
+| `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
+| `story_tests_lockstep_ts`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched vitest test          |
 | `cli_ts_test_seam`             | content     | CLI apps export only the root seam; story tests reach workspace code via fixture aliases |
 | `lib_ts_test_seam`             | content     | Libraries export only the root seam; story tests reach workspace code via fixture aliases |
 | `fixture_roles_ts`             | content     | Torn-out TS test suites compose fixtures from role modules: `#fixtures` targets `fixtures/index.ts` and only `act.ts` imports the subject package (its `./contracts` seam excepted) |

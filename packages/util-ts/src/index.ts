@@ -2,6 +2,7 @@ export * from './assert.ts';
 export { ExecError, type ExecPromise, type ExecResult } from './exec.ts';
 export * from './http.ts';
 export * from './json.ts';
+export * from './lap-timer.ts';
 export * from './manifest.ts';
 export * from './map-with-concurrency.ts';
 export * from './poll.ts';
