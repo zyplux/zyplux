@@ -27,9 +27,9 @@ def _list_published_modules(module: str, package: PackageInfo) -> set[str]:
     for key, entry in exports.items():
         for source in list_targets(entry):
             pattern = source.removeprefix("./")
-            if not PurePosixPath(module).full_match(pattern):
-                continue
             prefix, wildcard, suffix = pattern.partition("*")
+            if module != pattern and not (wildcard and module.startswith(prefix) and module.endswith(suffix)):
+                continue
             match = module[len(prefix) : len(module) - len(suffix) if suffix else None] if wildcard else ""
             modules.update(
                 target.removeprefix("./").replace("*", match)

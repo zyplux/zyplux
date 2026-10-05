@@ -190,21 +190,20 @@ def test_34_5_4_checks_javascript_and_explicit_module_extensions(
         (["./src/nested/register.ts", "./build/nested/register.js", "./build/nested/register.cjs"], False),
     ],
 )
-@pytest.mark.parametrize("uses_wildcard", [False, True])
+@pytest.mark.parametrize("export_pattern", ["nested/register", "nested/*", "*"])
 def test_34_5_5_preserves_published_registration_modules_in_every_runtime_condition(
-    run_check_with_files: RunCheckWithFiles, metadata: object, *, has_failure: bool, uses_wildcard: bool
+    run_check_with_files: RunCheckWithFiles, metadata: object, export_pattern: str, *, has_failure: bool
 ) -> None:
-    entry = "*" if uses_wildcard else "register"
     files = _workspace({
         "library": {
-            "exports": {f"./{entry}": f"./src/nested/{entry}.ts"},
+            "exports": {f"./{export_pattern}": f"./src/{export_pattern}.ts"},
             "sideEffects": metadata,
             "publishConfig": {
                 "exports": {
-                    f"./{entry}": {
-                        "types": f"./build/nested/{entry}.d.ts",
-                        "import": f"./build/nested/{entry}.js",
-                        "require": f"./build/nested/{entry}.cjs",
+                    f"./{export_pattern}": {
+                        "types": f"./build/{export_pattern}.d.ts",
+                        "import": f"./build/{export_pattern}.js",
+                        "require": f"./build/{export_pattern}.cjs",
                     }
                 }
             },
