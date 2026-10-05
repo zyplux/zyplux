@@ -198,6 +198,8 @@ def test_19_5_4_ignores_coverage_in_unrelated_nested_objects(
         ("npx vitest run --coverage=true", True),
         ("pnpm vitest run --coverage", True),
         ("bunx vitest run --coverage", True),
+        ("NODE_ENV=test vitest run --coverage", True),
+        ('NODE_ENV=test LABEL="two words" pnpm exec vitest run --coverage.enabled=true', True),
         ("vitest run", False),
         ("vitest run --coverage.enabled=false", False),
         ("vitest run --coverage=false", False),
@@ -227,11 +229,12 @@ def test_19_6_2_requires_explicit_collection_when_coverage_enabled_is_absent(
 
 
 @pytest.mark.parametrize("flag", ["--coverage.enabled=false", "--coverage=false", "--coverage false"])
+@pytest.mark.parametrize("prefix", ["", "NODE_ENV=test ", 'NODE_ENV=test LABEL="two words" '])
 def test_19_6_3_cli_coverage_flags_override_enabled_configuration(
-    run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, flag: str
+    run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, flag: str, prefix: str
 ) -> None:
     files = {
         "vitest.config.ts": _COMPLIANT_CONFIG,
-        "package.json": json.dumps({"scripts": {"test": f"vitest run {flag}"}}),
+        "package.json": json.dumps({"scripts": {"test": f"{prefix}vitest run {flag}"}}),
     }
     assert run_vitest_coverage(files).findings == [fail(_NO_COLLECTION_MESSAGE)]

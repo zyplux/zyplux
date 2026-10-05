@@ -181,6 +181,40 @@ def test_34_5_4_checks_javascript_and_explicit_module_extensions(
 
 
 @pytest.mark.parametrize(
+    ("metadata", "has_failure"),
+    [
+        (["./src/nested/register.ts"], True),
+        (["**/register.*"], False),
+        (["./src/nested/register.ts", "./build/nested/register.js"], True),
+        (["./src/nested/register.ts", "./build/nested/register.cjs"], True),
+        (["./src/nested/register.ts", "./build/nested/register.js", "./build/nested/register.cjs"], False),
+    ],
+)
+@pytest.mark.parametrize("uses_wildcard", [False, True])
+def test_34_5_5_preserves_published_registration_modules_in_every_runtime_condition(
+    run_check_with_files: RunCheckWithFiles, metadata: object, *, has_failure: bool, uses_wildcard: bool
+) -> None:
+    entry = "*" if uses_wildcard else "register"
+    files = _workspace({
+        "library": {
+            "exports": {f"./{entry}": f"./src/nested/{entry}.ts"},
+            "sideEffects": metadata,
+            "publishConfig": {
+                "exports": {
+                    f"./{entry}": {
+                        "types": f"./build/nested/{entry}.d.ts",
+                        "import": f"./build/nested/{entry}.js",
+                        "require": f"./build/nested/{entry}.cjs",
+                    }
+                }
+            },
+        }
+    })
+    files["packages/library/src/nested/register.ts"] = "registerMatchers();"
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+
+
+@pytest.mark.parametrize(
     ("source", "has_failure"),
     [
         ('import "node:fs";', True),

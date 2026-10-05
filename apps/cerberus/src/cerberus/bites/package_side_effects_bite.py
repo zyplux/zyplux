@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.architecture import is_library, run_package_policy
+from cerberus.architecture import build_export_map, is_library, list_targets, run_package_policy
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import Scope
 from cerberus.ts_syntax import node_text
@@ -18,6 +18,25 @@ if TYPE_CHECKING:
 ID = "package_side_effects"
 SUMMARY = "Libraries declare side effects and preserve modules that execute registration or initialization"
 SCOPE = Scope.CONTENT
+
+
+def _list_published_modules(module: str, package: PackageInfo) -> set[str]:
+    exports = build_export_map(package.manifest.get("exports"))
+    published = build_export_map(package.manifest.get("publishConfig", {}).get("exports", {}))
+    modules = set()
+    for key, entry in exports.items():
+        for source in list_targets(entry):
+            pattern = source.removeprefix("./")
+            if not PurePosixPath(module).full_match(pattern):
+                continue
+            prefix, wildcard, suffix = pattern.partition("*")
+            match = module[len(prefix) : len(module) - len(suffix) if suffix else None] if wildcard else ""
+            modules.update(
+                target.removeprefix("./").replace("*", match)
+                for target in list_targets(published.get(key))
+                if target.endswith((".js", ".mjs", ".cjs"))
+            )
+    return modules
 
 
 def _executes_statement(node: Node, functions: dict[str, Node], active: frozenset[str] = frozenset()) -> bool:
@@ -95,10 +114,12 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             if not _executes_initialization(tree.root_node):
                 continue
             module = path.removeprefix(f"{package.directory}/")
-            if metadata is False or not any(
-                PurePosixPath(module).full_match(pattern.removeprefix("./")) for pattern in metadata
-            ):
-                findings.append(f"{path} executes a top-level statement; list {module} in sideEffects")
+            findings.extend(
+                f"{path} executes a top-level statement; list {target} in sideEffects"
+                for target in sorted({module, *_list_published_modules(module, package)})
+                if metadata is False
+                or not any(PurePosixPath(target).full_match(pattern.removeprefix("./")) for pattern in metadata)
+            )
         return findings
 
     return run_package_policy(repo, ctx, ID, inspect)

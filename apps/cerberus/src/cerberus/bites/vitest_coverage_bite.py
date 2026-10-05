@@ -124,6 +124,8 @@ def _find_coverage(root: Node) -> tuple[Node | None, dict[str, Node], set[str]]:
 
 def _enables_coverage(script: str, *, configured: bool) -> bool:
     args = shlex.split(script)
+    while args and re.match(r"^[A-Za-z_][A-Za-z_0-9]*=", args[0]):
+        args.pop(0)
     prefixes = [("vitest",), ("pnpm", "exec", "vitest"), ("pnpm", "vitest"), ("npx", "vitest"), ("bunx", "vitest")]
     if not any(tuple(args[: len(prefix)]) == prefix for prefix in prefixes):
         return configured

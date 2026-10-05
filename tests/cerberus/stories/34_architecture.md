@@ -26,6 +26,8 @@
 
 ### 34.5.4 checks javascript and explicit module extensions
 
+### 34.5.5 preserves published registration modules in every runtime condition
+
 ## 34.6 Worker runtime reachability
 
 ### 34.6.1 workers follow runtime imports and ignore type edges or text
