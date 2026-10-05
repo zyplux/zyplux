@@ -4,12 +4,14 @@ import re
 import shutil
 import tomllib
 from importlib import resources
+from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from cerberus import __version__
 from cerberus.cli import app
+from rich.text import Text
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
@@ -376,7 +378,7 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
 
 
 @pytest.mark.parametrize(
-    ("retired", "replacement"),
+    "retirement",
     [
         ("cli_ts_test_seam", "test-seam-only-imports/package-imports"),
         ("lib_ts_test_seam", "test-seam-only-imports/package-imports"),
@@ -384,17 +386,28 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
         ("contract_keepers", "repository-local tests"),
         ("dependency_direction", "repository-local tests"),
     ],
+    ids=itemgetter(0),
 )
+@pytest.mark.parametrize("is_colored", [False, True])
 def test_16_4_3_explains_replacements_for_retired_bites(
     conforming_repo: Path,
     invoke_lint: Callable[..., Result],
-    retired: str,
-    replacement: str,
+    retirement: tuple[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    is_colored: bool,
 ) -> None:
+    retired, replacement = retirement
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    if is_colored:
+        monkeypatch.delenv("NO_COLOR", raising=False)
+    else:
+        monkeypatch.setenv("NO_COLOR", "1")
     result = invoke_lint("--check", retired)
     assert result.exit_code == USAGE_ERROR_EXIT
     assert f"retired bite `{retired}`" in result.output
-    assert replacement in " ".join(result.output.replace("│", " ").split()), result.output
+    assert replacement in " ".join(Text.from_ansi(result.output).plain.replace("│", " ").split()), result.output
     (conforming_repo / "cerberus.toml").write_text(f"[{retired}]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output
