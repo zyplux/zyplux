@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from cerberus.architecture import build_export_map, is_library, list_targets, run_package_policy
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import Scope
-from cerberus.ts_syntax import node_text
+from cerberus.ts_syntax import node_text, string_literal
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -18,6 +18,14 @@ if TYPE_CHECKING:
 ID = "package_side_effects"
 SUMMARY = "Libraries declare side effects and preserve modules that execute registration or initialization"
 SCOPE = Scope.CONTENT
+_FUNCTION_NODES = {
+    "arrow_function",
+    "function_expression",
+    "function_declaration",
+    "generator_function_declaration",
+    "generator_function",
+    "method_definition",
+}
 
 
 def _list_published_modules(module: str, package: PackageInfo) -> set[str]:
@@ -39,17 +47,39 @@ def _list_published_modules(module: str, package: PackageInfo) -> set[str]:
     return modules
 
 
+def _is_commonjs_export(node: Node | None) -> bool:
+    if node is None or node.type not in {"member_expression", "subscript_expression"}:
+        return False
+    receiver = node.child_by_field_name("object")
+    member = node.child_by_field_name("property") or node.child_by_field_name("index")
+    if receiver is None or member is None or member.type not in {"property_identifier", "string", "number"}:
+        return False
+    if node_text(receiver) == "module":
+        return (string_literal(member) or node_text(member)) == "exports"
+    return node_text(receiver) == "exports" or _is_commonjs_export(receiver)
+
+
+def _executes_export(node: Node) -> bool:
+    if node.type in _FUNCTION_NODES:
+        return False
+    return node.type in {
+        "call_expression",
+        "new_expression",
+        "assignment_expression",
+        "augmented_assignment_expression",
+        "update_expression",
+        "await_expression",
+    } or any(_executes_export(child) for child in node.named_children)
+
+
 def _executes_statement(node: Node, functions: dict[str, Node], active: frozenset[str] = frozenset()) -> bool:
     if node.type == "expression_statement":
-        return node.named_children[0].type != "string"
-    if node.type in {
-        "arrow_function",
-        "function_expression",
-        "function_declaration",
-        "generator_function_declaration",
-        "generator_function",
-        "method_definition",
-    }:
+        expression = node.named_children[0]
+        if expression.type == "assignment_expression" and _is_commonjs_export(expression.child_by_field_name("left")):
+            initializer = expression.child_by_field_name("right")
+            return initializer is not None and _executes_export(initializer)
+        return expression.type != "string"
+    if node.type in _FUNCTION_NODES:
         return False
     if node.type == "call_expression":
         callee = node.child_by_field_name("function")
@@ -101,6 +131,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
                 ".ts",
                 ".tsx",
                 ".js",
+                ".jsx",
                 ".mjs",
                 ".mts",
                 ".cts",

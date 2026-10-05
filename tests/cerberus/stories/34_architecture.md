@@ -30,6 +30,10 @@
 
 ### 34.5.6 ignores string directives and preserves actual registration
 
+### 34.5.7 checks commonjs export initializers
+
+### 34.5.8 checks jsx registration and defers component bodies
+
 ## 34.6 Worker runtime reachability
 
 ### 34.6.1 workers follow runtime imports and ignore type edges or text

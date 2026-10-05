@@ -17,8 +17,10 @@ type RunVitestCoverage = Callable[[Mapping[str, str | None]], CheckResult]
 
 CHECK_ID = "vitest_coverage"
 
+_VITEST_IMPORT = "import {defineConfig} from 'vitest/config';"
+
 _COMPLIANT_CONFIG = (
-    "export default defineConfig({\n"
+    _VITEST_IMPORT + "export default defineConfig({\n"
     "  test: {\n"
     "    coverage: {\n"
     "      enabled: true,\n"
@@ -164,7 +166,7 @@ def test_19_5_1_passes_when_every_threshold_metric_meets_the_required_floor(
 def test_19_5_2_resolves_local_constants_typed_objects_and_vitest_config_helpers(
     run_vitest_coverage: RunVitestCoverage, ok: MakeFinding, config: str
 ) -> None:
-    source = _TEST_SETUP + config
+    source = _VITEST_IMPORT + _TEST_SETUP + config
     assert run_vitest_coverage({"vitest.config.ts": source}).findings == [ok("Vitest coverage gate enforces >= 90%")]
 
 
@@ -189,7 +191,7 @@ def test_19_5_2_resolves_local_constants_typed_objects_and_vitest_config_helpers
 def test_19_5_3_rejects_unresolved_cycles_mutable_configs_and_unknown_transformations(
     run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, config: str
 ) -> None:
-    source = _TEST_SETUP + config
+    source = _VITEST_IMPORT + _TEST_SETUP + config
     assert run_vitest_coverage({"vitest.config.ts": source}).findings == [fail(_NO_COVERAGE_MESSAGE)]
 
 
@@ -217,6 +219,26 @@ def test_19_5_5_applies_literal_spreads_in_source_order(
         else _NO_COLLECTION_MESSAGE
     )
     assert run_vitest_coverage({"vitest.config.ts": _TEST_SETUP + config}).findings == [fail(message)]
+
+
+@pytest.mark.parametrize(
+    ("helper", "has_coverage"),
+    [
+        ("import {defineConfig} from 'vitest/config';", True),
+        ("import {defineConfig} from 'vite';", True),
+        ("import {defineConfig} from './custom';", False),
+        ("function defineConfig() { return {}; }", False),
+        ("", False),
+        ("import type {defineConfig} from 'vitest/config';", False),
+        ("import {type defineConfig} from 'vitest/config';", False),
+    ],
+)
+def test_19_5_6_trusts_config_helpers_only_from_vitest_or_vite(
+    run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, ok: MakeFinding, helper: str, *, has_coverage: bool
+) -> None:
+    expected = ok("Vitest coverage gate enforces >= 90%") if has_coverage else fail(_NO_COVERAGE_MESSAGE)
+    source = _TEST_SETUP + helper + "export default defineConfig({test});"
+    assert run_vitest_coverage({"vitest.config.ts": source}).findings == [expected]
 
 
 @pytest.mark.parametrize(

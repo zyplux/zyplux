@@ -36,6 +36,8 @@
 
 ### 19.5.5 applies literal spreads in source order
 
+### 19.5.6 trusts config helpers only from vitest or vite
+
 ## 19.6 requiring coverage collection
 
 ### 19.6.1 requires coverage collection in config or the root test command

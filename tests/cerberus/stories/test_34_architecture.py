@@ -228,6 +228,43 @@ def test_34_5_6_ignores_string_directives_and_preserves_actual_registration(
 @pytest.mark.parametrize(
     ("source", "has_failure"),
     [
+        ("module.exports = {value: 1};", False),
+        ("exports.value = 1;", False),
+        ("module.exports.value = 1;", False),
+        ("exports['value'] = 1;", False),
+        ("module['exports'] = {value: 1};", False),
+        ("module.other = {value: 1};", True),
+        ("exports[registerMatchers()] = 1;", True),
+        ("module.exports[registerMatchers()].value = 1;", True),
+        ("module.exports = () => registerMatchers();", False),
+        ("module.exports = {register() { registerMatchers(); }};", False),
+        ("module.exports = registerMatchers();", True),
+        ("module.exports = {matchers: registerMatchers()};", True),
+        ("exports.value = globalThis.counter++;", True),
+        ("const register = () => { registerMatchers(); }; module.exports = register();", True),
+    ],
+)
+def test_34_5_7_checks_commonjs_export_initializers(
+    run_check_with_files: RunCheckWithFiles, source: str, *, has_failure: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": "./src/index.cjs"}, "sideEffects": False}})
+    files["packages/library/src/index.cjs"] = source
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+
+
+@pytest.mark.parametrize("has_registration", [False, True])
+def test_34_5_8_checks_jsx_registration_and_defers_component_bodies(
+    run_check_with_files: RunCheckWithFiles, *, has_registration: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": "./src/index.jsx"}, "sideEffects": False}})
+    source = "export const Component = () => <p>Ready</p>;"
+    files["packages/library/src/index.jsx"] = source + ("registerMatchers();" if has_registration else "")
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
+
+
+@pytest.mark.parametrize(
+    ("source", "has_failure"),
+    [
         ('import "node:fs";', True),
         ('import type { Stats } from "node:fs";', False),
         ('export type { Stats } from "node:fs";', False),

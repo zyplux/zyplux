@@ -28,7 +28,7 @@ _METRICS = ("branches", "functions", "lines", "statements")
 
 def _list_bindings(root: Node) -> tuple[dict[str, Node], set[str]]:
     bindings = {}
-    helpers = {"defineConfig"}
+    helpers = set()
     for statement in root.named_children:
         declaration = statement.child_by_field_name("declaration") or statement
         if declaration.type == "lexical_declaration" and declaration.children[0].type == "const":
@@ -38,11 +38,13 @@ def _list_bindings(root: Node) -> tuple[dict[str, Node], set[str]]:
                     bindings[node_text(name)] = initializer
         if (
             declaration.type == "import_statement"
-            and string_literal(declaration.child_by_field_name("source")) == "vitest/config"
+            and string_literal(declaration.child_by_field_name("source")) in {"vitest/config", "vite"}
+            and not any(child.type == "type" for child in declaration.children)
         ):
             for specifier in walk_nodes(declaration):
                 if (
                     specifier.type == "import_specifier"
+                    and not any(child.type == "type" for child in specifier.children)
                     and node_text(specifier.child_by_field_name("name") or specifier) == "defineConfig"
                 ):
                     helpers.add(
