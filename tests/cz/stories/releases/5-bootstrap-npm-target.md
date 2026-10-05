@@ -10,4 +10,4 @@
 
 ### 5.2.1 skips publishing when the target's version is already on npm
 
-### 5.2.2 publishes the target when its version is not yet on npm
+### 5.2.2 publishes the target with the terminal connected for npm authentication

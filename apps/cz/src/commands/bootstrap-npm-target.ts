@@ -16,7 +16,7 @@ export const bootstrapNpmTargetCommand = command(
   object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }),
   {
     aliases: ['bn'],
-    brief: message`First-publish a new npm target with a token so trusted publishing can be enabled afterward.`,
+    brief: message`First-publish a new npm target using local npm authentication, then enable trusted publishing.`,
   },
 );
 
@@ -35,7 +35,7 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
   }
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
-  await publishNpm(target.dir, label, version);
+  await publishNpm(target.dir);
   console.log(
     `Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
   );

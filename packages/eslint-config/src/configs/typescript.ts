@@ -33,7 +33,9 @@ const allOverrides: Linter.RulesRecord = {
 const strictStylisticOverrides: Linter.RulesRecord = {
   '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
   '@typescript-eslint/consistent-type-definitions': 'off',
-  '@typescript-eslint/no-restricted-imports': [
+  '@typescript-eslint/prefer-destructuring': 'off',
+  '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+  'no-restricted-imports': [
     'error',
     {
       patterns: [
@@ -44,8 +46,6 @@ const strictStylisticOverrides: Linter.RulesRecord = {
       ],
     },
   ],
-  '@typescript-eslint/prefer-destructuring': 'off',
-  '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
 };
 
 export const typescript = (tsconfigRootDir: string): ConfigWithExtends => ({

@@ -89,14 +89,14 @@ def test_8_1_3_content_hash_diffs_humanized_matches_or_differs(
 
     plan = totchef.plan()
 
-    assert "file.drift,differs,differs,#21998928,would apply" in plan.report  # #sha256("NEW\n")[:8]
-    assert "file.settled,matches,matches,#e4426b0f,ok" in plan.report  # #sha256("SAME\n")[:8]
-    assert "file.fresh,absent,absent,#21998928,would apply" in plan.report
+    assert 'file.drift,differs,differs,"#21998928",would apply' in plan.report  # #sha256("NEW\n")[:8]
+    assert 'file.settled,matches,matches,"#e4426b0f",ok' in plan.report  # #sha256("SAME\n")[:8]
+    assert 'file.fresh,absent,absent,"#21998928",would apply' in plan.report
 
     report = totchef.up()
 
-    assert "file.drift,differs,matches,#21998928,applied" in report.full_table
-    assert "file.fresh,absent,matches,#21998928,applied" in report.full_table
+    assert 'file.drift,differs,matches,"#21998928",applied' in report.full_table
+    assert 'file.fresh,absent,matches,"#21998928",applied' in report.full_table
 
 
 def test_8_1_4_before_and_current_diverge_on_upgrade(

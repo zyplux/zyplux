@@ -21,7 +21,8 @@ const reactVersion = (config: Config) => {
   return;
 };
 
-const isRuleDisabled = (config: Config, ruleName: string) => config.some(entry => entry.rules?.[ruleName] === 'off');
+const isDomPropertyRuleDisabled = (config: Config) =>
+  config.some(entry => entry.rules?.['@eslint-react/dom-no-unknown-property'] === 'off');
 
 const reactSettingsFiles = (config: Config) =>
   config.flatMap(entry => (entry.settings !== undefined && 'react-x' in entry.settings ? (entry.files ?? []) : []));
@@ -68,16 +69,9 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
     });
 
     test('3.2.4 turns off the no-unknown-property rule for non-dom files only once react is enabled', ({ zyplux }) => {
-      expect(isRuleDisabled(zyplux(), '@eslint-react/dom-no-unknown-property')).toBe(false);
-      expect(
-        isRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'] }), '@eslint-react/dom-no-unknown-property'),
-      ).toBe(false);
-      expect(
-        isRuleDisabled(
-          zyplux({ nonDomReactFiles: ['apps/tui/**'], react: true }),
-          '@eslint-react/dom-no-unknown-property',
-        ),
-      ).toBe(true);
+      expect(isDomPropertyRuleDisabled(zyplux())).toBe(false);
+      expect(isDomPropertyRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'] }))).toBe(false);
+      expect(isDomPropertyRuleDisabled(zyplux({ nonDomReactFiles: ['apps/tui/**'], react: true }))).toBe(true);
     });
   });
 
@@ -104,7 +98,7 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
     test('3.4.3 enables react and disables no-unknown-property for a renderer map with no dom entry', ({ zyplux }) => {
       const domlessConfig = zyplux({ react: { opentui: ['apps/tui/**'] } });
       expect(hasReactSettings(domlessConfig)).toBe(true);
-      expect(isRuleDisabled(domlessConfig, '@eslint-react/dom-no-unknown-property')).toBe(true);
+      expect(isDomPropertyRuleDisabled(domlessConfig)).toBe(true);
     });
 
     test('3.4.4 treats an empty renderer map or a renderer with no globs as no react', ({ zyplux }) => {

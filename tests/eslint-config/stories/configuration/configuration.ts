@@ -19,7 +19,7 @@ const isAbsolutePath = (candidate: string) => path.isAbsolute(candidate);
 const tsconfigRootDirs = (config: ZypluxConfig) =>
   config.flatMap(entry => {
     const parsed = ParserOptionsSchema.safeParse(entry.languageOptions?.['parserOptions']);
-    return parsed.success ? [parsed.data.tsconfigRootDir] : [];
+    return parsed.success ? parsed.data.tsconfigRootDir : [];
   });
 
 type ConfigurationFixtures = {

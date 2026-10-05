@@ -1,8 +1,8 @@
 import { describe, expect, test } from './rules.ts';
 
-test.override({ ruleId: '@typescript-eslint/no-restricted-imports' });
+test.override({ ruleId: 'no-restricted-imports' });
 
-const parentImportViolation = [{ ruleId: '@typescript-eslint/no-restricted-imports' }];
+const parentImportViolation = [{ ruleId: 'no-restricted-imports' }];
 
 type ImportCase = [shape: string, codes: string[]];
 

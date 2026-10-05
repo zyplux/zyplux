@@ -30,7 +30,7 @@ export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurf
       reference.specifier === provider.name || reference.specifier.startsWith(`${provider.name}/`)
         ? `.${reference.specifier.slice(provider.name.length)}`
         : '';
-    return [{ ...reference, consumer, exportKey, provider }];
+    return { ...reference, consumer, exportKey, provider };
   });
   const runtimeDependencies = new Set(
     references
@@ -45,10 +45,10 @@ export const findTypeDependencyViolations = ({ imports, packages, sharedTypeSurf
     .flatMap(reference => {
       const { consumer, exportKey, filePath, line, provider, specifier } = reference;
       const location = `${filePath}:${line} (${consumer.name} → ${provider.name}) '${specifier}'`;
-      if (!hasPublicExport(provider.exports, exportKey)) return [`${location}: not a public package entry`];
+      if (!hasPublicExport(provider.exports, exportKey)) return `${location}: not a public package entry`;
       if (sharedTypeSurfaces.has(exportKey.replace(/^\.\//, ''))) return [];
       return runtimeDependencies.has(`${consumer.name}:${provider.name}`)
         ? []
-        : [`${location}: implementation package is used only for types`];
+        : `${location}: implementation package is used only for types`;
     });
 };

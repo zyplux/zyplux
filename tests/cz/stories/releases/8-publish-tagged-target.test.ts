@@ -35,7 +35,23 @@ describe('8.2 publishing to each registry kind', () => {
 
     await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-    expectNpmPackAndPublish(shell, targets.util.dir, 'zyplux-util-1.2.3.tgz');
+    await expectNpmPackAndPublish(shell, targets.util.dir);
+  });
+
+  test('8.2.6 removes the temporary archive when npm publication fails', async ({
+    cz,
+    expectNpmPackAndPublish,
+    registries,
+    shell,
+    targets,
+  }) => {
+    registries.setPublished({ npmPublished: false });
+    shell.on(/pnpm pack/, '');
+    shell.on(/^npm publish/, { exitCode: 1, stdout: '' });
+
+    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('command failed with exit code 1');
+
+    await expectNpmPackAndPublish(shell, targets.util.dir);
   });
 
   test('8.2.2 builds and publishes a pypi target', async ({ cz, registries, shell }) => {

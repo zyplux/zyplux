@@ -1,4 +1,8 @@
 import { spawn } from 'node:child_process';
+import { constants } from 'node:os';
+
+const FAILURE_EXIT_CODE = 1;
+const SIGNAL_EXIT_OFFSET = 128;
 
 export type ExecPromise = Promise<ExecResult> & {
   cwd: (dir: string) => ExecPromise;
@@ -73,9 +77,10 @@ const spawnProcess = (argv: string[], { cwd, env, nothrow, quiet, stdin }: Spawn
     });
 
     child.on('error', reject);
-    child.on('close', code => {
+    child.on('close', (code, signal) => {
+      const exitCode = code ?? (signal === null ? FAILURE_EXIT_CODE : SIGNAL_EXIT_OFFSET + constants.signals[signal]);
       const result = toExecResult(
-        code ?? 0,
+        exitCode,
         shouldMerge ? Buffer.concat(merged) : Buffer.concat(stdoutChunks),
         shouldMerge ? Buffer.alloc(0) : Buffer.concat(stderrChunks),
       );
@@ -130,3 +135,13 @@ export const run = (argv: string[], opts: RunOptions = {}): ExecPromise => {
   const { merge: shouldMerge = false, ...state } = opts;
   return makeExecPromise(argv, state, shouldMerge);
 };
+
+export const runPassthrough = ([program, ...args]: [string, ...string[]], cwd?: string) =>
+  new Promise<void>((resolve, reject) => {
+    const child = spawn(program, args, { cwd, stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('close', code => {
+      if (code === 0) resolve();
+      else reject(new Error(`command failed with exit code ${code ?? 'unknown'}: ${[program, ...args].join(' ')}`));
+    });
+  });

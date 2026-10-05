@@ -1,7 +1,7 @@
 import { ensure } from '@zyplux/util/assert';
+import { runPassthrough } from '@zyplux/util/exec';
 import { parseJson } from '@zyplux/util/json';
 import { $ } from '@zyplux/util/shell';
-import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -117,16 +117,6 @@ const shouldUpgrade = async (tool: string, declared: string, latest: string) => 
   }
 };
 
-const runPassthrough = (program: string, args: string[], cwd: string) =>
-  new Promise<void>((resolve, reject) => {
-    const child = spawn(program, args, { cwd, stdio: 'inherit' });
-    child.on('error', reject);
-    child.on('close', code => {
-      if (code === 0) resolve();
-      else reject(new Error(`command failed with exit code ${code ?? 'unknown'}: ${[program, ...args].join(' ')}`));
-    });
-  });
-
 const listDockerfiles = async (root: string) => {
   const output = await $.git.lsFiles(root, ['*Dockerfile*']);
   return output.stdout
@@ -155,7 +145,7 @@ const syncNode = async (root: string, declared: string, latest: string, isIntera
   const hasUpdate = declared !== latest;
   console.log(`node: declared ${declared}, latest deployable ${latest} — ${hasUpdate ? 'NEW VERSION' : 'up to date'}`);
   if (!hasUpdate || (isInteractive && !(await shouldUpgrade('Node', declared, latest)))) return;
-  await runPassthrough('pnpm', ['runtime', 'set', 'node', latest], root);
+  await runPassthrough(['pnpm', 'runtime', 'set', 'node', latest], root);
   await syncImageNode(root, latest);
 };
 
@@ -172,13 +162,13 @@ const syncTurbo = async (
     `turbo: declared ${declared}, latest ${latest} — ${hasUpdate ? `NEW VERSION ${target}` : `up to date; ${declared}.x floats on install`}`,
   );
   if (!hasUpdate || (isInteractive && !(await shouldUpgrade('turbo', declared, target)))) return;
-  await runPassthrough('pnpm', ['pkg', 'set', `toolchain.turbo=${target}`], root);
+  await runPassthrough(['pnpm', 'pkg', 'set', `toolchain.turbo=${target}`], root);
 };
 
 const updateJavaScript = (root: string, packages: readonly string[], isInteractive: boolean) =>
   runPassthrough(
-    'pnpm',
     [
+      'pnpm',
       'update',
       '--recursive',
       '--include-workspace-root',
@@ -191,9 +181,9 @@ const updateJavaScript = (root: string, packages: readonly string[], isInteracti
 
 const updatePython = async (root: string) => {
   if (!existsSync(path.join(root, 'pyproject.toml'))) return;
-  await runPassthrough('uv', ['lock', '--upgrade'], root);
-  await runPassthrough('uvx', ['uv-bump', '-v'], root);
-  await runPassthrough('uv', ['sync', '--all-packages', '--all-groups'], root);
+  await runPassthrough(['uv', 'lock', '--upgrade'], root);
+  await runPassthrough(['uvx', 'uv-bump', '-v'], root);
+  await runPassthrough(['uv', 'sync', '--all-packages', '--all-groups'], root);
 };
 
 export const runUpgrade = async ({ interactive, packages }: UpgradeConfig) => {
@@ -205,7 +195,7 @@ export const runUpgrade = async ({ interactive, packages }: UpgradeConfig) => {
   ]);
   const declaredNode = manifest.devEngines.runtime.version;
   const declaredTurbo = manifest.toolchain?.turbo;
-  await runPassthrough('pnpm', ['self-update', packageManagerMajor(manifest)], root);
+  await runPassthrough(['pnpm', 'self-update', packageManagerMajor(manifest)], root);
   await syncNode(root, declaredNode, latestNode, interactive);
   await syncTurbo(root, declaredTurbo, latestTurbo, interactive);
   await updateJavaScript(root, packages, interactive);
