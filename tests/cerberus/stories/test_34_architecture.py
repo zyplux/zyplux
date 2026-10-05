@@ -213,6 +213,18 @@ def test_34_5_5_preserves_published_registration_modules_in_every_runtime_condit
     assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
 
 
+@pytest.mark.parametrize("extension", ["js", "cjs"])
+@pytest.mark.parametrize("directive", ["use strict", "use client"])
+@pytest.mark.parametrize("has_registration", [False, True])
+def test_34_5_6_ignores_string_directives_and_preserves_actual_registration(
+    run_check_with_files: RunCheckWithFiles, extension: str, directive: str, *, has_registration: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": f"./src/index.{extension}"}, "sideEffects": False}})
+    statement = "registerMatchers();" if has_registration else "const ready = true;"
+    files[f"packages/library/src/index.{extension}"] = f'"{directive}"; {statement}'
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
+
+
 @pytest.mark.parametrize(
     ("source", "has_failure"),
     [

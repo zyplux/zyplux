@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-import json
 import re
 import shlex
+from functools import cache
 from typing import TYPE_CHECKING
+
+import tree_sitter_bash
+from tree_sitter import Language, Parser
 
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import CheckResult, Scope
-from cerberus.ts_syntax import node_text, object_fields, string_literal, walk_nodes
+from cerberus.package_test_script import parse_test_script
+from cerberus.ts_syntax import node_text, string_literal, walk_nodes
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -106,6 +110,31 @@ def _resolve_config(node: Node | None, bindings: dict[str, Node], helpers: set[s
     return node
 
 
+def _resolve_fields(
+    node: Node | None, bindings: dict[str, Node], helpers: set[str], active: frozenset[int] = frozenset()
+) -> dict[str, Node] | None:
+    node = _resolve_literal(node, bindings, helpers)
+    if node is None or node.type != "object" or node.id in active:
+        return None
+    fields = {}
+    for field in node.named_children:
+        if field.type == "spread_element":
+            spread = _resolve_fields(field.named_children[0], bindings, helpers, active | {node.id})
+            if spread is None:
+                return None
+            fields.update(spread)
+        elif field.type == "pair":
+            key, initializer = field.child_by_field_name("key"), field.child_by_field_name("value")
+            if key is None or initializer is None or key.type == "computed_property_name":
+                return None
+            fields[string_literal(key) or node_text(key)] = initializer
+        elif field.type == "shorthand_property_identifier":
+            fields[node_text(field)] = field
+        elif field.type != "comment":
+            return None
+    return fields
+
+
 def _find_coverage(root: Node) -> tuple[Node | None, dict[str, Node], set[str]]:
     bindings, helpers = _list_bindings(root)
 
@@ -116,23 +145,36 @@ def _find_coverage(root: Node) -> tuple[Node | None, dict[str, Node], set[str]]:
         if statement.type != "export_statement" or not any(child.type == "default" for child in statement.children):
             continue
         config = _resolve_config(statement.child_by_field_name("value"), bindings, helpers)
-        test = resolve(object_fields(config).get("test")) if config is not None and config.type == "object" else None
-        coverage = resolve(object_fields(test).get("coverage")) if test is not None and test.type == "object" else None
+        test = resolve((_resolve_fields(config, bindings, helpers) or {}).get("test"))
+        coverage = resolve((_resolve_fields(test, bindings, helpers) or {}).get("coverage"))
         return coverage, bindings, helpers
     return None, bindings, helpers
 
 
+@cache
+def _get_shell_parser() -> Parser:
+    return Parser(Language(tree_sitter_bash.language()))
+
+
 def _enables_coverage(script: str, *, configured: bool) -> bool:
-    args = shlex.split(script)
-    while args and re.match(r"^[A-Za-z_][A-Za-z_0-9]*=", args[0]):
-        args.pop(0)
+    root = _get_shell_parser().parse(script.encode()).root_node
+    if root.has_error:
+        return False
+    command = next((child for child in root.named_children if child.type != "comment"), None)
+    while command is not None and command.type in {"list", "pipeline", "redirected_statement"}:
+        command = next((child for child in command.named_children if child.type != "comment"), None)
+    if command is None or command.type != "command":
+        return configured
+    words = [*command.children_by_field_name("name"), *command.children_by_field_name("argument")]
+    try:
+        args = [shlex.split(node_text(word))[0] for word in words]
+    except ValueError:
+        return False
     prefixes = [("vitest",), ("pnpm", "exec", "vitest"), ("pnpm", "vitest"), ("npx", "vitest"), ("bunx", "vitest")]
     if not any(tuple(args[: len(prefix)]) == prefix for prefix in prefixes):
         return configured
     enabled = configured
     for index, arg in enumerate(args):
-        if arg in {"&&", "||", ";", "|"}:
-            break
         flag, separator, setting = arg.partition("=")
         if flag in {"--coverage", "--coverage.enabled"}:
             enabled = setting == "true" if separator else index + 1 == len(args) or args[index + 1] != "false"
@@ -145,14 +187,14 @@ def _check_config(path: str, content: str, floor: int, script: str, res: CheckRe
         res.fail(f"{path}: invalid TypeScript coverage configuration")
         return
     coverage, bindings, helpers = _find_coverage(tree.root_node)
-    fields = object_fields(coverage) if coverage is not None and coverage.type == "object" else {}
+    fields = _resolve_fields(coverage, bindings, helpers) or {}
     thresholds = _resolve_literal(fields.get("thresholds"), bindings, helpers)
-    if thresholds is None or thresholds.type != "object":
+    metrics = _resolve_fields(thresholds, bindings, helpers)
+    if metrics is None:
         res.fail(
             f"{path}: exported test.coverage.thresholds must resolve to a literal object enforcing at least {floor}%"
         )
         return
-    metrics = object_fields(thresholds)
     for key in _METRICS:
         threshold = _resolve_literal(metrics.get(key), bindings, helpers)
         if threshold is None or threshold.type != "number":
@@ -175,8 +217,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             res.skip("no root Vitest coverage configuration or TypeScript tests")
         return res
     floor = ctx.config.vitest_min_coverage
-    manifest = json.loads(ctx.file(repo, "package.json") or "{}")
-    script = manifest.get("scripts", {}).get("test", "")
+    script = parse_test_script(ctx.file(repo, "package.json") or "{}")
     for path in configs:
         content = ctx.file(repo, path)
         if content is None:

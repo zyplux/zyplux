@@ -34,6 +34,8 @@
 
 ### 19.5.4 ignores coverage in unrelated nested objects
 
+### 19.5.5 applies literal spreads in source order
+
 ## 19.6 requiring coverage collection
 
 ### 19.6.1 requires coverage collection in config or the root test command
@@ -41,3 +43,5 @@
 ### 19.6.2 requires explicit collection when coverage enabled is absent
 
 ### 19.6.3 CLI coverage flags override enabled configuration
+
+### 19.6.4 preserves coverage validation when the test manifest is malformed

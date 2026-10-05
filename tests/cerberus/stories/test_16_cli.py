@@ -375,16 +375,26 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
     assert "src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]" in verbose.output
 
 
-@pytest.mark.parametrize("retired", ["cli_ts_test_seam", "lib_ts_test_seam", "fixture_roles_ts"])
+@pytest.mark.parametrize(
+    ("retired", "replacement"),
+    [
+        ("cli_ts_test_seam", "test-seam-only-imports/package-imports"),
+        ("lib_ts_test_seam", "test-seam-only-imports/package-imports"),
+        ("fixture_roles_ts", "test-seam-only-imports/package-imports"),
+        ("contract_keepers", "repository-local tests"),
+        ("dependency_direction", "repository-local tests"),
+    ],
+)
 def test_16_4_3_explains_replacements_for_retired_bites(
     conforming_repo: Path,
     invoke_lint: Callable[..., Result],
     retired: str,
+    replacement: str,
 ) -> None:
     result = invoke_lint("--check", retired)
     assert result.exit_code == USAGE_ERROR_EXIT
     assert f"retired bite `{retired}`" in result.output
-    assert "test-seam-only-imports/package-imports" in result.output
+    assert replacement in " ".join(result.output.replace("│", " ").split()), result.output
     (conforming_repo / "cerberus.toml").write_text(f"[{retired}]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
     assert result.exit_code == 0, result.output

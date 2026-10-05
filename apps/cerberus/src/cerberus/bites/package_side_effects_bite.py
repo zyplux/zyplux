@@ -41,7 +41,7 @@ def _list_published_modules(module: str, package: PackageInfo) -> set[str]:
 
 def _executes_statement(node: Node, functions: dict[str, Node], active: frozenset[str] = frozenset()) -> bool:
     if node.type == "expression_statement":
-        return True
+        return node.named_children[0].type != "string"
     if node.type in {
         "arrow_function",
         "function_expression",

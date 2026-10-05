@@ -154,6 +154,11 @@ def test_19_5_1_passes_when_every_threshold_metric_meets_the_required_floor(
         "export default defineConfig(() => { return {test}; });",
         "export default defineConfig(function () { return {test}; });",
         "import {defineConfig as createConfig} from 'vitest/config'; export default createConfig({test});",
+        "export default {...{test}};",
+        "export default {...{test: {}}, test};",
+        "export default {test, ...{test}};",
+        "export default {test: {coverage: {...coverage}}};",
+        "export default {test: {coverage: {...coverage, thresholds: {...thresholds}}}};",
     ],
 )
 def test_19_5_2_resolves_local_constants_typed_objects_and_vitest_config_helpers(
@@ -173,6 +178,12 @@ def test_19_5_2_resolves_local_constants_typed_objects_and_vitest_config_helpers
         "const defineConfig = transform; export default defineConfig({test});",
         "export default defineConfig(() => { if (condition) return {test}; return {}; });",
         "export default defineConfig(() => {});",
+        "export default {test, ...unknown};",
+        "export default {test: {coverage: {...coverage, ...unknown}}};",
+        "export default {test: {coverage: {...coverage, thresholds: {...thresholds, ...unknown}}}};",
+        "const recursive = {...recursive}; export default {test, ...recursive};",
+        "export default {test, get test() { return {}; }};",
+        "export default {test, [key]: {}};",
     ],
 )
 def test_19_5_3_rejects_unresolved_cycles_mutable_configs_and_unknown_transformations(
@@ -187,6 +198,25 @@ def test_19_5_4_ignores_coverage_in_unrelated_nested_objects(
 ) -> None:
     source = _COMPLIANT_CONFIG.replace("test: {", "unrelated: { test: {").replace("});", "}});")
     assert run_vitest_coverage({"vitest.config.ts": source}).findings == [fail(_NO_COVERAGE_MESSAGE)]
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        "export default {test, ...{test: {coverage: {...coverage, enabled: false}}}};",
+        "export default {test: {coverage: {...coverage, ...{enabled: false}}}};",
+        "export default {test: {coverage: {...coverage, thresholds: {...thresholds, ...{lines: 80}}}}};",
+    ],
+)
+def test_19_5_5_applies_literal_spreads_in_source_order(
+    run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, config: str
+) -> None:
+    message = (
+        "vitest.config.ts coverage.thresholds.lines is 80.0, below the required 90"
+        if "lines: 80" in config
+        else _NO_COLLECTION_MESSAGE
+    )
+    assert run_vitest_coverage({"vitest.config.ts": _TEST_SETUP + config}).findings == [fail(message)]
 
 
 @pytest.mark.parametrize(
@@ -208,6 +238,27 @@ def test_19_5_4_ignores_coverage_in_unrelated_nested_objects(
         ("echo 'vitest run --coverage'", False),
         ("vitest run && echo --coverage", False),
         ("vitest run --coverage && echo finished", True),
+        ("vitest run --coverage&&echo finished", True),
+        ("vitest run --coverage;echo finished", True),
+        ("vitest run;echo --coverage", False),
+        ("vitest run||echo --coverage", False),
+        ("vitest run '--coverage", False),
+        ("vitest run --coverage &&", False),
+        ('"vitest" "run" "--coverage"', True),
+        ("vitest run # --coverage", False),
+        ("vitest run --coverage # --coverage=false", True),
+        ('vitest run "# --coverage"', False),
+        ("vitest run '#' --coverage", True),
+        (r"vitest run \# --coverage", True),
+        ("LABEL=#literal vitest run --coverage", True),
+        ("API_URL=https://example.test/#anchor vitest run --coverage", True),
+        ("# comment with an unmatched ' quote\nvitest run --coverage", True),
+        ("vitest run --coverage # an unmatched ' quote", True),
+        ("vitest run # --coverage\necho --coverage", False),
+        ("vitest run --coverage # disabled\necho --coverage=false", True),
+        ("vitest run --coverage;# --coverage=false", True),
+        ("vitest run '&&' --coverage", True),
+        ("vitest run --coverage \\\n --coverage=false", False),
     ],
 )
 def test_19_6_1_requires_coverage_collection_in_config_or_the_root_test_command(
@@ -229,7 +280,16 @@ def test_19_6_2_requires_explicit_collection_when_coverage_enabled_is_absent(
 
 
 @pytest.mark.parametrize("flag", ["--coverage.enabled=false", "--coverage=false", "--coverage false"])
-@pytest.mark.parametrize("prefix", ["", "NODE_ENV=test ", 'NODE_ENV=test LABEL="two words" '])
+@pytest.mark.parametrize(
+    "prefix",
+    [
+        "",
+        "NODE_ENV=test ",
+        'NODE_ENV=test LABEL="two words" ',
+        "API_URL=https://example.test ",
+        "API_URL=https://example.test/#anchor ",
+    ],
+)
 def test_19_6_3_cli_coverage_flags_override_enabled_configuration(
     run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, flag: str, prefix: str
 ) -> None:
@@ -238,3 +298,18 @@ def test_19_6_3_cli_coverage_flags_override_enabled_configuration(
         "package.json": json.dumps({"scripts": {"test": f"{prefix}vitest run {flag}"}}),
     }
     assert run_vitest_coverage(files).findings == [fail(_NO_COLLECTION_MESSAGE)]
+
+
+@pytest.mark.parametrize(
+    "manifest", ["not json", "null", "[]", '{"scripts": null}', '{"scripts": []}', '{"scripts": {"test": 3}}']
+)
+@pytest.mark.parametrize("is_enabled", [False, True])
+def test_19_6_4_preserves_coverage_validation_when_the_test_manifest_is_malformed(
+    run_vitest_coverage: RunVitestCoverage, fail: MakeFinding, ok: MakeFinding, manifest: str, *, is_enabled: bool
+) -> None:
+    files = {
+        "vitest.config.ts": _COMPLIANT_CONFIG.replace("enabled: true", f"enabled: {str(is_enabled).lower()}"),
+        "package.json": manifest,
+    }
+    expected = ok("Vitest coverage gate enforces >= 90%") if is_enabled else fail(_NO_COLLECTION_MESSAGE)
+    assert run_vitest_coverage(files).findings == [expected]

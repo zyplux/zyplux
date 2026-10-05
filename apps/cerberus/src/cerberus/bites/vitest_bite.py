@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING
 
@@ -9,6 +8,7 @@ import yaml
 from cerberus import workflow
 from cerberus.graph.parse import extract
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.package_test_script import parse_test_script
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -38,16 +38,6 @@ def _invokes_bun_test_runner(script: str) -> bool:
     return any(_BUN_TEST_RUNNER.search(line) for line in workflow.strip_comment_lines(script).splitlines())
 
 
-def _test_script(content: str) -> str:
-    try:
-        manifest = json.loads(content)
-    except json.JSONDecodeError:
-        return ""
-    scripts = manifest.get("scripts") if isinstance(manifest, dict) else None
-    script = scripts.get("test") if isinstance(scripts, dict) else None
-    return script if isinstance(script, str) else ""
-
-
 def _check_sources(repo: Repo, ctx: Context, res: CheckResult) -> None:
     for path in ctx.paths(repo):
         is_manifest = _is_manifest(path)
@@ -57,7 +47,7 @@ def _check_sources(repo: Repo, ctx: Context, res: CheckResult) -> None:
         content = ctx.file(repo, path)
         if content is None:
             continue
-        if is_manifest and _BUN_TEST_RUNNER.search(_test_script(content)):
+        if is_manifest and _BUN_TEST_RUNNER.search(parse_test_script(content)):
             res.fail(f"{path} `test` script runs bun's test runner; use `vitest run`")
         if is_test and "bun:test" in extract(path, content).ts_specifiers:
             res.fail(f"{path} imports `bun:test`; import from `vitest` instead")

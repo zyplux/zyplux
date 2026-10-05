@@ -29,20 +29,6 @@ def string_literal(node: Node | None) -> str | None:
     return node_text(node)[1:-1]
 
 
-def object_fields(node: Node) -> dict[str, Node]:
-    fields = {}
-    for pair in node.named_children:
-        if pair.type == "shorthand_property_identifier":
-            fields[node_text(pair)] = pair
-            continue
-        if pair.type != "pair":
-            continue
-        key, value = pair.child_by_field_name("key"), pair.child_by_field_name("value")
-        if key is not None and value is not None:
-            fields[string_literal(key) or node_text(key)] = value
-    return fields
-
-
 def parse_jsonc(content: str) -> dict[str, Any]:
     tree = parse_typescript("config.ts", f"({content})")
     objects = [node for node in walk_nodes(tree.root_node) if node.type == "object"]
