@@ -6,7 +6,6 @@ import {
   hasPublicExport,
   listExportTargets,
   listWorkspacePackages,
-  loadArchitecture,
 } from '@zyplux/util/workspace-architecture';
 import path from 'node:path';
 import ts from 'typescript';
@@ -22,7 +21,6 @@ export const test = libraryTest
   .extend('listExportTargets', () => listExportTargets)
   .extend('findPackageOwner', () => findPackageOwner)
   .extend('listWorkspacePackages', () => listWorkspacePackages)
-  .extend('loadArchitecture', () => loadArchitecture)
   .extend('checkTypeDependencies', () => checkTypeDependencies)
   .extend('collectReferences', () => collectReferences)
   .extend('packages', () => PACKAGES)

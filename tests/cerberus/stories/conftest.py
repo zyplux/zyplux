@@ -1,6 +1,7 @@
 """Registers `seam_fixtures` (the trusted seam to cerberus internals) with pytest."""
 
 from seam_fixtures import (
+    bite_module_names,
     check_result,
     ctx,
     error,
@@ -29,6 +30,7 @@ from seam_fixtures import (
 )
 
 __all__ = [
+    "bite_module_names",
     "check_result",
     "ctx",
     "error",

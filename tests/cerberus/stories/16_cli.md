@@ -48,6 +48,8 @@ Any bite switches off with `off = true` in its `[<bite id>]` config table — th
 
 ### 16.6.4 warns and carries on when an off table names an unknown bite
 
+### 16.6.5 disables coverage enforcement independently of the vitest runner
+
 ## 16.7 listing the available checks
 
 ### 16.7.1 lists every registered check by id
@@ -81,3 +83,9 @@ A repo tightens org defaults without forking them: a `cerberus.toml` at the repo
 Bites keep their one-line verdicts by default; `--verbose` asks them to also itemize what they measured (each clone, each dead-code issue), so nobody has to re-run the underlying tool locally to see what's bad.
 
 ### 16.13.1 prints a bite's verbose lines only when run with verbose
+
+## 16.14 documenting configuration
+
+### 16.14.1 bite settings match module names
+
+### 16.14.2 local overrides use bite names and explain each setting

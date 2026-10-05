@@ -230,6 +230,11 @@ def rumdl_canonical() -> str:
 
 
 @pytest.fixture
+def bite_module_names() -> dict[str, str]:
+    return {check.id: check.run.__module__.rsplit(".", 1)[-1].removesuffix("_bite") for check in bites.ALL}
+
+
+@pytest.fixture
 def known_check_ids() -> tuple[str, ...]:
     return tuple(bites.BY_ID)
 

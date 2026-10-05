@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import re
 import shutil
+import tomllib
 from importlib import resources
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -11,7 +14,6 @@ from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
@@ -247,6 +249,17 @@ def test_16_6_4_warns_and_carries_on_when_an_off_table_names_an_unknown_bite(
     assert "unknown off bites ignored: no_such_bite" in result.output
 
 
+def test_16_6_5_disables_coverage_enforcement_independently_of_the_vitest_runner(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    (conforming_repo / "vitest.config.ts").write_text("export default {test: {}};\n")
+    (conforming_repo / "cerberus.toml").write_text("[vitest_coverage]\noff = true\n")
+    result = invoke_lint()
+    assert result.exit_code == 0, result.output
+    assert "vitest_coverage" not in result.output
+    assert "🐾 vitest" in result.output
+
+
 def test_16_7_1_lists_every_registered_check_by_id(known_check_ids: tuple[str, ...]) -> None:
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0, result.output
@@ -345,11 +358,10 @@ def test_16_12_2_applies_an_explicit_config_file_in_place_of_the_repos_own_overl
 def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
     invoke_lint: Callable[..., Result], register_fake_check: RegisterFakeCheck, check_result: type[CheckResult]
 ) -> None:
-    def measured_clones(repo: Repo, ctx: Context) -> CheckResult:
+    def measured_clones(repo: Repo, _ctx: Context) -> CheckResult:
         result = check_result("codeowners_coverage", repo.name)
         result.ok("duplication is under the threshold in every language")
-        if ctx.verbose:
-            result.verbose_lines = ["    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]"]
+        result.verbose_lines = ["    src/a.ts [4:1 - 24:9] duplicates src/b.ts [40:1 - 60:9]"]
         return result
 
     register_fake_check("codeowners_coverage", measured_clones)
@@ -387,3 +399,21 @@ def test_16_5_3_explains_where_to_move_a_coverage_floor(
     result = invoke_lint("--check", "vitest_coverage")
     assert isinstance(result.exception, ValueError)
     assert "Move [vitest].min_coverage to [vitest_coverage].min_coverage" in str(result.exception)
+
+
+def test_16_14_1_bite_settings_match_module_names(bite_module_names: dict[str, str]) -> None:
+    settings = tomllib.loads(resources.files("cerberus").joinpath("cerberus.toml").read_text())
+    assert bite_module_names == {name: name for name in bite_module_names}
+    assert settings.keys() - {"source"} == bite_module_names.keys()
+
+
+def test_16_14_2_local_overrides_use_bite_names_and_explain_each_setting(bite_module_names: dict[str, str]) -> None:
+    local = (Path(__file__).resolve().parents[3] / "cerberus.toml").read_text()
+    assert tomllib.loads(local).keys() <= bite_module_names.keys() | {"source"}
+    assignments = re.finditer(r"(?m)^[ \t]*(?:\"[^\"\n]+\"|'[^'\n]+'|[\w.-]+)[ \t]*=", local)
+    undocumented = []
+    for assignment in assignments:
+        explanation = local[: assignment.start()].rstrip().rsplit("\n", 1)[-1].strip()
+        if not explanation.startswith("#") or not explanation.removeprefix("#").strip():
+            undocumented.append(assignment.group().rstrip("= ").strip())
+    assert undocumented == []

@@ -47,7 +47,10 @@ INTERLEAVED_CHECK = CONFORMING.replace(
 ) + ("\nextra:\n    echo extra\n")
 DEFAULT_NO_LIST = CONFORMING.replace("default:\n    @just --list\n", "default:\n    @echo hi\n")
 BARE_TOOL_CALL = CONFORMING.replace("    uv run rumdl check --fix\n", "    rumdl check\n")
-WITH_MODULES = CONFORMING + "\nmod infra 'infra/justfile'\nmod tools\nmod? extras\n"
+WITH_MODULES = CONFORMING + (
+    "\nmod infra 'infra/justfile'\nmod tools\nmod? extras\n"
+    "mod member-idp 'infra/member-idp/justfile'\nmod workflow-tools\nmod? e2e-tests\n"
+)
 DEGENERATE_MODULE_PATH = CONFORMING + "\nmod infra ''\n"
 NO_CERBERUS_RUN = CONFORMING.replace("    uv run cerberus --fix\n", "")
 CERBERUS_IN_CHECK_BODY = NO_CERBERUS_RUN.replace(

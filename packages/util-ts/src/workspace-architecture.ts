@@ -2,18 +2,8 @@ import { existsSync, globSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 
-import { ArchitectureConfigSchema, ArchitecturePackageSchema, WorkspaceConfigSchema } from './contracts.ts';
+import { ArchitecturePackageSchema, WorkspaceConfigSchema } from './contracts.ts';
 import { parseJson } from './json.ts';
-import { parseToml } from './toml.ts';
-
-export const loadArchitecture = (root: string) => {
-  const file = path.join(root, 'cerberus.toml');
-  return (
-    existsSync(file)
-      ? parseToml(readFileSync(file, 'utf8'), ArchitectureConfigSchema)
-      : ArchitectureConfigSchema.parse({})
-  ).architecture;
-};
 
 export const listWorkspacePackages = (root: string) => {
   const workspace = path.join(root, 'pnpm-workspace.yaml');

@@ -17,7 +17,7 @@ export const barrelOnlyReexports = createRule({
   }),
   defaultOptions: [],
   meta: {
-    docs: { description: 'Public library and keeper barrels contain only re-exports.' },
+    docs: { description: 'Public barrels contain only re-exports.' },
     messages: { statement: 'A public barrel contains only re-exports; move this statement to its owning module.' },
     schema: [],
     type: 'problem',

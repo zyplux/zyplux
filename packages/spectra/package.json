@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/spectra",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shared Vitest fixtures, matchers, polling, and journal reporting.",
   "keywords": [
     "test",
@@ -102,7 +102,7 @@
     "#require-mocked-module": "./src/helpers/require-mocked-module.ts"
   },
   "sideEffects": [
-    "./dist/library-test-api.js",
-    "./dist/test-matchers.js"
+    "**/library-test-api.*",
+    "**/test-matchers.*"
   ]
 }

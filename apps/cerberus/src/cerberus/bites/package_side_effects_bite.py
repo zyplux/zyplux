@@ -28,6 +28,7 @@ def _executes_statement(node: Node, functions: dict[str, Node], active: frozense
         "function_expression",
         "function_declaration",
         "generator_function_declaration",
+        "generator_function",
         "method_definition",
     }:
         return False
@@ -77,7 +78,15 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         findings = []
         prefix = f"{package.directory}/src/"
         for path in ctx.paths(repo):
-            if not path.startswith(prefix) or PurePosixPath(path).suffix not in {".ts", ".tsx"}:
+            if not path.startswith(prefix) or PurePosixPath(path).suffix not in {
+                ".ts",
+                ".tsx",
+                ".js",
+                ".mjs",
+                ".mts",
+                ".cts",
+                ".cjs",
+            }:
                 continue
             content = ctx.file(repo, path)
             if content is None:
@@ -85,11 +94,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             tree = parse_typescript(path, content)
             if not _executes_initialization(tree.root_node):
                 continue
-            built = "dist/" + path.removeprefix(prefix).rsplit(".", 1)[0] + ".js"
+            module = path.removeprefix(f"{package.directory}/")
             if metadata is False or not any(
-                PurePosixPath(built).full_match(pattern.removeprefix("./")) for pattern in metadata
+                PurePosixPath(module).full_match(pattern.removeprefix("./")) for pattern in metadata
             ):
-                findings.append(f"{path} executes a top-level statement; list {built} in sideEffects")
+                findings.append(f"{path} executes a top-level statement; list {module} in sideEffects")
         return findings
 
     return run_package_policy(repo, ctx, ID, inspect)

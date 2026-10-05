@@ -155,7 +155,7 @@ def lint(
 
     results = [_run_check(chk, repo, ctx) for chk in active]
 
-    _render_lint(repo, results)
+    _render_lint(repo, results, verbose=verbose)
     if _failed(results):
         raise typer.Exit(code=1)
 
@@ -213,7 +213,7 @@ def graph_query(
     console.print(query_text(graph, question, depth=depth, dfs=dfs, budget=budget), markup=False, soft_wrap=True)
 
 
-def _render_lint(repo: Repo, results: list[CheckResult]) -> None:
+def _render_lint(repo: Repo, results: list[CheckResult], *, verbose: bool) -> None:
     console.print(f"🐺 cerberus v{__version__}")
     console.print(f"[bold]{repo.name}[/bold]")
     problems = [(r.check, f) for r in results for f in r.problems]
@@ -231,8 +231,9 @@ def _render_lint(repo: Repo, results: list[CheckResult]) -> None:
                 console.print(f"error: {_GLYPH[finding.status]} {result.check}: {headline}{detail}")
                 if rest:
                     console.print(rest)
-        for line in result.verbose_lines:
-            console.print(line, markup=False)
+        if verbose:
+            for line in result.verbose_lines:
+                console.print(line, markup=False)
 
     if not problems:
         console.print("  [green]🐾 all bites pass[/green]")
