@@ -17,11 +17,11 @@ describe('22.1 enforcing declared dependency direction', () => {
     ['3 a resolved alias', 'import { fetchResponse } from "@provider/api";'],
     ['4 a dynamic import', 'const load = () => import("@sample/provider/api");'],
     ['5 a type query', 'export type API = typeof import("@sample/provider/api");'],
-  ])('22.1.%s', async ([, source], { lintArchitecture }) => {
+  ])('22.1.%s', async ([, source = ''], { lintArchitecture }) => {
     const reports = await lintArchitecture({
       ...workspace,
       'cerberus.toml': '[architecture.dependencies]\n"@sample/consumer"=[]',
-      'packages/consumer/src/entry.ts': source ?? '',
+      'packages/consumer/src/entry.ts': source,
     });
     expect(reports.map(report => report.message)).toContain(
       '@sample/consumer cannot depend on @sample/provider; this reverses the declared ownership direction.',
@@ -34,10 +34,10 @@ describe('22.2 preserving type ownership', () => {
     ['1 public API used only for types', 'import type { Response } from "@sample/provider/api";'],
     ['2 hidden implementation types', 'import type { Secret } from "@sample/provider/private";'],
     ['3 a relative implementation type', 'import type { Response } from "../../provider/src/api.ts";'],
-  ])('22.2.%s', async ([, source], { lintArchitecture }) => {
+  ])('22.2.%s', async ([, source = ''], { lintArchitecture }) => {
     const reports = await lintArchitecture({
       ...workspace,
-      'packages/consumer/src/entry.ts': source ?? '',
+      'packages/consumer/src/entry.ts': source,
       'packages/provider/src/private.ts': 'export type Secret = string;',
     });
     expect(reports.map(report => report.messageId)).toEqual(['ownership']);

@@ -49,8 +49,8 @@ export const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: Con
     },
     stubDepsDev: sourceRepoByPackage => {
       for (const [key, sourceRepo] of Object.entries(sourceRepoByPackage)) {
-        const [system, name] = key.split(':', DEPENDENCY_KEY_PARTS);
-        const base = `https://api.deps.dev/v3/systems/${system}/packages/${encodeURIComponent(name ?? '')}`;
+        const [system, name = ''] = key.split(':', DEPENDENCY_KEY_PARTS);
+        const base = `https://api.deps.dev/v3/systems/${system}/packages/${encodeURIComponent(name)}`;
         network.on(new RegExp(`^${escapeRegExp(base)}$`), () => depsDevDefaultVersion());
         network.on(new RegExp(String.raw`^${escapeRegExp(base)}/versions/1\.0\.0$`), () =>
           depsDevSourceRepoResponse(sourceRepo),

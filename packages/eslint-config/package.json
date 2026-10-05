@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/eslint-config",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Shared ESLint flat config and custom rules",
   "keywords": [
     "eslint",

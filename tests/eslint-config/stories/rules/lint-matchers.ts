@@ -15,7 +15,7 @@ export const applySuggestion = (code: string, { suggestions }: Linter.LintMessag
 const renderReports = (messages: Linter.LintMessage[]) =>
   messages.length === 0
     ? 'reported: (nothing)'
-    : `reported:\n${messages.map(({ line, message, messageId }) => `  ${messageId ?? '(no messageId)'} at line ${line}: ${message}`).join('\n')}`;
+    : `reported:\n${messages.map(({ line, message, messageId = '(no messageId)' }) => `  ${messageId} at line ${line}: ${message}`).join('\n')}`;
 
 export const registerLintMatchers = () =>
   registerMatchers({

@@ -26,17 +26,15 @@ export const listWorkspacePackages = (root: string) => {
     ...new Set(
       patterns
         .filter(pattern => !pattern.startsWith('!'))
-        .flatMap(pattern => (pattern === '.' ? ['.'] : [...globSync(pattern, { cwd: root, exclude: excluded })])),
+        .flatMap(pattern => (pattern === '.' ? '.' : [...globSync(pattern, { cwd: root, exclude: excluded })])),
     ),
   ].flatMap(directory => {
     const manifest = path.join(root, directory, 'package.json');
     return existsSync(manifest)
-      ? [
-          {
-            ...parseJson(readFileSync(manifest, 'utf8'), ArchitecturePackageSchema),
-            directory: path.resolve(root, directory),
-          },
-        ]
+      ? {
+          ...parseJson(readFileSync(manifest, 'utf8'), ArchitecturePackageSchema),
+          directory: path.resolve(root, directory),
+        }
       : [];
   });
 };

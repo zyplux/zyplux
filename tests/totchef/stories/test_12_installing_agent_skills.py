@@ -75,7 +75,7 @@ def test_12_1_3_each_skill_gets_its_own_report_row_with_version_and_content_id(
     report = totchef.up()
 
     assert (
-        "skills.zyplux/zyp-skills/totchef,(none),#aaaa1111,—,installed" in report.full_table
+        'skills.zyplux/zyp-skills/totchef,(none),"#aaaa1111",—,installed' in report.full_table
     )  # no manifest states a version; the decoy stays a decoy
     assert "skills.zyplux/zyp-skills/peek,(none),0.7.1 #ffff6666,—,installed" in report.full_table
     assert "skills.zyplux/zyp-skills/h2md,(none),0.3.0 #dddd4444,—,installed" in report.full_table
@@ -258,7 +258,7 @@ def test_12_1_13_a_plan_shows_would_upgrade_when_upstream_content_changed(
 
     report = totchef.plan()
 
-    assert "skills.zyplux/zyp-skills/totchef,#aaaa1111,#aaaa1111,#bbbb2222,would upgrade" in report.full_table
+    assert 'skills.zyplux/zyp-skills/totchef,"#aaaa1111","#aaaa1111","#bbbb2222",would upgrade' in report.full_table
 
 
 def test_12_1_14_when_github_is_unreachable_every_repo_re_syncs(

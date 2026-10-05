@@ -1,7 +1,11 @@
-import { JournaldReporter } from '@zyplux/spectra/journald-reporter';
-import { configDefaults, defineConfig } from 'vitest/config';
+import type { ViteUserConfig } from 'vitest/config';
 
-export default defineConfig({
+import { JournaldReporter } from '@zyplux/spectra/journald-reporter';
+import { configDefaults } from 'vitest/config';
+
+const journalReporter = new JournaldReporter({ identifier: 'zyplux' });
+
+export default {
   test: {
     coverage: {
       enabled: true,
@@ -22,9 +26,9 @@ export default defineConfig({
     },
     isolate: false,
     projects: ['tests/eslint-config', 'tests/cz', 'tests/util-ts', 'tests/spectra'],
-    reporters: [...configDefaults.reporters, new JournaldReporter({ identifier: 'zyplux' })],
+    reporters: [...configDefaults.reporters, journalReporter],
     restoreMocks: true,
     unstubEnvs: true,
     unstubGlobals: true,
   },
-});
+} satisfies ViteUserConfig;
