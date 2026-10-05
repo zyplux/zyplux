@@ -27,3 +27,19 @@
 ### 7.4.3 rejects when argv is empty
 
 ### 7.4.4 rejects when the command does not exist
+
+### 7.4.5 rejects a command terminated by a signal
+
+### 7.4.6 reports signal termination as failure when nothrow is chained
+
+## 7.5 sharing the parent terminal
+
+### 7.5.1 passes input and both output streams through the parent
+
+### 7.5.2 runs in the requested working directory
+
+### 7.5.3 rejects a nonzero exit
+
+### 7.5.4 rejects a missing executable
+
+### 7.5.5 rejects termination by a signal

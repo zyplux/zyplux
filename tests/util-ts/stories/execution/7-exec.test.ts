@@ -2,6 +2,12 @@ import { describe, expect, test } from './execution.ts';
 
 const node = process.execPath;
 const FAILING_EXIT_CODE = 3;
+const SIGTERM_EXIT_CODE = 143;
+const PASSTHROUGH_FAILURES: [story: string, argv: [string, ...string[]], message: string][] = [
+  ['3 rejects a nonzero exit', [node, '-e', `process.exit(${FAILING_EXIT_CODE})`], 'exit code 3'],
+  ['4 rejects a missing executable', ['zyplux-missing-command-probe'], 'ENOENT'],
+  ['5 rejects termination by a signal', [node, '-e', `process.kill(process.pid, 'SIGTERM')`], 'exit code unknown'],
+];
 
 describe('7.1 capturing process output', () => {
   test('7.1.1 resolves with stdout, stderr, and the exit code', async ({ run }) => {
@@ -80,5 +86,37 @@ describe('7.4 failing commands', () => {
 
   test('7.4.4 rejects when the command does not exist', async ({ run }) => {
     await expect(run(['zyplux-missing-command-probe']).quiet()).rejects.toThrow();
+  });
+
+  test('7.4.5 rejects a command terminated by a signal', async ({ run }) => {
+    const stopped = run([node, '-e', `process.kill(process.pid, 'SIGTERM')`]).quiet();
+
+    await expect(stopped).rejects.toMatchObject({ exitCode: SIGTERM_EXIT_CODE, name: 'ExecError' });
+  });
+
+  test('7.4.6 reports signal termination as failure when nothrow is chained', async ({ run }) => {
+    const stopped = await run([node, '-e', `process.kill(process.pid, 'SIGTERM')`]).nothrow().quiet();
+
+    expect(stopped.exitCode).toBe(SIGTERM_EXIT_CODE);
+  });
+});
+
+describe('7.5 sharing the parent terminal', () => {
+  test('7.5.1 passes input and both output streams through the parent', async ({ runWithParent }) => {
+    const script = `process.stdin.pipe(process.stdout); process.stderr.write('error stream');`;
+
+    const { stderr, stdout } = await runWithParent(script, 'terminal input');
+
+    expect([stdout.toString(), stderr.toString()]).toEqual(['terminal input', 'error stream']);
+  });
+
+  test('7.5.2 runs in the requested working directory', async ({ runPassthrough, tempDir }) => {
+    await runPassthrough([node, '-e', `require('node:fs').writeFileSync('terminal-marker', '')`], tempDir.path);
+
+    expect(tempDir.exists('terminal-marker')).toBe(true);
+  });
+
+  test.for(PASSTHROUGH_FAILURES)('7.5.%s', async ([, argv, message], { runPassthrough }) => {
+    await expect(runPassthrough(argv)).rejects.toThrow(message);
   });
 });

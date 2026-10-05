@@ -1,6 +1,9 @@
 import { ensure } from '@zyplux/util/assert';
-import { run } from '@zyplux/util/exec';
+import { run, runPassthrough } from '@zyplux/util/exec';
 import { $ } from '@zyplux/util/shell';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import type { InferValue } from '#optique';
 
@@ -22,12 +25,15 @@ export const publishTaggedTargetCommand = command(
 
 type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
 
-const npmTarballName = (label: string, version: string) =>
-  `${label.replace(/^@/, '').replace('/', '-')}-${version}.tgz`;
-
-export const publishNpm = async (dir: string, label: string, version: string) => {
-  await $`pnpm pack`.cwd(dir);
-  await $`npm publish ${npmTarballName(label, version)} --access public`.cwd(dir);
+export const publishNpm = async (dir: string) => {
+  const archiveDir = await mkdtemp(path.join(tmpdir(), 'cz-npm-'));
+  try {
+    const archive = path.join(archiveDir, 'package.tgz');
+    await $`pnpm pack --out ${archive}`.cwd(dir);
+    await runPassthrough(['npm', 'publish', archive, '--access', 'public'], dir);
+  } finally {
+    await rm(archiveDir, { force: true, recursive: true });
+  }
 };
 
 const publishPypi = async (label: string) => {
@@ -68,7 +74,7 @@ export const runPublishTaggedTarget = async ({ tag }: PublishTaggedTargetConfig)
       break;
     }
     case 'npm': {
-      await publishNpm(target.dir, target.label, version);
+      await publishNpm(target.dir);
       break;
     }
     case 'pypi': {

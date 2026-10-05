@@ -12,10 +12,9 @@ pnpm add @zyplux/util zod
 
 ```ts
 import { ensure } from '@zyplux/util/assert';
-import { readTrimmed } from '@zyplux/util/exec';
 import { FetchError, http } from '@zyplux/util/http';
 import { parseJson, readJson, readJsonSync } from '@zyplux/util/json';
-import { $ } from '@zyplux/util/shell';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import * as z from 'zod';
 
 const Pkg = z.object({ version: z.string() });
@@ -48,6 +47,7 @@ ensure(branch !== 'main', 'refusing to run on main');
 - `mapWithConcurrency` maps over items with a fixed worker limit, preserving input order.
 - `normalizeRepoUrl` reduces the many shapes a VCS url takes (`git+https`, `git@host:owner/repo`, `github:owner/repo`, bare `host/owner/repo`, `…/tree/main/sub`) to a canonical `https://host/owner/repo`, or `undefined` when the value is not a repository.
 - `$` is a small shell-command harness with typed `git`/`gh` helpers.
+- `runPassthrough(argv, cwd?)` from `@zyplux/util/exec` shares the parent's stdin, stdout, and stderr with a command, allowing interactive prompts and terminal detection. It resolves when the command succeeds and rejects on startup failure, a nonzero exit, or termination by a signal.
 - `$.gh` reads return Zod-validated objects or arrays. Select supported fields with a nonempty `json` array, such as `$.gh.run.view(id, { json: ['status', 'conclusion'] })`; only those fields appear in the inferred result. PR draft flags are booleans, PR numbers and run IDs are numbers. Run conclusions preserve the empty string while pending.
 - `$.gh.pr.reviews(slug, number)` returns reviews with author logins and commit IDs. `$.gh.release.exists(tag)` checks an exact tag, returning `false` for a missing release and propagating lookup errors. Actions return `Promise<void>`. Raw CLI commands remain available through `$`.
 - `@zyplux/util/contracts` exports reusable structural zod primitives (`StringRecordSchema`, `LooseRecordSchema`, `StringArraySchema`, `UnknownArraySchema`, `UnknownArrayRecordSchema`, `IdSchema`, `VersionKeySchema`) that other schema modules compose from.
