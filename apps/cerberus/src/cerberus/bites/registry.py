@@ -10,8 +10,6 @@ from cerberus.bites import (
     ci_workflow_gate_bite,
     cli_py_test_seam_bite,
     codeowners_coverage_bite,
-    contract_keepers_bite,
-    dependency_direction_bite,
     fallow_bite,
     jscpd_bite,
     justfile_bite,
@@ -71,8 +69,6 @@ ALL: tuple[Check, ...] = tuple(
         catalog_pinned_deps_bite,
         package_exports_bite,
         package_side_effects_bite,
-        contract_keepers_bite,
-        dependency_direction_bite,
         project_references_bite,
         worker_runtime_bite,
         vitest_coverage_bite,
@@ -94,6 +90,8 @@ ALL: tuple[Check, ...] = tuple(
 BY_ID: dict[str, Check] = {check.id: check for check in ALL}
 
 RETIRED = {
+    "contract_keepers": "repository-local tests",
+    "dependency_direction": "repository-local tests",
     "cli_ts_test_seam": "package_exports and ESLint test-seam-only-imports/package-imports",
     "lib_ts_test_seam": "package_exports and ESLint test-seam-only-imports/package-imports",
     "fixture_roles_ts": "ESLint test-seam-only-imports/package-imports",

@@ -70,8 +70,8 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 ## What's always on
 
 - Contract modules and their child modules export schemas, schema collections, and types. Schema detection is shared with naming and nesting checks.
-- Public library root barrels and keeper contract/interface barrels contain re-exports. Constants export immutable primitives; type and interface modules contain type-level statements.
-- `package-imports` checks declared dependency direction and cross-package type ownership using TypeScript's resolved modules.
+- Public library root barrels contain re-exports. Constants export immutable primitives; type and interface modules contain type-level statements.
+- `package-imports` checks cross-package type ownership using TypeScript's resolved modules.
 - Story tests import Vitest API bindings and fixture types from Vitest or their resolved domain test API. `testApis` maps story globs to explicit API paths for colocated UI rigs.
 - Other custom rules enforce validated JSON, arrow functions, type declarations, clear parameter shapes, and nesting limits.
 - Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
@@ -93,22 +93,7 @@ export default [...zyplux({ tsconfigRootDir: import.meta.dirname }), { rules: { 
 
 Schema detection is shared by contract boundaries, naming, and nesting checks. Nonempty plain objects containing only schemas (including nested collections) count as schemas. Mixed objects, empty objects, arrays, classes, callable objects, optional fields, and open dictionaries do not.
 
-## Architecture
-
-ESLint and Cerberus read package direction and scoped contract keepers from the same root `cerberus.toml` declaration:
-
-```toml
-[architecture.dependencies]
-"@example/domain" = []
-"@example/kernel" = ["@example/domain"]
-
-[[architecture.applications]]
-name = "service"
-keeper = "@example/domain"
-packages = ["@example/domain", "@example/kernel"]
-```
-
-A direction list names the workspace providers that a consumer may use. Independent libraries can retain their own API contracts. An application keeper owns shared domain contracts within its declared scope.
+## Test APIs
 
 Select a UI suite's test API relative to `tsconfigRootDir`:
 

@@ -143,9 +143,7 @@ unchecked.
 
 ### 1.8.1 passes a conforming justfile that declares modules
 
-A conforming justfile extended with an explicit-path module
-(`mod infra 'infra/justfile'`), a bare module (`mod tools`), and an optional
-module (`mod? extras`) parses and passes with no findings.
+A conforming justfile extended with explicit-path, bare, and optional module declarations parses and passes with no findings, including names containing hyphens such as `member-idp`.
 
 ### 1.8.2 errors instead of crashing on a module with a degenerate path
 

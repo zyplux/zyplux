@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
@@ -14,58 +13,6 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import Repo
-
-
-@dataclass(frozen=True)
-class Application:
-    name: str
-    keeper: str
-    packages: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class Architecture:
-    applications: tuple[Application, ...]
-    dependencies: dict[str, tuple[str, ...]]
-
-
-def _strings(value: object, label: str) -> tuple[str, ...]:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        message = f"{label} must be an array of package names"
-        raise TypeError(message)
-    return tuple(value)
-
-
-def _validate_keys(data: dict[str, Any], keys: set[str]) -> None:
-    unknown = data.keys() - keys
-    if unknown:
-        message = f"unknown architecture fields: {', '.join(sorted(unknown))}"
-        raise ValueError(message)
-
-
-def parse_architecture(data: dict[str, Any]) -> Architecture:
-    _validate_keys(data, {"applications", "dependencies"})
-    applications = data.get("applications", [])
-    dependencies = data.get("dependencies", {})
-    if not isinstance(applications, list) or not isinstance(dependencies, dict):
-        message = "architecture requires applications array and dependencies table"
-        raise TypeError(message)
-    scopes = []
-    for entry in applications:
-        if (
-            not isinstance(entry, dict)
-            or not isinstance(entry.get("name"), str)
-            or not isinstance(entry.get("keeper"), str)
-        ):
-            message = "architecture applications require name and keeper strings"
-            raise TypeError(message)
-        _validate_keys(entry, {"name", "keeper", "packages"})
-        packages = _strings(entry.get("packages"), "architecture application packages")
-        if not packages:
-            message = "architecture application packages cannot be empty"
-            raise ValueError(message)
-        scopes.append(Application(entry["name"], entry["keeper"], packages))
-    return Architecture(tuple(scopes), {name: _strings(providers, name) for name, providers in dependencies.items()})
 
 
 def list_packages(repo: Repo, ctx: Context) -> dict[str, PackageInfo]:

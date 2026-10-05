@@ -62,73 +62,6 @@ def test_34_1_3_preserves_framework_application_roots_and_binary_only_apps(
     assert not run_check_with_files("package_exports", files).problems
 
 
-_SCOPE = '[[architecture.applications]]\nname="application"\nkeeper="domain"\npackages=["domain","implementation"]\n'
-
-
-def test_34_2_1_checks_one_keeper_within_each_independent_application_scope(
-    run_check_with_files: RunCheckWithFiles,
-) -> None:
-    manifests: dict[str, dict[str, object]] = {
-        "domain": {"exports": {"./contracts": "./src/contracts.ts"}},
-        "implementation": {"exports": {".": "./src/index.ts", "./contracts": "./src/contracts.ts"}},
-        "other": {"exports": {"./contracts": "./src/contracts.ts"}},
-    }
-    assert not run_check_with_files("contract_keepers", _workspace(manifests), _SCOPE).problems
-
-
-@pytest.mark.parametrize(
-    ("keeper", "implementation"),
-    [
-        ({".": "./src/index.ts"}, {}),
-        ({"./contracts": "./src/contracts.ts"}, {"./interfaces": "./src/interfaces.ts"}),
-        ({}, {}),
-    ],
-)
-def test_34_2_2_rejects_invalid_keeper_surfaces_and_second_contract_only_packages(
-    run_check_with_files: RunCheckWithFiles, keeper: dict[str, str], implementation: dict[str, str]
-) -> None:
-    assert run_check_with_files(
-        "contract_keepers",
-        _workspace({"domain": {"exports": keeper}, "implementation": {"exports": implementation}}),
-        _SCOPE,
-    ).problems
-
-
-@pytest.mark.parametrize(
-    "scope",
-    [
-        _SCOPE.replace('keeper="domain"', 'keeper="missing"'),
-        _SCOPE.replace('"implementation"', '"missing"'),
-        _SCOPE + _SCOPE.replace('name="application"', 'name="other"'),
-    ],
-)
-def test_34_2_3_rejects_unknown_packages_and_overlapping_application_scopes(
-    run_check_with_files: RunCheckWithFiles, scope: str
-) -> None:
-    assert run_check_with_files(
-        "contract_keepers",
-        _workspace({"domain": {"exports": {"./contracts": "./src/contracts.ts"}}, "implementation": {}}),
-        scope,
-    ).problems
-
-
-@pytest.mark.parametrize("category", ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"])
-def test_34_3_1_dependency_direction_checks_each_manifest_dependency_category(
-    run_check_with_files: RunCheckWithFiles, category: str
-) -> None:
-    files = _workspace({"foundation": {category: {"implementation": "workspace:*"}}, "implementation": {}})
-    assert run_check_with_files("dependency_direction", files, "[architecture.dependencies]\nfoundation=[]").problems
-    assert not run_check_with_files(
-        "dependency_direction", files, '[architecture.dependencies]\nfoundation=["implementation"]'
-    ).problems
-
-
-def test_34_3_2_rejects_unknown_dependency_policy_packages(run_check_with_files: RunCheckWithFiles) -> None:
-    assert run_check_with_files(
-        "dependency_direction", _workspace({"foundation": {}}), '[architecture.dependencies]\nfoundation=["missing"]'
-    ).problems
-
-
 @pytest.mark.parametrize(
     ("references", "has_failure"),
     [
@@ -170,7 +103,7 @@ def test_34_4_2_project_references_resolve_jsonc_and_inherited_workspace_configs
 
 @pytest.mark.parametrize(
     ("side_effects", "has_failure"),
-    [(False, True), (True, False), (["./dist/register.js"], False), (["./dist/other.js"], True), (None, True)],
+    [(False, True), (True, False), (["./src/register.ts"], False), (["./src/other.ts"], True), (None, True)],
 )
 @pytest.mark.parametrize(
     "source",
@@ -201,6 +134,10 @@ def test_34_5_1_side_effect_metadata_preserves_registration_modules(
         'export class Reporter { record() { console.log("recording"); } }',
         "export const schema = z.object({});",
         "const collect = (depth = 0) => depth > 0 ? collect(depth - 1) : []; export const entries = collect();",
+        "export const messages = async function* () { yield 1; };",
+        "export const messages = function* () { yield 1; };",
+        "export async function* messages() { yield 1; }",
+        "const messages = async function* () { yield 1; }; export const stream = messages();",
     ],
 )
 def test_34_5_2_pure_libraries_may_declare_no_side_effects(
@@ -209,6 +146,120 @@ def test_34_5_2_pure_libraries_may_declare_no_side_effects(
     files = _workspace({"library": {"exports": {".": "./src/index.ts"}, "sideEffects": False}})
     files["packages/library/src/index.ts"] = source
     assert not run_check_with_files("package_side_effects", files).problems
+
+
+@pytest.mark.parametrize(
+    ("metadata", "has_failure"),
+    [
+        (["./src/nested/register.ts"], False),
+        (["src/**/*.ts"], False),
+        (["./dist/nested/register.js"], True),
+        ([], True),
+    ],
+)
+def test_34_5_3_matches_side_effects_against_workspace_modules_without_assuming_a_build_directory(
+    run_check_with_files: RunCheckWithFiles, metadata: object, *, has_failure: bool
+) -> None:
+    files = _workspace({
+        "library": {
+            "exports": {".": "./src/index.ts"},
+            "sideEffects": metadata,
+            "publishConfig": {"sideEffects": ["./build/nested/register.js"]},
+        }
+    })
+    files["packages/library/src/nested/register.ts"] = "registerMatchers();"
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+
+
+@pytest.mark.parametrize("extension", ["js", "mjs", "cjs", "mts", "cts"])
+def test_34_5_4_checks_javascript_and_explicit_module_extensions(
+    run_check_with_files: RunCheckWithFiles, extension: str
+) -> None:
+    files = _workspace({"library": {"exports": {".": f"./src/index.{extension}"}, "sideEffects": False}})
+    files[f"packages/library/src/index.{extension}"] = "registerMatchers();"
+    assert run_check_with_files("package_side_effects", files).problems
+
+
+@pytest.mark.parametrize(
+    ("metadata", "has_failure"),
+    [
+        (["./src/nested/register.ts"], True),
+        (["**/register.*"], False),
+        (["./src/nested/register.ts", "./build/nested/register.js"], True),
+        (["./src/nested/register.ts", "./build/nested/register.cjs"], True),
+        (["./src/nested/register.ts", "./build/nested/register.js", "./build/nested/register.cjs"], False),
+    ],
+)
+@pytest.mark.parametrize("export_pattern", ["nested/register", "nested/*", "*"])
+def test_34_5_5_preserves_published_registration_modules_in_every_runtime_condition(
+    run_check_with_files: RunCheckWithFiles, metadata: object, export_pattern: str, *, has_failure: bool
+) -> None:
+    files = _workspace({
+        "library": {
+            "exports": {f"./{export_pattern}": f"./src/{export_pattern}.ts"},
+            "sideEffects": metadata,
+            "publishConfig": {
+                "exports": {
+                    f"./{export_pattern}": {
+                        "types": f"./build/{export_pattern}.d.ts",
+                        "import": f"./build/{export_pattern}.js",
+                        "require": f"./build/{export_pattern}.cjs",
+                    }
+                }
+            },
+        }
+    })
+    files["packages/library/src/nested/register.ts"] = "registerMatchers();"
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+
+
+@pytest.mark.parametrize("extension", ["js", "cjs"])
+@pytest.mark.parametrize("directive", ["use strict", "use client"])
+@pytest.mark.parametrize("has_registration", [False, True])
+def test_34_5_6_ignores_string_directives_and_preserves_actual_registration(
+    run_check_with_files: RunCheckWithFiles, extension: str, directive: str, *, has_registration: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": f"./src/index.{extension}"}, "sideEffects": False}})
+    statement = "registerMatchers();" if has_registration else "const ready = true;"
+    files[f"packages/library/src/index.{extension}"] = f'"{directive}"; {statement}'
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
+
+
+@pytest.mark.parametrize(
+    ("source", "has_failure"),
+    [
+        ("module.exports = {value: 1};", False),
+        ("exports.value = 1;", False),
+        ("module.exports.value = 1;", False),
+        ("exports['value'] = 1;", False),
+        ("module['exports'] = {value: 1};", False),
+        ("module.other = {value: 1};", True),
+        ("exports[registerMatchers()] = 1;", True),
+        ("module.exports[registerMatchers()].value = 1;", True),
+        ("module.exports = () => registerMatchers();", False),
+        ("module.exports = {register() { registerMatchers(); }};", False),
+        ("module.exports = registerMatchers();", True),
+        ("module.exports = {matchers: registerMatchers()};", True),
+        ("exports.value = globalThis.counter++;", True),
+        ("const register = () => { registerMatchers(); }; module.exports = register();", True),
+    ],
+)
+def test_34_5_7_checks_commonjs_export_initializers(
+    run_check_with_files: RunCheckWithFiles, source: str, *, has_failure: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": "./src/index.cjs"}, "sideEffects": False}})
+    files["packages/library/src/index.cjs"] = source
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+
+
+@pytest.mark.parametrize("has_registration", [False, True])
+def test_34_5_8_checks_jsx_registration_and_defers_component_bodies(
+    run_check_with_files: RunCheckWithFiles, *, has_registration: bool
+) -> None:
+    files = _workspace({"library": {"exports": {".": "./src/index.jsx"}, "sideEffects": False}})
+    source = "export const Component = () => <p>Ready</p>;"
+    files["packages/library/src/index.jsx"] = source + ("registerMatchers();" if has_registration else "")
+    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
 
 
 @pytest.mark.parametrize(
@@ -306,25 +357,6 @@ def test_34_6_5_workers_respect_blocked_exports_and_default_condition_order(
         "packages/shared/src/api.ts": "export const ready = true;",
     })
     assert run_check_with_files("worker_runtime", files).problems
-
-
-@pytest.mark.parametrize(
-    "overlay",
-    [
-        "[architecture]\nunknown=true",
-        "[architecture]\napplications=1",
-        "[[architecture.applications]]\nname=1\nkeeper='domain'\npackages=['domain']",
-        "[[architecture.applications]]\nname='app'\nkeeper='domain'\npackages=[]",
-        "[[architecture.applications]]\nname='app'\nkeeper='domain'\npackages=['domain']\nunknown=true",
-        "[architecture.dependencies]\ndomain=1",
-    ],
-)
-def test_34_7_1_rejects_invalid_architecture_declarations(
-    run_check_with_files: RunCheckWithFiles,
-    overlay: str,
-) -> None:
-    with pytest.raises((TypeError, ValueError)):
-        run_check_with_files("contract_keepers", _workspace({"domain": {}}), overlay)
 
 
 def test_34_6_6_workers_resolve_child_paths_relative_to_their_declaring_config(

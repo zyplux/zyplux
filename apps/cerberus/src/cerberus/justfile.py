@@ -14,7 +14,7 @@ class JustfileError(RuntimeError):
     pass
 
 
-_MOD_STATEMENT = re.compile(r"^mod\??\s+(?P<name>\w+)(?:\s+(?P<quoted_path>'[^']*'|\"[^\"]*\"))?\s*(?:#.*)?$")
+_MOD_STATEMENT = re.compile(r"^mod\??\s+(?P<name>[\w-]+)(?:\s+(?P<quoted_path>'[^']*'|\"[^\"]*\"))?\s*(?:#.*)?$")
 
 
 @dataclass(frozen=True)

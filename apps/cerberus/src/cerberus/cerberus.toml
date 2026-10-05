@@ -137,6 +137,16 @@ min_coverage = 90
 
 [catalog_pinned_deps]
 
+[package_exports]
+
+[package_side_effects]
+
+[project_references]
+
+[worker_runtime]
+
+[pnpm_release_age]
+
 [story_tests_lockstep_py]
 
 [story_tests_lockstep_ts]
@@ -164,8 +174,3 @@ ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 # Only the repo carrying the pin source can act on a lagging pin; it switches this on in its overlay.
 [tool_pins_latest]
 off = true
-
-[architecture]
-applications = []
-
-[architecture.dependencies]

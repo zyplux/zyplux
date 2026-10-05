@@ -46,10 +46,9 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
 | `package_exports` | content | Libraries use a root barrel or named exports with matching source and publication keys |
 | `package_side_effects` | content | Library side-effect declarations include detected registration statements |
-| `contract_keepers` | content | Declared application scopes have one keeper with contract surfaces |
-| `dependency_direction` | content | Workspace manifest dependencies follow declared direction |
 | `project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
 | `worker_runtime` | content | First-party Worker runtime imports avoid filesystem builtins |
+| `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
 | `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
@@ -110,10 +109,12 @@ scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 
 `tool_pins_latest` guards the jscpd/fallow pins the same way, but runs only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos never see it (bundled `off = true`) and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.
 
-## Shared architecture policy
-
-Declare application contract keepers and allowed workspace dependencies in `[architecture]`. ESLint reads the same declaration; see [its configuration examples](../../packages/eslint-config/README.md#architecture).
+## Package and source checks
 
 TypeScript seam checks use ESLint's resolved imports. The retired `cli_ts_test_seam`, `lib_ts_test_seam`, and `fixture_roles_ts` IDs report migration guidance when encountered in overlays. Their package policies are covered by the focused export, ownership, and reference checks.
 
-Worker traversal covers first-party static imports and literal dynamic imports. Computed imports, third-party modules, and framework-provided entries are reported as static coverage limits; production bundle validation covers those boundaries. Side-effect detection checks top-level registration statements and cannot prove an arbitrary dependency graph pure.
+Worker traversal covers first-party static imports and literal dynamic imports. Normal output summarizes static coverage limits; `--verbose` lists computed imports, third-party modules, and framework-provided entries that require production bundle validation.
+
+Side-effect detection checks registration and initialization in workspace source modules against package-relative `sideEffects` paths. Packages publishing compiled files use patterns that also cover their compiled modules. The check cannot prove an arbitrary dependency graph pure.
+
+Vitest coverage resolves exported literal objects and local constants, including `defineConfig` and its direct-return callbacks, without executing configuration code. Every metric meets the configured floor, and collection is enabled through `test.coverage.enabled: true` or the root test script's coverage flag.

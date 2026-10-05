@@ -22,6 +22,28 @@
 
 ### 19.4.2 fails when a threshold metric is missing
 
+### 19.4.3 rejects functions in numeric threshold fields
+
 ## 19.5 passing a fully compliant config
 
 ### 19.5.1 passes when every threshold metric meets the required floor
+
+### 19.5.2 resolves local constants typed objects and vitest config helpers
+
+### 19.5.3 rejects unresolved cycles mutable configs and unknown transformations
+
+### 19.5.4 ignores coverage in unrelated nested objects
+
+### 19.5.5 applies literal spreads in source order
+
+### 19.5.6 trusts config helpers only from vitest or vite
+
+## 19.6 requiring coverage collection
+
+### 19.6.1 requires coverage collection in config or the root test command
+
+### 19.6.2 requires explicit collection when coverage enabled is absent
+
+### 19.6.3 CLI coverage flags override enabled configuration
+
+### 19.6.4 preserves coverage validation when the test manifest is malformed

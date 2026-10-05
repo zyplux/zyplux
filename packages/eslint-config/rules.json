@@ -327,6 +327,7 @@
       }
     ],
     "@typescript-eslint/prefer-readonly-parameter-types": [0],
+    "@typescript-eslint/prefer-destructuring": [0],
     "no-restricted-imports": [
       2,
       {
@@ -338,7 +339,6 @@
         ]
       }
     ],
-    "@typescript-eslint/prefer-destructuring": [0],
     "perfectionist/sort-variable-declarations": [2, { "type": "natural", "order": "asc" }],
     "perfectionist/sort-intersection-types": [2, { "type": "natural", "order": "asc" }],
     "perfectionist/sort-import-attributes": [2, { "type": "natural", "order": "asc" }],
@@ -1221,7 +1221,7 @@
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.71.0",
     "perfectionist:eslint-plugin-perfectionist@5.12.1",
     "unicorn:eslint-plugin-unicorn@77.0.0",
-    "@zyplux:@zyplux/eslint-config@0.10.0"
+    "@zyplux:@zyplux/eslint-config@0.10.1"
   ],
   "language": "@/js"
 }

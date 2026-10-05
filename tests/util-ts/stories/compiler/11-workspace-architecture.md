@@ -8,8 +8,6 @@
 
 ### 11.1.3 export patterns prefer the longest static prefix when a wildcard is blocked
 
-## 11.2 loading repository declarations
+## 11.2 discovering workspace packages
 
 ### 11.2.1 workspace discovery honors exclusions and single-package defaults
-
-### 11.2.2 architecture loading supplies defaults and validates declared scope

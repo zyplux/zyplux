@@ -10,25 +10,6 @@ const workspace = {
   'pnpm-workspace.yaml': 'packages: [packages/*]',
 };
 
-describe('22.1 enforcing declared dependency direction', () => {
-  test.for([
-    ['1 a normal runtime import', 'import { fetchResponse } from "@sample/provider/api";'],
-    ['2 a type-only import', 'import type { Response } from "@sample/provider/api";'],
-    ['3 a resolved alias', 'import { fetchResponse } from "@provider/api";'],
-    ['4 a dynamic import', 'const load = () => import("@sample/provider/api");'],
-    ['5 a type query', 'export type API = typeof import("@sample/provider/api");'],
-  ])('22.1.%s', async ([, source = ''], { lintArchitecture }) => {
-    const reports = await lintArchitecture({
-      ...workspace,
-      'cerberus.toml': '[architecture.dependencies]\n"@sample/consumer"=[]',
-      'packages/consumer/src/entry.ts': source,
-    });
-    expect(reports.map(report => report.message)).toContain(
-      '@sample/consumer cannot depend on @sample/provider; this reverses the declared ownership direction.',
-    );
-  });
-});
-
 describe('22.2 preserving type ownership', () => {
   test.for([
     ['1 public API used only for types', 'import type { Response } from "@sample/provider/api";'],

@@ -41,19 +41,6 @@ test('11.2.1 workspace discovery honors exclusions and single-package defaults',
   expect(listWorkspacePackages(tempDir.path).map(({ name }) => name)).toEqual(['library']);
 });
 
-test('11.2.2 architecture loading supplies defaults and validates declared scope', async ({
-  loadArchitecture,
-  tempDir,
-}) => {
-  expect(loadArchitecture(tempDir.path)).toEqual({ applications: [], dependencies: {} });
-  await tempDir.write('cerberus.toml', '[architecture.dependencies]\nfoundation=[]');
-  expect(loadArchitecture(tempDir.path).dependencies).toEqual({ foundation: [] });
-  await tempDir.write('cerberus.toml', '[architecture.dependencies]\nfoundation="wrong"');
-  expect(() => loadArchitecture(tempDir.path)).toThrow();
-  await tempDir.write('cerberus.toml', '[architecture]\ndepedencies={}');
-  expect(() => loadArchitecture(tempDir.path)).toThrow();
-});
-
 test('11.1.3 export patterns prefer the longest static prefix when a wildcard is blocked', async ({
   hasPublicExport,
   listWorkspacePackages,

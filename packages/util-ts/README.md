@@ -65,4 +65,4 @@ pnpm add typescript
 
 `@zyplux/util/type-dependencies` exports `findTypeDependencyViolations({ imports, packages, sharedTypeSurfaces })`. It checks public package entries and type ownership using caller-supplied module references and package declarations. Repository-specific architecture policy stays with the consumer.
 
-`@zyplux/util/workspace-architecture` reads workspace packages and the shared `cerberus.toml` architecture declaration. Its export-map and ownership helpers support conditional exports, blocked entries, wildcard subpaths, and nested package directories.
+`@zyplux/util/workspace-architecture` discovers workspace packages. Its export-map and ownership helpers support conditional exports, blocked entries, wildcard subpaths, and nested package directories.

@@ -208,7 +208,7 @@ def _ts_specifiers(root: Node, source: bytes, query: Query) -> tuple[str, ...]:
 
 
 def parse_typescript(path: str, content: str) -> Tree:
-    return (_tsx_parser() if path.endswith(".tsx") else _ts_parser()).parse(content.encode("utf-8"))
+    return (_tsx_parser() if path.endswith((".tsx", ".jsx")) else _ts_parser()).parse(content.encode("utf-8"))
 
 
 def extract(path: str, content: str) -> Extracted:
@@ -219,7 +219,7 @@ def extract(path: str, content: str) -> Extracted:
             symbols=_python_symbols(tree.root_node, source),
             py_imports=_python_import_refs(tree.root_node, source),
         )
-    if path.endswith(".tsx"):
+    if path.endswith((".tsx", ".jsx")):
         tree = _tsx_parser().parse(source)
         captures = QueryCursor(_tsx_symbol_query()).captures(tree.root_node)
         return Extracted(

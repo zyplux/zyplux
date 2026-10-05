@@ -8,20 +8,6 @@
 
 ### 34.1.3 preserves framework application roots and binary only apps
 
-## 34.2 application keepers
-
-### 34.2.1 checks one keeper within each independent application scope
-
-### 34.2.2 rejects invalid keeper surfaces and second contract only packages
-
-### 34.2.3 rejects unknown packages and overlapping application scopes
-
-## 34.3 dependency direction
-
-### 34.3.1 dependency direction checks each manifest dependency category
-
-### 34.3.2 rejects unknown dependency policy packages
-
 ## 34.4 project references
 
 ### 34.4.1 project references match compiled dependencies once
@@ -35,6 +21,18 @@
 ### 34.5.1 side effect metadata preserves registration modules
 
 ### 34.5.2 pure libraries may declare no side effects
+
+### 34.5.3 matches side effects against workspace modules without assuming a build directory
+
+### 34.5.4 checks javascript and explicit module extensions
+
+### 34.5.5 preserves published registration modules in every runtime condition
+
+### 34.5.6 ignores string directives and preserves actual registration
+
+### 34.5.7 checks commonjs export initializers
+
+### 34.5.8 checks jsx registration and defers component bodies
 
 ## 34.6 Worker runtime reachability
 
@@ -53,7 +51,3 @@
 ### 34.6.7 workers preserve or override base url across multiple parents
 
 ### 34.6.8 workers replace parent path maps instead of merging aliases
-
-## 34.7 validating architecture configuration
-
-### 34.7.1 rejects invalid architecture declarations
