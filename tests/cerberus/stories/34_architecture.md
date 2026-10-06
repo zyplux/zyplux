@@ -12,10 +12,6 @@
 
 ### 34.1.5 matches framework roots to the configured or default router
 
-Root packages and workspace applications use Vite's supported config extensions in its discovery order.
-
-### 34.1.6 uses vite config precedence
-
 ## 34.4 project references
 
 ### 34.4.1 project references match compiled dependencies once

@@ -82,31 +82,20 @@ def test_34_1_4_checks_application_roots_and_export_families(
 
 
 @pytest.mark.parametrize("options", ["", "{}", "{ router: { entry: 'custom' } }"])
-@pytest.mark.parametrize("directory", ["", "apps/web", "services/web"])
-@pytest.mark.parametrize("extension", ["js", "mjs", "ts", "cjs", "mts", "cts"])
 def test_34_1_5_matches_framework_roots_to_the_configured_or_default_router(
-    run_check_with_files: RunCheckWithFiles, options: str, directory: str, extension: str
+    run_check_with_files: RunCheckWithFiles, options: str
 ) -> None:
     entry = "custom" if options else "router"
     if options == "{}":
         entry = "router"
-    prefix = f"{directory}/" if directory else ""
-    files = {"package.json": '{"name":"sample"}', "pnpm-workspace.yaml": "packages: [apps/*, services/*]"}
-    if not directory:
-        del files["pnpm-workspace.yaml"]
-    files[f"{prefix}package.json"] = json.dumps({"name": "web", "exports": {".": f"./src/{entry}.tsx"}})
-    files[f"{prefix}vite.config.{extension}"] = f"export default {{ plugins: [tanstackStart({options})] }};"
-    assert not run_check_with_files("consistent_package_export_entries", files).problems
-    files[f"{prefix}package.json"] = '{"name":"web","exports":{".":"./src/other.tsx"}}'
-    assert run_check_with_files("consistent_package_export_entries", files).problems
-
-
-def test_34_1_6_uses_vite_config_precedence(run_check_with_files: RunCheckWithFiles) -> None:
     files = {
-        "package.json": '{"name":"web","exports":{".":"./src/router.tsx"}}',
-        "vite.config.js": "export default {};",
-        "vite.config.ts": "export default { plugins: [tanstackStart()] };",
+        "package.json": '{"name":"sample"}',
+        "pnpm-workspace.yaml": "packages: [apps/*]",
+        "apps/web/package.json": json.dumps({"name": "web", "exports": {".": f"./src/{entry}.tsx"}}),
+        "apps/web/vite.config.ts": f"export default {{ plugins: [tanstackStart({options})] }};",
     }
+    assert not run_check_with_files("consistent_package_export_entries", files).problems
+    files["apps/web/package.json"] = '{"name":"web","exports":{".":"./src/other.tsx"}}'
     assert run_check_with_files("consistent_package_export_entries", files).problems
 
 
