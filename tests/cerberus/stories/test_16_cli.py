@@ -380,9 +380,9 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
 @pytest.mark.parametrize(
     "retirement",
     [
-        ("cli_ts_test_seam", "test-seam-only-imports/package-imports"),
-        ("lib_ts_test_seam", "test-seam-only-imports/package-imports"),
-        ("fixture_roles_ts", "test-seam-only-imports/package-imports"),
+        ("cli_ts_test_seam", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
+        ("lib_ts_test_seam", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
+        ("fixture_roles_ts", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
         ("contract_keepers", "repository-local tests"),
         ("dependency_direction", "repository-local tests"),
     ],

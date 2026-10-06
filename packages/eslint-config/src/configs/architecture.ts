@@ -12,14 +12,21 @@ export const architectureConfigs = (root: string): ConfigWithExtends[] => {
     const surfaces = directory.startsWith('packages/') ? ['.'] : [];
     return surfaces.flatMap(surface =>
       listExportTargets(entries[surface])
-        .filter(target => /\.tsx?$/.test(target))
+        .filter(target => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(target))
         .map(target => path.posix.join(directory, target)),
     );
   });
   return [
-    { files: ['**/*.{ts,tsx}'], plugins: { '@zyplux': plugin }, rules: { '@zyplux/package-imports': 'error' } },
     {
-      files: ['**/{types,interfaces}.ts', '**/interfaces/**/*.ts'],
+      files: ['**/*.{ts,tsx,mts,cts}'],
+      plugins: { '@zyplux': plugin },
+      rules: {
+        '@zyplux/no-type-only-dependencies': 'error',
+        '@zyplux/use-package-type-exports': 'error',
+      },
+    },
+    {
+      files: ['**/{types,interfaces}.{ts,tsx,mts,cts}', '**/interfaces/**/*.{ts,tsx,mts,cts}'],
       plugins: { '@zyplux': plugin },
       rules: { '@zyplux/type-only-modules': 'error' },
     },

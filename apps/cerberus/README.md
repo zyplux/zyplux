@@ -44,10 +44,10 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
 | `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
-| `package_exports` | content | Libraries use a root barrel or named exports with matching source and publication keys |
-| `package_side_effects` | content | Library side-effect declarations include detected registration statements |
-| `project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
-| `worker_runtime` | content | First-party Worker runtime imports avoid filesystem builtins |
+| `consistent_package_export_entries` | content | Workspace packages use index roots or named modules, with matching source/publication keys; application router roots match their TanStack Vite entry |
+| `explicit_module_side_effects` | content | Library packages declare `false` or module patterns that preserve detected initialization in source and published modules |
+| `consistent_workspace_project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
+| `no_worker_filesystem_imports` | content | First-party Worker runtime imports avoid filesystem builtins |
 | `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
 | `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
@@ -63,7 +63,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 ## Justfile recipes
 
-[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks the shared names and aliases, ordered gate steps through dependencies or `just` body calls, managed-tool runners, cleanup, and whitespace. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
+[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks names, aliases, ordered gate steps and their actual tool calls, managed-tool runners, cleanup, and whitespace. Required calls run as standalone foreground commands that preserve failures; local shell helpers enable `set -e`. The test recipe may guard runners by their workspace manifests and accept pytest's empty-suite exit code. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
 
 ## Fallow inputs
 

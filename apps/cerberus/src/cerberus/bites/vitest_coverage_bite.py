@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import re
-import shlex
-from functools import cache
 from typing import TYPE_CHECKING
-
-import tree_sitter_bash
-from tree_sitter import Language, Parser
 
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import CheckResult, Scope
 from cerberus.package_test_script import parse_test_script
+from cerberus.shell_commands import get_shell_parser, list_command_args
 from cerberus.ts_syntax import node_text, string_literal, walk_nodes
 
 if TYPE_CHECKING:
@@ -153,13 +149,8 @@ def _find_coverage(root: Node) -> tuple[Node | None, dict[str, Node], set[str]]:
     return None, bindings, helpers
 
 
-@cache
-def _get_shell_parser() -> Parser:
-    return Parser(Language(tree_sitter_bash.language()))
-
-
 def _enables_coverage(script: str, *, configured: bool) -> bool:
-    root = _get_shell_parser().parse(script.encode()).root_node
+    root = get_shell_parser().parse(script.encode()).root_node
     if root.has_error:
         return False
     command = next((child for child in root.named_children if child.type != "comment"), None)
@@ -167,10 +158,8 @@ def _enables_coverage(script: str, *, configured: bool) -> bool:
         command = next((child for child in command.named_children if child.type != "comment"), None)
     if command is None or command.type != "command":
         return configured
-    words = [*command.children_by_field_name("name"), *command.children_by_field_name("argument")]
-    try:
-        args = [shlex.split(node_text(word))[0] for word in words]
-    except ValueError:
+    args = list_command_args(command)
+    if not args:
         return False
     prefixes = [("vitest",), ("pnpm", "exec", "vitest"), ("pnpm", "vitest"), ("npx", "vitest"), ("bunx", "vitest")]
     if not any(tuple(args[: len(prefix)]) == prefix for prefix in prefixes):

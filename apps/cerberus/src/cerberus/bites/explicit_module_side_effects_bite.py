@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from cerberus.graph.resolve_ts import PackageInfo
     from cerberus.model import CheckResult, Repo
 
-ID = "package_side_effects"
+ID = "explicit_module_side_effects"
 SUMMARY = "Libraries declare side effects and preserve modules that execute registration or initialization"
 SCOPE = Scope.CONTENT
 _FUNCTION_NODES = {
@@ -116,14 +116,10 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         if not is_library(package):
             return []
         metadata = package.manifest.get("sideEffects")
-        if (
-            metadata is not False
-            and metadata is not True
-            and not (isinstance(metadata, list) and all(isinstance(entry, str) for entry in metadata))
+        if metadata is not False and not (
+            isinstance(metadata, list) and all(isinstance(entry, str) for entry in metadata)
         ):
-            return ["declare sideEffects as false, true, or module patterns"]
-        if metadata is True:
-            return []
+            return ["declare sideEffects as false or explicit module patterns"]
         findings = []
         prefix = f"{package.directory}/src/"
         for path in ctx.paths(repo):

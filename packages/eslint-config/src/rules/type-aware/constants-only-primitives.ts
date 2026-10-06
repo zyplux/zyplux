@@ -2,8 +2,12 @@ import { ESLintUtils, type TSESTree } from '@typescript-eslint/utils';
 import ts from 'typescript';
 
 import { createRule } from '#create-rule';
-
-import { isMutableDeclaration, isTypeExport, listRuntimeReexports } from './export-symbols.ts';
+import {
+  findExportDeclaration,
+  hasTypeOnlySpecifier,
+  isMutableBinding,
+  mapReexportDeclarations,
+} from '#rule-support/export-declarations';
 
 const primitiveFlags =
   ts.TypeFlags.StringLike |
@@ -25,20 +29,19 @@ export const constantsOnlyPrimitives = createRule({
         const source = services.esTreeNodeToTSNodeMap.get(node);
         const module = checker.getSymbolAtLocation(source);
         if (module === undefined) return;
-        const runtimeReexports = listRuntimeReexports(source, checker);
+        const reexports = mapReexportDeclarations(source, checker);
         const reported = new Set<TSESTree.Node>();
         for (const exported of checker.getExportsOfModule(module)) {
           const symbol = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
           const declaration = symbol.valueDeclaration;
           if (
             declaration !== undefined &&
-            !isTypeExport(exported) &&
+            !hasTypeOnlySpecifier(exported) &&
             isPrimitive(checker.getTypeOfSymbolAtLocation(symbol, declaration)) &&
-            !isMutableDeclaration(declaration)
+            !isMutableBinding(declaration)
           )
             continue;
-          const local =
-            exported.declarations?.find(item => item.getSourceFile() === source) ?? runtimeReexports.get(exported.name);
+          const local = findExportDeclaration(exported, source, reexports);
           const location = local === undefined ? node : services.tsNodeToESTreeNodeMap.get(local);
           if (reported.has(location)) continue;
           reported.add(location);

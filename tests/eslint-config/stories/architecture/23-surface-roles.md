@@ -39,3 +39,11 @@
 ### 23.4.1 contracts report a runtime star re-export at its source line
 
 ### 23.4.2 constants reject type-only re-exports at the export specifier
+
+## 23.5 applying the shipped architecture scopes
+
+### 23.5.1 rejects runtime declarations in type modules
+
+### 23.5.2 rejects declarations in exported roots
+
+### 23.5.3 rejects direct helper imports throughout test suites

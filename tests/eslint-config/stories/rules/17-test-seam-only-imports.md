@@ -25,11 +25,11 @@
 3. flags a default import of the fixtures alias
 4. flags a namespace import of the fixtures alias
 
-## 17.4 scoping the rule to story tests in the shipped config
+## 17.4 scoping the rule to tests in the shipped config
 
-### 17.4.1 enables the rule only for story test files
+### 17.4.1 enables the rule for test files inside and outside stories
 
-The shipped config covers both flat and nested story directories.
+The shipped config covers `.test.ts` and `.test.tsx` throughout the repository.
 
 ## 17.5 using a local domain module
 

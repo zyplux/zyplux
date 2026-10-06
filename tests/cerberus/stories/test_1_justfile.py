@@ -78,12 +78,13 @@ FREE_FORM_CUSTOM_TAIL = CONFORMING + (
 )
 
 CHECK_ID = "justfile"
+WORKSPACE_MANIFESTS = {"package.json": "{}", "pyproject.toml": "[project]\nname = 'sample'\nversion = '0.0.0'\n"}
 
 
 @pytest.fixture
 def run_justfile_check(run_check_with_files: RunCheckWithFiles) -> RunJustfileCheck:
     def _run(justfile_text: str | None) -> CheckResult:
-        files = {} if justfile_text is None else {"justfile": justfile_text}
+        files = {} if justfile_text is None else {"justfile": justfile_text, **WORKSPACE_MANIFESTS}
         return run_check_with_files(CHECK_ID, files)
 
     return _run
@@ -188,7 +189,10 @@ def test_1_5_1_fails_and_names_the_tool_when_a_recipe_calls_it_directly(
     result = run_justfile_check(BARE_TOOL_CALL)
     assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
-        ["recipe `lint` runs `rumdl` directly; managed tools must run via `uv run`/`pnpx`"],
+        [
+            "recipe `lint` must run `uv run rumdl check --fix` without masking its failure",
+            "recipe `lint` runs `rumdl` directly; managed tools must run via `uv run`/`pnpx`",
+        ],
     )
 
 
@@ -337,6 +341,116 @@ def test_1_10_5_rejects_recursive_body_calls(run_justfile_check: RunJustfileChec
     result = run_justfile_check(content)
     assert result.status is status.FAIL
     assert any("recursive just invocation" in finding.message for finding in result.problems)
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "call",
+    [
+        "echo just lint",
+        "if false; then just lint; fi",
+        "just lint | cat",
+        "just lint &",
+        "just lint || true",
+        "-just lint",
+        "false && just lint",
+    ],
+)
+def test_1_10_6_rejects_skipped_background_or_masked_gate_steps(
+    run_justfile_check: RunJustfileCheck, call: str
+) -> None:
+    content = CONFORMING.replace(
+        "check: install knip typecheck lint test cerberus",
+        f"check: install knip typecheck\n    {call}\n    just test\n    just cerberus",
+    )
+    assert run_justfile_check(content).problems
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo pnpm run lint:fix",
+        "if false; then pnpm run lint:fix; fi",
+        "pnpm run lint:fix | cat",
+        "pnpm run lint:fix &",
+        "pnpm run lint:fix || true",
+        "-pnpm run lint:fix",
+    ],
+)
+def test_1_10_7_requires_real_failure_preserving_tool_calls(run_justfile_check: RunJustfileCheck, command: str) -> None:
+    content = CONFORMING.replace("    pnpm run lint:fix\n", f"    {command}\n")
+    assert any("must run `pnpm run lint:fix`" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+@pytest.mark.parametrize("recipe", ["install", "knip", "typecheck", "lint", "test"])
+def test_1_10_8_rejects_empty_quality_recipes(run_justfile_check: RunJustfileCheck, recipe: str) -> None:
+    lines = CONFORMING.splitlines(keepends=True)
+    start = lines.index(f"{recipe}:\n")
+    end = start + 1
+    while end < len(lines) and (lines[end].startswith("    ") or not lines[end].strip()):
+        end += 1
+    content = "".join([*lines[: start + 1], "    echo no checks\n\n", *lines[end:]])
+    assert run_justfile_check(content).problems
+
+
+@requires_just
+def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWithFiles) -> None:
+    content = CONFORMING.replace(
+        "    pnpm install\n    uv sync --all-packages --all-groups\n", "    bash scripts/install.sh\n"
+    )
+    files = {
+        **WORKSPACE_MANIFESTS,
+        "justfile": content,
+        "scripts/install.sh": (
+            "#!/bin/bash\nset -euo pipefail\npnpm install --frozen-lockfile\nuv sync --all-packages --all-groups\n"
+        ),
+    }
+    assert not run_check_with_files(CHECK_ID, files).problems
+    files["scripts/install.sh"] = "echo 'pnpm install; uv sync --all-packages --all-groups'"
+    assert run_check_with_files(CHECK_ID, files).problems
+
+
+@requires_just
+def test_1_10_10_rejects_reversed_test_runners(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING.replace(
+        "    if test -f package.json; then pnpm run test; fi\n"
+        '    if test -f pyproject.toml; then uv run pytest || test "$?" -eq 5; fi',
+        "    uv run pytest\n    pnpm run test",
+    )
+    assert any("baseline order" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+def test_1_10_11_requires_both_knip_graphs(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING.replace("    pnpm run knip\n", "")
+    assert any("must run `pnpm run knip`" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "command",
+    [
+        "uv run echo cerberus",
+        "uvx --from cerberus echo",
+        "uv run --with cerberus echo",
+        "uv run cerberus || true",
+        "uv run cerberus | cat",
+        "uv run cerberus &",
+    ],
+)
+def test_1_10_12_requires_a_real_failure_preserving_cerberus_run(
+    run_justfile_check: RunJustfileCheck, command: str
+) -> None:
+    content = CONFORMING.replace("    uv run cerberus --fix\n", f"    {command}\n")
+    assert any("runs cerberus" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+def test_1_10_13_ignores_tool_names_inside_quoted_text(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING + '\nexample:\n    echo "setup; ruff check; rumdl check"\n'
+    assert not run_justfile_check(content).problems
 
 
 @requires_just

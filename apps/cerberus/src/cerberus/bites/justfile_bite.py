@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import re
+from functools import cache
+from importlib import resources
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from cerberus import justfile
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.shell_commands import list_required_commands, list_shell_commands
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -19,10 +23,16 @@ SUMMARY = (
 )
 SCOPE = Scope.CONTENT
 
-_SEGMENT_SPLIT = re.compile(r"&&|\|\||[|;]")
-_RECIPE_LINE_PREFIXES = "@-"
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
-_CERBERUS_RUNNERS = frozenset({"uv", "uvx"})
+_RUNNER_VALUE_OPTIONS = frozenset({
+    "--from",
+    "--with",
+    "--with-editable",
+    "--with-requirements",
+    "--project",
+    "--directory",
+    "--python",
+})
 _CZ_CLEAN_INVOCATIONS = (
     ("cz", "clean"),
     ("pnpm", "run", "cz", "clean"),
@@ -38,35 +48,21 @@ def _strip_trailing_ws(content: str) -> str:
     return _TRAILING_WS.sub("", content)
 
 
-def _command_tokens(segment: str) -> list[str]:
-    tokens = segment.split()
-    while tokens and "=" in tokens[0] and not tokens[0].startswith("-"):
-        tokens = tokens[1:]
-    if tokens:
-        tokens[0] = tokens[0].lstrip(_RECIPE_LINE_PREFIXES)
-    return tokens
+def _invokes_cerberus(args: tuple[str, ...]) -> bool:
+    match args:
+        case ("cerberus", *_):
+            return True
+        case ("uv", "run", *options) | ("uvx", *options):
+            while options and options[0].startswith("-"):
+                flag = options.pop(0)
+                if flag in _RUNNER_VALUE_OPTIONS and options:
+                    options.pop(0)
+            return bool(options) and options[0] == "cerberus"
+        case _:
+            return False
 
 
-def _leading_command(segment: str) -> str | None:
-    tokens = _command_tokens(segment)
-    return tokens[0] if tokens else None
-
-
-def _invokes_cerberus(segment: str) -> bool:
-    """Decide whether a command segment actually runs cerberus.
-
-    `cerberus` in command position counts, as does a runner (`uv`, `uvx`)
-    carrying a `cerberus` token (`uv run --active cerberus`,
-    `uvx --from zyplux-cerberus cerberus`). A mention in a shell comment or as
-    an argument to an unrelated command does not.
-    """
-    tokens = _command_tokens(segment)
-    if not tokens:
-        return False
-    return tokens[0] == "cerberus" or (tokens[0] in _CERBERUS_RUNNERS and "cerberus" in tokens[1:])
-
-
-def _invokes_cz_clean(segment: str) -> bool:
+def _invokes_cz_clean(tokens: tuple[str, ...]) -> bool:
     """Decide whether a command segment actually runs `cz clean`.
 
     Only the invocation shapes the org's repos actually use count: bare
@@ -76,7 +72,6 @@ def _invokes_cz_clean(segment: str) -> bool:
     to be followed by the words `cz clean` (`pnpm run echo cz clean`), does
     not count.
     """
-    tokens = tuple(_command_tokens(segment))
     return any(tokens[: len(invocation)] == invocation for invocation in _CZ_CLEAN_INVOCATIONS)
 
 
@@ -92,14 +87,11 @@ def _bare_tool_calls(bodies: dict[str, str], wrapped_tools: Iterable[str]) -> li
     seen: set[tuple[str, str]] = set()
     calls: list[tuple[str, str]] = []
     for recipe, body in bodies.items():
-        for line in body.split("\n"):
-            for segment in _SEGMENT_SPLIT.split(line):
-                command = _leading_command(segment)
-                if command is None or command not in tools:
-                    continue
-                if (recipe, command) not in seen:
-                    seen.add((recipe, command))
-                    calls.append((recipe, command))
+        for args in list_shell_commands(body):
+            command = args[0]
+            if command in tools and (recipe, command) not in seen:
+                seen.add((recipe, command))
+                calls.append((recipe, command))
     return calls
 
 
@@ -131,13 +123,12 @@ def _check_recipes(recipes: Iterable[str], expected: Iterable[str], kind: str, r
 
 def _list_recipe_calls(jf: justfile.Justfile, recipe: str) -> list[str]:
     calls = list(jf.recipes.get(recipe, []))
-    for line in jf.bodies.get(recipe, "").splitlines():
-        for segment in _SEGMENT_SPLIT.split(line):
-            match _command_tokens(segment):
-                case ["just", name, *_]:
-                    target = jf.aliases.get(name, name)
-                    if target in jf.recipes:
-                        calls.append(target)
+    for args in list_required_commands(jf.bodies.get(recipe, ""), frozenset()):
+        match args:
+            case ("just", name, *_):
+                target = jf.aliases.get(name, name)
+                if target in jf.recipes:
+                    calls.append(target)
     return calls
 
 
@@ -152,29 +143,112 @@ def _calc_execution_order(jf: justfile.Justfile, recipe: str, ancestors: frozens
     return order
 
 
-def _check_local_cerberus_run(jf: justfile.Justfile, res: CheckResult) -> None:
+def _normalize_tool_args(args: tuple[str, ...]) -> tuple[str, ...]:
+    if args[:2] == ("uv", "run"):
+        return args[:2] + tuple(arg for arg in args[2:] if arg != "--no-sync")
+    if len(args) > 1 and args[0] == "pnpm" and args[1] in {"test", "knip", "typecheck"}:
+        return ("pnpm", "run", *args[1:])
+    return args
+
+
+def _list_tool_commands(
+    jf: justfile.Justfile, recipe: str, repo: Repo, ctx: Context, ancestors: frozenset[str] = frozenset()
+) -> list[tuple[str, ...]]:
+    if recipe in ancestors:
+        message = f"recursive just invocation in recipe `{recipe}`"
+        raise justfile.JustfileError(message)
+    manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
+    commands = []
+    for target in jf.recipes.get(recipe, []):
+        commands.extend(_list_tool_commands(jf, target, repo, ctx, ancestors | {recipe}))
+    for args in list_required_commands(jf.bodies.get(recipe, ""), manifests):
+        match args:
+            case ("just", name, *_) if jf.aliases.get(name, name) in jf.recipes:
+                commands.extend(_list_tool_commands(jf, jf.aliases.get(name, name), repo, ctx, ancestors | {recipe}))
+            case ("bash" | "sh", script, *_) | (script, *_) if script.endswith(".sh"):
+                commands.extend(_list_script_commands(script, repo, ctx, frozenset()))
+            case _:
+                commands.append(_normalize_tool_args(args))
+    return commands
+
+
+def _list_script_commands(script: str, repo: Repo, ctx: Context, ancestors: frozenset[str]) -> list[tuple[str, ...]]:
+    path = PurePosixPath(script)
+    if path.is_absolute() or ".." in path.parts or str(path) in ancestors:
+        return []
+    content = ctx.file(repo, str(path))
+    if content is None:
+        return []
+    shell_commands = list_required_commands(content, frozenset())
+    if not any(
+        args[0] == "set" and any(arg.startswith("-") and "e" in arg[1:] for arg in args[1:]) for args in shell_commands
+    ):
+        return []
+    commands = []
+    for args in shell_commands:
+        match args:
+            case ("bash" | "sh", child, *_) | (child, *_) if child.endswith(".sh"):
+                commands.extend(_list_script_commands(child, repo, ctx, ancestors | {str(path)}))
+            case _:
+                commands.append(_normalize_tool_args(args))
+    return commands
+
+
+@cache
+def _load_baseline() -> justfile.Justfile:
+    return justfile.parse(resources.files("cerberus").joinpath("baseline.just").read_text())
+
+
+def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
+    baseline = _load_baseline()
+    manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
+    for recipe in ctx.config.check_pipeline:
+        if recipe not in jf.recipes:
+            continue
+        actual = _list_tool_commands(jf, recipe, repo, ctx)
+        required = [
+            args
+            for args in list_required_commands(baseline.bodies.get(recipe, ""), manifests)
+            if (args[0] != "pnpm" or "package.json" in manifests) and (args[0] != "uv" or "pyproject.toml" in manifests)
+        ]
+        missing = [args for args in required if not any(_matches_tool_command(command, args) for command in actual)]
+        for args in missing:
+            res.fail(f"recipe `{recipe}` must run `{' '.join(args)}` without masking its failure")
+        if not missing:
+            remaining = iter(actual)
+            if not all(any(_matches_tool_command(command, args) for command in remaining) for args in required):
+                res.fail(f"recipe `{recipe}` must run its required tools in baseline order")
+
+
+def _matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
+    if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
+        return False
+    positional = tuple(arg for arg in command if not arg.startswith("-"))
+    expected = tuple(arg for arg in required if not arg.startswith("-"))
+    return positional[: len(expected)] == expected and all(arg in command for arg in required if arg.startswith("-"))
+
+
+def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     if "check" not in jf.recipes:
         return
-    segments = (
-        segment
-        for recipe in _calc_execution_order(jf, "check")
-        for line in jf.bodies.get(recipe, "").split("\n")
-        for segment in _SEGMENT_SPLIT.split(line)
-    )
-    if not any(_invokes_cerberus(segment) for segment in segments):
+    commands = _list_tool_commands(jf, "check", repo, ctx)
+    if not any(_invokes_cerberus(args) for args in commands):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 
-def _check_clean_uses_cz(jf: justfile.Justfile, res: CheckResult) -> None:
+def _check_clean_uses_cz(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     if "clean" not in jf.recipes:
         return
-    segments = (segment for line in jf.bodies.get("clean", "").split("\n") for segment in _SEGMENT_SPLIT.split(line))
-    if not any(_invokes_cz_clean(segment) for segment in segments):
+    commands = _list_tool_commands(jf, "clean", repo, ctx)
+    if not any(_invokes_cz_clean(args) for args in commands):
         res.fail("`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`")
 
 
 def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
-    if "default" in jf.recipes and cfg.default_recipe_marker not in jf.bodies.get("default", ""):
+    marker = tuple(cfg.default_recipe_marker.split())
+    if "default" in jf.recipes and not any(
+        args[: len(marker)] == marker for args in list_required_commands(jf.bodies.get("default", ""), frozenset())
+    ):
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
     if "check" in jf.recipes:
         deps = _calc_execution_order(jf, "check")[:-1]
@@ -205,10 +279,14 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
     try:
         _check_pipeline(jf, cfg, res)
-        _check_local_cerberus_run(jf, res)
+        _check_tool_commands(jf, repo, ctx, res)
+        _check_local_cerberus_run(jf, repo, ctx, res)
     except justfile.JustfileError as err:
         res.fail(str(err))
-    _check_clean_uses_cz(jf, res)
+    try:
+        _check_clean_uses_cz(jf, repo, ctx, res)
+    except justfile.JustfileError as err:
+        res.fail(str(err))
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):
         res.fail(f"recipe `{recipe}` runs `{tool}` directly; managed tools must run via `uv run`/`pnpx`")

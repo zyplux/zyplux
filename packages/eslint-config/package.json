@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/eslint-config",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Shared ESLint flat config and custom rules",
   "keywords": [
     "eslint",
@@ -24,7 +24,8 @@
   },
   "imports": {
     "#create-rule": "./src/create-rule.ts",
-    "#plugin": "./src/plugin.ts"
+    "#plugin": "./src/plugin.ts",
+    "#rule-support/*": "./src/rule-support/*.ts"
   },
   "files": [
     "README.md",
@@ -34,7 +35,8 @@
     "access": "public",
     "imports": {
       "#create-rule": "./dist/src/create-rule.js",
-      "#plugin": "./dist/src/plugin.js"
+      "#plugin": "./dist/src/plugin.js",
+      "#rule-support/*": "./dist/src/rule-support/*.js"
     },
     "exports": {
       ".": {

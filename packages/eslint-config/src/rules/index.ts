@@ -16,10 +16,11 @@ import { noReturnArrayPush } from './type-aware/no-return-array-push.ts';
 import { noSchemasOutsideContracts } from './type-aware/no-schemas-outside-contracts.ts';
 import { noStrayPascalConst } from './type-aware/no-stray-pascal-const.ts';
 import { noTypeAnnotations } from './type-aware/no-type-annotations.ts';
+import { noTypeOnlyDependencies } from './type-aware/no-type-only-dependencies.ts';
 import { noUnvalidatedJson } from './type-aware/no-unvalidated-json.ts';
 import { noZodCustom } from './type-aware/no-zod-custom.ts';
-import { packageImports } from './type-aware/package-imports.ts';
 import { preferDestructuredParams } from './type-aware/prefer-destructured-params.ts';
+import { usePackageTypeExports } from './type-aware/use-package-type-exports.ts';
 
 const upstreamPreferArrowFunctions = preferArrowFunctions.rules['prefer-arrow-functions'];
 if (!upstreamPreferArrowFunctions) {
@@ -37,13 +38,14 @@ export const rules: Record<string, EslintRule> = {
   'no-schemas-outside-contracts': noSchemasOutsideContracts,
   'no-stray-pascal-const': noStrayPascalConst,
   'no-type-annotations': noTypeAnnotations,
+  'no-type-only-dependencies': noTypeOnlyDependencies,
   'no-type-predicate': noTypePredicate,
   'no-unvalidated-json': noUnvalidatedJson,
   'no-zod-custom': noZodCustom,
-  'package-imports': packageImports,
   'prefer-arrow-functions': castToEslintRule(upstreamPreferArrowFunctions),
   'prefer-destructured-params': preferDestructuredParams,
   'test-seam-only-imports': testSeamOnlyImports,
   'type-only-modules': typeOnlyModules,
   'type-over-interface': typeOverInterface,
+  'use-package-type-exports': usePackageTypeExports,
 };

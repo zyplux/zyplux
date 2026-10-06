@@ -47,11 +47,11 @@ describe('17.3 flagging value bindings beyond describe, expect, and test', () =>
   });
 });
 
-describe('17.4 scoping the rule to story tests in the shipped config', () => {
-  test('17.4.1 enables the rule only for story test files', ({ zyplux }) => {
+describe('17.4 scoping the rule to tests in the shipped config', () => {
+  test('17.4.1 enables the rule for test files inside and outside stories', ({ zyplux }) => {
     const config = zyplux();
     const entries = config.filter(entry => entry.rules?.['@zyplux/test-seam-only-imports'] !== undefined);
-    expect(entries.map(entry => entry.files)).toEqual([['**/stories/**/*.test.{ts,tsx}']]);
+    expect(entries.map(entry => entry.files)).toEqual([['**/*.test.{ts,tsx}']]);
   });
 });
 

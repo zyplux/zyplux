@@ -10,16 +10,17 @@ from cerberus.bites import (
     ci_workflow_gate_bite,
     cli_py_test_seam_bite,
     codeowners_coverage_bite,
+    consistent_package_export_entries_bite,
+    consistent_workspace_project_references_bite,
+    explicit_module_side_effects_bite,
     fallow_bite,
     jscpd_bite,
     justfile_bite,
     knip_bite,
     lib_py_test_seam_bite,
     line_length_bite,
-    package_exports_bite,
-    package_side_effects_bite,
+    no_worker_filesystem_imports_bite,
     pnpm_release_age_bite,
-    project_references_bite,
     pyrefly_bite,
     pytest_bite,
     release_surface_version_bump_bite,
@@ -31,7 +32,6 @@ from cerberus.bites import (
     tsc_bite,
     vitest_bite,
     vitest_coverage_bite,
-    worker_runtime_bite,
     workflow_toolchain_only_bite,
     zyplux_deps_latest_bite,
 )
@@ -67,10 +67,10 @@ ALL: tuple[Check, ...] = tuple(
         vitest_bite,
         tsc_bite,
         catalog_pinned_deps_bite,
-        package_exports_bite,
-        package_side_effects_bite,
-        project_references_bite,
-        worker_runtime_bite,
+        consistent_package_export_entries_bite,
+        explicit_module_side_effects_bite,
+        consistent_workspace_project_references_bite,
+        no_worker_filesystem_imports_bite,
         vitest_coverage_bite,
         pnpm_release_age_bite,
         story_tests_lockstep_py_bite,
@@ -92,7 +92,13 @@ BY_ID: dict[str, Check] = {check.id: check for check in ALL}
 RETIRED = {
     "contract_keepers": "repository-local tests",
     "dependency_direction": "repository-local tests",
-    "cli_ts_test_seam": "package_exports and ESLint test-seam-only-imports/package-imports",
-    "lib_ts_test_seam": "package_exports and ESLint test-seam-only-imports/package-imports",
-    "fixture_roles_ts": "ESLint test-seam-only-imports/package-imports",
+    "cli_ts_test_seam": (
+        "consistent_package_export_entries and ESLint "
+        "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"
+    ),
+    "lib_ts_test_seam": (
+        "consistent_package_export_entries and ESLint "
+        "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"
+    ),
+    "fixture_roles_ts": "ESLint test-seam-only-imports/use-package-type-exports/no-type-only-dependencies",
 }

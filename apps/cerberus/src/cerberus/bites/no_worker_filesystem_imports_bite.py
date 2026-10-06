@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "worker_runtime"
+ID = "no_worker_filesystem_imports"
 SUMMARY = "First-party runtime code reachable from Wrangler Worker entries avoids filesystem builtins"
 SCOPE = Scope.CONTENT
 _FILESYSTEM = {"node:fs", "node:fs/promises", "fs", "fs/promises"}

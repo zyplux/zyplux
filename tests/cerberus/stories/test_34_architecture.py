@@ -33,7 +33,9 @@ def _workspace(manifests: dict[str, dict[str, object]]) -> dict[str, str]:
 def test_34_1_1_accepts_library_export_families_and_conditional_or_asset_entries(
     run_check_with_files: RunCheckWithFiles, exports: object
 ) -> None:
-    assert not run_check_with_files("package_exports", _workspace({"library": {"exports": exports}})).problems
+    assert not run_check_with_files(
+        "consistent_package_export_entries", _workspace({"library": {"exports": exports}})
+    ).problems
 
 
 @pytest.mark.parametrize(
@@ -47,7 +49,7 @@ def test_34_1_1_accepts_library_export_families_and_conditional_or_asset_entries
 def test_34_1_2_rejects_mixed_exports_misnamed_entries_and_published_key_drift(
     run_check_with_files: RunCheckWithFiles, manifest: dict[str, object]
 ) -> None:
-    assert run_check_with_files("package_exports", _workspace({"library": manifest})).problems
+    assert run_check_with_files("consistent_package_export_entries", _workspace({"library": manifest})).problems
 
 
 def test_34_1_3_preserves_framework_application_roots_and_binary_only_apps(
@@ -57,9 +59,44 @@ def test_34_1_3_preserves_framework_application_roots_and_binary_only_apps(
         "package.json": '{"name":"sample"}',
         "pnpm-workspace.yaml": "packages: [apps/*]",
         "apps/web/package.json": '{"name":"web","exports":{".":"./src/router.tsx"}}',
+        "apps/web/vite.config.ts": "export default { plugins: [tanstackStart({ router: { entry: 'router' } })] };",
         "apps/cli/package.json": '{"name":"cli","bin":{"cli":"./src/cli.ts"}}',
     }
-    assert not run_check_with_files("package_exports", files).problems
+    assert not run_check_with_files("consistent_package_export_entries", files).problems
+
+
+@pytest.mark.parametrize("extension", ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"])
+@pytest.mark.parametrize("exports", [{".": "router"}, {".": "index", "./api": "api"}])
+def test_34_1_4_checks_application_roots_and_export_families(
+    run_check_with_files: RunCheckWithFiles, extension: str, exports: dict[str, str]
+) -> None:
+    files = {
+        "package.json": '{"name":"sample"}',
+        "pnpm-workspace.yaml": "packages: [apps/*]",
+        "apps/web/package.json": json.dumps({
+            "name": "web",
+            "exports": {key: f"./src/{name}.{extension}" for key, name in exports.items()},
+        }),
+    }
+    assert run_check_with_files("consistent_package_export_entries", files).problems
+
+
+@pytest.mark.parametrize("options", ["", "{}", "{ router: { entry: 'custom' } }"])
+def test_34_1_5_matches_framework_roots_to_the_configured_or_default_router(
+    run_check_with_files: RunCheckWithFiles, options: str
+) -> None:
+    entry = "custom" if options else "router"
+    if options == "{}":
+        entry = "router"
+    files = {
+        "package.json": '{"name":"sample"}',
+        "pnpm-workspace.yaml": "packages: [apps/*]",
+        "apps/web/package.json": json.dumps({"name": "web", "exports": {".": f"./src/{entry}.tsx"}}),
+        "apps/web/vite.config.ts": f"export default {{ plugins: [tanstackStart({options})] }};",
+    }
+    assert not run_check_with_files("consistent_package_export_entries", files).problems
+    files["apps/web/package.json"] = '{"name":"web","exports":{".":"./src/other.tsx"}}'
+    assert run_check_with_files("consistent_package_export_entries", files).problems
 
 
 @pytest.mark.parametrize(
@@ -84,7 +121,7 @@ def test_34_4_1_project_references_match_compiled_dependencies_once(
             "references": references,
         }),
     })
-    assert bool(run_check_with_files("project_references", files).problems) is has_failure
+    assert bool(run_check_with_files("consistent_workspace_project_references", files).problems) is has_failure
 
 
 def test_34_4_2_project_references_resolve_jsonc_and_inherited_workspace_configs(
@@ -98,12 +135,12 @@ def test_34_4_2_project_references_resolve_jsonc_and_inherited_workspace_configs
         "packages/configuration/base.json": '{ /* build options */ "compilerOptions": {"composite": true,},}',
         "packages/consumer/tsconfig.json": '{"extends":"configuration/base.json", "references": [],}',
     })
-    assert not run_check_with_files("project_references", files).problems
+    assert not run_check_with_files("consistent_workspace_project_references", files).problems
 
 
 @pytest.mark.parametrize(
     ("side_effects", "has_failure"),
-    [(False, True), (True, False), (["./src/register.ts"], False), (["./src/other.ts"], True), (None, True)],
+    [(False, True), (True, True), (["./src/register.ts"], False), (["./src/other.ts"], True), (None, True)],
 )
 @pytest.mark.parametrize(
     "source",
@@ -122,7 +159,7 @@ def test_34_5_1_side_effect_metadata_preserves_registration_modules(
 ) -> None:
     files = _workspace({"library": {"exports": {"./register": "./src/register.ts"}, "sideEffects": side_effects}})
     files["packages/library/src/register.ts"] = source
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_failure
 
 
 @pytest.mark.parametrize(
@@ -145,7 +182,7 @@ def test_34_5_2_pure_libraries_may_declare_no_side_effects(
 ) -> None:
     files = _workspace({"library": {"exports": {".": "./src/index.ts"}, "sideEffects": False}})
     files["packages/library/src/index.ts"] = source
-    assert not run_check_with_files("package_side_effects", files).problems
+    assert not run_check_with_files("explicit_module_side_effects", files).problems
 
 
 @pytest.mark.parametrize(
@@ -168,7 +205,7 @@ def test_34_5_3_matches_side_effects_against_workspace_modules_without_assuming_
         }
     })
     files["packages/library/src/nested/register.ts"] = "registerMatchers();"
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_failure
 
 
 @pytest.mark.parametrize("extension", ["js", "mjs", "cjs", "mts", "cts"])
@@ -177,7 +214,7 @@ def test_34_5_4_checks_javascript_and_explicit_module_extensions(
 ) -> None:
     files = _workspace({"library": {"exports": {".": f"./src/index.{extension}"}, "sideEffects": False}})
     files[f"packages/library/src/index.{extension}"] = "registerMatchers();"
-    assert run_check_with_files("package_side_effects", files).problems
+    assert run_check_with_files("explicit_module_side_effects", files).problems
 
 
 @pytest.mark.parametrize(
@@ -210,7 +247,7 @@ def test_34_5_5_preserves_published_registration_modules_in_every_runtime_condit
         }
     })
     files["packages/library/src/nested/register.ts"] = "registerMatchers();"
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_failure
 
 
 @pytest.mark.parametrize("extension", ["js", "cjs"])
@@ -222,7 +259,7 @@ def test_34_5_6_ignores_string_directives_and_preserves_actual_registration(
     files = _workspace({"library": {"exports": {".": f"./src/index.{extension}"}, "sideEffects": False}})
     statement = "registerMatchers();" if has_registration else "const ready = true;"
     files[f"packages/library/src/index.{extension}"] = f'"{directive}"; {statement}'
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_registration
 
 
 @pytest.mark.parametrize(
@@ -249,7 +286,7 @@ def test_34_5_7_checks_commonjs_export_initializers(
 ) -> None:
     files = _workspace({"library": {"exports": {".": "./src/index.cjs"}, "sideEffects": False}})
     files["packages/library/src/index.cjs"] = source
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_failure
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_failure
 
 
 @pytest.mark.parametrize("has_registration", [False, True])
@@ -259,7 +296,15 @@ def test_34_5_8_checks_jsx_registration_and_defers_component_bodies(
     files = _workspace({"library": {"exports": {".": "./src/index.jsx"}, "sideEffects": False}})
     source = "export const Component = () => <p>Ready</p>;"
     files["packages/library/src/index.jsx"] = source + ("registerMatchers();" if has_registration else "")
-    assert bool(run_check_with_files("package_side_effects", files).problems) is has_registration
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_registration
+
+
+@pytest.mark.parametrize(("metadata", "has_failure"), [(None, True), (True, True), (False, False), ([], False)])
+def test_34_5_9_requires_explicit_side_effects_in_packages_without_exports(
+    run_check_with_files: RunCheckWithFiles, metadata: object, *, has_failure: bool
+) -> None:
+    files = _workspace({"library": {"sideEffects": metadata}})
+    assert bool(run_check_with_files("explicit_module_side_effects", files).problems) is has_failure
 
 
 @pytest.mark.parametrize(
@@ -284,7 +329,7 @@ def test_34_6_1_workers_follow_runtime_imports_and_ignore_type_edges_or_text(
         "packages/shared/src/api.ts": source,
         "packages/shared/src/types.ts": 'import "node:fs";',
     })
-    assert bool(run_check_with_files("worker_runtime", files).problems) is has_failure
+    assert bool(run_check_with_files("no_worker_filesystem_imports", files).problems) is has_failure
 
 
 def test_34_6_2_workers_resolve_local_aliases_and_package_import_maps(run_check_with_files: RunCheckWithFiles) -> None:
@@ -299,7 +344,7 @@ def test_34_6_2_workers_resolve_local_aliases_and_package_import_maps(run_check_
         "packages/shared/src/api.ts": 'import "#internal";',
         "packages/shared/src/internal.ts": 'import "node:fs";',
     })
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_external_gaps(
@@ -309,14 +354,14 @@ def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_exte
         "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
         "apps/worker/src/index.ts": 'import "third-party"; const load = (name: string) => import(name);',
     }
-    result = run_check_with_files("worker_runtime", files)
+    result = run_check_with_files("no_worker_filesystem_imports", files)
     assert not result.problems
     assert result.verbose_lines == [
         "apps/worker/src/index.ts:1: computed dynamic import cannot be resolved statically",
         "third-party runtime third-party is outside the first-party graph",
     ]
     files["apps/worker/src/index.ts"] = 'import "./missing.ts";'
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 def test_34_4_3_project_references_check_projects_with_external_compiler_settings(
@@ -325,9 +370,9 @@ def test_34_4_3_project_references_check_projects_with_external_compiler_setting
     files = _workspace({"consumer": {"dependencies": {"provider": "workspace:*"}}, "provider": {}})
     for name in ("consumer", "provider"):
         files[f"packages/{name}/tsconfig.json"] = '{"extends":"external/node.json"}'
-    assert run_check_with_files("project_references", files).problems
+    assert run_check_with_files("consistent_workspace_project_references", files).problems
     files["packages/consumer/tsconfig.json"] = '{"extends":"external/node.json","references":[{"path":"../provider"}]}'
-    assert not run_check_with_files("project_references", files).problems
+    assert not run_check_with_files("consistent_workspace_project_references", files).problems
 
 
 def test_34_6_4_workers_follow_inherited_aliases_and_export_arrays(
@@ -342,9 +387,9 @@ def test_34_6_4_workers_follow_inherited_aliases_and_export_arrays(
         "apps/worker/src/entry.ts": 'import "shared/api";',
         "packages/shared/src/api.ts": 'import "node:fs";',
     })
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
     files["packages/shared/src/api.ts"] = "export const ready = true;"
-    assert not run_check_with_files("worker_runtime", files).problems
+    assert not run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 def test_34_6_5_workers_respect_blocked_exports_and_default_condition_order(
@@ -356,7 +401,7 @@ def test_34_6_5_workers_respect_blocked_exports_and_default_condition_order(
         "apps/worker/src/index.ts": 'import "shared/api";',
         "packages/shared/src/api.ts": "export const ready = true;",
     })
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 def test_34_6_6_workers_resolve_child_paths_relative_to_their_declaring_config(
@@ -372,9 +417,9 @@ def test_34_6_6_workers_resolve_child_paths_relative_to_their_declaring_config(
         "apps/worker/src/index.ts": 'import "local";',
         "apps/worker/src/entry.ts": 'import "node:fs";',
     }
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
     files["apps/worker/src/entry.ts"] = "export const ready = true;"
-    assert not run_check_with_files("worker_runtime", files).problems
+    assert not run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 @pytest.mark.parametrize("later_base", [None, "alternate"])
@@ -400,9 +445,9 @@ def test_34_6_7_workers_preserve_or_override_base_url_across_multiple_parents(
         "apps/worker/src/entry.ts": "export const ready = true;",
         entry: 'import "node:fs";',
     }
-    assert run_check_with_files("worker_runtime", files).problems
+    assert run_check_with_files("no_worker_filesystem_imports", files).problems
     files[entry] = "export const ready = true;"
-    assert not run_check_with_files("worker_runtime", files).problems
+    assert not run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
 @pytest.mark.parametrize("later_paths", [{}, {"other": ["src/entry.ts"]}])
@@ -419,4 +464,4 @@ def test_34_6_8_workers_replace_parent_path_maps_instead_of_merging_aliases(
         "packages/shared/src/index.ts": "export const ready = true;",
         "src/entry.ts": 'import "node:fs";',
     })
-    assert not run_check_with_files("worker_runtime", files).problems
+    assert not run_check_with_files("no_worker_filesystem_imports", files).problems

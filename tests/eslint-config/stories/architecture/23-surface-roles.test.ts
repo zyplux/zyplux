@@ -71,3 +71,52 @@ describe('23.4 locating violations at the public export', () => {
     ]);
   });
 });
+
+describe('23.5 applying the shipped architecture scopes', () => {
+  test.for(['types.ts', 'types.tsx', 'interfaces.tsx', 'interfaces/entry.tsx', 'types.mts', 'interfaces.cts'])(
+    '23.5.1 rejects runtime declarations in %s',
+    async (module, { lintArchitectureScopes }) => {
+      const filename = `packages/consumer/src/${module}`;
+      const reports = await lintArchitectureScopes(
+        { [filename]: 'export const runtime = 1;' },
+        'type-only-modules',
+        filename,
+      );
+      expect(reports.map(report => report.messageId)).toEqual(['runtime']);
+    },
+  );
+
+  test.for(['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs'])(
+    '23.5.2 rejects declarations in an exported %s root',
+    async (extension, { lintArchitectureScopes }) => {
+      const filename = `packages/consumer/src/index.${extension}`;
+      const reports = await lintArchitectureScopes(
+        {
+          [filename]: 'export const runtime = 1;',
+          'package.json': '{"name":"sample"}',
+          'packages/consumer/package.json': JSON.stringify({
+            exports: { '.': `./src/index.${extension}` },
+            name: 'consumer',
+          }),
+          'pnpm-workspace.yaml': 'packages: [packages/*]',
+        },
+        'barrel-only-reexports',
+        filename,
+      );
+      expect(reports.map(report => report.messageId)).toEqual(['statement']);
+    },
+  );
+
+  test.for([
+    'tests/cluster-startup.test.ts',
+    'tests/stories/api/example.test.ts',
+    'apps/widget/tests/stories/example.test.tsx',
+  ])('23.5.3 rejects direct helper imports in %s', async (filename, { lintArchitectureScopes }) => {
+    const reports = await lintArchitectureScopes(
+      { [filename]: 'import { helper } from "./helper.ts";' },
+      'test-seam-only-imports',
+      filename,
+    );
+    expect(reports.map(report => report.messageId)).toEqual(['moduleOutsideSeam']);
+  });
+});

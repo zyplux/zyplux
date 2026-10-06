@@ -3,14 +3,13 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
-
-import { createSchemaDetector } from './zod-schema.ts';
+import { createNodeSchemaCheck } from '#rule-support/schema-checks';
 
 type MessageId = 'schemaExport';
 
 export const noSchemasOutsideContracts = createRule<[], MessageId>({
   create: context => {
-    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
+    const isSchema = createNodeSchemaCheck(ESLintUtils.getParserServices(context));
     const reportSchema = (node: TSESTree.Node) => {
       if (isSchema(node)) context.report({ messageId: 'schemaExport', node });
     };

@@ -152,10 +152,7 @@ dependency like the `cerberus` recipe earns no cerberus-run finding.
 
 ### 1.9.3 does not count a mere mention of cerberus
 
-The word `cerberus` in a shell comment or as an argument to an unrelated
-command (`echo cerberus`) is not a cerberus run: only a command segment that
-invokes cerberus — `cerberus` in command position, or a runner (`uv`, `uvx`)
-whose segment carries a `cerberus` token — satisfies the check.
+The check recognizes `cerberus` in command position, including through `uv run` or `uvx`. Mentions in comments, arguments, or runner options do not count.
 
 ### 1.9.4 counts runner-wrapped cerberus invocations
 
@@ -175,6 +172,22 @@ cerberus-run finding.
 ### 1.10.4 follows nested recipe calls without counting comments or echo arguments
 
 ### 1.10.5 rejects recursive body calls
+
+### 1.10.6 rejects skipped background or masked gate steps
+
+### 1.10.7 requires real failure preserving tool calls
+
+### 1.10.8 rejects empty quality recipes
+
+### 1.10.9 follows shell install helpers
+
+### 1.10.10 rejects reversed test runners
+
+### 1.10.11 requires both knip graphs
+
+### 1.10.12 requires a real failure preserving cerberus run
+
+### 1.10.13 ignores tool names inside quoted text
 
 ## 1.11 requiring the clean recipe to run cz clean
 
