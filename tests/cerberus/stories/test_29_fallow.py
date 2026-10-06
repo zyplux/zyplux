@@ -126,7 +126,8 @@ def run_fallow(repo: Repo, run_check: RunCheck, make_context: MakeContext, repo_
             target = repo_root / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
-        return run_check(CHECK_ID, repo, make_context(repo_root, verbose=verbose))
+        config_path = repo_root / "cerberus.toml" if "cerberus.toml" in files else None
+        return run_check(CHECK_ID, repo, make_context(repo_root, verbose=verbose, config_path=config_path))
 
     return _run
 
@@ -522,3 +523,66 @@ def test_29_8_5_never_persists_a_dead_code_report_without_verbose_even_past_the_
         )
     ]
     assert not (repo_root / ".reports").exists()
+
+
+def test_29_9_1_passes_measured_istanbul_coverage_only_to_the_health_analysis(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({"package.json": _PACKAGE_JSON, "coverage/coverage-final.json": "{}"})
+    dead_code, health = [argv for argv, _ in fake_proc.calls]
+    assert "--coverage" not in dead_code
+    assert health[health.index("--coverage") + 1] == str(repo_root / "coverage/coverage-final.json")
+
+
+def test_29_9_2_keeps_static_health_analysis_when_no_coverage_report_exists(
+    run_fallow: RunFallow, fake_proc: FakeProc
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({"package.json": _PACKAGE_JSON})
+    assert all("--coverage" not in argv for argv, _ in fake_proc.calls)
+
+
+def test_29_10_1_registers_explicit_runtime_entry_points_in_both_analyses(
+    run_fallow: RunFallow, fake_proc: FakeProc
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "src/iframe.ts": "export default {};",
+        "cerberus.toml": '[fallow]\nentry_points = ["src/iframe.ts"]\n',
+    })
+    assert all(json.loads(snapshot)["entry"] == ["src/iframe.ts"] for snapshot in fake_proc.config_snapshots)
+
+
+@pytest.mark.parametrize("entry", ["src/missing.ts", "../outside.ts"])
+def test_29_10_2_rejects_missing_or_external_runtime_entry_points(
+    run_fallow: RunFallow, fake_proc: FakeProc, entry: str, status: type[Status]
+) -> None:
+    result = run_fallow({"package.json": _PACKAGE_JSON, "cerberus.toml": f'[fallow]\nentry_points = ["{entry}"]\n'})
+    assert result.status is status.FAIL
+    assert fake_proc.calls == []
+
+
+def test_29_10_3_rejects_a_coverage_report_outside_the_repository(
+    run_fallow: RunFallow, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    result = run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "cerberus.toml": '[fallow]\ncoverage_report = "../coverage.json"\n',
+    })
+    assert result.status is status.FAIL
+    assert fake_proc.calls == []
+
+
+def test_29_10_4_supports_a_repository_specific_coverage_report_path(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "reports/istanbul.json": "{}",
+        "cerberus.toml": '[fallow]\ncoverage_report = "reports/istanbul.json"\n',
+    })
+    health = fake_proc.calls[1][0]
+    assert health[health.index("--coverage") + 1] == str(repo_root / "reports/istanbul.json")

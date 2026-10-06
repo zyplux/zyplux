@@ -73,3 +73,19 @@ Itemizing every offender inline is unreadable past a screenful, so both analyses
 ### 29.8.4 persists the full dead-code report and points to it once issues exceed the cap in verbose mode
 
 ### 29.8.5 never persists a dead-code report without verbose even past the cap
+
+## 29.9 using measured test coverage
+
+### 29.9.1 passes measured Istanbul coverage only to the health analysis
+
+### 29.9.2 keeps static health analysis when no coverage report exists
+
+## 29.10 registering repository analysis inputs
+
+### 29.10.1 registers explicit runtime entry points in both analyses
+
+### 29.10.2 rejects missing or external runtime entry points
+
+### 29.10.3 rejects a coverage report outside the repository
+
+### 29.10.4 supports a repository specific coverage report path

@@ -168,6 +168,8 @@ pattern = "**/*.{ts,tsx,py}"
 ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 
 [fallow]
+entry_points = []
+coverage_report = "coverage/coverage-final.json"
 
 [zyplux_deps_latest]
 

@@ -30,7 +30,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 | ID                             | Scope       | Verifies                                                                            |
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
-| `justfile`                     | content     | Canonical baseline block (byte-exact, `--fix`able), recipe names, aliases, `check` pipeline, local cerberus run, wrapped tool calls, no trailing whitespace |
+| `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
 | `ci_check_sequence`            | content     | `ci.yml` runs the canonical check sequence per stack          |
 | `ci_cerberus_step`             | content     | A CI workflow runs cerberus to self-verify org invariants                           |
@@ -61,9 +61,13 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
 | `tool_pins_latest`             | content     | The npm tool versions pinned in cerberus source are the latest npm releases (skips repos not carrying the pin source) |
 
-## The justfile baseline
+## Justfile recipes
 
-Every repo's `justfile` must start with the line `# BASELINE`, carry the canonical block from [`baseline.just`](src/cerberus/baseline.just) byte-for-byte, and close it with a `# CUSTOM` line. Everything after `# CUSTOM` is the repo's own (extra aliases, recipes, `set`/`mod` statements, variables). With both markers present, `--fix` restores a drifted baseline region and leaves the custom tail untouched; the zyplux repo's own `justfile` mirrors the packaged canonical, and cerberus keeps the two identical.
+[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks the shared names and aliases, ordered gate steps through dependencies or `just` body calls, managed-tool runners, cleanup, and whitespace. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
+
+## Fallow inputs
+
+`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. `[fallow].coverage_report` defaults to `coverage/coverage-final.json`; when present, the health analysis uses it for measured CRAP scores. Run tests before Cerberus to refresh the report. Dead-code analysis and complexity thresholds use the shared policy.
 
 ## Config
 

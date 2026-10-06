@@ -1,46 +1,7 @@
-"""Dead-code and complexity ban for the JS/TS workspace: cerberus runs
-fallow's dead-code analysis (unused files, exports, dependencies, circular
-imports) and its health analysis (functions above fallow's complexity
-thresholds) over the checkout and fails on any finding. Cerberus owns the
-whole fallow invocation: it writes its own config — ignoring only the
-directories a workspace glob matches that hold no package.json, which
-fallow would otherwise warn about during workspace discovery, and switching
-off fallow's default duplicate ignores so test files are analyzed like any
-other code — and runs the
-subprocess with `--root`/`--config` from a cwd outside the repo, so
-repo-local fallow config (`.fallowrc.json`, `fallow.toml`) can never leak
-in. `--quiet --fail-on-issues` makes each run non-interactive with the
-verdict in the exit code, and fallow itself runs at the exact version
-pinned in `cerberus.tool_pins` so every run analyzes with the same tool.
-Fallow analyzes only TypeScript/JavaScript, so a repo without a
-`package.json` is out of scope.
+"""Run pinned Fallow analyses with Cerberus-owned policy and measured coverage.
 
-Each analysis writes its report to a file via fallow's own `--output-file`
-rather than being read off `outcome.stdout`: relaying a large JSON report
-through the runner (pnpx) -> fallow subprocess pipe chain has
-been observed to truncate silently at a pipe-buffer-sized boundary on
-real-world repos (confirmed against `fallow@3.3.0` — a multi-hundred-KB
-health report cuts off at an exact multiple of 64KiB), which produces
-unparseable JSON and would otherwise be indistinguishable from a genuine
-fallow crash. Writing to a file sidesteps that pipe entirely, matching the
-same file-based report convention `jscpd_bite` already uses for the same
-reason.
-
-The same size problem shows up again one layer up, in cerberus's own
-terminal output: itemizing every offender inline is unreadable past a
-screenful, and a report with hundreds of findings would swamp the rest of
-a `just c` run. Past `_MAX_INLINE_FINDINGS` itemized lines, an analysis
-stops itemizing inline and instead persists its already-parsed report to a
-gitignored `.reports/` directory under the repo root being checked
-(`.reports/fallow-health.json`, `.reports/fallow-dead-code.json`) and
-fails with one line pointing at that file — cheap to do because the report
-is already sitting in memory as the parsed dict `_load_report` returned,
-no re-read of the (by-then-deleted) shielded temp file required. Only the
-analysis that actually exceeds the cap gets persisted, and only when it
-would otherwise itemize at all: dead-code stays a bare count-and-rerun-hint
-unless `--verbose`, so a non-verbose dead-code failure never writes a
-report regardless of size. Below the cap, itemization stays inline exactly
-as before.
+Reports use files because large pnpx stdout reports can be truncated by the
+subprocess pipe chain. Oversized findings are saved under .reports/.
 """
 
 from __future__ import annotations
@@ -242,41 +203,66 @@ def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
     return [m.relative_to(repo_root).as_posix() for m in members if not (m / "package.json").is_file()]
 
 
+def _validate_inputs(ctx: Context, res: CheckResult) -> None:
+    repo_root = ctx.source.root.resolve()
+    for entry in ctx.config.fallow_entry_points:
+        path = (repo_root / entry).resolve()
+        if not path.is_relative_to(repo_root) or not path.is_file():
+            res.fail(f"fallow entry_points must name existing repository files: {entry}")
+    coverage_path = (repo_root / ctx.config.fallow_coverage_report).resolve()
+    if not coverage_path.is_relative_to(repo_root):
+        res.fail("fallow coverage_report must be inside the repository")
+
+
+def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]:
+    analyses: dict[str, _Analysis] = {}
+    coverage_path = (ctx.source.root / ctx.config.fallow_coverage_report).resolve()
+    with tempfile.TemporaryDirectory(prefix="cerberus-fallow-") as shield_dir:
+        config_path = Path(shield_dir) / "fallow.json"
+        shield_config: dict[str, Any] = {"ignorePatterns": ignored_dirs, "duplicates": {"ignoreDefaults": False}}
+        if ctx.config.fallow_entry_points:
+            shield_config["entry"] = list(ctx.config.fallow_entry_points)
+        config_path.write_text(json.dumps(shield_config))
+        flags = [*_SHARED_FLAGS, "--root", str(ctx.source.root.resolve()), "--config", str(config_path)]
+        for analysis in ("dead-code", "health"):
+            report_path = Path(shield_dir) / f"{analysis}-report.json"
+            coverage_flags: list[str] = []
+            if analysis == "health" and coverage_path.is_file():
+                coverage_flags = ["--coverage", str(coverage_path)]
+            argv = [
+                "pnpx",
+                tool_pins.format_spec("fallow"),
+                analysis,
+                *flags,
+                *coverage_flags,
+                "--output-file",
+                str(report_path),
+            ]
+            outcome = proc.run(argv, cwd=Path(shield_dir))
+            analyses[analysis] = _Analysis(outcome, _load_report(report_path))
+    return analyses
+
+
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
     if ctx.file(repo, "package.json") is None:
         res.skip("no package.json")
         return res
+    _validate_inputs(ctx, res)
+    if res.problems:
+        return res
     try:
-        ignored_dirs = _packageless_member_dirs(repo, ctx)
+        analyses = _run_analyses(ctx, _packageless_member_dirs(repo, ctx))
     except yaml.YAMLError as exc:
         res.error(f"pnpm-workspace.yaml is not valid YAML: {exc}")
         return res
-    runner_prefix = ["pnpx"]
-    runner = " ".join(runner_prefix)
-    outcomes: dict[str, subprocess.CompletedProcess[str]] = {}
-    reports: dict[str, dict[str, Any] | None] = {}
-    with tempfile.TemporaryDirectory(prefix="cerberus-fallow-") as shield_dir:
-        config_path = Path(shield_dir) / "fallow.json"
-        shield_config = {"ignorePatterns": ignored_dirs, "duplicates": {"ignoreDefaults": False}}
-        config_path.write_text(json.dumps(shield_config))
-        flags = [*_SHARED_FLAGS, "--root", str(ctx.source.root.resolve()), "--config", str(config_path)]
-        fallow_spec = tool_pins.format_spec("fallow")
-        for analysis in ("dead-code", "health"):
-            report_path = Path(shield_dir) / f"{analysis}-report.json"
-            argv = [*runner_prefix, fallow_spec, analysis, *flags, "--output-file", str(report_path)]
-            try:
-                outcomes[analysis] = proc.run(argv, cwd=Path(shield_dir))
-            except proc.ToolNotFoundError as exc:
-                res.error(str(exc))
-                return res
-            reports[analysis] = _load_report(report_path)
-    _record_dead_code(
-        res, ctx, _Analysis(outcomes["dead-code"], reports["dead-code"]), verbose=ctx.verbose, runner=runner
-    )
-    _record_complexity(res, ctx, _Analysis(outcomes["health"], reports["health"]), runner=runner)
+    except proc.ToolNotFoundError as exc:
+        res.error(str(exc))
+        return res
+    _record_dead_code(res, ctx, analyses["dead-code"], verbose=ctx.verbose, runner="pnpx")
+    _record_complexity(res, ctx, analyses["health"], runner="pnpx")
     if not res.findings:
-        if reports["health"] is not None:
-            res.detail = _health_status_line(reports["health"])
+        if analyses["health"].report is not None:
+            res.detail = _health_status_line(analyses["health"].report)
         res.ok("fallow found no dead code, cycles, or complexity offenders")
     return res

@@ -58,9 +58,9 @@
 
 ### 27.4.13 ignores non npm targets when computing published workspace dirs
 
-### 27.4.14 requires the prod config to repeat knip.json's customizations
+### 27.4.14 allows production to omit exemptions used only by tests
 
-### 27.4.15 passes when the prod config repeats knip.json's customizations
+### 27.4.15 validates production exemptions against the shared allowances
 
 ### 27.4.16 fails and names a workspace entry with extra keys
 
