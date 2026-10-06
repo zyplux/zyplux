@@ -137,13 +137,13 @@ min_coverage = 90
 
 [catalog_pinned_deps]
 
-[package_exports]
+[consistent_package_export_entries]
 
-[package_side_effects]
+[explicit_module_side_effects]
 
-[project_references]
+[consistent_workspace_project_references]
 
-[worker_runtime]
+[no_worker_filesystem_imports]
 
 [pnpm_release_age]
 
@@ -168,6 +168,11 @@ pattern = "**/*.{ts,tsx,py}"
 ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 
 [fallow]
+entry_points = []
+coverage_report = "coverage/coverage-final.json"
+
+[fallow.rules]
+complexity-crap = "error"
 
 [zyplux_deps_latest]
 

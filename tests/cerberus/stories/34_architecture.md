@@ -8,6 +8,10 @@
 
 ### 34.1.3 preserves framework application roots and binary only apps
 
+### 34.1.4 checks application roots and export families
+
+### 34.1.5 matches framework roots to the configured or default router
+
 ## 34.4 project references
 
 ### 34.4.1 project references match compiled dependencies once
@@ -33,6 +37,8 @@
 ### 34.5.7 checks commonjs export initializers
 
 ### 34.5.8 checks jsx registration and defers component bodies
+
+### 34.5.9 requires explicit side effects in packages without exports
 
 ## 34.6 Worker runtime reachability
 

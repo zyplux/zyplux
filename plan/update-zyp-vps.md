@@ -1,6 +1,6 @@
 # Update zyp-vps
 
-Prerequisite: publish `zyplux-cerberus` 0.20.1, `@zyplux/eslint-config` 0.10.1, `@zyplux/util` 0.8.1, and `@zyplux/spectra` 0.3.1 before migration.
+Prerequisite: publish `zyplux-cerberus` 0.21.0, `@zyplux/eslint-config` 0.11.0, `@zyplux/tsconfig` 0.3.2, `@zyplux/util` 0.9.0, and `@zyplux/spectra` 0.3.1 before migration.
 
 ## Shared packages and testing
 
@@ -18,7 +18,7 @@ Keep TypeScript and Python suite execution sequential. Python journaling and uni
 
 ## Shared architecture checks
 
-- [ ] Adopt shared ESLint checks for barrels, primitive constants, schemas, type-only modules, and type ownership.
+- [ ] Adopt shared ESLint checks for barrels, primitive constants, schemas, type-only modules, public package type exports, and type-only dependencies.
 - [ ] Enable test seam enforcement for every story suite, including the dashboard and widget rig APIs.
 - [ ] Replace broad schema-boundary and nesting overrides with the shared schema detection and exact Zod nesting exemption.
 - [ ] Review matcher `this` and context-bound `expect` exceptions; retain only necessary, narrowly scoped exceptions for supported Vitest APIs.

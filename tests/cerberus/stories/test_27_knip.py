@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
@@ -306,19 +307,42 @@ def test_27_4_13_ignores_non_npm_targets_when_computing_published_workspace_dirs
     assert result.findings == [ok(_OK)]
 
 
-def test_27_4_14_requires_the_prod_config_to_repeat_knip_jsons_customizations(
-    run_knip_config: RunKnipConfig, fail: MakeFinding
+@pytest.mark.parametrize(
+    "prod",
+    [
+        _ENTRY_EXPORTS_OK,
+        _ENTRY_EXPORTS_WITH_ALLOWANCES,
+        '{"includeEntryExports": true, "ignoreWorkspaces": ["tests/*"], "ignoreBinaries": ["uv"]}',
+    ],
+)
+def test_27_4_14_allows_production_to_omit_exemptions_used_only_by_tests(
+    run_knip_config: RunKnipConfig, prod: str, ok: MakeFinding
 ) -> None:
-    result = run_knip_config(knip=_BASE_ALLOWED, prod=_ENTRY_EXPORTS_OK)
-    assert fail('knip.prod.json must set "ignoreBinaries": ["podman", "uv"]') in result.findings
-    assert fail('knip.prod.json must set "ignoreDependencies": ["cloudflare"]') in result.findings
-
-
-def test_27_4_15_passes_when_the_prod_config_repeats_knip_jsons_customizations(
-    run_knip_config: RunKnipConfig, ok: MakeFinding
-) -> None:
-    result = run_knip_config(knip=_BASE_ALLOWED, prod=_ENTRY_EXPORTS_WITH_ALLOWANCES)
+    result = run_knip_config(knip=_BASE_ALLOWED, prod=prod)
     assert result.findings == [ok(_OK)]
+
+
+@pytest.mark.parametrize(
+    ("setting", "names", "message"),
+    [
+        (
+            "ignoreBinaries",
+            ["terraform"],
+            "knip.prod.json ignoreBinaries allows only podman, uv; not allowed: terraform",
+        ),
+        (
+            "ignoreDependencies",
+            ["left-pad"],
+            "knip.prod.json ignoreDependencies allows only cloudflare; not allowed: left-pad",
+        ),
+    ],
+)
+def test_27_4_15_validates_production_exemptions_against_the_shared_allowances(
+    run_knip_config: RunKnipConfig, setting: str, names: list[str], message: str, fail: MakeFinding
+) -> None:
+    prod = json.dumps({"includeEntryExports": True, "ignoreWorkspaces": ["tests/*"], setting: names})
+    result = run_knip_config(prod=prod)
+    assert fail(message) in result.findings
 
 
 def test_27_4_16_fails_and_names_a_workspace_entry_with_extra_keys(

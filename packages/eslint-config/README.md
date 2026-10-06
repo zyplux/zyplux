@@ -69,10 +69,13 @@ Deprecated, mapped onto `react` for back-compat: `reactFiles` → `react: { dom 
 
 ## What's always on
 
+Rule implementations live in `src/rules/`; shared analysis and reporting live in `src/rule-support/`.
+
 - Contract modules and their child modules export schemas, schema collections, and types. Schema detection is shared with naming and nesting checks.
 - Public library root barrels contain re-exports. Constants export immutable primitives; type and interface modules contain type-level statements.
-- `package-imports` checks cross-package type ownership using TypeScript's resolved modules.
-- Story tests import Vitest API bindings and fixture types from Vitest or their resolved domain test API. `testApis` maps story globs to explicit API paths for colocated UI rigs.
+- `use-package-type-exports` requires cross-package type imports and re-exports to use the provider's public `package.json` exports. Imports within a package remain unrestricted by this rule.
+- `no-type-only-dependencies` rejects dependencies on workspace implementation packages solely for types. Public `/contracts` and `/interfaces` entries are allowed; other public API types require a value import or re-export from the provider somewhere in the consumer package's TypeScript program.
+- `test-seam-only-imports` covers every `.test.ts` and `.test.tsx`, including tests outside story directories. Value imports are Vitest API bindings; type-only imports from the same suite API may describe fixtures. Executable helpers reach tests through fixture context. `testApis` maps suite globs to explicit API paths for colocated UI rigs.
 - Other custom rules enforce validated JSON, arrow functions, type declarations, clear parameter shapes, and nesting limits.
 - Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-ID = "project_references"
+ID = "consistent_workspace_project_references"
 SUMMARY = "Workspace TypeScript projects reference each compiled workspace dependency once"
 SCOPE = Scope.CONTENT
 

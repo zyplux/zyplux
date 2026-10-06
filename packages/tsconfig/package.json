@@ -1,7 +1,8 @@
 {
   "name": "@zyplux/tsconfig",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
+  "sideEffects": false,
   "description": "Shared TypeScript configs for the zyplux org",
   "keywords": [
     "tsconfig",

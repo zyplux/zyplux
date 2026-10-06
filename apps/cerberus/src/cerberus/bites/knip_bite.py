@@ -16,10 +16,9 @@ workspace dropped, no production one with it. Published packages are the excepti
 and opt out of `includeEntryExports` one by one — exactly the npm-kind targets
 in `release-targets.toml`, whose consumers live outside this repo.
 
-Two mechanics: `--config` replaces knip's config wholesale (knip has no
-`extends`), so this file must repeat `knip.json` verbatim; and it may set
-`"exclude": ["catalog"]`, since catalog entries used only outside production
-read as unused here and the base pass already checks the catalog.
+Each config uses the shared allowances independently: production may omit
+exemptions for tools and dependencies used only outside its graph. It may set
+`"exclude": ["catalog"]`, since the base pass checks the complete catalog.
 """
 
 from __future__ import annotations
@@ -82,38 +81,39 @@ def _check_no_inline_key(manifest: dict[str, Any], res: CheckResult) -> None:
         res.fail(f'{PACKAGE_JSON} must not have a "knip" key; move its content to a standalone {BASE_CONFIG}')
 
 
-def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any]:
-    """Validate knip.json against the shared allowance; return its content ($schema aside) for the prod pass."""
+def _check_customizations(parsed: dict[str, Any], path: str, ctx: Context, res: CheckResult) -> None:
+    customizations = ctx.config.knip_allowed_customizations
+    for key, allowance in customizations.items():
+        names = parsed.get(key)
+        if names is None:
+            continue
+        if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+            res.fail(f'{path} "{key}" must be a JSON array of strings')
+            continue
+        outside = sorted(set(names) - allowance)
+        if outside:
+            res.fail(f"{path} {key} allows only {', '.join(sorted(allowance))}; not allowed: {', '.join(outside)}")
+
+
+def _check_base_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     content = ctx.file(repo, BASE_CONFIG)
     if content is None:
-        return {}
+        return
     try:
         parsed = json.loads(content)
     except json.JSONDecodeError as exc:
         res.error(f"could not parse {BASE_CONFIG}: {exc}")
-        return {}
+        return
     if not isinstance(parsed, dict):
         res.error(f"{BASE_CONFIG} must be a JSON object")
-        return {}
+        return
     base = _without_schema(parsed)
     customizations = ctx.config.knip_allowed_customizations
     stray_keys = sorted(set(base) - set(customizations))
     if stray_keys:
         allowed_keys = ", ".join(f'"{key}"' for key in customizations)
         res.fail(f"{BASE_CONFIG} may only customize {allowed_keys}; unexpected key(s): {', '.join(stray_keys)}")
-    for key, allowance in customizations.items():
-        names = base.get(key)
-        if names is None:
-            continue
-        if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
-            res.fail(f'{BASE_CONFIG} "{key}" must be a JSON array of strings')
-            continue
-        outside = sorted(set(names) - allowance)
-        if outside:
-            res.fail(
-                f"{BASE_CONFIG} {key} allows only {', '.join(sorted(allowance))}; not allowed: {', '.join(outside)}"
-            )
-    return base
+    _check_customizations(base, BASE_CONFIG, ctx, res)
 
 
 def _workspace_exemptions(workspaces: object) -> tuple[set[str], list[str]]:
@@ -168,7 +168,7 @@ def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], r
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" drops production workspace(s): {", ".join(dropped_production)}')
 
 
-def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: CheckResult) -> None:
+def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     content = ctx.file(repo, PROD_CONFIG)
     if content is None:
         res.fail(f"no {PROD_CONFIG} at repo root — needed to catch dead/test-only exports")
@@ -182,8 +182,8 @@ def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: Chec
         res.error(f"{PROD_CONFIG} must be a JSON object")
         return
 
-    required = {**base, "includeEntryExports": True}
-    stray_keys = sorted(set(parsed) - set(required) - _PROD_EXTRA_KEYS)
+    required = {"includeEntryExports": True}
+    stray_keys = sorted(set(parsed) - set(required) - _PROD_EXTRA_KEYS - set(ctx.config.knip_allowed_customizations))
     if stray_keys:
         res.fail(f"{PROD_CONFIG} has unexpected key(s): {', '.join(stray_keys)}")
     for key, expected in required.items():
@@ -194,6 +194,7 @@ def _check_prod_config(repo: Repo, ctx: Context, base: dict[str, Any], res: Chec
     if exclude is not None and exclude != allowed_exclude:
         res.fail(f'{PROD_CONFIG} "exclude" (if any) must be exactly {json.dumps(allowed_exclude)}')
 
+    _check_customizations(parsed, PROD_CONFIG, ctx, res)
     _check_ignore_workspaces(repo, ctx, parsed, res)
     _check_workspace_exemptions(repo, ctx, parsed, res)
 
@@ -214,9 +215,9 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     _check_no_inline_key(manifest, res)
-    base = _check_base_config(repo, ctx, res)
+    _check_base_config(repo, ctx, res)
     try:
-        _check_prod_config(repo, ctx, base, res)
+        _check_prod_config(repo, ctx, res)
     except yaml.YAMLError as exc:
         res.error(f"pnpm-workspace.yaml is not valid YAML: {exc}")
         return res

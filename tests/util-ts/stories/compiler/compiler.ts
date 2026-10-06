@@ -10,7 +10,7 @@ import {
 import path from 'node:path';
 import ts from 'typescript';
 
-import { checkTypeDependencies, PACKAGES } from './type-dependency-fixture.ts';
+import { checkPackageTypes, PACKAGES } from './type-dependency-fixture.ts';
 
 const collectReferences = (source: string, filePath = 'caller.ts') =>
   collectModuleReferences(ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true));
@@ -21,7 +21,7 @@ export const test = libraryTest
   .extend('listExportTargets', () => listExportTargets)
   .extend('findPackageOwner', () => findPackageOwner)
   .extend('listWorkspacePackages', () => listWorkspacePackages)
-  .extend('checkTypeDependencies', () => checkTypeDependencies)
+  .extend('checkPackageTypes', () => checkPackageTypes)
   .extend('collectReferences', () => collectReferences)
   .extend('packages', () => PACKAGES)
   .extend('resolvePath', () => path.resolve);

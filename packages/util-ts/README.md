@@ -63,6 +63,6 @@ ensure(branch !== 'main', 'refusing to run on main');
 pnpm add typescript
 ```
 
-`@zyplux/util/type-dependencies` exports `findTypeDependencyViolations({ imports, packages, sharedTypeSurfaces })`. It checks public package entries and type ownership using caller-supplied module references and package declarations. Repository-specific architecture policy stays with the consumer.
+`@zyplux/util/type-dependencies` exports `scanTypeDependencies({ program, packages, sharedTypeSurfaces })` to resolve a TypeScript program's references and return separate `unexportedTypes` and `typeOnlyDependencies` collections. `collectPackageReferences({ imports, packages })`, `findTypeExportViolations(references)`, and `findTypeOnlyDependencies({ references, sharedTypeSurfaces })` support caller-supplied module references. Shared type-entry names are supplied by the consumer.
 
 `@zyplux/util/workspace-architecture` discovers workspace packages. Its export-map and ownership helpers support conditional exports, blocked entries, wildcard subpaths, and nested package directories.

@@ -3,8 +3,7 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
-
-import { createSchemaDetector } from './zod-schema.ts';
+import { createNodeSchemaCheck } from '#rule-support/schema-checks';
 
 type ExpressionPredicate = (node: TSESTree.Expression) => boolean;
 
@@ -88,7 +87,7 @@ const isSchemaSuspectName = (name: string) => isPascalCase(name) || name.endsWit
 
 export const noStrayPascalConst = createRule<NoStrayPascalConstOptions, MessageId>({
   create: (context, [{ allowedFactories }]) => {
-    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
+    const isSchema = createNodeSchemaCheck(ESLintUtils.getParserServices(context));
     const factories = new Set([...defaultFactories, ...allowedFactories]);
     const usedAsJsx = new Set<string>();
     const pendingStrays: { id: TSESTree.Identifier; name: string }[] = [];

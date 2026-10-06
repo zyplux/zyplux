@@ -1,6 +1,6 @@
 # 16. [Linting a repo checkout from the command line](test_16_cli.py)
 
-## 16.1 invoking lint as the default command
+## 16.1 linting from the root command
 
 ### 16.1.1 passes a fully conforming checkout given an explicit path
 
@@ -9,6 +9,10 @@
 ### 16.1.3 prints one line per active bite with its id and outcome
 
 ### 16.1.4 appends a bite's measured detail to its line
+
+### 16.1.5 accepts a repository directory named lint
+
+### 16.1.6 shows repository options and named commands in root help
 
 ## 16.2 surfacing check failures end to end
 
@@ -58,9 +62,9 @@ Any bite switches off with `off = true` in its `[<bite id>]` config table — th
 
 ### 16.8.1 prints the cerberus version
 
-## 16.9 guarding the lint command surface against unknown options
+## 16.9 guarding repository options
 
-### 16.9.1 rejects an option the lint command never defined
+### 16.9.1 rejects unknown repository options
 
 ## 16.10 isolating a crashing check
 

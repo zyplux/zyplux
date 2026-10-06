@@ -55,12 +55,14 @@ def list_dependencies(manifest: dict[str, Any]) -> set[str]:
 
 
 def is_library(package: PackageInfo) -> bool:
-    return package.directory.split("/", 1)[0] == "packages" and bool(package.manifest.get("exports"))
+    return package.directory.split("/", 1)[0] == "packages"
 
 
 def list_source_targets(exports: object) -> list[str]:
     return [
-        target for target in list_targets(exports) if PurePosixPath(target).suffix in {".ts", ".tsx", ".js", ".mjs"}
+        target
+        for target in list_targets(exports)
+        if PurePosixPath(target).suffix in {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
     ]
 
 

@@ -1,5 +1,9 @@
 import { collectModuleReferences } from '@zyplux/util/module-references';
-import { findTypeDependencyViolations } from '@zyplux/util/type-dependencies';
+import {
+  collectPackageReferences,
+  findTypeExportViolations,
+  findTypeOnlyDependencies,
+} from '@zyplux/util/type-dependencies';
 import ts from 'typescript';
 
 export const PACKAGES = [
@@ -12,11 +16,15 @@ export const PACKAGES = [
   },
 ];
 
-export const checkTypeDependencies = (sources: Record<string, string>, packages = PACKAGES) =>
-  findTypeDependencyViolations({
+export const checkPackageTypes = (sources: Record<string, string>, packages = PACKAGES) => {
+  const references = collectPackageReferences({
     imports: Object.entries(sources).flatMap(([filePath, source]) =>
       collectModuleReferences(ts.createSourceFile(filePath, source, ts.ScriptTarget.Latest, true)),
     ),
     packages,
-    sharedTypeSurfaces: new Set(['contracts']),
   });
+  return {
+    typeOnlyDependencies: findTypeOnlyDependencies({ references, sharedTypeSurfaces: new Set(['contracts']) }),
+    unexportedTypes: findTypeExportViolations(references),
+  };
+};

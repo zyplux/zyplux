@@ -36,6 +36,9 @@ class Config:
     jscpd_threshold: float
     jscpd_pattern: str
     jscpd_ignore: tuple[str, ...]
+    fallow_entry_points: tuple[str, ...]
+    fallow_coverage_report: str
+    fallow_rules: dict[str, str]
     disabled_bites: frozenset[str]
 
 
@@ -110,6 +113,9 @@ def _from_dict(data: dict[str, Any]) -> Config:
         jscpd_threshold=jscpd["threshold"],
         jscpd_pattern=jscpd["pattern"],
         jscpd_ignore=tuple(jscpd["ignore"]),
+        fallow_entry_points=tuple(_table(data, "fallow")["entry_points"]),
+        fallow_coverage_report=_table(data, "fallow")["coverage_report"],
+        fallow_rules=_table(data, "fallow")["rules"],
         disabled_bites=_disabled_bites(data),
     )
 

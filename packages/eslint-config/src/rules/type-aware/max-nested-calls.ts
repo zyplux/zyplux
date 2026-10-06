@@ -4,8 +4,7 @@ import { ESLintUtils } from '@typescript-eslint/utils';
 import unicorn from 'eslint-plugin-unicorn';
 
 import { createRule } from '#create-rule';
-
-import { createSchemaDetector } from './zod-schema.ts';
+import { createNodeSchemaCheck } from '#rule-support/schema-checks';
 
 const upstream = unicorn.rules?.['max-nested-calls'];
 if (!upstream) throw new Error('eslint-plugin-unicorn: "max-nested-calls" rule missing');
@@ -13,7 +12,7 @@ const createUpstream = upstream.create.bind(upstream);
 
 export const maxNestedCalls = createRule<[{ max: number }], 'max-nested-calls'>({
   create: context => {
-    const isSchema = createSchemaDetector(ESLintUtils.getParserServices(context));
+    const isSchema = createNodeSchemaCheck(ESLintUtils.getParserServices(context));
     const upstreamListeners: unknown = Reflect.apply(createUpstream, undefined, [context]);
     if (upstreamListeners === null || typeof upstreamListeners !== 'object') {
       throw new TypeError('eslint-plugin-unicorn: expected nesting rule listeners');

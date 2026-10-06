@@ -30,7 +30,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 | ID                             | Scope       | Verifies                                                                            |
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
-| `justfile`                     | content     | Canonical baseline block (byte-exact, `--fix`able), recipe names, aliases, `check` pipeline, local cerberus run, wrapped tool calls, no trailing whitespace |
+| `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
 | `ci_check_sequence`            | content     | `ci.yml` runs the canonical check sequence per stack          |
 | `ci_cerberus_step`             | content     | A CI workflow runs cerberus to self-verify org invariants                           |
@@ -44,10 +44,10 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
 | `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
-| `package_exports` | content | Libraries use a root barrel or named exports with matching source and publication keys |
-| `package_side_effects` | content | Library side-effect declarations include detected registration statements |
-| `project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
-| `worker_runtime` | content | First-party Worker runtime imports avoid filesystem builtins |
+| `consistent_package_export_entries` | content | Workspace packages use index roots or named modules, with matching source/publication keys; application router roots match their TanStack Vite entry |
+| `explicit_module_side_effects` | content | Library packages declare `false` or module patterns that preserve detected initialization in source and published modules |
+| `consistent_workspace_project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
+| `no_worker_filesystem_imports` | content | First-party Worker runtime imports avoid filesystem builtins |
 | `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
 | `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
@@ -61,9 +61,15 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
 | `tool_pins_latest`             | content     | The npm tool versions pinned in cerberus source are the latest npm releases (skips repos not carrying the pin source) |
 
-## The justfile baseline
+## Justfile recipes
 
-Every repo's `justfile` must start with the line `# BASELINE`, carry the canonical block from [`baseline.just`](src/cerberus/baseline.just) byte-for-byte, and close it with a `# CUSTOM` line. Everything after `# CUSTOM` is the repo's own (extra aliases, recipes, `set`/`mod` statements, variables). With both markers present, `--fix` restores a drifted baseline region and leaves the custom tail untouched; the zyplux repo's own `justfile` mirrors the packaged canonical, and cerberus keeps the two identical.
+[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks names, aliases, ordered gate steps and their actual tool calls, managed-tool runners, cleanup, and whitespace. Required calls run as standalone foreground commands that preserve failures; local shell helpers start with `set -euo pipefail` and contain no other `set` commands. Local Cerberus commands start with `uv run cerberus`. The test recipe may guard runners by their workspace manifests and accept pytest's empty-suite exit code. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
+
+## Fallow inputs
+
+`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. CRAP is enabled by default: `[fallow].coverage_report` defaults to `coverage/coverage-final.json` and must exist; run tests before Cerberus to refresh it.
+
+`[fallow.rules]` accepts [Fallow rule names](https://fallow.tools/docs/configuration/rules/). Set `complexity-crap = "off"` to disable CRAP and its coverage-file requirement while retaining dead-code and source complexity checks. Other rules can be disabled individually. Rules not overridden retain Fallow's defaults; Cerberus's `--fail-on-issues` makes both `error` and `warn` findings fail.
 
 ## Config
 

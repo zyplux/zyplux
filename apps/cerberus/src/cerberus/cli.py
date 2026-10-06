@@ -23,20 +23,13 @@ if TYPE_CHECKING:
 
 
 class LinterGroup(TyperGroup):
-    """Make `cerberus [PATH]` lint (ESLint-style) while keeping the named commands.
-
-    A bare invocation, a path, or an option falls through to the `lint` command;
-    a known subcommand (`list`, `version`, `lint`) dispatches normally.
-    """
-
-    default_command = "lint"
+    """Keep the optional repository path from consuming a named command."""
 
     @override
     def parse_args(self, ctx: Any, args: list[str]) -> list[str]:
-        if not args:
-            args = [self.default_command]
-        elif args[0] not in self.commands and args[0] not in {"--help", "-h"}:
-            args = [self.default_command, *args]
+        ctx.allow_interspersed_args = not args or args[0] not in self.commands
+        if not ctx.allow_interspersed_args:
+            args = [".", *args]
         return super().parse_args(ctx, args)
 
 
@@ -44,6 +37,7 @@ app = typer.Typer(
     cls=LinterGroup,
     no_args_is_help=False,
     add_completion=False,
+    subcommand_metavar="[COMMAND [ARGS]...]",
     help="🐺 Lint a repo checkout against org invariants.",
 )
 
@@ -121,9 +115,16 @@ def list_checks() -> None:
     console.print(table)
 
 
-@app.command()
+def _find_lint_path(command_ctx: typer.Context, path: Path) -> Path | None:
+    return path if command_ctx.allow_interspersed_args else None
+
+
+@app.callback(invoke_without_command=True)
 def lint(
-    path: Annotated[Path, typer.Argument(help="Repo checkout to lint (default: current directory).")] = Path(),
+    path: Annotated[
+        Path | None,
+        typer.Argument(callback=_find_lint_path, help="Repo checkout to lint (default: current directory)."),
+    ] = Path(),
     config_path: ConfigOpt = None,
     check: CheckOpt = None,
     *,
@@ -141,6 +142,8 @@ def lint(
     a file to overlay in its place); `off = true` in a bite's table switches
     it off entirely, unless `--check` names it.
     """
+    if path is None:
+        return
     ctx = context.local_context(config.load(config_path, repo_root=path), path, fix=fix, verbose=verbose)
     repo = ctx.repos()[0]
     selected = _select_checks(check)

@@ -51,7 +51,7 @@ const strictStylisticOverrides: Linter.RulesRecord = {
 export const typescript = (tsconfigRootDir: string): ConfigWithExtends => ({
   extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
   //extends: [tseslint.configs.all],
-  files: ['**/*.{ts,tsx}'],
+  files: ['**/*.{ts,tsx,mts,cts}'],
   languageOptions: {
     parserOptions: {
       projectService: true,

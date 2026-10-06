@@ -4,17 +4,16 @@ import os
 import shutil
 import subprocess
 from importlib import resources
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
-    from cerberus.context import Context
     from cerberus.model import CheckResult, Status
-    from seam_fixtures import RunCheck, RunCheckOnDisk, RunCheckWithFiles
+    from seam_fixtures import RunCheckOnDisk, RunCheckWithFiles
 
 type RunJustfileCheck = Callable[[str | None], CheckResult]
 
@@ -23,9 +22,6 @@ requires_just = pytest.mark.skipif(shutil.which("just") is None, reason="require
 BASELINE = resources.files("cerberus").joinpath("baseline.just").read_text()
 CONFORMING = f"# BASELINE\n{BASELINE}\n# CUSTOM\n"
 
-INSTALL_RECIPE = (
-    "# Install both workspaces: pnpm + uv.\ninstall:\n    pnpm install\n    uv sync --all-packages --all-groups\n\n"
-)
 DEFAULT_RECIPE = "# List available recipes.\ndefault:\n    @just --list\n\n"
 CLEAN_RECIPE = (
     "# Remove gitignored build artifacts and caches from all workspaces.\n"
@@ -75,32 +71,20 @@ WITH_INTERPOLATION = CONFORMING + (
 )
 NO_MARKERS = CONFORMING.replace("# BASELINE\n", "").replace("# CUSTOM\n", "")
 DRIFTED_INSTALL = CONFORMING.replace("    pnpm install\n", "    pnpm install --frozen-lockfile\n")
-DRIFTED_INSTALL_LINE = DRIFTED_INSTALL.splitlines().index("    pnpm install --frozen-lockfile") + 1
 DRIFTED_WITH_TAIL = DRIFTED_INSTALL + "\nsmoke:\n    echo ok\n"
-MARKERS_WITH_TRAILING_WS = CONFORMING.replace("# BASELINE\n", "# BASELINE  \n").replace(
-    "\n# CUSTOM\n", "\n# CUSTOM \n"
-) + ("\nsmoke:\n    echo ok\n")
-UNFIXABLE_DUPLICATE_RECIPE = CONFORMING.replace(INSTALL_RECIPE, "") + "\ninstall:\n    pnpm install\n"
 FREE_FORM_CUSTOM_TAIL = CONFORMING + (
     "\nset dotenv-load := true\n\ngreeting := 'hello'\n\nalias s := smoke\n\n"
     "# Smoke-test the checkout.\nsmoke:\n    echo {{ greeting }}\n"
 )
 
 CHECK_ID = "justfile"
-
-
-def baseline_messages(result: CheckResult) -> list[str]:
-    return [f.message for f in result.problems if f.message.startswith("baseline")]
-
-
-def structural_messages(result: CheckResult) -> list[str]:
-    return [f.message for f in result.problems if not f.message.startswith("baseline")]
+WORKSPACE_MANIFESTS = {"package.json": "{}", "pyproject.toml": "[project]\nname = 'sample'\nversion = '0.0.0'\n"}
 
 
 @pytest.fixture
 def run_justfile_check(run_check_with_files: RunCheckWithFiles) -> RunJustfileCheck:
     def _run(justfile_text: str | None) -> CheckResult:
-        files = {} if justfile_text is None else {"justfile": justfile_text}
+        files = {} if justfile_text is None else {"justfile": justfile_text, **WORKSPACE_MANIFESTS}
         return run_check_with_files(CHECK_ID, files)
 
     return _run
@@ -141,7 +125,7 @@ def test_1_2_1_fails_when_a_required_alias_is_missing_or_targets_the_wrong_recip
     run_justfile_check: RunJustfileCheck, justfile_text: str, expected_message: str, status: type[Status]
 ) -> None:
     result = run_justfile_check(justfile_text)
-    assert (result.status, structural_messages(result)) == (status.FAIL, [expected_message])
+    assert (result.status, [f.message for f in result.problems]) == (status.FAIL, [expected_message])
 
 
 @requires_just
@@ -149,7 +133,7 @@ def test_1_2_2_fails_when_a_required_recipe_is_missing(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(MISSING_REQUIRED_RECIPE)
-    assert (result.status, structural_messages(result)) == (status.FAIL, ["missing required recipe `default`"])
+    assert (result.status, [f.message for f in result.problems]) == (status.FAIL, ["missing required recipe `default`"])
 
 
 @requires_just
@@ -157,7 +141,7 @@ def test_1_2_3_fails_when_a_recommended_alias_or_recipe_is_missing(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(MISSING_RECOMMENDED)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["missing recommended alias `ui := upgrade-interactive`", "missing recommended recipe `clean`"],
     )
@@ -168,11 +152,11 @@ def test_1_3_1_fails_when_the_check_recipe_runs_its_steps_out_of_order(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(WRONG_CHECK_ORDER)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         [
             (
-                "`check` dependencies ['install', 'lint', 'knip', 'typecheck', 'test', 'cerberus'] must "
+                "`check` steps ['install', 'lint', 'knip', 'typecheck', 'test', 'cerberus'] must "
                 "contain ['install', 'knip', 'typecheck', 'lint', 'test'] in order"
             )
         ],
@@ -184,7 +168,7 @@ def test_1_3_2_passes_when_extra_steps_are_interleaved_between_the_pipeline_step
     run_justfile_check: RunJustfileCheck,
 ) -> None:
     result = run_justfile_check(INTERLEAVED_CHECK)
-    assert structural_messages(result) == []
+    assert [f.message for f in result.problems] == []
 
 
 @requires_just
@@ -192,7 +176,10 @@ def test_1_4_1_fails_when_the_default_recipe_does_not_list_available_commands(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(DEFAULT_NO_LIST)
-    assert (result.status, structural_messages(result)) == (status.FAIL, ["`default` recipe should run `just --list`"])
+    assert (result.status, [f.message for f in result.problems]) == (
+        status.FAIL,
+        ["`default` recipe should run `just --list`"],
+    )
 
 
 @requires_just
@@ -200,9 +187,12 @@ def test_1_5_1_fails_and_names_the_tool_when_a_recipe_calls_it_directly(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(BARE_TOOL_CALL)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
-        ["recipe `lint` runs `rumdl` directly; managed tools must run via `uv run`/`pnpx`"],
+        [
+            "recipe `lint` must run `uv run rumdl check --fix` without masking its failure",
+            "recipe `lint` runs `rumdl` directly; managed tools must run via `uv run`/`pnpx`",
+        ],
     )
 
 
@@ -211,7 +201,7 @@ def test_1_6_1_fails_when_a_recipe_line_has_trailing_whitespace(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(CUSTOM_TAIL_TRAILING_WS)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         [f"trailing whitespace on line(s) {CUSTOM_TAIL_TRAILING_WS_LINE}"],
     )
@@ -256,7 +246,7 @@ def test_1_9_1_fails_when_no_recipe_in_the_check_pipeline_runs_cerberus(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(NO_CERBERUS_RUN)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline"],
     )
@@ -265,7 +255,7 @@ def test_1_9_1_fails_when_no_recipe_in_the_check_pipeline_runs_cerberus(
 @requires_just
 def test_1_9_2_counts_a_cerberus_run_in_the_check_recipe_body_itself(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(CERBERUS_IN_CHECK_BODY)
-    assert structural_messages(result) == []
+    assert [f.message for f in result.problems] == []
 
 
 @requires_just
@@ -273,93 +263,207 @@ def test_1_9_3_does_not_count_a_mere_mention_of_cerberus(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(CERBERUS_ONLY_MENTIONED)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline"],
     )
 
 
 @requires_just
+@pytest.mark.parametrize("content", [NO_MARKERS, DRIFTED_WITH_TAIL, FREE_FORM_CUSTOM_TAIL])
+def test_1_10_1_accepts_application_recipes_without_rewriting_them(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, content: str, status: type[Status]
+) -> None:
+    result = run_check_on_disk(CHECK_ID, {"justfile": content}, fix=True)
+    assert (result.status, result.problems) == (status.PASS, [])
+    assert (tmp_path / "justfile").read_text() == content
+
+
+@requires_just
+@pytest.mark.parametrize("calls", ["i k tc l t cerberus", "install knip typecheck lint test cerberus"])
+def test_1_10_2_accepts_ordered_recipe_calls_in_a_parameterized_check_body(
+    run_justfile_check: RunJustfileCheck, calls: str, status: type[Status]
+) -> None:
+    body = "check name='':\n" + "".join(f"    @just {recipe}\n" for recipe in calls.split())
+    content = CONFORMING.replace("check: install knip typecheck lint test cerberus", body.rstrip())
+    result = run_justfile_check(content)
+    assert (result.status, result.problems) == (status.PASS, [])
+
+
+@requires_just
+def test_1_10_3_rejects_a_body_pipeline_that_skips_a_required_step(
+    run_justfile_check: RunJustfileCheck, status: type[Status]
+) -> None:
+    content = CONFORMING.replace(
+        "check: install knip typecheck lint test cerberus",
+        "check:\n    @just install\n    @just typecheck\n    @just lint\n    @just test\n    @just cerberus",
+    )
+    result = run_justfile_check(content)
+    assert result.status is status.FAIL
+    assert any("`check` steps" in finding.message for finding in result.problems)
+
+
+@requires_just
+def test_1_10_4_follows_nested_recipe_calls_without_counting_comments_or_echo_arguments(
+    run_justfile_check: RunJustfileCheck, status: type[Status]
+) -> None:
+    content = (
+        CONFORMING.replace(
+            "check: install knip typecheck lint test cerberus",
+            "check: install knip typecheck lint test\n    @just governance",
+        )
+        + "\ngovernance:\n    @just cerberus\n"
+    )
+    assert run_justfile_check(content).status is status.PASS
+    mentions = content.replace("    @just governance", "    # just governance\n    echo just governance")
+    assert run_justfile_check(mentions).status is status.FAIL
+
+
+@requires_just
+def test_1_10_5_rejects_recursive_body_calls(run_justfile_check: RunJustfileCheck, status: type[Status]) -> None:
+    content = CONFORMING.replace("check: install knip typecheck lint test cerberus", "check:\n    @just check")
+    result = run_justfile_check(content)
+    assert result.status is status.FAIL
+    assert any("recursive just invocation" in finding.message for finding in result.problems)
+
+
+@requires_just
 @pytest.mark.parametrize(
-    "invocation",
+    "call",
     [
-        "uv run cerberus --fix",
-        "uv run --active cerberus --fix",
-        "uvx --from zyplux-cerberus cerberus --fix",
+        "echo just lint",
+        "if false; then just lint; fi",
+        "just lint | cat",
+        "just lint &",
+        "just lint || true",
+        "-just lint",
+        "false && just lint",
     ],
 )
-def test_1_9_4_counts_runner_wrapped_cerberus_invocations(
-    run_justfile_check: RunJustfileCheck, invocation: str
+def test_1_10_6_rejects_skipped_background_or_masked_gate_steps(
+    run_justfile_check: RunJustfileCheck, call: str
 ) -> None:
-    result = run_justfile_check(CONFORMING.replace("uv run cerberus --fix", invocation))
-    assert structural_messages(result) == []
-
-
-@requires_just
-def test_1_10_1_fails_when_the_baseline_markers_are_missing(
-    run_justfile_check: RunJustfileCheck, status: type[Status]
-) -> None:
-    result = run_justfile_check(NO_MARKERS)
-    assert result.status is status.FAIL
-    assert baseline_messages(result) == [
-        (
-            "baseline markers missing: line 1 must be `# BASELINE`, followed by the canonical baseline block "
-            "(packaged with cerberus as `baseline.just`; see zyplux/justfile), then a `# CUSTOM` line — "
-            "everything after `# CUSTOM` stays repo-specific"
-        )
-    ]
-
-
-@requires_just
-def test_1_10_2_fails_naming_the_first_line_that_drifts_from_the_canonical_baseline(
-    run_justfile_check: RunJustfileCheck, status: type[Status]
-) -> None:
-    result = run_justfile_check(DRIFTED_INSTALL)
-    assert result.status is status.FAIL
-    assert baseline_messages(result) == [
-        (
-            f"baseline drift at line {DRIFTED_INSTALL_LINE}: expected `    pnpm install`, "
-            "actual `    pnpm install --frozen-lockfile`"
-        )
-    ]
+    content = CONFORMING.replace(
+        "check: install knip typecheck lint test cerberus",
+        f"check: install knip typecheck\n    {call}\n    just test\n    just cerberus",
+    )
+    assert run_justfile_check(content).problems
 
 
 @requires_just
 @pytest.mark.parametrize(
-    "drifted_justfile", [DRIFTED_WITH_TAIL, MARKERS_WITH_TRAILING_WS], ids=["body-drift", "marker-trailing-ws"]
+    "command",
+    [
+        "echo pnpm run lint:fix",
+        "if false; then pnpm run lint:fix; fi",
+        "pnpm run lint:fix | cat",
+        "pnpm run lint:fix &",
+        "pnpm run lint:fix || true",
+        "-pnpm run lint:fix",
+        "pnpm run --if-present lint:fix",
+        "pnpm run --help lint:fix",
+        "pnpm run lint:fix --help",
+        "pnpm run lint:fix -h",
+        "pnpm run lint:fix --version",
+        "pnpm run lint:fix -V",
+    ],
 )
-def test_1_10_3_rewrites_a_drifted_baseline_region_when_run_with_fix(
-    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, drifted_justfile: str, status: type[Status]
-) -> None:
-    result = run_check_on_disk(CHECK_ID, {"justfile": drifted_justfile}, fix=True)
-    assert (tmp_path / "justfile").read_text() == CONFORMING + "\nsmoke:\n    echo ok\n"
-    assert (result.status, result.problems) == (status.PASS, [])
+def test_1_10_7_requires_real_failure_preserving_tool_calls(run_justfile_check: RunJustfileCheck, command: str) -> None:
+    content = CONFORMING.replace("    pnpm run lint:fix\n", f"    {command}\n")
+    assert any("must run `pnpm run lint:fix`" in finding.message for finding in run_justfile_check(content).problems)
 
 
 @requires_just
-def test_1_10_4_refuses_to_fix_a_baseline_whose_rewrite_does_not_parse(
-    run_check_on_disk: RunCheckOnDisk, tmp_path: Path, status: type[Status]
-) -> None:
-    result = run_check_on_disk(CHECK_ID, {"justfile": UNFIXABLE_DUPLICATE_RECIPE}, fix=True)
-    assert (tmp_path / "justfile").read_text() == UNFIXABLE_DUPLICATE_RECIPE
-    assert result.status is status.FAIL
-    assert baseline_messages(result)[0].startswith("baseline region not rewritten: the fixed justfile does not parse")
+@pytest.mark.parametrize("recipe", ["install", "knip", "typecheck", "lint", "test"])
+def test_1_10_8_rejects_empty_quality_recipes(run_justfile_check: RunJustfileCheck, recipe: str) -> None:
+    lines = CONFORMING.splitlines(keepends=True)
+    start = lines.index(f"{recipe}:\n")
+    end = start + 1
+    while end < len(lines) and (lines[end].startswith("    ") or not lines[end].strip()):
+        end += 1
+    content = "".join([*lines[: start + 1], "    echo no checks\n\n", *lines[end:]])
+    assert run_justfile_check(content).problems
 
 
 @requires_just
-def test_1_10_5_leaves_the_custom_section_free_form(run_justfile_check: RunJustfileCheck, status: type[Status]) -> None:
-    result = run_justfile_check(FREE_FORM_CUSTOM_TAIL)
-    assert (result.status, result.problems) == (status.PASS, [])
+def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWithFiles) -> None:
+    content = CONFORMING.replace(
+        "    pnpm install\n    uv sync --all-packages --all-groups\n", "    bash scripts/install.sh\n"
+    )
+    files = {
+        **WORKSPACE_MANIFESTS,
+        "justfile": content,
+        "scripts/install.sh": (
+            "#!/bin/bash\nset -euo pipefail\npnpm install --frozen-lockfile\nuv sync --all-packages --all-groups\n"
+        ),
+    }
+    assert not run_check_with_files(CHECK_ID, files).problems
+    files["scripts/install.sh"] = "echo 'pnpm install; uv sync --all-packages --all-groups'"
+    assert run_check_with_files(CHECK_ID, files).problems
 
 
 @requires_just
-def test_1_10_6_keeps_this_repo_justfile_identical_to_the_packaged_canonical(
-    make_context: Callable[..., Context], run_check: RunCheck, status: type[Status]
+@pytest.mark.parametrize(
+    "script",
+    [
+        "pnpm install\nset -euo pipefail\nuv sync --all-packages --all-groups",
+        "set -e\npnpm install\nuv sync --all-packages --all-groups",
+        "set -euo pipefail\npnpm install\nset +e\nuv sync --all-packages --all-groups",
+        "set -euo pipefail\npnpm install\nuv sync --all-packages --all-groups\nset +e",
+        "set -euo pipefail\nif true; then set +e; fi\npnpm install\nuv sync --all-packages --all-groups",
+    ],
+)
+def test_1_10_14_requires_canonical_helper_options(run_check_with_files: RunCheckWithFiles, script: str) -> None:
+    content = CONFORMING.replace(
+        "    pnpm install\n    uv sync --all-packages --all-groups\n", "    bash scripts/install.sh\n"
+    )
+    assert run_check_with_files(
+        CHECK_ID, {**WORKSPACE_MANIFESTS, "justfile": content, "scripts/install.sh": f"#!/bin/bash\n{script}\n"}
+    ).problems
+
+
+@requires_just
+def test_1_10_10_rejects_reversed_test_runners(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING.replace(
+        "    if test -f package.json; then pnpm run test; fi\n"
+        '    if test -f pyproject.toml; then uv run pytest || test "$?" -eq 5; fi',
+        "    uv run pytest\n    pnpm run test",
+    )
+    assert any("baseline order" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+def test_1_10_11_requires_both_knip_graphs(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING.replace("    pnpm run knip\n", "")
+    assert any("must run `pnpm run knip`" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo "uv run cerberus"',
+        "uv run echo cerberus",
+        "uv run --extra dev cerberus --fix",
+        "uvx cerberus --fix",
+        "cerberus --fix",
+        "uv run cerberus || true",
+        "uv run cerberus | cat",
+        "uv run cerberus &",
+        "uv run cerberus --help",
+    ],
+)
+def test_1_10_12_requires_a_real_failure_preserving_cerberus_run(
+    run_justfile_check: RunJustfileCheck, command: str
 ) -> None:
-    repo_root = Path(__file__).resolve().parents[3]
-    checker = make_context(repo_root)
-    result = run_check(CHECK_ID, checker.repos()[0], checker)
-    assert (result.status, result.problems) == (status.PASS, [])
+    content = CONFORMING.replace("    uv run cerberus --fix\n", f"    {command}\n")
+    assert any("runs cerberus" in finding.message for finding in run_justfile_check(content).problems)
+
+
+@requires_just
+def test_1_10_13_ignores_tool_names_inside_quoted_text(run_justfile_check: RunJustfileCheck) -> None:
+    content = CONFORMING + '\nexample:\n    echo "setup; ruff check; rumdl check"\n'
+    assert not run_justfile_check(content).problems
 
 
 @requires_just
@@ -367,7 +471,7 @@ def test_1_11_1_fails_when_the_clean_recipe_does_not_invoke_cz_clean(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(CLEAN_WITHOUT_CZ)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`"],
     )
@@ -376,13 +480,13 @@ def test_1_11_1_fails_when_the_clean_recipe_does_not_invoke_cz_clean(
 @requires_just
 def test_1_11_2_passes_when_the_clean_recipe_runs_cz_clean_via_pnpm_run(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(CONFORMING)
-    assert structural_messages(result) == []
+    assert [f.message for f in result.problems] == []
 
 
 @requires_just
 def test_1_11_3_passes_when_the_clean_recipe_invokes_cz_clean_directly(run_justfile_check: RunJustfileCheck) -> None:
     result = run_justfile_check(CLEAN_RUNS_BARE_CZ)
-    assert structural_messages(result) == []
+    assert [f.message for f in result.problems] == []
 
 
 @requires_just
@@ -390,7 +494,7 @@ def test_1_11_4_does_not_count_a_mere_mention_of_cz_clean(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(CLEAN_ONLY_MENTIONED)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`"],
     )
@@ -401,7 +505,7 @@ def test_1_11_5_does_not_count_a_runner_wrapping_an_unrelated_command(
     run_justfile_check: RunJustfileCheck, status: type[Status]
 ) -> None:
     result = run_justfile_check(CLEAN_RUNNER_WRAPS_UNRELATED_COMMAND)
-    assert (result.status, structural_messages(result)) == (
+    assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`"],
     )

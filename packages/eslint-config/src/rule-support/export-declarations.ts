@@ -1,12 +1,12 @@
 import ts from 'typescript';
 
-export const isTypeExport = ({ declarations }: ts.Symbol) =>
+export const hasTypeOnlySpecifier = ({ declarations }: ts.Symbol) =>
   declarations?.some(
     declaration =>
       ts.isExportSpecifier(declaration) && (declaration.isTypeOnly || declaration.parent.parent.isTypeOnly),
   );
 
-export const listRuntimeReexports = ({ statements }: ts.SourceFile, checker: ts.TypeChecker) =>
+export const mapReexportDeclarations = ({ statements }: ts.SourceFile, checker: ts.TypeChecker) =>
   new Map(
     statements.flatMap(statement => {
       if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) return [];
@@ -24,7 +24,13 @@ export const listRuntimeReexports = ({ statements }: ts.SourceFile, checker: ts.
     }),
   );
 
-export const isMutableDeclaration = (declaration: ts.Declaration) =>
+export const findExportDeclaration = (
+  { declarations, name }: ts.Symbol,
+  source: ts.SourceFile,
+  reexports: ReadonlyMap<string, ts.ExportDeclaration>,
+) => declarations?.find(declaration => declaration.getSourceFile() === source) ?? reexports.get(name);
+
+export const isMutableBinding = (declaration: ts.Declaration) =>
   ts.isVariableDeclaration(declaration) &&
   ts.isVariableDeclarationList(declaration.parent) &&
   !(declaration.parent.flags & ts.NodeFlags.Const);

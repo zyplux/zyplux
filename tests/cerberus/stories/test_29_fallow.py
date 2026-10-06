@@ -93,6 +93,7 @@ def _argv(spec: str, analysis: str, repo_root: Path) -> list[str]:
         str(repo_root.resolve()),
         "--config",
         f"{_SHIELD_DIR_PLACEHOLDER}/fallow.json",
+        *(["--coverage", str(repo_root / "coverage/coverage-final.json")] if analysis == "health" else []),
         "--output-file",
         f"{_SHIELD_DIR_PLACEHOLDER}/{analysis}-report.json",
     ]
@@ -121,12 +122,15 @@ def repo_root(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def run_fallow(repo: Repo, run_check: RunCheck, make_context: MakeContext, repo_root: Path) -> RunFallow:
-    def _run(files: dict[str, str], *, verbose: bool = False) -> CheckResult:
+    def _run(files: dict[str, str], *, verbose: bool = False, has_coverage: bool = True) -> CheckResult:
+        if has_coverage:
+            files = {"coverage/coverage-final.json": "{}", **files}
         for path, content in files.items():
             target = repo_root / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
-        return run_check(CHECK_ID, repo, make_context(repo_root, verbose=verbose))
+        config_path = repo_root / "cerberus.toml" if "cerberus.toml" in files else None
+        return run_check(CHECK_ID, repo, make_context(repo_root, verbose=verbose, config_path=config_path))
 
     return _run
 
@@ -276,7 +280,11 @@ def test_29_5_1_shields_fallow_behind_a_cerberus_owned_config_ignoring_workspace
         "pnpm-workspace.yaml": "packages:\n  - apps/*\n  - tests/*\n",
     })
 
-    expected_config = {"ignorePatterns": ["apps/py", "tests/py"], "duplicates": {"ignoreDefaults": False}}
+    expected_config = {
+        "ignorePatterns": ["apps/py", "tests/py"],
+        "duplicates": {"ignoreDefaults": False},
+        "rules": {"complexity-crap": "error"},
+    }
     assert [json.loads(snapshot) for snapshot in fake_proc.config_snapshots] == [expected_config, expected_config]
     assert all(not cwd.is_relative_to(repo_root) for _, cwd in fake_proc.calls if cwd is not None)
 
@@ -522,3 +530,117 @@ def test_29_8_5_never_persists_a_dead_code_report_without_verbose_even_past_the_
         )
     ]
     assert not (repo_root / ".reports").exists()
+
+
+def test_29_9_1_passes_measured_istanbul_coverage_only_to_the_health_analysis(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({"package.json": _PACKAGE_JSON, "coverage/coverage-final.json": "{}"})
+    dead_code, health = [argv for argv, _ in fake_proc.calls]
+    assert "--coverage" not in dead_code
+    assert health[health.index("--coverage") + 1] == str(repo_root / "coverage/coverage-final.json")
+
+
+@pytest.mark.parametrize("report", ["coverage/coverage-final.json", "reports/istanbul.json"])
+def test_29_9_2_rejects_missing_coverage_without_falling_back_to_other_inputs(
+    run_fallow: RunFallow, fake_proc: FakeProc, report: str, monkeypatch: pytest.MonkeyPatch, status: type[Status]
+) -> None:
+    monkeypatch.setenv("FALLOW_COVERAGE", "/outside/coverage.json")
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": f'[fallow]\ncoverage_report = "{report}"\n'},
+        has_coverage=report != "coverage/coverage-final.json",
+    )
+    assert result.status is status.FAIL
+    assert "must name an existing repository file" in result.findings[0].message
+    assert fake_proc.calls == []
+
+
+def test_29_9_3_disables_crap_without_requiring_coverage(run_fallow: RunFallow, fake_proc: FakeProc) -> None:
+    _serve_clean(fake_proc)
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": '[fallow.rules]\ncomplexity-crap = "off"\n'},
+        has_coverage=False,
+    )
+    assert not result.problems
+    assert [argv[2] for argv, _ in fake_proc.calls] == ["dead-code", "health"]
+    assert all("--coverage" not in argv for argv, _ in fake_proc.calls)
+    assert all(json.loads(snapshot)["rules"] == {"complexity-crap": "off"} for snapshot in fake_proc.config_snapshots)
+
+
+def test_29_9_4_keeps_source_complexity_failures_when_crap_is_off(
+    run_fallow: RunFallow, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    _serve_clean(fake_proc)
+    fake_proc.serve("fallow health", returncode=1)
+    fake_proc.serve_report_file(
+        "fallow health",
+        json.dumps({
+            "findings": [{"path": "src/app.ts", "line": 1, "name": "run", "cyclomatic": 25, "crap": 650}],
+            "summary": {"max_cyclomatic_threshold": 20, "max_crap_threshold": 30},
+        }),
+    )
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": '[fallow.rules]\ncomplexity-crap = "off"\n'},
+        has_coverage=False,
+    )
+    assert result.status is status.FAIL
+    assert "cyclomatic 25/20" in result.findings[0].message
+    assert "CRAP" not in result.findings[0].message
+
+
+def test_29_9_5_passes_repository_rule_overrides_to_both_analyses(run_fallow: RunFallow, fake_proc: FakeProc) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "cerberus.toml": '[fallow.rules]\nunused-exports = "off"\n',
+    })
+    assert all(
+        json.loads(snapshot)["rules"] == {"complexity-crap": "error", "unused-exports": "off"}
+        for snapshot in fake_proc.config_snapshots
+    )
+
+
+def test_29_10_1_registers_explicit_runtime_entry_points_in_both_analyses(
+    run_fallow: RunFallow, fake_proc: FakeProc
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "src/iframe.ts": "export default {};",
+        "cerberus.toml": '[fallow]\nentry_points = ["src/iframe.ts"]\n',
+    })
+    assert all(json.loads(snapshot)["entry"] == ["src/iframe.ts"] for snapshot in fake_proc.config_snapshots)
+
+
+@pytest.mark.parametrize("entry", ["src/missing.ts", "../outside.ts"])
+def test_29_10_2_rejects_missing_or_external_runtime_entry_points(
+    run_fallow: RunFallow, fake_proc: FakeProc, entry: str, status: type[Status]
+) -> None:
+    result = run_fallow({"package.json": _PACKAGE_JSON, "cerberus.toml": f'[fallow]\nentry_points = ["{entry}"]\n'})
+    assert result.status is status.FAIL
+    assert fake_proc.calls == []
+
+
+def test_29_10_3_rejects_a_coverage_report_outside_the_repository(
+    run_fallow: RunFallow, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    result = run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "cerberus.toml": '[fallow]\ncoverage_report = "../coverage.json"\n',
+    })
+    assert result.status is status.FAIL
+    assert fake_proc.calls == []
+
+
+def test_29_10_4_supports_a_repository_specific_coverage_report_path(
+    run_fallow: RunFallow, fake_proc: FakeProc, repo_root: Path
+) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "reports/istanbul.json": "{}",
+        "cerberus.toml": '[fallow]\ncoverage_report = "reports/istanbul.json"\n',
+    })
+    health = fake_proc.calls[1][0]
+    assert health[health.index("--coverage") + 1] == str(repo_root / "reports/istanbul.json")

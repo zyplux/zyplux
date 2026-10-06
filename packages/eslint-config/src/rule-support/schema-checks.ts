@@ -2,14 +2,14 @@ import type { ParserServicesWithTypeInformation, TSESTree } from '@typescript-es
 
 import * as ts from 'typescript';
 
-const isZodSchema = (
+const isSchemaType = (
   type: ts.Type,
   checker: ts.TypeChecker,
   node: ts.Node,
   ancestors = new Set<ts.Type>(),
 ): boolean => {
   if (ancestors.has(type)) return false;
-  if (type.isUnion()) return type.types.every(member => isZodSchema(member, checker, node, ancestors));
+  if (type.isUnion()) return type.types.every(member => isSchemaType(member, checker, node, ancestors));
   if (type.getProperty('~standard') !== undefined || type.getProperty('_zod') !== undefined) return true;
   if (
     !(type.flags & ts.TypeFlags.Object) ||
@@ -26,18 +26,15 @@ const isZodSchema = (
     properties.every(
       property =>
         !(property.flags & ts.SymbolFlags.Optional) &&
-        isZodSchema(checker.getTypeOfSymbolAtLocation(property, node), checker, node, parents),
+        isSchemaType(checker.getTypeOfSymbolAtLocation(property, node), checker, node, parents),
     )
   );
 };
 
-export const createSchemaDetector = (services: ParserServicesWithTypeInformation) => {
-  const checker = services.program.getTypeChecker();
-  return (node: TSESTree.Node) =>
-    isZodSchema(services.getTypeAtLocation(node), checker, services.esTreeNodeToTSNodeMap.get(node));
-};
+export const createTypeSchemaCheck = (checker: ts.TypeChecker) => (type: ts.Type, node: ts.Node) =>
+  isSchemaType(type, checker, node);
 
-export const createSchemaTypeDetector = ({ program }: ParserServicesWithTypeInformation) => {
-  const checker = program.getTypeChecker();
-  return (type: ts.Type, node: ts.Node) => isZodSchema(type, checker, node);
+export const createNodeSchemaCheck = (services: ParserServicesWithTypeInformation) => {
+  const isSchema = createTypeSchemaCheck(services.program.getTypeChecker());
+  return (node: TSESTree.Node) => isSchema(services.getTypeAtLocation(node), services.esTreeNodeToTSNodeMap.get(node));
 };
