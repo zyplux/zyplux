@@ -280,7 +280,11 @@ def test_29_5_1_shields_fallow_behind_a_cerberus_owned_config_ignoring_workspace
         "pnpm-workspace.yaml": "packages:\n  - apps/*\n  - tests/*\n",
     })
 
-    expected_config = {"ignorePatterns": ["apps/py", "tests/py"], "duplicates": {"ignoreDefaults": False}}
+    expected_config = {
+        "ignorePatterns": ["apps/py", "tests/py"],
+        "duplicates": {"ignoreDefaults": False},
+        "rules": {"complexity-crap": "error"},
+    }
     assert [json.loads(snapshot) for snapshot in fake_proc.config_snapshots] == [expected_config, expected_config]
     assert all(not cwd.is_relative_to(repo_root) for _, cwd in fake_proc.calls if cwd is not None)
 
@@ -550,6 +554,51 @@ def test_29_9_2_rejects_missing_coverage_without_falling_back_to_other_inputs(
     assert result.status is status.FAIL
     assert "must name an existing repository file" in result.findings[0].message
     assert fake_proc.calls == []
+
+
+def test_29_9_3_disables_crap_without_requiring_coverage(run_fallow: RunFallow, fake_proc: FakeProc) -> None:
+    _serve_clean(fake_proc)
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": '[fallow.rules]\ncomplexity-crap = "off"\n'},
+        has_coverage=False,
+    )
+    assert not result.problems
+    assert [argv[2] for argv, _ in fake_proc.calls] == ["dead-code", "health"]
+    assert all("--coverage" not in argv for argv, _ in fake_proc.calls)
+    assert all(json.loads(snapshot)["rules"] == {"complexity-crap": "off"} for snapshot in fake_proc.config_snapshots)
+
+
+def test_29_9_4_keeps_source_complexity_failures_when_crap_is_off(
+    run_fallow: RunFallow, fake_proc: FakeProc, status: type[Status]
+) -> None:
+    _serve_clean(fake_proc)
+    fake_proc.serve("fallow health", returncode=1)
+    fake_proc.serve_report_file(
+        "fallow health",
+        json.dumps({
+            "findings": [{"path": "src/app.ts", "line": 1, "name": "run", "cyclomatic": 25, "crap": 650}],
+            "summary": {"max_cyclomatic_threshold": 20, "max_crap_threshold": 30},
+        }),
+    )
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": '[fallow.rules]\ncomplexity-crap = "off"\n'},
+        has_coverage=False,
+    )
+    assert result.status is status.FAIL
+    assert "cyclomatic 25/20" in result.findings[0].message
+    assert "CRAP" not in result.findings[0].message
+
+
+def test_29_9_5_passes_repository_rule_overrides_to_both_analyses(run_fallow: RunFallow, fake_proc: FakeProc) -> None:
+    _serve_clean(fake_proc)
+    run_fallow({
+        "package.json": _PACKAGE_JSON,
+        "cerberus.toml": '[fallow.rules]\nunused-exports = "off"\n',
+    })
+    assert all(
+        json.loads(snapshot)["rules"] == {"complexity-crap": "error", "unused-exports": "off"}
+        for snapshot in fake_proc.config_snapshots
+    )
 
 
 def test_29_10_1_registers_explicit_runtime_entry_points_in_both_analyses(

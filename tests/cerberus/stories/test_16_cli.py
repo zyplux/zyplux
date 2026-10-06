@@ -127,6 +127,23 @@ def test_16_1_4_appends_a_bites_measured_detail_to_its_line(
 
 
 @requires_just
+def test_16_1_5_accepts_a_repository_directory_named_lint(
+    conforming_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    conforming_repo.rename(conforming_repo.with_name("lint"))
+    monkeypatch.chdir(conforming_repo.parent)
+    result = runner.invoke(app, ["lint", "--check", "justfile"])
+    assert result.exit_code == 0, result.output
+    assert "🐾 justfile" in result.output
+
+
+def test_16_1_6_shows_repository_options_and_named_commands_in_root_help() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0, result.output
+    assert all(name in result.output for name in ("--fix", "--check", "--config", "list", "version", "graph"))
+
+
+@requires_just
 def test_16_2_1_fails_when_the_ci_workflow_file_is_missing(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
@@ -275,7 +292,7 @@ def test_16_8_1_prints_the_cerberus_version() -> None:
 
 
 @pytest.mark.parametrize("flag", ["--json", "--strict"])
-def test_16_9_1_rejects_an_option_the_lint_command_never_defined(invoke_lint: Callable[..., Result], flag: str) -> None:
+def test_16_9_1_rejects_unknown_repository_options(invoke_lint: Callable[..., Result], flag: str) -> None:
     result = invoke_lint(flag)
     assert result.exit_code == USAGE_ERROR_EXIT
     assert flag.removeprefix("--") in result.output.lower()

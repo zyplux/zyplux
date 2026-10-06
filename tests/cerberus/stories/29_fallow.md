@@ -80,6 +80,12 @@ Itemizing every offender inline is unreadable past a screenful, so both analyses
 
 ### 29.9.2 rejects missing coverage without falling back to other inputs
 
+### 29.9.3 disables CRAP without requiring coverage
+
+### 29.9.4 keeps source complexity failures when CRAP is off
+
+### 29.9.5 passes repository rule overrides to both analyses
+
 ## 29.10 registering repository analysis inputs
 
 ### 29.10.1 registers explicit runtime entry points in both analyses

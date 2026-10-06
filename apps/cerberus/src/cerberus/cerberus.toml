@@ -171,6 +171,9 @@ ignore = ["**/dist/**", "**/.venv/**", "**/*.gen.*"]
 entry_points = []
 coverage_report = "coverage/coverage-final.json"
 
+[fallow.rules]
+complexity-crap = "error"
+
 [zyplux_deps_latest]
 
 # Only the repo carrying the pin source can act on a lagging pin; it switches this on in its overlay.

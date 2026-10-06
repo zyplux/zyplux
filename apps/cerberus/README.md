@@ -63,11 +63,13 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 ## Justfile recipes
 
-[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks names, aliases, ordered gate steps and their actual tool calls, managed-tool runners, cleanup, and whitespace. Required calls run as standalone foreground commands that preserve failures; local shell helpers enable `set -e`. The test recipe may guard runners by their workspace manifests and accept pytest's empty-suite exit code. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
+[`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks names, aliases, ordered gate steps and their actual tool calls, managed-tool runners, cleanup, and whitespace. Required calls run as standalone foreground commands that preserve failures; local shell helpers start with `set -euo pipefail` and contain no other `set` commands. Local Cerberus commands start with `uv run cerberus`. The test recipe may guard runners by their workspace manifests and accept pytest's empty-suite exit code. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
 
 ## Fallow inputs
 
-`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. `[fallow].coverage_report` defaults to `coverage/coverage-final.json` and must exist; the health analysis receives this exact report for measured CRAP scores. Run tests before Cerberus to refresh the report. Dead-code analysis and complexity thresholds use the shared policy.
+`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. CRAP is enabled by default: `[fallow].coverage_report` defaults to `coverage/coverage-final.json` and must exist; run tests before Cerberus to refresh it.
+
+`[fallow.rules]` accepts [Fallow rule names](https://fallow.tools/docs/configuration/rules/). Set `complexity-crap = "off"` to disable CRAP and its coverage-file requirement while retaining dead-code and source complexity checks. Other rules can be disabled individually. Rules not overridden retain Fallow's defaults; Cerberus's `--fail-on-issues` makes both `error` and `warn` findings fail.
 
 ## Config
 

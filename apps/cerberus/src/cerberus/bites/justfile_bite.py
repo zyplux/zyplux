@@ -24,68 +24,6 @@ SUMMARY = (
 SCOPE = Scope.CONTENT
 
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
-_UV_VALUE_OPTIONS = frozenset({
-    "--allow-insecure-host",
-    "--build-constraint",
-    "--build-constraints",
-    "--cache-dir",
-    "--color",
-    "--config-file",
-    "--config-setting",
-    "--config-settings",
-    "--config-setting-package",
-    "--config-settings-package",
-    "--constraint",
-    "--constraints",
-    "--default-index",
-    "--directory",
-    "--env-file",
-    "--exclude-newer",
-    "--exclude-newer-package",
-    "--extra",
-    "--extra-index-url",
-    "--find-links",
-    "--fork-strategy",
-    "--from",
-    "--group",
-    "--index",
-    "--index-strategy",
-    "--index-url",
-    "--keyring-provider",
-    "--link-mode",
-    "--max-recursion-depth",
-    "--no-binary-package",
-    "--no-build-isolation-package",
-    "--no-build-package",
-    "--no-editable-package",
-    "--no-extra",
-    "--no-group",
-    "--no-sources-package",
-    "--only-group",
-    "--override",
-    "--overrides",
-    "--package",
-    "--prerelease",
-    "--prerelease-package",
-    "--preview-feature",
-    "--preview-features",
-    "--project",
-    "--python",
-    "--python-fetch",
-    "--python-platform",
-    "--python-preference",
-    "--refresh-package",
-    "--reinstall-package",
-    "--resolution",
-    "--torch-backend",
-    "--trusted-host",
-    "--upgrade-group",
-    "--upgrade-package",
-    "--with",
-    "--with-editable",
-    "--with-requirements",
-})
-_UV_SHORT_VALUES = frozenset("bCcfipPw")
 _CZ_CLEAN_INVOCATIONS = (
     ("cz", "clean"),
     ("pnpm", "run", "cz", "clean"),
@@ -99,14 +37,6 @@ def _trailing_ws_lines(content: str) -> list[int]:
 
 def _strip_trailing_ws(content: str) -> str:
     return _TRAILING_WS.sub("", content)
-
-
-def _invokes_cerberus(args: tuple[str, ...]) -> bool:
-    match args:
-        case ("cerberus", *_) | ("uv", "run", "cerberus", *_) | ("uvx", "cerberus", *_):
-            return True
-        case _:
-            return False
 
 
 def _invokes_cz_clean(tokens: tuple[str, ...]) -> bool:
@@ -190,36 +120,7 @@ def _calc_execution_order(jf: justfile.Justfile, recipe: str, ancestors: frozens
     return order
 
 
-def _parse_uv_option(option: str) -> tuple[str, bool]:
-    if option.startswith("--"):
-        flag, separator, _argument = option.partition("=")
-        return flag, bool(separator)
-    for index, flag in enumerate(option[1:], start=1):
-        if flag in _UV_SHORT_VALUES or flag in "hV":
-            return f"-{flag}", index < len(option) - 1
-    return option, False
-
-
-def _list_uv_command(options: tuple[str, ...]) -> tuple[str, ...]:
-    remaining = iter(options)
-    for option in remaining:
-        if option == "--":
-            return tuple(remaining)
-        if not option.startswith("-"):
-            return (option, *remaining)
-        flag, has_inline_argument = _parse_uv_option(option)
-        if flag in {"-h", "-V", "--help", "--version", "--generate-shell-completion"}:
-            return ()
-        if not has_inline_argument and (flag in _UV_VALUE_OPTIONS or flag.removeprefix("-") in _UV_SHORT_VALUES):
-            next(remaining, None)
-    return ()
-
-
 def _normalize_tool_args(args: tuple[str, ...]) -> tuple[str, ...]:
-    if args[:2] == ("uv", "run"):
-        return args[:2] + _list_uv_command(args[2:])
-    if args[0] == "uvx":
-        return args[:1] + _list_uv_command(args[1:])
     if len(args) > 1 and args[0] == "pnpm" and args[1] in {"test", "knip", "typecheck"}:
         return ("pnpm", "run", *args[1:])
     return args
@@ -253,32 +154,19 @@ def _list_script_commands(script: str, repo: Repo, ctx: Context, ancestors: froz
     content = ctx.file(repo, str(path))
     if content is None:
         return []
+    script_commands = list_required_commands(content, frozenset())
+    if not script_commands or script_commands[0] != ("set", "-euo", "pipefail"):
+        return []
+    if any(args[0] == "set" for args in list_shell_commands(content)[1:]):
+        return []
     commands = []
-    is_errexit = False
-    for args in list_required_commands(content, frozenset()):
-        if args[0] == "set":
-            is_errexit = _get_errexit(args[1:], is_errexit=is_errexit)
-        if not is_errexit:
-            continue
+    for args in script_commands[1:]:
         match args:
             case ("bash" | "sh", child, *_) | (child, *_) if child.endswith(".sh"):
                 commands.extend(_list_script_commands(child, repo, ctx, ancestors | {str(path)}))
             case _:
                 commands.append(_normalize_tool_args(args))
     return commands
-
-
-def _get_errexit(options: tuple[str, ...], *, is_errexit: bool) -> bool:
-    remaining = iter(options)
-    for option in remaining:
-        if option == "--" or not option.startswith(("-", "+")):
-            break
-        if option in {"-o", "+o"}:
-            if next(remaining, None) == "errexit":
-                is_errexit = option == "-o"
-        elif "e" in option[1:]:
-            is_errexit = option.startswith("-")
-    return is_errexit
 
 
 @cache
@@ -308,6 +196,8 @@ def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
 
 
 def _matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
+    if required[:2] == ("uv", "run") and command[:3] != required[:3]:
+        return False
     if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
         return False
     positional = tuple(arg for arg in command if not arg.startswith("-"))
@@ -319,7 +209,7 @@ def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, r
     if "check" not in jf.recipes:
         return
     commands = _list_tool_commands(jf, "check", repo, ctx)
-    if not any(_invokes_cerberus(args) for args in commands):
+    if not any(args[:3] == ("uv", "run", "cerberus") for args in commands):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 

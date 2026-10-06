@@ -270,27 +270,6 @@ def test_1_9_3_does_not_count_a_mere_mention_of_cerberus(
 
 
 @requires_just
-@pytest.mark.parametrize(
-    "invocation",
-    [
-        "uv run cerberus --fix",
-        "uv run --active cerberus --fix",
-        "uv run --extra dev --package app --config-file uv.toml -p 3.14 cerberus --fix",
-        "uv run --extra=dev -qp3.14 -- cerberus --fix",
-        "uv run -w package --with-requirements requirements.txt cerberus --fix",
-        "uv run --index-url https://pypi.org/simple cerberus --fix",
-        "uvx --from zyplux-cerberus cerberus --fix",
-        "uvx -c constraints.txt -b build.txt --override overrides.txt cerberus --fix",
-    ],
-)
-def test_1_9_4_counts_runner_wrapped_cerberus_invocations(
-    run_justfile_check: RunJustfileCheck, invocation: str
-) -> None:
-    result = run_justfile_check(CONFORMING.replace("uv run cerberus --fix", invocation))
-    assert [f.message for f in result.problems] == []
-
-
-@requires_just
 @pytest.mark.parametrize("content", [NO_MARKERS, DRIFTED_WITH_TAIL, FREE_FORM_CUSTOM_TAIL])
 def test_1_10_1_accepts_application_recipes_without_rewriting_them(
     run_check_on_disk: RunCheckOnDisk, tmp_path: Path, content: str, status: type[Status]
@@ -401,8 +380,7 @@ def test_1_10_8_rejects_empty_quality_recipes(run_justfile_check: RunJustfileChe
 
 
 @requires_just
-@pytest.mark.parametrize("enable", ["set -euo pipefail", "set -o errexit", "set +e -e"])
-def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWithFiles, enable: str) -> None:
+def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWithFiles) -> None:
     content = CONFORMING.replace(
         "    pnpm install\n    uv sync --all-packages --all-groups\n", "    bash scripts/install.sh\n"
     )
@@ -410,7 +388,7 @@ def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWith
         **WORKSPACE_MANIFESTS,
         "justfile": content,
         "scripts/install.sh": (
-            f"#!/bin/bash\n{enable}\npnpm install --frozen-lockfile\nuv sync --all-packages --all-groups\n"
+            "#!/bin/bash\nset -euo pipefail\npnpm install --frozen-lockfile\nuv sync --all-packages --all-groups\n"
         ),
     }
     assert not run_check_with_files(CHECK_ID, files).problems
@@ -422,14 +400,14 @@ def test_1_10_9_follows_shell_install_helpers(run_check_with_files: RunCheckWith
 @pytest.mark.parametrize(
     "script",
     [
-        "pnpm install\nset -e\nuv sync --all-packages --all-groups",
-        "set -e\npnpm install\nset +e\nuv sync --all-packages --all-groups\necho done",
-        "set -e\npnpm install\nset +o errexit\nuv sync --all-packages --all-groups\necho done",
-        "set -e +e\npnpm install\nuv sync --all-packages --all-groups\necho done",
-        "set -- -e\npnpm install\nuv sync --all-packages --all-groups\necho done",
+        "pnpm install\nset -euo pipefail\nuv sync --all-packages --all-groups",
+        "set -e\npnpm install\nuv sync --all-packages --all-groups",
+        "set -euo pipefail\npnpm install\nset +e\nuv sync --all-packages --all-groups",
+        "set -euo pipefail\npnpm install\nuv sync --all-packages --all-groups\nset +e",
+        "set -euo pipefail\nif true; then set +e; fi\npnpm install\nuv sync --all-packages --all-groups",
     ],
 )
-def test_1_10_14_requires_errexit_at_each_helper_command(run_check_with_files: RunCheckWithFiles, script: str) -> None:
+def test_1_10_14_requires_canonical_helper_options(run_check_with_files: RunCheckWithFiles, script: str) -> None:
     content = CONFORMING.replace(
         "    pnpm install\n    uv sync --all-packages --all-groups\n", "    bash scripts/install.sh\n"
     )
@@ -458,18 +436,11 @@ def test_1_10_11_requires_both_knip_graphs(run_justfile_check: RunJustfileCheck)
 @pytest.mark.parametrize(
     "command",
     [
+        'echo "uv run cerberus"',
         "uv run echo cerberus",
-        "uvx --from cerberus echo",
-        "uv run --with cerberus echo",
-        "uv run --extra cerberus echo",
-        "uv run --extra=cerberus echo",
-        "uv run --package cerberus echo",
-        "uv run --config-file cerberus echo",
-        "uv run --index-url cerberus echo",
-        "uv run -p cerberus echo",
-        "uv run -qpcerberus echo",
-        "uv run --help cerberus",
-        "uvx -c cerberus echo",
+        "uv run --extra dev cerberus --fix",
+        "uvx cerberus --fix",
+        "cerberus --fix",
         "uv run cerberus || true",
         "uv run cerberus | cat",
         "uv run cerberus &",

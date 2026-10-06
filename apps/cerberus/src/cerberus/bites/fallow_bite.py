@@ -1,4 +1,4 @@
-"""Run pinned Fallow analyses with Cerberus-owned policy and measured coverage.
+"""Run pinned Fallow analyses with Cerberus-owned configuration.
 
 Reports use files because large pnpx stdout reports can be truncated by the
 subprocess pipe chain. Oversized findings are saved under .reports/.
@@ -79,14 +79,14 @@ def _health_status_line(report: dict[str, Any]) -> str | None:
     return line
 
 
-def _complexity_lines(report: dict[str, Any]) -> list[str]:
+def _complexity_lines(report: dict[str, Any], rules: dict[str, str]) -> list[str]:
     thresholds = report["summary"]
     lines = []
     for offender in report["findings"]:
         metrics = ", ".join(
             f"{label} {offender[metric]:g}/{thresholds[threshold]:g}"
             for metric, threshold, label in _COMPLEXITY_METRICS
-            if metric in offender and threshold in thresholds
+            if metric in offender and threshold in thresholds and rules.get(f"complexity-{metric}") != "off"
         )
         lines.append(f"    {offender['path']}:{offender['line']} {offender['name']} — {metrics}")
     return lines
@@ -194,7 +194,7 @@ def _record_complexity(res: CheckResult, ctx: Context, analysis: _Analysis, *, r
         report_path = _persist_report(ctx, report, _HEALTH_REPORT_FILENAME)
         res.fail(f"{header}; see {report_path}")
     else:
-        res.fail("\n".join([header, *_complexity_lines(report)]))
+        res.fail("\n".join([header, *_complexity_lines(report, ctx.config.fallow_rules)]))
 
 
 def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
@@ -209,11 +209,14 @@ def _validate_inputs(ctx: Context, res: CheckResult) -> None:
         path = (repo_root / entry).resolve()
         if not path.is_relative_to(repo_root) or not path.is_file():
             res.fail(f"fallow entry_points must name existing repository files: {entry}")
-    coverage_path = (repo_root / ctx.config.fallow_coverage_report).resolve()
-    if not coverage_path.is_relative_to(repo_root):
-        res.fail("fallow coverage_report must be inside the repository")
-    elif not coverage_path.is_file():
-        res.fail(f"fallow coverage_report must name an existing repository file: {ctx.config.fallow_coverage_report}")
+    if ctx.config.fallow_rules["complexity-crap"] != "off":
+        coverage_path = (repo_root / ctx.config.fallow_coverage_report).resolve()
+        if not coverage_path.is_relative_to(repo_root):
+            res.fail("fallow coverage_report must be inside the repository")
+        elif not coverage_path.is_file():
+            res.fail(
+                f"fallow coverage_report must name an existing repository file: {ctx.config.fallow_coverage_report}"
+            )
 
 
 def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]:
@@ -221,7 +224,11 @@ def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]
     coverage_path = (ctx.source.root / ctx.config.fallow_coverage_report).resolve()
     with tempfile.TemporaryDirectory(prefix="cerberus-fallow-") as shield_dir:
         config_path = Path(shield_dir) / "fallow.json"
-        shield_config: dict[str, Any] = {"ignorePatterns": ignored_dirs, "duplicates": {"ignoreDefaults": False}}
+        shield_config: dict[str, Any] = {
+            "ignorePatterns": ignored_dirs,
+            "duplicates": {"ignoreDefaults": False},
+            "rules": ctx.config.fallow_rules,
+        }
         if ctx.config.fallow_entry_points:
             shield_config["entry"] = list(ctx.config.fallow_entry_points)
         config_path.write_text(json.dumps(shield_config))
@@ -229,7 +236,7 @@ def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]
         for analysis in ("dead-code", "health"):
             report_path = Path(shield_dir) / f"{analysis}-report.json"
             coverage_flags: list[str] = []
-            if analysis == "health":
+            if analysis == "health" and ctx.config.fallow_rules["complexity-crap"] != "off":
                 coverage_flags = ["--coverage", str(coverage_path)]
             argv = [
                 "pnpx",

@@ -152,14 +152,7 @@ dependency like the `cerberus` recipe earns no cerberus-run finding.
 
 ### 1.9.3 does not count a mere mention of cerberus
 
-The check recognizes `cerberus` in command position, including through `uv run` or `uvx`. Mentions in comments, arguments, or runner options do not count.
-
-### 1.9.4 counts runner-wrapped cerberus invocations
-
-The invocation styles the org's repos actually use all count:
-`uv run cerberus --fix`, `uv run --active cerberus --fix`, and
-`uvx --from zyplux-cerberus cerberus --fix` — none of them earns a
-cerberus-run finding.
+The check recognizes commands starting with `uv run cerberus`. Mentions in comments or arguments do not count.
 
 ## 1.10 supporting application recipes
 
@@ -189,7 +182,9 @@ cerberus-run finding.
 
 ### 1.10.13 ignores tool names inside quoted text
 
-### 1.10.14 requires errexit at each helper command
+### 1.10.14 requires canonical helper options
+
+Shell helpers start with `set -euo pipefail` and contain no other `set` commands.
 
 ## 1.11 requiring the clean recipe to run cz clean
 
