@@ -360,6 +360,12 @@ def test_1_10_6_rejects_skipped_background_or_masked_gate_steps(
         "pnpm run lint:fix &",
         "pnpm run lint:fix || true",
         "-pnpm run lint:fix",
+        "pnpm run --if-present lint:fix",
+        "pnpm run --help lint:fix",
+        "pnpm run lint:fix --help",
+        "pnpm run lint:fix -h",
+        "pnpm run lint:fix --version",
+        "pnpm run lint:fix -V",
     ],
 )
 def test_1_10_7_requires_real_failure_preserving_tool_calls(run_justfile_check: RunJustfileCheck, command: str) -> None:
@@ -444,6 +450,7 @@ def test_1_10_11_requires_both_knip_graphs(run_justfile_check: RunJustfileCheck)
         "uv run cerberus || true",
         "uv run cerberus | cat",
         "uv run cerberus &",
+        "uv run cerberus --help",
     ],
 )
 def test_1_10_12_requires_a_real_failure_preserving_cerberus_run(

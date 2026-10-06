@@ -90,6 +90,10 @@ ALL: tuple[Check, ...] = tuple(
 BY_ID: dict[str, Check] = {check.id: check for check in ALL}
 
 RETIRED = {
+    "package_exports": "consistent_package_export_entries",
+    "package_side_effects": "explicit_module_side_effects",
+    "project_references": "consistent_workspace_project_references",
+    "worker_runtime": "no_worker_filesystem_imports",
     "contract_keepers": "repository-local tests",
     "dependency_direction": "repository-local tests",
     "cli_ts_test_seam": (

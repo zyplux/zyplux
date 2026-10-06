@@ -196,7 +196,9 @@ def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
 
 
 def _matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
-    if required[:2] == ("uv", "run") and command[:3] != required[:3]:
+    if set(command) & {"--help", "-h", "--version", "-V"}:
+        return False
+    if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
         return False
     if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
         return False
@@ -209,7 +211,7 @@ def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, r
     if "check" not in jf.recipes:
         return
     commands = _list_tool_commands(jf, "check", repo, ctx)
-    if not any(args[:3] == ("uv", "run", "cerberus") for args in commands):
+    if not any(_matches_tool_command(args, ("uv", "run", "cerberus")) for args in commands):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 

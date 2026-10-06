@@ -140,7 +140,8 @@ def test_16_1_5_accepts_a_repository_directory_named_lint(
 def test_16_1_6_shows_repository_options_and_named_commands_in_root_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0, result.output
-    assert all(name in result.output for name in ("--fix", "--check", "--config", "list", "version", "graph"))
+    help_text = Text.from_ansi(result.output).plain
+    assert all(name in help_text for name in ("--fix", "--check", "--config", "list", "version", "graph"))
 
 
 @requires_just
@@ -397,6 +398,10 @@ def test_16_13_1_prints_a_bites_verbose_lines_only_when_run_with_verbose(
 @pytest.mark.parametrize(
     "retirement",
     [
+        ("package_exports", "consistent_package_export_entries"),
+        ("package_side_effects", "explicit_module_side_effects"),
+        ("project_references", "consistent_workspace_project_references"),
+        ("worker_runtime", "no_worker_filesystem_imports"),
         ("cli_ts_test_seam", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
         ("lib_ts_test_seam", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
         ("fixture_roles_ts", "test-seam-only-imports/use-package-type-exports/no-type-only-dependencies"),
