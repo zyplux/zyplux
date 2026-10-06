@@ -3,7 +3,7 @@
     "parserOptions": { "tsconfigRootDir": "<rootDir>", "projectService": true },
     "sourceType": "module",
     "ecmaVersion": 2026,
-    "parser": "typescript-eslint/parser@8.71.0",
+    "parser": "typescript-eslint/parser@8.71.1",
     "globals": {
       "AggregateError": false,
       "Array": false,
@@ -1219,7 +1219,7 @@
   },
   "plugins": [
     "@",
-    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.71.0",
+    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.71.1",
     "perfectionist:eslint-plugin-perfectionist@5.12.1",
     "unicorn:eslint-plugin-unicorn@77.0.0",
     "@zyplux:@zyplux/eslint-config@0.11.0"
