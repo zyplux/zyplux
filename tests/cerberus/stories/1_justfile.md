@@ -189,6 +189,8 @@ cerberus-run finding.
 
 ### 1.10.13 ignores tool names inside quoted text
 
+### 1.10.14 requires errexit at each helper command
+
 ## 1.11 requiring the clean recipe to run cz clean
 
 A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the

@@ -78,7 +78,7 @@ Itemizing every offender inline is unreadable past a screenful, so both analyses
 
 ### 29.9.1 passes measured Istanbul coverage only to the health analysis
 
-### 29.9.2 keeps static health analysis when no coverage report exists
+### 29.9.2 rejects missing coverage without falling back to other inputs
 
 ## 29.10 registering repository analysis inputs
 

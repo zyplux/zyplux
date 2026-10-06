@@ -67,7 +67,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 ## Fallow inputs
 
-`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. `[fallow].coverage_report` defaults to `coverage/coverage-final.json`; when present, the health analysis uses it for measured CRAP scores. Run tests before Cerberus to refresh the report. Dead-code analysis and complexity thresholds use the shared policy.
+`[fallow].entry_points` registers exact repository files loaded by framework or runtime conventions that Fallow cannot infer. Every declared file must exist. `[fallow].coverage_report` defaults to `coverage/coverage-final.json` and must exist; the health analysis receives this exact report for measured CRAP scores. Run tests before Cerberus to refresh the report. Dead-code analysis and complexity thresholds use the shared policy.
 
 ## Config
 

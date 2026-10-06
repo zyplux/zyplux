@@ -30,11 +30,12 @@ def _get_property(node: Node | None, name: str) -> Node | None:
 
 
 def _find_router_entry(package: PackageInfo, repo: Repo, ctx: Context) -> str | None:
-    if not package.directory.startswith("apps/"):
-        return None
-    path = f"{package.directory}/vite.config.ts"
-    content = ctx.file(repo, path)
-    if content is None:
+    for extension in ("js", "mjs", "ts", "cjs", "mts", "cts"):
+        path = str(PurePosixPath(package.directory) / f"vite.config.{extension}")
+        content = ctx.file(repo, path)
+        if content is not None:
+            break
+    else:
         return None
     for node in walk_nodes(parse_typescript(path, content).root_node):
         if node.type != "call_expression":

@@ -24,15 +24,68 @@ SUMMARY = (
 SCOPE = Scope.CONTENT
 
 _TRAILING_WS = re.compile(r"[ \t]+(?=\r?\n|\Z)")
-_RUNNER_VALUE_OPTIONS = frozenset({
+_UV_VALUE_OPTIONS = frozenset({
+    "--allow-insecure-host",
+    "--build-constraint",
+    "--build-constraints",
+    "--cache-dir",
+    "--color",
+    "--config-file",
+    "--config-setting",
+    "--config-settings",
+    "--config-setting-package",
+    "--config-settings-package",
+    "--constraint",
+    "--constraints",
+    "--default-index",
+    "--directory",
+    "--env-file",
+    "--exclude-newer",
+    "--exclude-newer-package",
+    "--extra",
+    "--extra-index-url",
+    "--find-links",
+    "--fork-strategy",
     "--from",
+    "--group",
+    "--index",
+    "--index-strategy",
+    "--index-url",
+    "--keyring-provider",
+    "--link-mode",
+    "--max-recursion-depth",
+    "--no-binary-package",
+    "--no-build-isolation-package",
+    "--no-build-package",
+    "--no-editable-package",
+    "--no-extra",
+    "--no-group",
+    "--no-sources-package",
+    "--only-group",
+    "--override",
+    "--overrides",
+    "--package",
+    "--prerelease",
+    "--prerelease-package",
+    "--preview-feature",
+    "--preview-features",
+    "--project",
+    "--python",
+    "--python-fetch",
+    "--python-platform",
+    "--python-preference",
+    "--refresh-package",
+    "--reinstall-package",
+    "--resolution",
+    "--torch-backend",
+    "--trusted-host",
+    "--upgrade-group",
+    "--upgrade-package",
     "--with",
     "--with-editable",
     "--with-requirements",
-    "--project",
-    "--directory",
-    "--python",
 })
+_UV_SHORT_VALUES = frozenset("bCcfipPw")
 _CZ_CLEAN_INVOCATIONS = (
     ("cz", "clean"),
     ("pnpm", "run", "cz", "clean"),
@@ -50,14 +103,8 @@ def _strip_trailing_ws(content: str) -> str:
 
 def _invokes_cerberus(args: tuple[str, ...]) -> bool:
     match args:
-        case ("cerberus", *_):
+        case ("cerberus", *_) | ("uv", "run", "cerberus", *_) | ("uvx", "cerberus", *_):
             return True
-        case ("uv", "run", *options) | ("uvx", *options):
-            while options and options[0].startswith("-"):
-                flag = options.pop(0)
-                if flag in _RUNNER_VALUE_OPTIONS and options:
-                    options.pop(0)
-            return bool(options) and options[0] == "cerberus"
         case _:
             return False
 
@@ -143,9 +190,36 @@ def _calc_execution_order(jf: justfile.Justfile, recipe: str, ancestors: frozens
     return order
 
 
+def _parse_uv_option(option: str) -> tuple[str, bool]:
+    if option.startswith("--"):
+        flag, separator, _argument = option.partition("=")
+        return flag, bool(separator)
+    for index, flag in enumerate(option[1:], start=1):
+        if flag in _UV_SHORT_VALUES or flag in "hV":
+            return f"-{flag}", index < len(option) - 1
+    return option, False
+
+
+def _list_uv_command(options: tuple[str, ...]) -> tuple[str, ...]:
+    remaining = iter(options)
+    for option in remaining:
+        if option == "--":
+            return tuple(remaining)
+        if not option.startswith("-"):
+            return (option, *remaining)
+        flag, has_inline_argument = _parse_uv_option(option)
+        if flag in {"-h", "-V", "--help", "--version", "--generate-shell-completion"}:
+            return ()
+        if not has_inline_argument and (flag in _UV_VALUE_OPTIONS or flag.removeprefix("-") in _UV_SHORT_VALUES):
+            next(remaining, None)
+    return ()
+
+
 def _normalize_tool_args(args: tuple[str, ...]) -> tuple[str, ...]:
     if args[:2] == ("uv", "run"):
-        return args[:2] + tuple(arg for arg in args[2:] if arg != "--no-sync")
+        return args[:2] + _list_uv_command(args[2:])
+    if args[0] == "uvx":
+        return args[:1] + _list_uv_command(args[1:])
     if len(args) > 1 and args[0] == "pnpm" and args[1] in {"test", "knip", "typecheck"}:
         return ("pnpm", "run", *args[1:])
     return args
@@ -179,19 +253,32 @@ def _list_script_commands(script: str, repo: Repo, ctx: Context, ancestors: froz
     content = ctx.file(repo, str(path))
     if content is None:
         return []
-    shell_commands = list_required_commands(content, frozenset())
-    if not any(
-        args[0] == "set" and any(arg.startswith("-") and "e" in arg[1:] for arg in args[1:]) for args in shell_commands
-    ):
-        return []
     commands = []
-    for args in shell_commands:
+    is_errexit = False
+    for args in list_required_commands(content, frozenset()):
+        if args[0] == "set":
+            is_errexit = _get_errexit(args[1:], is_errexit=is_errexit)
+        if not is_errexit:
+            continue
         match args:
             case ("bash" | "sh", child, *_) | (child, *_) if child.endswith(".sh"):
                 commands.extend(_list_script_commands(child, repo, ctx, ancestors | {str(path)}))
             case _:
                 commands.append(_normalize_tool_args(args))
     return commands
+
+
+def _get_errexit(options: tuple[str, ...], *, is_errexit: bool) -> bool:
+    remaining = iter(options)
+    for option in remaining:
+        if option == "--" or not option.startswith(("-", "+")):
+            break
+        if option in {"-o", "+o"}:
+            if next(remaining, None) == "errexit":
+                is_errexit = option == "-o"
+        elif "e" in option[1:]:
+            is_errexit = option.startswith("-")
+    return is_errexit
 
 
 @cache

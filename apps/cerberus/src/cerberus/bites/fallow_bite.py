@@ -212,6 +212,8 @@ def _validate_inputs(ctx: Context, res: CheckResult) -> None:
     coverage_path = (repo_root / ctx.config.fallow_coverage_report).resolve()
     if not coverage_path.is_relative_to(repo_root):
         res.fail("fallow coverage_report must be inside the repository")
+    elif not coverage_path.is_file():
+        res.fail(f"fallow coverage_report must name an existing repository file: {ctx.config.fallow_coverage_report}")
 
 
 def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]:
@@ -227,7 +229,7 @@ def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]
         for analysis in ("dead-code", "health"):
             report_path = Path(shield_dir) / f"{analysis}-report.json"
             coverage_flags: list[str] = []
-            if analysis == "health" and coverage_path.is_file():
+            if analysis == "health":
                 coverage_flags = ["--coverage", str(coverage_path)]
             argv = [
                 "pnpx",

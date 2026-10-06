@@ -93,6 +93,7 @@ def _argv(spec: str, analysis: str, repo_root: Path) -> list[str]:
         str(repo_root.resolve()),
         "--config",
         f"{_SHIELD_DIR_PLACEHOLDER}/fallow.json",
+        *(["--coverage", str(repo_root / "coverage/coverage-final.json")] if analysis == "health" else []),
         "--output-file",
         f"{_SHIELD_DIR_PLACEHOLDER}/{analysis}-report.json",
     ]
@@ -121,7 +122,9 @@ def repo_root(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def run_fallow(repo: Repo, run_check: RunCheck, make_context: MakeContext, repo_root: Path) -> RunFallow:
-    def _run(files: dict[str, str], *, verbose: bool = False) -> CheckResult:
+    def _run(files: dict[str, str], *, verbose: bool = False, has_coverage: bool = True) -> CheckResult:
+        if has_coverage:
+            files = {"coverage/coverage-final.json": "{}", **files}
         for path, content in files.items():
             target = repo_root / path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -535,12 +538,18 @@ def test_29_9_1_passes_measured_istanbul_coverage_only_to_the_health_analysis(
     assert health[health.index("--coverage") + 1] == str(repo_root / "coverage/coverage-final.json")
 
 
-def test_29_9_2_keeps_static_health_analysis_when_no_coverage_report_exists(
-    run_fallow: RunFallow, fake_proc: FakeProc
+@pytest.mark.parametrize("report", ["coverage/coverage-final.json", "reports/istanbul.json"])
+def test_29_9_2_rejects_missing_coverage_without_falling_back_to_other_inputs(
+    run_fallow: RunFallow, fake_proc: FakeProc, report: str, monkeypatch: pytest.MonkeyPatch, status: type[Status]
 ) -> None:
-    _serve_clean(fake_proc)
-    run_fallow({"package.json": _PACKAGE_JSON})
-    assert all("--coverage" not in argv for argv, _ in fake_proc.calls)
+    monkeypatch.setenv("FALLOW_COVERAGE", "/outside/coverage.json")
+    result = run_fallow(
+        {"package.json": _PACKAGE_JSON, "cerberus.toml": f'[fallow]\ncoverage_report = "{report}"\n'},
+        has_coverage=report != "coverage/coverage-final.json",
+    )
+    assert result.status is status.FAIL
+    assert "must name an existing repository file" in result.findings[0].message
+    assert fake_proc.calls == []
 
 
 def test_29_10_1_registers_explicit_runtime_entry_points_in_both_analyses(
