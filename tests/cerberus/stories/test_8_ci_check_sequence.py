@@ -44,8 +44,10 @@ def run_ci_sequence(run_check_with_files: RunCheckWithFiles) -> RunCiSequence:
         files: dict[str, str] = {}
         if python:
             files["pyproject.toml"] = "x"
+            files["app.py"] = "print(1)"
         if ts:
             files["package.json"] = "{}"
+            files["app.ts"] = "console.log(1);"
         if ci:
             files[".github/workflows/ci.yml"] = ci
         return run_check_with_files(CHECK_ID, files)
@@ -167,3 +169,23 @@ def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(
     )
     result = run_ci_sequence(python=True, ci=ci)
     assert result.findings == [fail("python ci is missing `pytest`")]
+
+
+@pytest.mark.parametrize("missing", ["", "uv sync --locked", "rumdl check", "pnpm install --frozen-lockfile"])
+def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
+    run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
+) -> None:
+    steps = ("pnpm install --frozen-lockfile", "uv sync --locked", "uv run rumdl check")
+    ci = "jobs:\n  ci:\n    steps:\n" + "".join(
+        f"      - run: {step}\n" for step in steps if not missing or missing not in step
+    )
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            "package.json": "{}",
+            "pyproject.toml": "[tool.uv]\npackage = false\n",
+            ".github/workflows/ci.yml": ci,
+        },
+    )
+    label = "ts" if missing.startswith("pnpm") else "python"
+    assert result.findings == ([fail(f"{label} ci is missing `{missing}`")] if missing else [sequence_pass])

@@ -36,6 +36,7 @@ typecheck:
 lint:
     pnpm run lint:fix
     pnpm run format
+    pnpm run lint:mermaid
     uv run rumdl check --fix
     uv run rumdl fmt
     uv run ruff check --fix

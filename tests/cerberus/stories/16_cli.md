@@ -93,3 +93,9 @@ Bites keep their one-line verdicts by default; `--verbose` asks them to also ite
 ### 16.14.1 bite settings match module names
 
 ### 16.14.2 local overrides use bite names and explain each setting
+
+## 16.15 choosing language checks from source files
+
+### 16.15.1 skips source bites when manifests only install tools
+
+### 16.15.2 runs source bites only for languages present

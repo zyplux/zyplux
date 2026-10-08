@@ -15,6 +15,7 @@ from cerberus.graph import explain_text, query_text
 from cerberus.graph import load as load_graph
 from cerberus.graph import write as write_graph
 from cerberus.model import CheckResult, Repo, Scope, Status
+from cerberus.stacks import has_source
 
 if TYPE_CHECKING:
     import networkx as nx
@@ -81,6 +82,10 @@ def _select_checks(only: list[str] | None) -> list[bites.Check]:
 
 def _run_check(check: bites.Check, repo: Repo, ctx: Context) -> CheckResult:
     try:
+        if check.languages and not any(has_source(repo, ctx, language) for language in check.languages):
+            skipped = CheckResult(check.id, repo.name)
+            skipped.skip(f"no {' or '.join(check.languages)} source files")
+            return skipped
         return check.run(repo, ctx)
     except Exception as exc:
         logger.exception("bite %s crashed for %s", check.id, repo.name)

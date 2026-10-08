@@ -8,6 +8,8 @@ Verifies repository invariants — CI workflow structure, justfile and dependenc
 
 The `justfile` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd` and `fallow` bites run their tools via `pnpx` at exact versions pinned in [`tool_pins.py`](src/cerberus/tool_pins.py), so every cerberus release measures with the same tools everywhere; `pnpm` must be on PATH.
 
+Language checks use tracked and unignored source files: JavaScript/TypeScript checks require JS/TS files, and Python checks require Python files. Manifests used only to install tooling do not require application lint, typecheck or test steps. Configuration, dependency, CI and Markdown checks still apply.
+
 ## Lint a repo
 
 ```sh

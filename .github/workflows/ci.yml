@@ -31,6 +31,7 @@ jobs:
       - run: uv run --no-sync rumdl check
       - run: uv run --no-sync rumdl fmt --check
       - run: pnpm run lint
+      - run: pnpm run lint:mermaid
       - run: pnpm exec prettier --check .
       - run: uv run --no-sync ruff check
       - run: uv run --no-sync ruff format --check

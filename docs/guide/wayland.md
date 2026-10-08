@@ -133,7 +133,7 @@ sequenceDiagram
     W->>U: "share which screen / window?"
     U-->>W: picks output or surface
     W-->>Portal: chosen source + capabilities
-    Portal->>PW: create stream node; hand fd to App
+    Portal->>PW: create stream node and hand fd to App
     loop per frame
         W->>PW: dmabuf of captured surface/output
         PW->>App: stream frame (zero-copy when possible)

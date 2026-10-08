@@ -462,3 +462,45 @@ def test_16_14_2_local_overrides_use_bite_names_and_explain_each_setting(bite_mo
         if not explanation.startswith("#") or not explanation.removeprefix("#").strip():
             undocumented.append(assignment.group().rstrip("= ").strip())
     assert undocumented == []
+
+
+def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    (conforming_repo / ".github/workflows/ci.yml").write_text(
+        CONFORMING_CI.replace(
+            "      - run: echo ci",
+            (
+                "      - run: pnpm install --frozen-lockfile\n"
+                "      - run: uv sync --locked\n"
+                "      - run: uv run rumdl check"
+            ),
+        )
+    )
+    result = invoke_lint()
+    assert result.exit_code == 0, result.output
+    assert "○ ruff: no python source files" in result.output
+    assert "○ knip: no javascript source files" in result.output
+    assert "○ jscpd: no python or javascript source files" in result.output
+    assert "🐾 ci_check_sequence" in result.output
+
+
+@pytest.mark.parametrize(
+    "case",
+    [("app.py", "ruff", "knip", "javascript"), ("app.ts", "knip", "ruff", "python")],
+)
+def test_16_15_2_runs_source_bites_only_for_languages_present(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    case: tuple[str, str, str, str],
+) -> None:
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    source, active_check, skipped_check, language = case
+    (conforming_repo / source).write_text("")
+    result = invoke_lint("--check", active_check, "--check", skipped_check)
+    assert result.exit_code == 1, result.output
+    assert f"error: 💢 {active_check}:" in result.output
+    assert f"○ {skipped_check}: no {language} source files" in result.output

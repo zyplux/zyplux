@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from cerberus import justfile
 from cerberus.model import CheckResult, Repo, Scope
 from cerberus.shell_commands import list_required_commands, list_shell_commands
+from cerberus.stacks import can_run_command, has_source
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -184,7 +185,9 @@ def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
         required = [
             args
             for args in list_required_commands(baseline.bodies.get(recipe, ""), manifests)
-            if (args[0] != "pnpm" or "package.json" in manifests) and (args[0] != "uv" or "pyproject.toml" in manifests)
+            if (args[0] != "pnpm" or "package.json" in manifests)
+            and (args[0] != "uv" or "pyproject.toml" in manifests)
+            and can_run_command(repo, ctx, args)
         ]
         missing = [args for args in required if not any(_matches_tool_command(command, args) for command in actual)]
         for args in missing:
@@ -223,7 +226,7 @@ def _check_clean_uses_cz(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
         res.fail("`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`")
 
 
-def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> None:
+def _check_pipeline(jf: justfile.Justfile, pipeline: tuple[str, ...], cfg: Config, res: CheckResult) -> None:
     marker = tuple(cfg.default_recipe_marker.split())
     if "default" in jf.recipes and not any(
         args[: len(marker)] == marker for args in list_required_commands(jf.bodies.get("default", ""), frozenset())
@@ -231,8 +234,8 @@ def _check_pipeline(jf: justfile.Justfile, cfg: Config, res: CheckResult) -> Non
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
     if "check" in jf.recipes:
         deps = _calc_execution_order(jf, "check")[:-1]
-        if not justfile.is_subsequence(list(cfg.check_pipeline), deps):
-            res.fail(f"`check` steps {deps} must contain {list(cfg.check_pipeline)} in order")
+        if not justfile.is_subsequence(list(pipeline), deps):
+            res.fail(f"`check` steps {deps} must contain {list(pipeline)} in order")
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
@@ -252,12 +255,20 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    _check_aliases(jf.aliases, cfg.required_aliases, "", res)
+    source_recipes = (
+        set()
+        if any(has_source(repo, ctx, language) for language in ("python", "javascript"))
+        else {"knip", "typecheck", "test"}
+    )
+    aliases = {alias: target for alias, target in cfg.required_aliases.items() if target not in source_recipes}
+    recipes = tuple(recipe for recipe in cfg.required_recipes if recipe not in source_recipes)
+    pipeline = tuple(recipe for recipe in cfg.check_pipeline if recipe not in source_recipes)
+    _check_aliases(jf.aliases, aliases, "", res)
     _check_aliases(jf.aliases, cfg.recommended_aliases, "recommended ", res)
-    _check_recipes(jf.recipes, cfg.required_recipes, "required ", res)
+    _check_recipes(jf.recipes, recipes, "required ", res)
     _check_recipes(jf.recipes, cfg.recommended_recipes, "recommended ", res)
     try:
-        _check_pipeline(jf, cfg, res)
+        _check_pipeline(jf, pipeline, cfg, res)
         _check_tool_commands(jf, repo, ctx, res)
         _check_local_cerberus_run(jf, repo, ctx, res)
     except justfile.JustfileError as err:

@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo, Scope
+    from cerberus.stacks import Language
 
 
 @dataclass(frozen=True)
@@ -49,10 +50,43 @@ class Check:
     summary: str
     scope: Scope
     run: Callable[[Repo, Context], CheckResult]
+    languages: tuple[Language, ...] = ()
+
+
+PYTHON_CHECKS = {
+    "pyrefly",
+    "ruff",
+    "pytest",
+    "story_tests_lockstep_py",
+    "cli_py_test_seam",
+    "lib_py_test_seam",
+}
+JAVASCRIPT_CHECKS = {
+    "knip",
+    "vitest",
+    "tsc",
+    "consistent_package_export_entries",
+    "explicit_module_side_effects",
+    "consistent_workspace_project_references",
+    "no_worker_filesystem_imports",
+    "vitest_coverage",
+    "story_tests_lockstep_ts",
+    "fallow",
+}
+
+
+def _list_languages(check_id: str) -> tuple[Language, ...]:
+    if check_id in PYTHON_CHECKS:
+        return ("python",)
+    if check_id in JAVASCRIPT_CHECKS:
+        return ("javascript",)
+    if check_id == "jscpd":
+        return ("python", "javascript")
+    return ()
 
 
 ALL: tuple[Check, ...] = tuple(
-    Check(module.ID, module.SUMMARY, module.SCOPE, module.run)
+    Check(module.ID, module.SUMMARY, module.SCOPE, module.run, _list_languages(module.ID))
     for module in (
         justfile_bite,
         ci_workflow_gate_bite,

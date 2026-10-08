@@ -6,6 +6,7 @@ import yaml
 
 from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.stacks import can_run_command
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -69,9 +70,19 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     commands = workflow.run_commands(doc)
 
     if has_ts:
-        _verify_sequence(res, "ts", cfg.ci_required_ts, commands)
+        _verify_sequence(
+            res,
+            "ts",
+            tuple(step for step in cfg.ci_required_ts if can_run_command(repo, ctx, tuple(step.split()))),
+            commands,
+        )
     if has_python:
-        _verify_sequence(res, "python", cfg.ci_required_python, commands)
+        _verify_sequence(
+            res,
+            "python",
+            tuple(step for step in cfg.ci_required_python if can_run_command(repo, ctx, tuple(step.split()))),
+            commands,
+        )
 
     if not res.problems:
         res.ok("ci.yml runs the canonical sequence")
