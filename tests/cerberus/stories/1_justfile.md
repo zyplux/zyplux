@@ -237,5 +237,3 @@ The test recipe runs JavaScript tests when `package.json` exists, then Python te
 ## 1.16 selecting recipes from source files
 
 ### 1.16.1 requires application recipes when python stubs are present
-
-### 1.16.2 requires formatting for markdown only packages

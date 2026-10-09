@@ -474,30 +474,29 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
             "      - run: echo ci",
             (
                 "      - run: pnpm install --frozen-lockfile\n"
-                "      - run: pnpm exec prettier --check .\n"
                 "      - run: uv sync --locked\n"
-                "      - run: uv run rumdl check"
+                "      - run: uv run --no-sync rumdl check"
             ),
         )
     )
     result = invoke_lint()
     assert result.exit_code == 0, result.output
     assert "○ ruff: no Python source or ruff.toml" in result.output
-    assert "○ knip: no JavaScript source or knip.prod.json" in result.output
+    assert "○ knip: no TypeScript source or knip.prod.json" in result.output
     assert "○ pyrefly: no Python source or pyrefly.toml" in result.output
     assert "○ pytest: no Python source or coverage configuration" in result.output
-    assert "○ jscpd: no python or javascript source files" in result.output
+    assert "○ jscpd: no python or typescript source files" in result.output
     assert "🐾 ci_check_sequence" in result.output
 
 
 @pytest.mark.parametrize(
     "case",
     [
-        ("app.py", "ruff", "knip", "no JavaScript source or knip.prod.json"),
-        ("app.pyi", "ruff", "knip", "no JavaScript source or knip.prod.json"),
+        ("app.py", "ruff", "knip", "no TypeScript source or knip.prod.json"),
+        ("app.pyi", "ruff", "knip", "no TypeScript source or knip.prod.json"),
         ("app.ts", "knip", "ruff", "no Python source or ruff.toml"),
-        ("app.py", "pyrefly", "knip", "no JavaScript source or knip.prod.json"),
-        ("app.pyi", "pyrefly", "knip", "no JavaScript source or knip.prod.json"),
+        ("app.py", "pyrefly", "knip", "no TypeScript source or knip.prod.json"),
+        ("app.pyi", "pyrefly", "knip", "no TypeScript source or knip.prod.json"),
     ],
 )
 def test_16_15_2_runs_source_bites_only_for_languages_present(

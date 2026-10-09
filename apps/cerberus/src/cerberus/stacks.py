@@ -7,22 +7,24 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
 
-type Language = Literal["python", "javascript"]
+type Language = Literal["python", "typescript"]
 
 SOURCE_SUFFIXES: dict[Language, frozenset[str]] = {
     "python": frozenset({".py", ".pyi"}),
-    "javascript": frozenset({".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"}),
+    "typescript": frozenset({".ts", ".tsx", ".mts", ".cts"}),
 }
 TOOL_LANGUAGES: dict[str, Language] = {
     "vulture": "python",
     "ruff": "python",
     "pyrefly": "python",
     "pytest": "python",
-    "knip": "javascript",
-    "typecheck": "javascript",
-    "lint": "javascript",
-    "lint:fix": "javascript",
-    "test": "javascript",
+    "knip": "typescript",
+    "typecheck": "typescript",
+    "lint": "typescript",
+    "lint:fix": "typescript",
+    "format": "typescript",
+    "prettier": "typescript",
+    "test": "typescript",
 }
 
 

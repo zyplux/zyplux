@@ -33,7 +33,7 @@ _TS_CI = (
     "      - run: pnpm run knip\n"
     "      - run: pnpm run typecheck\n"
     "      - run: pnpm run lint\n"
-    "      - run: pnpx prettier --check .\n"
+    "      - run: pnpm exec prettier --check .\n"
     "      - run: pnpm run test\n"
 )
 
@@ -92,8 +92,9 @@ def test_8_3_1_passes_a_python_ci_workflow_that_runs_every_required_step_in_orde
     [
         (_PY_CI.replace("      - run: uv run --no-sync pytest\n", ""), "pytest"),
         (_PY_CI.replace("uv sync --locked --all-groups", "uv sync --all-groups"), "uv sync --locked"),
+        (_PY_CI.replace("uv run --no-sync vulture", "uv run vulture"), "vulture"),
     ],
-    ids=["step_missing", "step_command_wrong"],
+    ids=["step_missing", "step_command_wrong", "runner_command_wrong"],
 )
 def test_8_3_2_fails_when_a_required_python_step_is_missing_or_does_not_match_its_required_command(
     run_ci_sequence: RunCiSequence, ci: str, missing_step: str, fail: MakeFinding
@@ -131,12 +132,18 @@ def test_8_4_1_passes_a_ts_ci_workflow_that_runs_every_required_step_in_order(
     assert result.findings == [sequence_pass]
 
 
+@pytest.mark.parametrize(
+    ("ci", "missing_step"),
+    [
+        (_TS_CI.replace("      - run: pnpm run knip\n", ""), "pnpm run knip"),
+        (_TS_CI.replace("pnpm exec prettier", "pnpx prettier"), "prettier --check"),
+    ],
+)
 def test_8_4_2_fails_when_a_required_ts_step_is_missing_or_does_not_match_its_required_command(
-    run_ci_sequence: RunCiSequence, fail: MakeFinding
+    run_ci_sequence: RunCiSequence, ci: str, missing_step: str, fail: MakeFinding
 ) -> None:
-    ci = _TS_CI.replace("      - run: pnpm run knip\n", "")
     result = run_ci_sequence(ts=True, ci=ci)
-    assert result.findings == [fail("ts ci is missing `pnpm run knip`")]
+    assert result.findings == [fail(f"ts ci is missing `{missing_step}`")]
 
 
 def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
@@ -148,7 +155,7 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
         "      - run: pnpm run typecheck\n"
         "      - run: pnpm run knip\n"
         "      - run: pnpm run lint\n"
-        "      - run: pnpx prettier --check .\n"
+        "      - run: pnpm exec prettier --check .\n"
         "      - run: pnpm run test\n"
     )
     result = run_ci_sequence(ts=True, ci=ci)
@@ -179,6 +186,8 @@ def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(
         "printf '%s' 'pnpm run lint'",
         "pnpm run lint --help",
         "pnpm run lint --version",
+        'pnpm run "lint"',
+        "pnpm run lint $FLAGS",
     ],
 )
 def test_8_5_2_requires_canonical_commands_at_command_boundaries(
@@ -202,46 +211,44 @@ def test_8_5_3_checks_order_using_the_canonical_invocation(run_ci_sequence: RunC
     ]
 
 
-def test_8_5_4_accepts_sequential_commands_in_a_multiline_step(
-    run_ci_sequence: RunCiSequence, sequence_pass: Finding
-) -> None:
+def test_8_5_4_requires_one_canonical_command_per_ci_step(run_ci_sequence: RunCiSequence, fail: MakeFinding) -> None:
     ci = _TS_CI.replace(
-        "      - run: pnpm run lint\n      - run: pnpx prettier --check .",
+        "      - run: pnpm run lint\n      - run: pnpm exec prettier --check .",
         "      - run: |\n          pnpm run lint\n          pnpm exec prettier --check .",
     )
     result = run_ci_sequence(ts=True, ci=ci)
-    assert result.findings == [sequence_pass]
-
-
-@pytest.mark.parametrize("step_count", [2, 3])
-def test_8_5_5_accepts_failure_preserving_command_chains(
-    run_ci_sequence: RunCiSequence, sequence_pass: Finding, step_count: int
-) -> None:
-    step_lines = _TS_CI.splitlines()[3 : 3 + step_count]
-    commands = [line.removeprefix("      - run: ") for line in step_lines]
-    ci = _TS_CI.replace("\n".join(step_lines), f"      - run: {' && '.join(commands)}")
-    result = run_ci_sequence(ts=True, ci=ci)
-    assert result.findings == [sequence_pass]
+    assert result.findings == [
+        fail("ts ci is missing `pnpm run lint`"),
+        fail("ts ci is missing `prettier --check`"),
+    ]
 
 
 @pytest.mark.parametrize(
     "command",
-    ["pnpm run lint || true", "pnpm run lint &", "false && pnpm run lint", "pnpm run lint && true || true"],
+    [
+        "pnpm run lint || true",
+        "pnpm run lint &",
+        "false && pnpm run lint",
+        "pnpm run lint && true",
+        "if true; then set +e; fi; pnpm run lint",
+    ],
 )
-def test_8_5_6_rejects_skipped_background_or_masked_commands(
+def test_8_5_5_rejects_skipped_background_or_chained_commands(
     run_ci_sequence: RunCiSequence, command: str, fail: MakeFinding
 ) -> None:
     result = run_ci_sequence(ts=True, ci=_TS_CI.replace("pnpm run lint", command))
     assert result.findings == [fail("ts ci is missing `pnpm run lint`")]
 
 
-@pytest.mark.parametrize(
-    "missing", ["", "uv sync --locked", "rumdl check", "pnpm install --frozen-lockfile", "prettier --check"]
-)
+@pytest.mark.parametrize("missing", ["", "uv sync --locked", "rumdl check", "pnpm install --frozen-lockfile"])
 def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
 ) -> None:
-    steps = ("pnpm install --frozen-lockfile", "pnpm exec prettier --check .", "uv sync --locked", "uv run rumdl check")
+    steps = (
+        "pnpm install --frozen-lockfile",
+        "uv sync --locked",
+        "uv run --no-sync rumdl check",
+    )
     ci = "jobs:\n  ci:\n    steps:\n" + "".join(
         f"      - run: {step}\n" for step in steps if not missing or missing not in step
     )
@@ -253,7 +260,7 @@ def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
             ".github/workflows/ci.yml": ci,
         },
     )
-    label = "ts" if missing.startswith(("pnpm", "prettier")) else "python"
+    label = "ts" if missing.startswith("pnpm") else "python"
     assert result.findings == ([fail(f"{label} ci is missing `{missing}`")] if missing else [sequence_pass])
 
 
@@ -271,8 +278,8 @@ def test_8_6_2_requires_python_quality_steps_for_stub_only_packages(
     assert result.findings == [fail("python ci is missing `pyrefly check`")]
 
 
-@pytest.mark.parametrize("path", ["eslint.config.js", "eslint.config.ts", ".prettierrc.js", "vitest.config.ts"])
-def test_8_6_3_requires_javascript_quality_steps_for_executable_tool_configuration(
+@pytest.mark.parametrize("path", ["eslint.config.ts", "vitest.config.ts"])
+def test_8_6_3_requires_typescript_quality_steps_for_executable_tool_configuration(
     run_check_with_files: RunCheckWithFiles, path: str, fail: MakeFinding
 ) -> None:
     result = run_check_with_files(
@@ -292,14 +299,15 @@ def test_8_6_3_requires_javascript_quality_steps_for_executable_tool_configurati
     ]
 
 
-@pytest.mark.parametrize("has_prettier", [False, True])
-def test_8_6_4_requires_prettier_for_markdown_only_packages(
-    run_check_with_files: RunCheckWithFiles, fail: MakeFinding, sequence_pass: Finding, *, has_prettier: bool
+def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
+    run_check_with_files: RunCheckWithFiles, sequence_pass: Finding
 ) -> None:
-    ci = "jobs:\n  ci:\n    steps:\n      - run: pnpm install --frozen-lockfile\n"
-    if has_prettier:
-        ci += "      - run: pnpm exec prettier --check .\n"
     result = run_check_with_files(
-        CHECK_ID, {"package.json": "{}", "README.md": "# demo\n", ".github/workflows/ci.yml": ci}
+        CHECK_ID,
+        {
+            "eslint.config.js": "export default {};\n",
+            "package.json": "{}",
+            ".github/workflows/ci.yml": "jobs:\n  ci:\n    steps:\n      - run: pnpm install --frozen-lockfile\n",
+        },
     )
-    assert result.findings == ([sequence_pass] if has_prettier else [fail("ts ci is missing `prettier --check`")])
+    assert result.findings == [sequence_pass]

@@ -6,7 +6,7 @@ import yaml
 
 from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.shell_commands import list_required_commands, matches_tool_command
+from cerberus.shell_commands import get_shell_parser, list_command_args, matches_tool_command
 from cerberus.stacks import can_run_command
 
 if TYPE_CHECKING:
@@ -38,10 +38,27 @@ def _parse_workflow(content: str) -> dict[str, Any] | None:
 def _matches_step(command: tuple[str, ...], step: str) -> bool:
     required = tuple(step.split())
     if required[0] not in {"uv", "pnpm"}:
-        match command:
-            case ("uv", "run", "--no-sync", *args) | ("uv", "run", *args) | ("pnpx", *args) | ("pnpm", "exec", *args):
-                command = tuple(args)
+        prefix = ("pnpm", "exec") if required[0] == "prettier" else ("uv", "run", "--no-sync")
+        if command[: len(prefix)] != prefix:
+            return False
+        command = command[len(prefix) :]
     return matches_tool_command(command, required)
+
+
+def _parse_step_command(script: str) -> tuple[str, ...]:
+    root = get_shell_parser().parse(script.encode()).root_node
+    statements = [child for child in root.named_children if child.type != "comment"]
+    if root.has_error or len(statements) != 1 or statements[0].type != "command":
+        return ()
+    if any(child.type == "&" for child in root.children):
+        return ()
+    parts = statements[0].named_children
+    if not parts or parts[0].type != "command_name":
+        return ()
+    words = [*parts[0].named_children, *parts[1:]]
+    if any(word.type != "word" or word.named_children for word in words):
+        return ()
+    return list_command_args(statements[0])
 
 
 def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
@@ -77,8 +94,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
-    commands = [args for script in workflow.run_commands(doc) for args in list_required_commands(script, manifests)]
+    commands = [_parse_step_command(script) for script in workflow.run_commands(doc)]
 
     if has_ts:
         _verify_sequence(

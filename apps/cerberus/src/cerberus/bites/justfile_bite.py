@@ -245,7 +245,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     cfg = ctx.config
     source_recipes = (
         set()
-        if any(has_source(repo, ctx, language) for language in ("python", "javascript"))
+        if any(has_source(repo, ctx, language) for language in ("python", "typescript"))
         else {"knip", "typecheck", "test"}
     )
     aliases = {alias: target for alias, target in cfg.required_aliases.items() if target not in source_recipes}

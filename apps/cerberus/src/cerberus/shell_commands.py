@@ -51,14 +51,6 @@ def _list_commands(node: Node, manifests: frozenset[str]) -> Iterator[tuple[str,
                 yield from _list_commands(child, manifests)
         case "if_statement":
             yield from _list_manifest_commands(node, manifests)
-        case "list" if any(child.type == "&&" for child in node.children):
-            if not any(
-                list_command_args(command)[:1] == ("false",)
-                for command in walk_nodes(node)
-                if command.type == "command"
-            ):
-                for child in node.named_children:
-                    yield from _list_commands(child, manifests)
         case "list":
             yield from _list_empty_pytest_commands(node)
 

@@ -58,7 +58,7 @@ PYTHON_CHECKS = {
     "cli_py_test_seam",
     "lib_py_test_seam",
 }
-JAVASCRIPT_CHECKS = {
+TYPESCRIPT_CHECKS = {
     "vitest",
     "tsc",
     "consistent_package_export_entries",
@@ -74,10 +74,10 @@ JAVASCRIPT_CHECKS = {
 def _list_languages(check_id: str) -> tuple[Language, ...]:
     if check_id in PYTHON_CHECKS:
         return ("python",)
-    if check_id in JAVASCRIPT_CHECKS:
-        return ("javascript",)
+    if check_id in TYPESCRIPT_CHECKS:
+        return ("typescript",)
     if check_id == "jscpd":
-        return ("python", "javascript")
+        return ("python", "typescript")
     return ()
 
 
