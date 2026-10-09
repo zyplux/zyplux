@@ -1,11 +1,13 @@
 import { ensure } from '@zyplux/util/assert';
+import { $ } from '@zyplux/util/shell';
 import { Parser } from 'commonmark';
-import { glob, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 
 import { command, constant, message, object } from '#optique';
 
 export const lintMermaidCommand = command('lint-mermaid', object({ command: constant('lint-mermaid' as const) }), {
-  brief: message`Check Mermaid diagrams in Markdown files under the current directory.`,
+  brief: message`Check Mermaid diagrams in tracked and unignored Markdown under the current Git directory.`,
 });
 
 type MermaidFence = { source: string; startLine: number };
@@ -34,8 +36,13 @@ const findParseError = async (source: string, parse: typeof import('mermaid').de
 const lintMarkdown = async (parse: typeof import('mermaid').default.parse) => {
   const failures: string[] = [];
   let fenceCount = 0;
-  const markdownPaths = glob('**/*.md', { exclude: ['**/logs/**', '**/node_modules/**'] });
-  for await (const markdownPath of markdownPaths) {
+  const markdownListing =
+    await $`git ls-files --cached --others --exclude-standard -z -- *.md :!:**/logs/** :!:**/node_modules/**`.quiet();
+  const markdownPaths = markdownListing
+    .text()
+    .split('\0')
+    .filter(markdownPath => markdownPath !== '' && existsSync(markdownPath));
+  for (const markdownPath of markdownPaths) {
     const markdown = await readFile(markdownPath, 'utf8');
     for (const fence of listFences(markdown)) {
       fenceCount += 1;

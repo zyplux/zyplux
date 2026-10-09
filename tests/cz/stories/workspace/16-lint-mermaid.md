@@ -15,3 +15,7 @@
 ### 16.1.6 keeps shorter and mismatched delimiters inside the diagram
 
 ### 16.1.7 ignores fence examples inside other code blocks
+
+### 16.1.8 checks hidden files and directories while excluding dependency and log trees
+
+### 16.1.9 skips deleted tracked Markdown files

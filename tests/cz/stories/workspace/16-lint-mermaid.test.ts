@@ -1,4 +1,14 @@
-import { describe, expect, test } from './workspace.ts';
+import { describe, expect, test as workspaceTest } from './workspace.ts';
+
+const test = workspaceTest.extend<{ markdownSetup: undefined }>({
+  markdownSetup: [
+    async ({ markdownRepo }, use) => {
+      await markdownRepo.init();
+      await use(undefined);
+    },
+    { auto: true },
+  ],
+});
 
 describe('16.1 checking Markdown diagrams', () => {
   test('16.1.1 checks diagrams in nested Markdown files and ignores dependency and log folders', async ({
@@ -62,6 +72,40 @@ describe('16.1 checking Markdown diagrams', () => {
 
   test('16.1.7 ignores fence examples inside other code blocks', async ({ cz, logs, tempDir }) => {
     await tempDir.write('guide.md', '````text\n```mermaid\ninvalid\n```\n````\n\n    ~~~mermaid\n    invalid\n    ~~~');
+
+    await cz.run('lint-mermaid');
+
+    expect(logs).toHaveLogged('All 0 mermaid diagrams parse.');
+  });
+
+  test('16.1.8 checks hidden files and directories while excluding dependency and log trees', async ({
+    cz,
+    logs,
+    markdownRepo,
+    tempDir,
+  }) => {
+    await tempDir.write('.github/copilot-instructions.md', '~~~mermaid\ninvalid\n~~~');
+    await tempDir.write('docs/.agents/nested/.guide.md', '````mermaid\ninvalid\n````');
+    await tempDir.write('.agents/node_modules/package/README.md', '```mermaid\ninvalid\n```');
+    await tempDir.write('.github/logs/run.md', '```mermaid\ninvalid\n```');
+    await tempDir.write('.claude/worktrees/old/docs.md', '```mermaid\ninvalid\n```');
+    markdownRepo.track('.github/copilot-instructions.md');
+
+    const lintRun = cz.run('lint-mermaid');
+    await expect(lintRun).rejects.toThrow('2 of 2 mermaid diagrams failed to parse');
+    await expect(lintRun).rejects.toThrow('.github/copilot-instructions.md:1');
+    await expect(lintRun).rejects.toThrow('docs/.agents/nested/.guide.md:1');
+
+    await tempDir.write('.github/copilot-instructions.md', '~~~mermaid\nflowchart LR\n  A --> B\n~~~');
+    await tempDir.write('docs/.agents/nested/.guide.md', '````mermaid\nflowchart LR\n  A --> B\n````');
+    await cz.run('lint-mermaid');
+    expect(logs).toHaveLogged('All 2 mermaid diagrams parse.');
+  });
+
+  test('16.1.9 skips deleted tracked Markdown files', async ({ cz, logs, markdownRepo, tempDir }) => {
+    await tempDir.write('removed.md', '```mermaid\ninvalid\n```');
+    markdownRepo.track('removed.md');
+    await markdownRepo.remove('removed.md');
 
     await cz.run('lint-mermaid');
 
