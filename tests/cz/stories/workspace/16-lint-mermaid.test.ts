@@ -34,4 +34,37 @@ describe('16.1 checking Markdown diagrams', () => {
     await cz.run('lint-mermaid');
     expect(logs).toHaveLogged('All 1 mermaid diagrams parse.');
   });
+
+  test('16.1.4 checks tilde and longer backtick fences inside Markdown containers', async ({ cz, logs, tempDir }) => {
+    await tempDir.write(
+      'guide.md',
+      '# Guide\r\n\r\n~~~ mermaid title\r\nflowchart LR\r\n  A --> B\r\n~~~~\r\n\r\n> ````mermaid\r\n> sequenceDiagram\r\n>   Alice->>Bob: Hello\r\n> `````\r\n\r\n- Diagram:\r\n\r\n  ~~~~mermaid\r\n  flowchart LR\r\n    A --> B',
+    );
+
+    await cz.run('lint-mermaid');
+
+    expect(logs).toHaveLogged('All 3 mermaid diagrams parse.');
+  });
+
+  test('16.1.5 reports invalid diagrams across fence delimiters with their original lines', async ({ cz, tempDir }) => {
+    await tempDir.write('broken.md', '# Broken\n\n~~~mermaid\ninvalid\n~~~\n\n> ````mermaid\n> invalid\n> ````');
+
+    await expect(cz.run('lint-mermaid')).rejects.toThrow(
+      /2 of 2 mermaid diagrams failed to parse:[\s\S]*broken.md:3[\s\S]*broken.md:7/u,
+    );
+  });
+
+  test('16.1.6 keeps shorter and mismatched delimiters inside the diagram', async ({ cz, tempDir }) => {
+    await tempDir.write('broken.md', '````mermaid\nflowchart LR\n  A --> B\n```\n~~~\n````');
+
+    await expect(cz.run('lint-mermaid')).rejects.toThrow('1 of 1 mermaid diagrams failed to parse');
+  });
+
+  test('16.1.7 ignores fence examples inside other code blocks', async ({ cz, logs, tempDir }) => {
+    await tempDir.write('guide.md', '````text\n```mermaid\ninvalid\n```\n````\n\n    ~~~mermaid\n    invalid\n    ~~~');
+
+    await cz.run('lint-mermaid');
+
+    expect(logs).toHaveLogged('All 0 mermaid diagrams parse.');
+  });
 });

@@ -61,14 +61,16 @@
     "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
+    "@happy-dom/global-registrator": "catalog:",
     "@optique/core": "catalog:",
     "@optique/run": "catalog:",
     "@zyplux/util": "workspace:*",
-    "zod": "catalog:",
-    "@happy-dom/global-registrator": "catalog:",
-    "mermaid": "catalog:"
+    "commonmark": "catalog:",
+    "mermaid": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/commonmark": "catalog:",
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
     "publint": "catalog:"

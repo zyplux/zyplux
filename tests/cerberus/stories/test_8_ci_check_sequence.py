@@ -189,3 +189,17 @@ def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     )
     label = "ts" if missing.startswith("pnpm") else "python"
     assert result.findings == ([fail(f"{label} ci is missing `{missing}`")] if missing else [sequence_pass])
+
+
+def test_8_6_2_requires_python_quality_steps_for_stub_only_packages(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            "app.pyi": "",
+            "pyproject.toml": "[project]\nname = 'sample-stubs'\nversion = '0.0.0'\n",
+            ".github/workflows/ci.yml": _PY_CI.replace("      - run: uv run --no-sync pyrefly check\n", ""),
+        },
+    )
+    assert result.findings == [fail("python ci is missing `pyrefly check`")]

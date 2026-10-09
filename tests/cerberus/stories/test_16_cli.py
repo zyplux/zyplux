@@ -489,7 +489,11 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
 
 @pytest.mark.parametrize(
     "case",
-    [("app.py", "ruff", "knip", "javascript"), ("app.ts", "knip", "ruff", "python")],
+    [
+        ("app.py", "ruff", "knip", "javascript"),
+        ("app.pyi", "ruff", "knip", "javascript"),
+        ("app.ts", "knip", "ruff", "python"),
+    ],
 )
 def test_16_15_2_runs_source_bites_only_for_languages_present(
     conforming_repo: Path,

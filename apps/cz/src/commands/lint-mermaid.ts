@@ -1,4 +1,5 @@
 import { ensure } from '@zyplux/util/assert';
+import { Parser } from 'commonmark';
 import { glob, readFile } from 'node:fs/promises';
 
 import { command, constant, message, object } from '#optique';
@@ -9,28 +10,14 @@ export const lintMermaidCommand = command('lint-mermaid', object({ command: cons
 
 type MermaidFence = { source: string; startLine: number };
 
-const FENCE_OPEN = /^\s*```mermaid\s*$/;
-const FENCE_CLOSE = /^\s*```\s*$/;
-
 const listFences = (markdown: string) => {
   const fences: MermaidFence[] = [];
-  let openedAtLine: number | undefined;
-  let fenceLines: string[] = [];
-  for (const [index, line] of markdown.split('\n').entries()) {
-    if (openedAtLine === undefined) {
-      if (FENCE_OPEN.test(line)) {
-        openedAtLine = index + 1;
-        fenceLines = [];
-      }
-    } else if (FENCE_CLOSE.test(line)) {
-      fences.push({ source: fenceLines.join('\n'), startLine: openedAtLine });
-      openedAtLine = undefined;
-    } else {
-      fenceLines.push(line);
+  const walker = new Parser().parse(markdown).walker();
+  for (let visit = walker.next(); visit !== null; visit = walker.next()) {
+    const node = visit.node;
+    if (node.type === 'code_block' && node.info?.split(/\s+/u, 1)[0] === 'mermaid') {
+      fences.push({ source: node.literal ?? '', startLine: node.sourcepos[0][0] });
     }
-  }
-  if (openedAtLine !== undefined) {
-    fences.push({ source: fenceLines.join('\n'), startLine: openedAtLine });
   }
   return fences;
 };

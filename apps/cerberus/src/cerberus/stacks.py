@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 type Language = Literal["python", "javascript"]
 
 SOURCE_SUFFIXES: dict[Language, frozenset[str]] = {
-    "python": frozenset({".py"}),
+    "python": frozenset({".py", ".pyi"}),
     "javascript": frozenset({".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"}),
 }
 TOOL_LANGUAGES: dict[str, Language] = {

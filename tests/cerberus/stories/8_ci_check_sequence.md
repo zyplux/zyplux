@@ -30,6 +30,8 @@
 
 ### 8.5.1 fails when a required step appears only in a comment
 
-## 8.6 tooling-only repositories
+## 8.6 selecting steps from source files
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests
+
+### 8.6.2 requires python quality steps for stub only packages

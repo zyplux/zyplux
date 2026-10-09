@@ -563,8 +563,10 @@ def test_1_13_1_runs_present_workspaces_sequentially_and_preserves_failures(
     assert (calls.read_text().splitlines() if calls.exists() else []) == expected_calls
 
 
-def test_1_16_1_accepts_a_tooling_only_gate_without_application_recipes(
+@pytest.mark.parametrize("source", ["", "app.pyi"])
+def test_1_16_1_requires_application_recipes_when_python_stubs_are_present(
     run_check_with_files: RunCheckWithFiles,
+    source: str,
 ) -> None:
     content = CONFORMING
     for recipe, alias in (("knip", "k"), ("typecheck", "tc"), ("test", "t")):
@@ -575,6 +577,14 @@ def test_1_16_1_accepts_a_tooling_only_gate_without_application_recipes(
     content = content.replace("    pnpm run lint:fix\n", "").replace("    pnpm run format\n", "")
     content = content.replace("    uv run ruff check --fix\n", "").replace("    uv run ruff format\n", "")
     result = run_check_with_files(
-        CHECK_ID, {"justfile": content, "package.json": "{}", "pyproject.toml": "[tool.uv]\npackage = false\n"}
+        CHECK_ID,
+        {
+            "justfile": content,
+            "package.json": "{}",
+            "pyproject.toml": "[tool.uv]\npackage = false\n",
+            **({source: ""} if source else {}),
+        },
     )
-    assert not result.problems
+    assert bool(result.problems) is bool(source)
+    if source:
+        assert "missing required recipe `typecheck`" in [problem.message for problem in result.problems]
