@@ -72,7 +72,7 @@ def run_package_policy(
     packages = list_packages(repo, ctx)
     res = CheckResult(check_id, repo.name)
     if not packages:
-        res.skip("no named JavaScript workspace packages")
+        res.skip("no named TypeScript workspace packages")
         return res
     for name, package in packages.items():
         for finding in inspect(name, package):

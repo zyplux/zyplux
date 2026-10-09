@@ -85,6 +85,7 @@ _REPO_LAYOUT = {
     "package.json": _PKG_NO_KNIP,
     "pnpm-workspace.yaml": "packages:\n  - 'packages/*'\n  - 'tests/*'\n",
     "packages/lib/package.json": '{"name": "@demo/lib"}',
+    "packages/lib/src/index.ts": "",
     "tests/lib/package.json": '{"name": "@demo/tests-lib"}',
 }
 _NESTED_TESTS_LAYOUT = {

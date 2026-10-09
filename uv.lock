@@ -1145,7 +1145,7 @@ type = [
 
 [[package]]
 name = "zyplux-cerberus"
-version = "0.21.0"
+version = "0.22.0"
 source = { editable = "apps/cerberus" }
 dependencies = [
     { name = "networkx" },

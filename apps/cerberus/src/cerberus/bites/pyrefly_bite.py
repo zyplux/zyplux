@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.stacks import SOURCE_SUFFIXES, has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -26,7 +27,7 @@ def _python_roots(paths: list[str], source: SourceScope) -> tuple[set[str], set[
     production: set[str] = set()
     tests: set[str] = set()
     for path in paths:
-        if not path.endswith(".py"):
+        if PurePosixPath(path).suffix not in SOURCE_SUFFIXES["python"]:
             continue
         seg = path.split("/")
         if source.is_test_file(path):
@@ -118,16 +119,12 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
-    if pyproject is None:
+    if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="pyrefly") is None:
         return res
 
     production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source)
-    if not production_roots and not test_roots:
-        res.skip("no Python source")
-        return res
-
-    if py_tool_config.fail_when_embedded(pyproject, "pyrefly", res):
+    if not has_source(repo, ctx, "python") and ctx.file(repo, PATH) is None:
+        res.skip("no Python source or pyrefly.toml")
         return res
 
     config = _load_strict_config(repo, ctx, res)

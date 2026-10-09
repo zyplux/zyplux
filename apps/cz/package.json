@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "cli",
@@ -61,12 +61,16 @@
     "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
+    "@happy-dom/global-registrator": "catalog:",
     "@optique/core": "catalog:",
     "@optique/run": "catalog:",
     "@zyplux/util": "workspace:*",
+    "commonmark": "catalog:",
+    "mermaid": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/commonmark": "catalog:",
     "@types/node": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
     "publint": "catalog:"

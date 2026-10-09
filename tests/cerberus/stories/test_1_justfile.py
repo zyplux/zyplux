@@ -78,7 +78,12 @@ FREE_FORM_CUSTOM_TAIL = CONFORMING + (
 )
 
 CHECK_ID = "justfile"
-WORKSPACE_MANIFESTS = {"package.json": "{}", "pyproject.toml": "[project]\nname = 'sample'\nversion = '0.0.0'\n"}
+WORKSPACE_MANIFESTS = {
+    "app.py": "print(1)",
+    "app.ts": "console.log(1);",
+    "package.json": "{}",
+    "pyproject.toml": "[project]\nname = 'sample'\nversion = '0.0.0'\n",
+}
 
 
 @pytest.fixture
@@ -556,3 +561,30 @@ def test_1_13_1_runs_present_workspaces_sequentially_and_preserves_failures(
     )
     assert (completed.returncode == 0) is is_success, completed.stderr
     assert (calls.read_text().splitlines() if calls.exists() else []) == expected_calls
+
+
+@pytest.mark.parametrize("source", ["", "app.pyi"])
+def test_1_16_1_requires_application_recipes_when_python_stubs_are_present(
+    run_check_with_files: RunCheckWithFiles,
+    source: str,
+) -> None:
+    content = CONFORMING
+    for recipe, alias in (("knip", "k"), ("typecheck", "tc"), ("test", "t")):
+        content = content.replace(f"alias {alias} := {recipe}\n", "")
+        body = content.split(f"\n{recipe}:\n", 1)[1].split("\n\n", 1)[0]
+        content = content.replace(f"\n{recipe}:\n{body}\n", "")
+    content = content.replace("check: install knip typecheck lint test cerberus", "check: install lint cerberus")
+    content = content.replace("    pnpm run lint:fix\n", "").replace("    pnpm run format\n", "")
+    content = content.replace("    uv run ruff check --fix\n", "").replace("    uv run ruff format\n", "")
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            "justfile": content,
+            "package.json": "{}",
+            "pyproject.toml": "[tool.uv]\npackage = false\n",
+            **({source: ""} if source else {}),
+        },
+    )
+    assert bool(result.problems) is bool(source)
+    if source:
+        assert "missing required recipe `typecheck`" in [problem.message for problem in result.problems]

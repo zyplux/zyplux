@@ -462,3 +462,172 @@ def test_16_14_2_local_overrides_use_bite_names_and_explain_each_setting(bite_mo
         if not explanation.startswith("#") or not explanation.removeprefix("#").strip():
             undocumented.append(assignment.group().rstrip("= ").strip())
     assert undocumented == []
+
+
+def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
+    conforming_repo: Path, invoke_lint: Callable[..., Result]
+) -> None:
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    (conforming_repo / ".github/workflows/ci.yml").write_text(
+        CONFORMING_CI.replace(
+            "      - run: echo ci",
+            (
+                "      - run: pnpm install --frozen-lockfile\n"
+                "      - run: uv sync --locked\n"
+                "      - run: uv run --no-sync rumdl check"
+            ),
+        )
+    )
+    result = invoke_lint()
+    assert result.exit_code == 0, result.output
+    assert "○ ruff: no Python source or ruff.toml" in result.output
+    assert "○ knip: no TypeScript source or knip.prod.json" in result.output
+    assert "○ pyrefly: no Python source or pyrefly.toml" in result.output
+    assert "○ pytest: no Python source or coverage configuration" in result.output
+    assert "○ jscpd: no python or typescript source files" in result.output
+    assert "🐾 ci_check_sequence" in result.output
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("app.py", "ruff", "knip", "no TypeScript source or knip.prod.json"),
+        ("app.pyi", "ruff", "knip", "no TypeScript source or knip.prod.json"),
+        ("app.ts", "knip", "ruff", "no Python source or ruff.toml"),
+        ("app.py", "pyrefly", "knip", "no TypeScript source or knip.prod.json"),
+        ("app.pyi", "pyrefly", "knip", "no TypeScript source or knip.prod.json"),
+    ],
+)
+def test_16_15_2_runs_source_bites_only_for_languages_present(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    case: tuple[str, str, str, str],
+) -> None:
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    source, active_check, skipped_check, reason = case
+    (conforming_repo / source).write_text("")
+    result = invoke_lint("--check", active_check, "--check", skipped_check)
+    assert result.exit_code == 1, result.output
+    assert f"error: 💢 {active_check}:" in result.output
+    assert f"○ {skipped_check}: {reason}" in result.output
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ("ruff", "pyproject.toml", "[tool.ruff]\n", "ruff config lives in pyproject.toml"),
+        ("ruff", "ruff.toml", "preview = [unterminated", "could not parse ruff.toml"),
+        ("knip", "package.json", '{"knip": {}}', 'package.json must not have a "knip" key'),
+        ("knip", "knip.json", "{unterminated", "could not parse knip.json"),
+        ("knip", "knip.prod.json", "{unterminated", "could not parse knip.prod.json"),
+        ("pyrefly", "pyproject.toml", "[tool.pyrefly]\n", "pyrefly config lives in pyproject.toml"),
+        ("pyrefly", "pyrefly.toml", 'preset = "default"', 'pyrefly.toml must set `preset = "strict"`'),
+        ("pytest", "pyproject.toml", "[tool.coverage.report]\nfail_under = 80", "below the required 90"),
+    ],
+)
+def test_16_15_3_rejects_invalid_tool_configuration_without_source(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    case: tuple[str, str, str, str],
+) -> None:
+    check_id, path, content, diagnostic = case
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    (conforming_repo / path).write_text(content)
+
+    result = invoke_lint("--check", check_id)
+
+    assert result.exit_code == 1, result.output
+    assert diagnostic in result.output
+
+
+@pytest.mark.parametrize(
+    ("check_id", "path", "content"),
+    [
+        ("ruff", "ruff.toml", 'preview = true\n[lint]\nselect = ["ALL"]'),
+        ("knip", "knip.prod.json", '{"includeEntryExports": true, "ignoreWorkspaces": []}'),
+        (
+            "pyrefly",
+            "pyrefly.toml",
+            'preset = "strict"\ndisable-project-excludes-heuristics = true\nuse-ignore-files = false',
+        ),
+        ("pytest", "pyproject.toml", "[tool.coverage.report]\nfail_under = 90"),
+    ],
+)
+def test_16_15_4_validates_compliant_tool_configuration_without_source(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    check_id: str,
+    path: str,
+    content: str,
+) -> None:
+    (conforming_repo / "package.json").write_text('{"private": true}')
+    (conforming_repo / "pyproject.toml").write_text("[tool.uv]\npackage = false\n")
+    (conforming_repo / path).write_text(content)
+
+    result = invoke_lint("--check", check_id)
+
+    assert result.exit_code == 0, result.output
+    assert f"🐾 {check_id}" in result.output
+
+
+@pytest.mark.parametrize(
+    ("check_id", "files", "diagnostic"),
+    [
+        (
+            "story_tests_lockstep_py",
+            {"pyproject.toml": '[project]\nname = "sample"\n[project.scripts]\nsample = "sample:main"\n'},
+            "exposes a public interface but has no",
+        ),
+        (
+            "vitest",
+            {"package.json": '{"scripts":{"test":"bun test"}}'},
+            "`test` script runs bun's test runner",
+        ),
+        (
+            "consistent_package_export_entries",
+            {
+                "package.json": (
+                    '{"name":"sample","exports":{"./api":"./src/api.ts"},'
+                    '"publishConfig":{"exports":{".":"./dist/index.js"}}}'
+                ),
+            },
+            "source and published export keys must agree",
+        ),
+        (
+            "explicit_module_side_effects",
+            {
+                "package.json": '{"name":"sample"}',
+                "pnpm-workspace.yaml": "packages: [packages/*]",
+                "packages/lib/package.json": '{"name":"lib"}',
+            },
+            "declare sideEffects as false or explicit module patterns",
+        ),
+        (
+            "consistent_workspace_project_references",
+            {
+                "package.json": '{"name":"sample"}',
+                "tsconfig.json": '{"references":[{"path":"./missing"}]}',
+            },
+            "is not a workspace TypeScript project",
+        ),
+    ],
+)
+def test_16_15_5_validates_package_metadata_without_implementation_files(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    check_id: str,
+    files: dict[str, str],
+    diagnostic: str,
+) -> None:
+    for path, content in files.items():
+        target = conforming_repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
+
+    result = invoke_lint("--check", check_id)
+
+    assert result.exit_code == 1, result.output
+    assert diagnostic in " ".join(Text.from_ansi(result.output).plain.split())

@@ -233,3 +233,7 @@ The canonical recipes keep `just u` and `just ui` as the stable interface while 
 ### 1.13.1 runs present workspaces sequentially and preserves failures
 
 The test recipe runs JavaScript tests when `package.json` exists, then Python tests when `pyproject.toml` exists. An empty pytest suite succeeds; other runner failures stop the recipe. A directory without either manifest fails.
+
+## 1.16 selecting recipes from source files
+
+### 1.16.1 requires application recipes when python stubs are present

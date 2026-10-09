@@ -5,6 +5,7 @@ import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/boo
 import { cleanCommand, runClean } from './commands/clean.ts';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from './commands/clone-reference-repo.ts';
 import { depsCatalogCommand, runDepsCatalog } from './commands/deps-catalog.ts';
+import { lintMermaidCommand, runLintMermaid } from './commands/lint-mermaid.ts';
 import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.ts';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
@@ -29,6 +30,7 @@ const program = defineProgram({
     bootstrapNpmTargetCommand,
     publishTaggedTargetCommand,
     printTagKindCommand,
+    lintMermaidCommand,
     cleanCommand,
     upgradeCommand,
   ),
@@ -70,6 +72,9 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'deps-catalog': {
       return runDepsCatalog(result);
+    }
+    case 'lint-mermaid': {
+      return runLintMermaid();
     }
     case 'print-tag-kind': {
       return runPrintTagKind(result);

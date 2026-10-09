@@ -26,6 +26,7 @@ cz release-bumped-targets               Publish any bumped release target via a 
 cz bootstrap-npm-target <LABEL>         First-publish using local npm authentication, then enable trusted publishing.
 cz deps-catalog [--dir DIR] [--out FILE] Resolve every dependency across the repos to its source repo; write catalog.json.
 cz clean [--dry-run] [--exclude DIR...] Remove gitignored build artifacts/caches from this repo, or every repo under the cwd.
+cz lint-mermaid                       Check Mermaid diagrams in tracked and unignored Markdown under the current Git directory.
 cz upgrade [--interactive] [PACKAGE...] Upgrade the pinned toolchain plus JavaScript and Python workspace dependencies.
 ```
 

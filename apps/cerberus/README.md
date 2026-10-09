@@ -1,12 +1,18 @@
 # cerberus
 
-Verifies repository invariants — CI workflow structure, justfile and dependency conventions, CODEOWNERS, and release-version bumps — as a per-repo linter against a checkout.
+Verifies invariants for zyplux repository checkouts — CI workflow structure, justfile and dependency conventions, CODEOWNERS, and release-version bumps.
 
 ## Requirements
 
 - [`uv`](https://docs.astral.sh/uv/) and Python 3.14
 
 The `justfile` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd` and `fallow` bites run their tools via `pnpx` at exact versions pinned in [`tool_pins.py`](src/cerberus/tool_pins.py), so every cerberus release measures with the same tools everywhere; `pnpm` must be on PATH.
+
+Source checks use tracked and unignored files: TypeScript checks require `.ts`, `.tsx`, `.mts` or `.cts` files, and Python checks require `.py` or `.pyi` files. Executable TypeScript tool configuration counts as source. Manifests used only to install tooling do not require application lint, typecheck or test steps. Ruff, Knip, Pyrefly and pytest configuration stays optional without source; supplied configuration must satisfy the same invariants. Package metadata, dependency, CI and Markdown checks still apply.
+
+CI uses one unquoted canonical command with literal arguments per `run` step. Python tool calls use `uv run --no-sync`; Prettier uses `pnpm exec prettier --check`.
+
+Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.
 
 ## Lint a repo
 
@@ -95,7 +101,7 @@ test_files = [
 
 Production roots are repository-relative directory globs; their descendants belong to production, including source assets, build configuration, and deployment infrastructure. Test-file globs take precedence even inside a production root. `*` matches one path segment and `**` spans directories. Files outside both selections are other maintained files, such as development tooling. These conventions apply independently of which bites are enabled.
 
-Knip intersects this ownership with registered JavaScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
+Knip intersects this ownership with registered TypeScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
 
 Other tools can consume the public API without scanning files or invoking the CLI:
 

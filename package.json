@@ -18,7 +18,8 @@
     "lint": "eslint . --cache",
     "lint:fix": "pnpm run lint --fix",
     "test": "vitest run",
-    "cz": "node apps/cz/src/index.ts"
+    "cz": "node apps/cz/src/index.ts",
+    "lint:mermaid": "pnpm run --silent cz lint-mermaid"
   },
   "devDependencies": {
     "@types/node": "catalog:",

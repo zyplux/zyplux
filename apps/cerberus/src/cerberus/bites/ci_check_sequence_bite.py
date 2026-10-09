@@ -6,6 +6,8 @@ import yaml
 
 from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.shell_commands import get_shell_parser, list_command_args, matches_tool_command
+from cerberus.stacks import can_run_command
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -33,15 +35,41 @@ def _parse_workflow(content: str) -> dict[str, Any] | None:
     return doc if isinstance(doc, dict) else None
 
 
-def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[str]) -> None:
-    missing = [step for step in required if not any(step in cmd for cmd in commands)]
+def _matches_step(command: tuple[str, ...], step: str) -> bool:
+    required = tuple(step.split())
+    if required[0] not in {"uv", "pnpm"}:
+        prefix = ("pnpm", "exec") if required[0] == "prettier" else ("uv", "run", "--no-sync")
+        if command[: len(prefix)] != prefix:
+            return False
+        command = command[len(prefix) :]
+    return matches_tool_command(command, required)
+
+
+def _parse_step_command(script: str) -> tuple[str, ...]:
+    root = get_shell_parser().parse(script.encode()).root_node
+    statements = [child for child in root.named_children if child.type != "comment"]
+    if root.has_error or len(statements) != 1 or statements[0].type != "command":
+        return ()
+    if any(child.type == "&" for child in root.children):
+        return ()
+    parts = statements[0].named_children
+    if not parts or parts[0].type != "command_name":
+        return ()
+    words = [*parts[0].named_children, *parts[1:]]
+    if any(word.type != "word" or word.named_children for word in words):
+        return ()
+    return list_command_args(statements[0])
+
+
+def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
+    missing = [step for step in required if not any(_matches_step(command, step) for command in commands)]
     for step in missing:
         res.fail(f"{label} ci is missing `{step}`")
     if missing:
         return
     index = 0
-    for cmd in commands:
-        if index < len(required) and required[index] in cmd:
+    for command in commands:
+        if index < len(required) and _matches_step(command, required[index]):
             index += 1
     if index != len(required):
         res.fail(f"{label} ci steps run out of canonical order; expected {list(required)}")
@@ -66,12 +94,22 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    commands = workflow.run_commands(doc)
+    commands = [_parse_step_command(script) for script in workflow.run_commands(doc)]
 
     if has_ts:
-        _verify_sequence(res, "ts", cfg.ci_required_ts, commands)
+        _verify_sequence(
+            res,
+            "ts",
+            tuple(step for step in cfg.ci_required_ts if can_run_command(repo, ctx, tuple(step.split()))),
+            commands,
+        )
     if has_python:
-        _verify_sequence(res, "python", cfg.ci_required_python, commands)
+        _verify_sequence(
+            res,
+            "python",
+            tuple(step for step in cfg.ci_required_python if can_run_command(repo, ctx, tuple(step.split()))),
+            commands,
+        )
 
     if not res.problems:
         res.ok("ci.yml runs the canonical sequence")

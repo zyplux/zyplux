@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from cerberus import proc
 from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.stacks import has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -88,7 +89,10 @@ def _check_per_file_ignores(
 def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] | None:
     content = ctx.file(repo, PATH)
     if content is None:
-        res.fail(f"no {PATH} at repo root (ruff config must be standalone)")
+        if has_source(repo, ctx, "python"):
+            res.fail(f"no {PATH} at repo root (ruff config must be standalone)")
+        else:
+            res.skip(f"no Python source or {PATH}")
         return None
     config = py_tool_config.parse_toml(content)
     if config is None:
@@ -98,11 +102,7 @@ def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] |
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
-    if pyproject is None:
-        return res
-
-    if py_tool_config.fail_when_embedded(pyproject, "ruff", res):
+    if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="ruff") is None:
         return res
 
     config = _load_config(repo, ctx, res)

@@ -59,11 +59,14 @@ def test_6_1_2_skips_repos_with_a_pyproject_file_but_no_python_source(
 ) -> None:
     result = run_pyrefly(pyrefly=None, paths=["packages/ui/index.ts"])
 
-    assert result.findings == [skip("no Python source")]
+    assert result.findings == [skip("no Python source or pyrefly.toml")]
 
 
-def test_6_2_1_fails_when_pyrefly_config_is_missing(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
-    result = run_pyrefly(pyrefly=None)
+@pytest.mark.parametrize("paths", [None, ["app.py"], ["app.pyi"]])
+def test_6_2_1_fails_when_pyrefly_config_is_missing(
+    run_pyrefly: RunPyrefly, fail: MakeFinding, paths: list[str] | None
+) -> None:
+    result = run_pyrefly(pyrefly=None, paths=paths)
 
     assert result.findings == [fail('no pyrefly.toml at repo root (org requires `preset = "strict"`)')]
 
@@ -86,18 +89,22 @@ def test_6_3_1_fails_when_preset_is_not_strict(run_pyrefly: RunPyrefly, fail: Ma
     assert result.findings == [fail("pyrefly.toml must set `preset = \"strict\"`; found 'default'")]
 
 
-def test_6_4_1_fails_and_names_the_uncovered_production_root(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+@pytest.mark.parametrize("suffix", [".py", ".pyi"])
+def test_6_4_1_fails_and_names_the_uncovered_production_root(
+    run_pyrefly: RunPyrefly, fail: MakeFinding, suffix: str
+) -> None:
     pyrefly = _PYREFLY_STRICT.replace('"apps/cerberus/src", ', "")
 
-    result = run_pyrefly(pyrefly=pyrefly)
+    result = run_pyrefly(pyrefly=pyrefly, paths=[path.removesuffix(".py") + suffix for path in _PY_PATHS])
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: apps/cerberus/src")]
 
 
-def test_6_4_2_fails_and_names_the_uncovered_test_root(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+@pytest.mark.parametrize("suffix", [".py", ".pyi"])
+def test_6_4_2_fails_and_names_the_uncovered_test_root(run_pyrefly: RunPyrefly, fail: MakeFinding, suffix: str) -> None:
     pyrefly = _PYREFLY_STRICT.replace(', "tests/cerberus"]', "]")
 
-    result = run_pyrefly(pyrefly=pyrefly)
+    result = run_pyrefly(pyrefly=pyrefly, paths=[path.removesuffix(".py") + suffix for path in _PY_PATHS])
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: tests/cerberus")]
 
