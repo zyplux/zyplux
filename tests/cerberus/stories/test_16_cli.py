@@ -630,4 +630,4 @@ def test_16_15_5_validates_package_metadata_without_implementation_files(
     result = invoke_lint("--check", check_id)
 
     assert result.exit_code == 1, result.output
-    assert diagnostic in result.output
+    assert diagnostic in " ".join(Text.from_ansi(result.output).plain.split())
