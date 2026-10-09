@@ -19,7 +19,7 @@ CHECK_ID = "jscpd"
 _BASE_TOML = '[justfile]\ndefault_recipe_marker = "just --list"\n'
 _CUSTOM_THRESHOLD_TOML = f"{_BASE_TOML}\n[jscpd]\nthreshold = 5\n"
 _THRESHOLDLESS_TOML = f'{_BASE_TOML}\n[jscpd]\npattern = "**/*.py"\n'
-_CUSTOM_SELECTION_TOML = f'{_BASE_TOML}\n[jscpd]\npattern = "**/*.rs"\nignore = ["**/target/**"]\n'
+_CUSTOM_SELECTION_TOML = f'{_BASE_TOML}\n[jscpd]\npattern = "**/*.tsx"\nignore = ["**/dist/**"]\n'
 _DEFAULT_PATTERN = "**/*.{ts,tsx,py}"
 _DEFAULT_IGNORE = "**/dist/**,**/.venv/**,**/*.gen.*"
 _REPORT_DIR_PLACEHOLDER = "<report-dir>"
@@ -211,7 +211,7 @@ def test_28_3_4_passes_a_configured_pattern_and_ignore_through_to_jscpd(
 ) -> None:
     fake_proc.serve("jscpd", output_files=_UNDER_THRESHOLD_REPORT)
     run_jscpd(config_toml=_CUSTOM_SELECTION_TOML)
-    expected = _argv(npm_tool_spec("jscpd"), [str(repo_root.resolve())], pattern="**/*.rs", ignore="**/target/**")
+    expected = _argv(npm_tool_spec("jscpd"), [str(repo_root.resolve())], pattern="**/*.tsx", ignore="**/dist/**")
     assert _mask_report_dir(fake_proc.calls) == [(expected, Path(_REPORT_DIR_PLACEHOLDER))]
 
 

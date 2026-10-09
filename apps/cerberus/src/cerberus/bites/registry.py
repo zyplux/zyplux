@@ -54,16 +54,11 @@ class Check:
 
 
 PYTHON_CHECKS = {
-    "story_tests_lockstep_py",
     "cli_py_test_seam",
     "lib_py_test_seam",
 }
 TYPESCRIPT_CHECKS = {
-    "vitest",
     "tsc",
-    "consistent_package_export_entries",
-    "explicit_module_side_effects",
-    "consistent_workspace_project_references",
     "no_worker_filesystem_imports",
     "vitest_coverage",
     "story_tests_lockstep_ts",

@@ -103,3 +103,5 @@ Bites keep their one-line verdicts by default; `--verbose` asks them to also ite
 ### 16.15.3 rejects invalid tool configuration without source
 
 ### 16.15.4 validates compliant tool configuration without source
+
+### 16.15.5 validates package metadata without implementation files

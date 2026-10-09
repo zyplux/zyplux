@@ -571,3 +571,63 @@ def test_16_15_4_validates_compliant_tool_configuration_without_source(
 
     assert result.exit_code == 0, result.output
     assert f"🐾 {check_id}" in result.output
+
+
+@pytest.mark.parametrize(
+    ("check_id", "files", "diagnostic"),
+    [
+        (
+            "story_tests_lockstep_py",
+            {"pyproject.toml": '[project]\nname = "sample"\n[project.scripts]\nsample = "sample:main"\n'},
+            "exposes a public interface but has no",
+        ),
+        (
+            "vitest",
+            {"package.json": '{"scripts":{"test":"bun test"}}'},
+            "`test` script runs bun's test runner",
+        ),
+        (
+            "consistent_package_export_entries",
+            {
+                "package.json": (
+                    '{"name":"sample","exports":{"./api":"./src/api.ts"},'
+                    '"publishConfig":{"exports":{".":"./dist/index.js"}}}'
+                ),
+            },
+            "source and published export keys must agree",
+        ),
+        (
+            "explicit_module_side_effects",
+            {
+                "package.json": '{"name":"sample"}',
+                "pnpm-workspace.yaml": "packages: [packages/*]",
+                "packages/lib/package.json": '{"name":"lib"}',
+            },
+            "declare sideEffects as false or explicit module patterns",
+        ),
+        (
+            "consistent_workspace_project_references",
+            {
+                "package.json": '{"name":"sample"}',
+                "tsconfig.json": '{"references":[{"path":"./missing"}]}',
+            },
+            "is not a workspace TypeScript project",
+        ),
+    ],
+)
+def test_16_15_5_validates_package_metadata_without_implementation_files(
+    conforming_repo: Path,
+    invoke_lint: Callable[..., Result],
+    check_id: str,
+    files: dict[str, str],
+    diagnostic: str,
+) -> None:
+    for path, content in files.items():
+        target = conforming_repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
+
+    result = invoke_lint("--check", check_id)
+
+    assert result.exit_code == 1, result.output
+    assert diagnostic in result.output

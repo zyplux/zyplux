@@ -8,7 +8,7 @@ Verifies invariants for zyplux repository checkouts — CI workflow structure, j
 
 The `justfile` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd` and `fallow` bites run their tools via `pnpx` at exact versions pinned in [`tool_pins.py`](src/cerberus/tool_pins.py), so every cerberus release measures with the same tools everywhere; `pnpm` must be on PATH.
 
-Language checks use tracked and unignored source files: TypeScript checks require `.ts`, `.tsx`, `.mts` or `.cts` files, and Python checks require `.py` or `.pyi` files. Executable TypeScript tool configuration counts as source. Manifests used only to install tooling do not require application lint, typecheck or test steps. Ruff, Knip, Pyrefly and pytest configuration stays optional without source; supplied configuration must satisfy the same invariants. Dependency, CI and Markdown checks still apply.
+Source checks use tracked and unignored files: TypeScript checks require `.ts`, `.tsx`, `.mts` or `.cts` files, and Python checks require `.py` or `.pyi` files. Executable TypeScript tool configuration counts as source. Manifests used only to install tooling do not require application lint, typecheck or test steps. Ruff, Knip, Pyrefly and pytest configuration stays optional without source; supplied configuration must satisfy the same invariants. Package metadata, dependency, CI and Markdown checks still apply.
 
 CI uses one unquoted canonical command with literal arguments per `run` step. Python tool calls use `uv run --no-sync`; Prettier uses `pnpm exec prettier --check`.
 
