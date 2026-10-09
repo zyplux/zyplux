@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from cerberus import justfile
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.shell_commands import list_required_commands, list_shell_commands
+from cerberus.shell_commands import list_required_commands, list_shell_commands, matches_tool_command
 from cerberus.stacks import can_run_command, has_source
 
 if TYPE_CHECKING:
@@ -189,32 +189,20 @@ def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
             and (args[0] != "uv" or "pyproject.toml" in manifests)
             and can_run_command(repo, ctx, args)
         ]
-        missing = [args for args in required if not any(_matches_tool_command(command, args) for command in actual)]
+        missing = [args for args in required if not any(matches_tool_command(command, args) for command in actual)]
         for args in missing:
             res.fail(f"recipe `{recipe}` must run `{' '.join(args)}` without masking its failure")
         if not missing:
             remaining = iter(actual)
-            if not all(any(_matches_tool_command(command, args) for command in remaining) for args in required):
+            if not all(any(matches_tool_command(command, args) for command in remaining) for args in required):
                 res.fail(f"recipe `{recipe}` must run its required tools in baseline order")
-
-
-def _matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
-    if set(command) & {"--help", "-h", "--version", "-V"}:
-        return False
-    if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
-        return False
-    if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
-        return False
-    positional = tuple(arg for arg in command if not arg.startswith("-"))
-    expected = tuple(arg for arg in required if not arg.startswith("-"))
-    return positional[: len(expected)] == expected and all(arg in command for arg in required if arg.startswith("-"))
 
 
 def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     if "check" not in jf.recipes:
         return
     commands = _list_tool_commands(jf, "check", repo, ctx)
-    if not any(_matches_tool_command(args, ("uv", "run", "cerberus")) for args in commands):
+    if not any(matches_tool_command(args, ("uv", "run", "cerberus")) for args in commands):
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 

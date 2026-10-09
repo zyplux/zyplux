@@ -28,6 +28,18 @@ def list_command_args(command: Node) -> tuple[str, ...]:
         return ()
 
 
+def matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
+    if set(command) & {"--help", "-h", "--version", "-V"}:
+        return False
+    if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
+        return False
+    if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
+        return False
+    positional = tuple(arg for arg in command if not arg.startswith("-"))
+    expected = tuple(arg for arg in required if not arg.startswith("-"))
+    return positional[: len(expected)] == expected and all(arg in command for arg in required if arg.startswith("-"))
+
+
 def _list_commands(node: Node, manifests: frozenset[str]) -> Iterator[tuple[str, ...]]:
     match node.type:
         case "command":

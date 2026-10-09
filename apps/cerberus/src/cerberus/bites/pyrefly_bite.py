@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.stacks import SOURCE_SUFFIXES
+from cerberus.stacks import SOURCE_SUFFIXES, has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -123,7 +123,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source)
-    if not production_roots and not test_roots and ctx.file(repo, PATH) is None:
+    if not has_source(repo, ctx, "python") and ctx.file(repo, PATH) is None:
         res.skip("no Python source or pyrefly.toml")
         return res
 

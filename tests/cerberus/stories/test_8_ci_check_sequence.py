@@ -171,6 +171,48 @@ def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(
     assert result.findings == [fail("python ci is missing `pytest`")]
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "pnpm run lint:mermaid",
+        "echo pnpm run lint",
+        "printf '%s' 'pnpm run lint'",
+        "pnpm run lint --help",
+        "pnpm run lint --version",
+    ],
+)
+def test_8_5_2_requires_canonical_commands_at_command_boundaries(
+    run_ci_sequence: RunCiSequence, command: str, fail: MakeFinding
+) -> None:
+    ci = _TS_CI.replace("pnpm run lint", command)
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [fail("ts ci is missing `pnpm run lint`")]
+
+
+def test_8_5_3_checks_order_using_the_canonical_invocation(run_ci_sequence: RunCiSequence, fail: MakeFinding) -> None:
+    ci = _TS_CI.replace("pnpm run lint", "pnpm run lint:mermaid").replace(
+        "      - run: pnpm run test", "      - run: pnpm run lint\n      - run: pnpm run test"
+    )
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [
+        fail(
+            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
+            "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']"
+        )
+    ]
+
+
+def test_8_5_4_accepts_sequential_commands_in_a_multiline_step(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding
+) -> None:
+    ci = _TS_CI.replace(
+        "      - run: pnpm run lint\n      - run: pnpx prettier --check .",
+        "      - run: |\n          pnpm run lint\n          pnpm exec prettier --check .",
+    )
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [sequence_pass]
+
+
 @pytest.mark.parametrize("missing", ["", "uv sync --locked", "rumdl check", "pnpm install --frozen-lockfile"])
 def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
@@ -203,3 +245,24 @@ def test_8_6_2_requires_python_quality_steps_for_stub_only_packages(
         },
     )
     assert result.findings == [fail("python ci is missing `pyrefly check`")]
+
+
+@pytest.mark.parametrize("path", ["eslint.config.js", "eslint.config.ts", ".prettierrc.js", "vitest.config.ts"])
+def test_8_6_3_requires_javascript_quality_steps_for_executable_tool_configuration(
+    run_check_with_files: RunCheckWithFiles, path: str, fail: MakeFinding
+) -> None:
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            path: "export default {};\n",
+            "package.json": "{}",
+            ".github/workflows/ci.yml": (
+                "jobs:\n  ci:\n    steps:\n"
+                "      - run: pnpm install --frozen-lockfile\n"
+                "      - run: pnpm exec prettier --check .\n"
+            ),
+        },
+    )
+    assert result.findings == [
+        fail(f"ts ci is missing `pnpm run {script}`") for script in ("knip", "typecheck", "lint", "test")
+    ]

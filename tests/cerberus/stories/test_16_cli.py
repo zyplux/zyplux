@@ -495,6 +495,8 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
         ("app.py", "ruff", "knip", "no JavaScript source or knip.prod.json"),
         ("app.pyi", "ruff", "knip", "no JavaScript source or knip.prod.json"),
         ("app.ts", "knip", "ruff", "no Python source or ruff.toml"),
+        ("app.py", "pyrefly", "knip", "no JavaScript source or knip.prod.json"),
+        ("app.pyi", "pyrefly", "knip", "no JavaScript source or knip.prod.json"),
     ],
 )
 def test_16_15_2_runs_source_bites_only_for_languages_present(

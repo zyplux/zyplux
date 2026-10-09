@@ -30,8 +30,16 @@
 
 ### 8.5.1 fails when a required step appears only in a comment
 
+### 8.5.2 requires canonical commands at command boundaries
+
+### 8.5.3 checks order using the canonical invocation
+
+### 8.5.4 accepts sequential commands in a multiline step
+
 ## 8.6 selecting steps from source files
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests
 
 ### 8.6.2 requires python quality steps for stub only packages
+
+### 8.6.3 requires javascript quality steps for executable tool configuration

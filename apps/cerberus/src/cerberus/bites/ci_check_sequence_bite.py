@@ -6,6 +6,7 @@ import yaml
 
 from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.shell_commands import list_required_commands, matches_tool_command
 from cerberus.stacks import can_run_command
 
 if TYPE_CHECKING:
@@ -34,15 +35,24 @@ def _parse_workflow(content: str) -> dict[str, Any] | None:
     return doc if isinstance(doc, dict) else None
 
 
-def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[str]) -> None:
-    missing = [step for step in required if not any(step in cmd for cmd in commands)]
+def _matches_step(command: tuple[str, ...], step: str) -> bool:
+    required = tuple(step.split())
+    if required[0] not in {"uv", "pnpm"}:
+        match command:
+            case ("uv", "run", "--no-sync", *args) | ("uv", "run", *args) | ("pnpx", *args) | ("pnpm", "exec", *args):
+                command = tuple(args)
+    return matches_tool_command(command, required)
+
+
+def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
+    missing = [step for step in required if not any(_matches_step(command, step) for command in commands)]
     for step in missing:
         res.fail(f"{label} ci is missing `{step}`")
     if missing:
         return
     index = 0
-    for cmd in commands:
-        if index < len(required) and required[index] in cmd:
+    for command in commands:
+        if index < len(required) and _matches_step(command, required[index]):
             index += 1
     if index != len(required):
         res.fail(f"{label} ci steps run out of canonical order; expected {list(required)}")
@@ -67,7 +77,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    commands = workflow.run_commands(doc)
+    manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
+    commands = [args for script in workflow.run_commands(doc) for args in list_required_commands(script, manifests)]
 
     if has_ts:
         _verify_sequence(
