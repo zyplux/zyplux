@@ -21,7 +21,7 @@ _OK_MESSAGE = "pytest coverage gate enforces >= 90% ([tool.coverage.report] fail
 @pytest.fixture
 def run_pytest_coverage(run_check_with_files: RunCheckWithFiles) -> RunPytestCoverage:
     def _run(pyproject: str | None) -> CheckResult:
-        files = {} if pyproject is None else {PYPROJECT: pyproject}
+        files = {} if pyproject is None else {PYPROJECT: pyproject, "app.py": ""}
         return run_check_with_files(CHECK_ID, files)
 
     return _run

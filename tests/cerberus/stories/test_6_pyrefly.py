@@ -59,7 +59,7 @@ def test_6_1_2_skips_repos_with_a_pyproject_file_but_no_python_source(
 ) -> None:
     result = run_pyrefly(pyrefly=None, paths=["packages/ui/index.ts"])
 
-    assert result.findings == [skip("no Python source")]
+    assert result.findings == [skip("no Python source or pyrefly.toml")]
 
 
 def test_6_2_1_fails_when_pyrefly_config_is_missing(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:

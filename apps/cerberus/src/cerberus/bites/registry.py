@@ -54,15 +54,11 @@ class Check:
 
 
 PYTHON_CHECKS = {
-    "pyrefly",
-    "ruff",
-    "pytest",
     "story_tests_lockstep_py",
     "cli_py_test_seam",
     "lib_py_test_seam",
 }
 JAVASCRIPT_CHECKS = {
-    "knip",
     "vitest",
     "tsc",
     "consistent_package_export_entries",

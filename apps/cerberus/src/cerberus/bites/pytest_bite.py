@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from cerberus.bites import py_tool_config
 from cerberus.bites.py_tool_config import PYPROJECT
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.stacks import has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -30,6 +31,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     config = py_tool_config.parse_toml(pyproject)
     if config is None:
         res.error(f"could not parse {PYPROJECT}")
+        return res
+
+    tool = config.get("tool")
+    if not has_source(repo, ctx, "python") and (not isinstance(tool, dict) or "coverage" not in tool):
+        res.skip("no Python source or coverage configuration")
         return res
 
     floor = ctx.config.pytest_min_coverage

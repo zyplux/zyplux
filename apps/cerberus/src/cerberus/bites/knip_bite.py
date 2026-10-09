@@ -31,6 +31,7 @@ import yaml
 
 from cerberus import workspaces
 from cerberus.model import CheckResult, Scope
+from cerberus.stacks import has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -171,7 +172,10 @@ def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], r
 def _check_prod_config(repo: Repo, ctx: Context, res: CheckResult) -> None:
     content = ctx.file(repo, PROD_CONFIG)
     if content is None:
-        res.fail(f"no {PROD_CONFIG} at repo root — needed to catch dead/test-only exports")
+        if has_source(repo, ctx, "javascript"):
+            res.fail(f"no {PROD_CONFIG} at repo root — needed to catch dead/test-only exports")
+        else:
+            res.skip(f"no JavaScript source or {PROD_CONFIG}")
         return
     try:
         parsed = json.loads(content)
@@ -222,6 +226,6 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error(f"pnpm-workspace.yaml is not valid YAML: {exc}")
         return res
 
-    if not res.problems:
+    if not res.findings:
         res.ok(_OK_MESSAGE)
     return res

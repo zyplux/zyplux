@@ -119,16 +119,12 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
-    if pyproject is None:
+    if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="pyrefly") is None:
         return res
 
     production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source)
-    if not production_roots and not test_roots:
-        res.skip("no Python source")
-        return res
-
-    if py_tool_config.fail_when_embedded(pyproject, "pyrefly", res):
+    if not production_roots and not test_roots and ctx.file(repo, PATH) is None:
+        res.skip("no Python source or pyrefly.toml")
         return res
 
     config = _load_strict_config(repo, ctx, res)

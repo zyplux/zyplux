@@ -30,7 +30,7 @@ _RUFF_CANONICAL = (
 @pytest.fixture
 def run_ruff(run_check_with_files: RunCheckWithFiles) -> RunRuff:
     def _run(*, ruff: str | None = _RUFF_CANONICAL, pyproject: str | None = "[project]\n") -> CheckResult:
-        files = {"pyproject.toml": pyproject, "ruff.toml": ruff}
+        files = {"pyproject.toml": pyproject, "ruff.toml": ruff, "app.py": ""}
         present = {path: content for path, content in files.items() if content is not None}
         return run_check_with_files(CHECK_ID, present)
 

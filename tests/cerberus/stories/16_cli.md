@@ -99,3 +99,7 @@ Bites keep their one-line verdicts by default; `--verbose` asks them to also ite
 ### 16.15.1 skips source bites when manifests only install tools
 
 ### 16.15.2 runs source bites only for languages present
+
+### 16.15.3 rejects invalid tool configuration without source
+
+### 16.15.4 validates compliant tool configuration without source

@@ -26,19 +26,16 @@ def parse_toml(content: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def load_pyproject(repo: Repo, ctx: Context, res: CheckResult) -> str | None:
-    """The root pyproject.toml's content; records a skip and returns None for a non-Python repo."""
+def load_pyproject(repo: Repo, ctx: Context, res: CheckResult, *, standalone_tool: str | None = None) -> str | None:
+    """Read pyproject.toml and reject embedded settings for a standalone tool."""
     content = ctx.file(repo, PYPROJECT)
     if content is None:
         res.skip(f"no {PYPROJECT} (not a Python repo)")
+        return None
+    if standalone_tool is not None:
+        config = parse_toml(content) or {}
+        tables = config.get("tool")
+        if isinstance(tables, dict) and standalone_tool in tables:
+            res.fail(f"{standalone_tool} config lives in {PYPROJECT}; move it to a standalone {standalone_tool}.toml")
+            return None
     return content
-
-
-def fail_when_embedded(pyproject: str, tool_name: str, res: CheckResult) -> bool:
-    """Whether pyproject.toml embeds `[tool.<name>]`; records the standalone-config failure when it does."""
-    config = parse_toml(pyproject) or {}
-    tables = config.get("tool")
-    if isinstance(tables, dict) and tool_name in tables:
-        res.fail(f"{tool_name} config lives in {PYPROJECT}; move it to a standalone {tool_name}.toml")
-        return True
-    return False
