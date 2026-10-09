@@ -574,7 +574,7 @@ def test_1_16_1_requires_application_recipes_when_python_stubs_are_present(
         body = content.split(f"\n{recipe}:\n", 1)[1].split("\n\n", 1)[0]
         content = content.replace(f"\n{recipe}:\n{body}\n", "")
     content = content.replace("check: install knip typecheck lint test cerberus", "check: install lint cerberus")
-    content = content.replace("    pnpm run lint:fix\n", "").replace("    pnpm run format\n", "")
+    content = content.replace("    pnpm run lint:fix\n", "")
     content = content.replace("    uv run ruff check --fix\n", "").replace("    uv run ruff format\n", "")
     result = run_check_with_files(
         CHECK_ID,
@@ -588,3 +588,14 @@ def test_1_16_1_requires_application_recipes_when_python_stubs_are_present(
     assert bool(result.problems) is bool(source)
     if source:
         assert "missing required recipe `typecheck`" in [problem.message for problem in result.problems]
+
+
+@pytest.mark.parametrize("has_format", [False, True])
+def test_1_16_2_requires_formatting_for_markdown_only_packages(
+    run_check_with_files: RunCheckWithFiles, *, has_format: bool
+) -> None:
+    content = CONFORMING if has_format else CONFORMING.replace("    pnpm run format\n", "")
+    result = run_check_with_files(CHECK_ID, {"justfile": content, "package.json": "{}", "README.md": "# demo\n"})
+    assert [finding.message for finding in result.problems] == (
+        [] if has_format else ["recipe `lint` must run `pnpm run format` without masking its failure"]
+    )

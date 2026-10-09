@@ -22,8 +22,6 @@ TOOL_LANGUAGES: dict[str, Language] = {
     "typecheck": "javascript",
     "lint": "javascript",
     "lint:fix": "javascript",
-    "format": "javascript",
-    "prettier": "javascript",
     "test": "javascript",
 }
 

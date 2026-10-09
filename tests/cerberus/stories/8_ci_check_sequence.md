@@ -36,6 +36,10 @@
 
 ### 8.5.4 accepts sequential commands in a multiline step
 
+### 8.5.5 accepts failure preserving command chains
+
+### 8.5.6 rejects skipped background or masked commands
+
 ## 8.6 selecting steps from source files
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests
@@ -43,3 +47,5 @@
 ### 8.6.2 requires python quality steps for stub only packages
 
 ### 8.6.3 requires javascript quality steps for executable tool configuration
+
+### 8.6.4 requires prettier for markdown only packages

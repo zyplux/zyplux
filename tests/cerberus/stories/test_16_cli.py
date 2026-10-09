@@ -474,6 +474,7 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
             "      - run: echo ci",
             (
                 "      - run: pnpm install --frozen-lockfile\n"
+                "      - run: pnpm exec prettier --check .\n"
                 "      - run: uv sync --locked\n"
                 "      - run: uv run rumdl check"
             ),
