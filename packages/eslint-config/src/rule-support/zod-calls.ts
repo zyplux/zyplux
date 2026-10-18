@@ -6,7 +6,7 @@ import ts from 'typescript';
 export const createZodTypeCheck =
   ({ program }: ParserServicesWithTypeInformation) =>
   (type: ts.Type) => {
-    const name = (type.getSymbol() ?? type.aliasSymbol)?.getName();
+    const name = (type.aliasSymbol ?? type.getSymbol())?.getName();
     return name !== undefined && typeMatchesSomeSpecifier(type, [{ from: 'package', name, package: 'zod' }], program);
   };
 

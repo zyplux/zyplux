@@ -37,6 +37,20 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
       '10 flags JSON passed to an unrelated parser',
       'const parser = { parse: (input: unknown) => input }; parser.parse(JSON.parse(text));',
     ],
+    [
+      '11 flags a JSON promise passed into validation',
+      `${schemaImport} declare const response: { json(): Promise<any> }; Schema.validateAsync(response.json());`,
+    ],
+    [
+      '12 flags a JSON promise passed into parsing',
+      `${schemaImport} declare const response: { json(): Promise<any> }; Schema.parse(response.json());`,
+    ],
+    [
+      '13 flags a JSON promise passed into functional validation',
+      `${schemaImport} declare const response: { json(): Promise<any> }; z.validateAsync(Schema, response.json());`,
+    ],
+    ['14 flags JSON used as validation options', `${schemaImport} Schema.validate('name', JSON.parse(text));`],
+    ['15 flags a functional validator without a schema', `${schemaImport} z.validate({}, JSON.parse(text));`],
     ['5 flags a JSON parse passed to a non-zod consumer', 'normalizeRules(JSON.parse(printed));'],
     [
       '6 flags a non-awaited any promise json call, caught by type rather than syntax',
@@ -83,6 +97,24 @@ describe('11.2 permitting validated reads and non-boundary json calls', () => {
         'declare const builder: { json(body: unknown): { ok: boolean } };',
         'const sent = builder.json({ ok: true });',
       ].join('\n'),
+    ],
+    ['10 allows namespace boolean validation', 'const valid = z.validate(Schema, JSON.parse(text));'],
+    [
+      '11 allows imported boolean validation',
+      "import { validate as check } from 'zod'; const valid = check(Schema, JSON.parse(text));",
+    ],
+    ['12 allows functional parsing', 'const parsed = z.parse(Schema, JSON.parse(text));'],
+    [
+      '13 allows namespace async validation of resolved JSON',
+      'declare const response: { json(): Promise<any> }; const valid = await z.validateAsync(Schema, await response.json());',
+    ],
+    [
+      '14 allows imported async validation of resolved JSON',
+      "import { validateAsync as check } from 'zod'; declare const response: { json(): Promise<any> }; const valid = await check(Schema, await response.json());",
+    ],
+    [
+      '15 allows instance async validation of resolved JSON',
+      'declare const response: { json(): Promise<any> }; const valid = await Schema.validateAsync(await response.json());',
     ],
     ['8 allows JSON flowing into boolean validation', 'const valid = Schema.validate(JSON.parse(text));'],
     [

@@ -78,13 +78,25 @@ export const noFunctionScopedSchema = createRule({
       return owner.type === AST_NODE_TYPES.CallExpression && getCallName(owner) !== undefined && isSchema(owner);
     };
 
+    const getReceiverScope = (node: TSESTree.Node) => {
+      let scope = context.sourceCode.getScope(node).variableScope;
+      while (scope.block.type === AST_NODE_TYPES.ArrowFunctionExpression && scope.upper !== null)
+        scope = scope.upper.variableScope;
+      return scope;
+    };
+
     const hasImmediateEffect = (node: TSESTree.CallExpression) => {
       const scope = context.sourceCode.getScope(node).variableScope;
       return [...effects, ...calls].some(
         effect =>
           isWithinRange(node, effect) &&
-          context.sourceCode.getScope(effect).variableScope === scope &&
-          (effect.type !== AST_NODE_TYPES.CallExpression || getCallName(effect) === undefined),
+          (([AST_NODE_TYPES.MetaProperty, AST_NODE_TYPES.Super, AST_NODE_TYPES.ThisExpression].includes(effect.type) &&
+            getReceiverScope(effect) === getReceiverScope(node)) ||
+            (context.sourceCode.getScope(effect).variableScope === scope &&
+              (effect.type !== AST_NODE_TYPES.CallExpression ||
+                !isSchema(effect) ||
+                getCallName(effect) === undefined ||
+                ['describe', 'meta', 'register'].includes(getCallName(effect) ?? '')))),
       );
     };
 
@@ -92,7 +104,7 @@ export const noFunctionScopedSchema = createRule({
       CallExpression: node => {
         calls.push(node);
       },
-      'NewExpression, ThisExpression': (node: TSESTree.Node) => {
+      'NewExpression, ThisExpression, Super, MetaProperty': (node: TSESTree.Node) => {
         effects.push(node);
       },
       'Program:exit': () => {

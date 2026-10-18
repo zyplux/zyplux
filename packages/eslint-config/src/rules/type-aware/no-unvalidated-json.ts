@@ -5,6 +5,7 @@ import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 import { createNodeSchemaCheck } from '#rule-support/schema-checks';
+import { createZodCallName } from '#rule-support/zod-calls';
 
 const zodCheckMethods = new Set<string>([
   'parse',
@@ -29,36 +30,32 @@ const isJsonMethodCall = ({ callee }: TSESTree.CallExpression) =>
   callee.property.type === AST_NODE_TYPES.Identifier &&
   callee.property.name === 'json';
 
-const isSchemaConsumer = (source: TSESTree.CallExpression, isSchema: ReturnType<typeof createNodeSchemaCheck>) => {
-  const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;
-  const { parent: host } = consumed;
-  return (
-    host.type === AST_NODE_TYPES.CallExpression &&
-    host.callee.type === AST_NODE_TYPES.MemberExpression &&
-    !host.callee.computed &&
-    host.callee.property.type === AST_NODE_TYPES.Identifier &&
-    zodCheckMethods.has(host.callee.property.name) &&
-    isSchema(host.callee.object) &&
-    host.arguments.includes(consumed)
-  );
-};
-
 export const noUnvalidatedJson = createRule({
   create: context => {
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();
     const isSchema = createNodeSchemaCheck(services);
+    const getCallName = createZodCallName(services);
+    const isSchemaConsumer = (source: TSESTree.CallExpression) => {
+      const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;
+      const { parent: host } = consumed;
+      if (host.type !== AST_NODE_TYPES.CallExpression || !zodCheckMethods.has(getCallName(host) ?? '')) return false;
+      if (host.callee.type === AST_NODE_TYPES.MemberExpression && isSchema(host.callee.object))
+        return host.arguments[0] === consumed;
+      const [schema, input] = host.arguments;
+      return schema !== undefined && isSchema(schema) && input === consumed;
+    };
 
     return {
       CallExpression: node => {
         const isJsonParse = isJsonParseCall(node);
-        if (!isJsonParse) {
-          if (!isJsonMethodCall(node)) return;
-          const tsNode = services.esTreeNodeToTSNodeMap.get(node);
-          const resultType = checker.getTypeAtLocation(tsNode);
-          if (discriminateAnyType(resultType, checker, services.program, tsNode) === AnyType.Safe) return;
-        }
-        if (isSchemaConsumer(node, isSchema)) return;
+        if (!isJsonParse && !isJsonMethodCall(node)) return;
+        const tsNode = services.esTreeNodeToTSNodeMap.get(node);
+        const resultType = checker.getTypeAtLocation(tsNode);
+        const boundaryType = discriminateAnyType(resultType, checker, services.program, tsNode);
+        if (!isJsonParse && boundaryType === AnyType.Safe) return;
+        const isResolved = boundaryType !== AnyType.PromiseAny || node.parent.type === AST_NODE_TYPES.AwaitExpression;
+        if (isResolved && isSchemaConsumer(node)) return;
         context.report({
           data: { api: isJsonParse ? 'JSON.parse(…)' : '….json()' },
           messageId: 'validateJson',
@@ -71,7 +68,7 @@ export const noUnvalidatedJson = createRule({
   meta: {
     docs: {
       description:
-        'Require deserialized JSON to flow directly into schema parsing or boolean validation, optionally through await. JSON.parse is matched syntactically; .json() is matched when its return type is any or Promise<any>. Already typed .json() methods are permitted.',
+        'Require deserialized JSON to flow directly into schema parsing or boolean validation, with await required for JSON promises. JSON.parse is matched syntactically; .json() is matched when its return type is any or Promise<any>. Already typed .json() methods are permitted.',
       requiresTypeChecking: true,
     },
     messages: {
