@@ -101,7 +101,7 @@ describe('21.2 exempting schema construction precisely', () => {
     const configs = zyplux();
     const replacement = configs.find(config => config.rules?.['@zyplux/max-nested-calls'] !== undefined);
     expect(replacement).toMatchObject({
-      files: ['**/*.{ts,tsx}'],
+      files: ['**/*.{ts,tsx,mts,cts}'],
       rules: { '@zyplux/max-nested-calls': 'error', 'unicorn/max-nested-calls': 'off' },
     });
     expect(

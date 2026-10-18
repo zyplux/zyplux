@@ -4,8 +4,17 @@ import { AnyType, discriminateAnyType } from '@typescript-eslint/type-utils';
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
+import { createNodeSchemaCheck } from '#rule-support/schema-checks';
+import { createZodCallName } from '#rule-support/zod-calls';
 
-const zodParseMethods = new Set<string>(['parse', 'parseAsync', 'safeParse', 'safeParseAsync']);
+const zodCheckMethods = new Set<string>([
+  'parse',
+  'parseAsync',
+  'safeParse',
+  'safeParseAsync',
+  'validate',
+  'validateAsync',
+]);
 
 const isJsonParseCall = ({ callee }: TSESTree.CallExpression) =>
   callee.type === AST_NODE_TYPES.MemberExpression &&
@@ -21,34 +30,32 @@ const isJsonMethodCall = ({ callee }: TSESTree.CallExpression) =>
   callee.property.type === AST_NODE_TYPES.Identifier &&
   callee.property.name === 'json';
 
-const isZodParseConsumer = (source: TSESTree.CallExpression) => {
-  const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;
-  const { parent: host } = consumed;
-  return (
-    host.type === AST_NODE_TYPES.CallExpression &&
-    host.callee.type === AST_NODE_TYPES.MemberExpression &&
-    !host.callee.computed &&
-    host.callee.property.type === AST_NODE_TYPES.Identifier &&
-    zodParseMethods.has(host.callee.property.name) &&
-    host.arguments.includes(consumed)
-  );
-};
-
 export const noUnvalidatedJson = createRule({
   create: context => {
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();
+    const isSchema = createNodeSchemaCheck(services);
+    const getCallName = createZodCallName(services);
+    const isSchemaConsumer = (source: TSESTree.CallExpression) => {
+      const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;
+      const { parent: host } = consumed;
+      if (host.type !== AST_NODE_TYPES.CallExpression || !zodCheckMethods.has(getCallName(host) ?? '')) return false;
+      if (host.callee.type === AST_NODE_TYPES.MemberExpression && isSchema(host.callee.object))
+        return host.arguments[0] === consumed;
+      const [schema, input] = host.arguments;
+      return schema !== undefined && isSchema(schema) && input === consumed;
+    };
 
     return {
       CallExpression: node => {
         const isJsonParse = isJsonParseCall(node);
-        if (!isJsonParse) {
-          if (!isJsonMethodCall(node)) return;
-          const tsNode = services.esTreeNodeToTSNodeMap.get(node);
-          const resultType = checker.getTypeAtLocation(tsNode);
-          if (discriminateAnyType(resultType, checker, services.program, tsNode) === AnyType.Safe) return;
-        }
-        if (isZodParseConsumer(node)) return;
+        if (!isJsonParse && !isJsonMethodCall(node)) return;
+        const tsNode = services.esTreeNodeToTSNodeMap.get(node);
+        const resultType = checker.getTypeAtLocation(tsNode);
+        const boundaryType = discriminateAnyType(resultType, checker, services.program, tsNode);
+        if (!isJsonParse && boundaryType === AnyType.Safe) return;
+        const isResolved = boundaryType !== AnyType.PromiseAny || node.parent.type === AST_NODE_TYPES.AwaitExpression;
+        if (isResolved && isSchemaConsumer(node)) return;
         context.report({
           data: { api: isJsonParse ? 'JSON.parse(…)' : '….json()' },
           messageId: 'validateJson',
@@ -61,12 +68,12 @@ export const noUnvalidatedJson = createRule({
   meta: {
     docs: {
       description:
-        'Disallow consuming a deserialization boundary — `JSON.parse(…)` or a `.json()` call whose result is `any`/`Promise<any>` (a `Response`/`fs.readFileSync` read) — without a zod schema. `JSON.parse` is matched syntactically (its signature always yields `any`); `.json()` is matched by type, so a domain `.json()` that already returns a typed value is left alone, while one returning `any`/`Promise<any>` is flagged whether or not it is awaited. The boundary value must flow directly (optionally through `await`) into a schema `.parse()`/`.safeParse()` — `Schema.parse(JSON.parse(text))`, `Schema.parse(await response.json())` — or through a helper that does, so the boundary returns a typed, runtime-checked value instead of an `as` cast or a hand-rolled `typeof`/`in` guard.',
+        'Require deserialized JSON to flow directly into schema parsing or boolean validation, with await required for JSON promises. JSON.parse is matched syntactically; .json() is matched when its return type is any or Promise<any>. Already typed .json() methods are permitted.',
       requiresTypeChecking: true,
     },
     messages: {
       validateJson:
-        '`{{api}}` produces untyped `any` at a deserialization boundary. Validate it with a zod schema: pass the result directly to a schema `.parse()`/`.safeParse()` (`Schema.parse(JSON.parse(text))`, `Schema.parse(await response.json())`), or route it through a helper that does, so the boundary returns a typed, runtime-checked value instead of an `as` cast or a hand-rolled `typeof`/`in` guard.',
+        '`{{api}}` produces untyped `any`. Pass it directly to schema parsing or boolean validation, such as Schema.parse(JSON.parse(text)) or Schema.validate(await response.json()).',
     },
     schema: [],
     type: 'problem',

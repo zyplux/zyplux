@@ -1,4 +1,4 @@
-import type { ZodType } from 'zod';
+import type * as z from 'zod';
 
 import type { SafeResult } from './result.ts';
 
@@ -28,14 +28,14 @@ const send = (input: string | URL, init?: RequestInit) => {
     return response;
   };
   const pending = fetchChecked();
-  const json = async <T>(schema: ZodType<T>) => {
+  const json = async <T>(schema: z.ZodType<T>) => {
     const response = await pending;
     return schema.parse(await response.json());
   };
   return {
     json,
     response: async () => pending,
-    safeJson: <T>(schema: ZodType<T>): Promise<SafeResult<T>> => attemptAsync(() => json(schema)),
+    safeJson: <T>(schema: z.ZodType<T>): Promise<SafeResult<T>> => attemptAsync(() => json(schema)),
     text: async () => {
       const response = await pending;
       return response.text();
@@ -55,7 +55,7 @@ export const http = Object.assign(send, {
   put: withMethod('PUT'),
 });
 
-export const fetchJson = async <T>(url: string | URL, schema: ZodType<T>): Promise<T | undefined> => {
+export const fetchJson = async <T>(url: string | URL, schema: z.ZodType<T>): Promise<T | undefined> => {
   const result = await http.get(url).safeJson(schema);
   return result.ok ? result.data : undefined;
 };

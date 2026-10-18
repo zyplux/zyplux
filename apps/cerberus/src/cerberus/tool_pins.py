@@ -12,7 +12,7 @@ from __future__ import annotations
 
 NPM_TOOL_PINS: dict[str, str] = {
     "jscpd": "5.4.1",
-    "fallow": "3.34.0",
+    "fallow": "3.34.1",
 }
 
 

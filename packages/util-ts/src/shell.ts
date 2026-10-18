@@ -1,4 +1,4 @@
-import type { ZodObject, ZodRawShape, ZodType } from 'zod';
+import type * as z from 'zod';
 
 import type { GhPr, GhRelease, GhRepo, GhRun } from './contracts.ts';
 import type { ExecPromise } from './exec.ts';
@@ -77,13 +77,13 @@ const flag = (name: string, value: FlagValue) => {
 const toArgs = (flags: Record<string, FlagValue>) =>
   Object.entries(flags).flatMap(([name, value]) => flag(name, value));
 
-const pickFields = <Shape extends ZodRawShape>(schema: ZodObject<Shape>, fields: readonly (keyof Shape)[]) => {
+const pickFields = <Shape extends z.ZodRawShape>(schema: z.ZodObject<Shape>, fields: readonly (keyof Shape)[]) => {
   const mask: Parameters<typeof schema.pick>[0] = {};
   for (const field of fields) Object.assign(mask, { [field]: true });
   return schema.pick(mask);
 };
 
-const readGh = async <T>(argv: string[], schema: ZodType<T>) => {
+const readGh = async <T>(argv: string[], schema: z.ZodType<T>) => {
   const response = await sh`gh ${argv}`.quiet();
   return parseJson(response.text(), schema);
 };

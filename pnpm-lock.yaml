@@ -227,6 +227,9 @@ catalogs:
     eslint-plugin-unicorn:
       specifier: ^78.0.0
       version: 78.0.0
+    eslint-plugin-zod:
+      specifier: ^5.2.0
+      version: 5.2.0
     knip:
       specifier: ^6.41.0
       version: 6.41.0
@@ -367,6 +370,9 @@ importers:
       eslint-plugin-unicorn:
         specifier: 'catalog:'
         version: 78.0.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+      eslint-plugin-zod:
+        specifier: 'catalog:'
+        version: 5.2.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(zod@4.6.7)
       typescript-eslint:
         specifier: 'catalog:'
         version: 8.71.2(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
@@ -757,6 +763,11 @@ packages:
     peerDependenciesMeta:
       eslint:
         optional: true
+
+  '@eslint-zod/utils@6.2.0':
+    resolution:
+      { integrity: sha512-m7MEtKljnyl5dR/ryjpzvzGmt1r05LziY30RN46tiHaz256NUK8fFownih95qPDmaGAluhZxQAVOY8G1FX7ZzA== }
+    engines: { node: ^20.19 || ^22.12 || >=24 }
 
   '@eslint/config-array@0.23.5':
     resolution:
@@ -2142,6 +2153,22 @@ packages:
       typescript:
         optional: true
 
+  eslint-plugin-zod@5.2.0:
+    resolution:
+      { integrity: sha512-2dnk6/AI5FmzNd17EA5ejvlc8wvuWP5Q+vKz6WCUHbPRT4wPSzMHo6PwpVb87CeoHy1tCXqaGQdJqsG4LLPg4A== }
+    engines: { node: ^20.19 || ^22.12 || >=24 }
+    peerDependencies:
+      eslint: ^9 || ^10
+      oxlint: ^1.59.0
+      zod: ^4
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+      oxlint:
+        optional: true
+      zod:
+        optional: true
+
   eslint-scope@9.1.2:
     resolution:
       { integrity: sha512-xS90H51cKw0jltxmvmHy2Iai1LIqrfbw57b79w/J7MfvDfkIkFZ+kj6zC3BjtUwh150HsSSdxXZcsuv72miDFQ== }
@@ -3514,6 +3541,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@eslint-zod/utils@6.2.0':
+    dependencies:
+      '@typescript-eslint/types': 8.71.2
+      esquery: 1.7.0
+
   '@eslint/config-array@0.23.5(supports-color@7.2.0)':
     dependencies:
       '@eslint/object-schema': 3.0.5
@@ -4621,6 +4653,14 @@ snapshots:
       typescript: 6.0.3
     transitivePeerDependencies:
       - supports-color
+
+  eslint-plugin-zod@5.2.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(zod@4.6.7):
+    dependencies:
+      '@eslint-zod/utils': 6.2.0
+      '@typescript-eslint/types': 8.71.2
+    optionalDependencies:
+      eslint: 10.13.0(jiti@2.7.0)(supports-color@7.2.0)
+      zod: 4.6.7
 
   eslint-scope@9.1.2:
     dependencies:

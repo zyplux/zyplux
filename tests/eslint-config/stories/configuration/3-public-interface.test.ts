@@ -3,6 +3,8 @@ import type { ZypluxConfig as Config } from './configuration.ts';
 
 import { describe, expect, test } from './configuration.ts';
 
+const errorSeverity = 2;
+
 const hasReactSettings = (config: Config) =>
   config.some(entry => entry.settings !== undefined && 'react-x' in entry.settings);
 
@@ -42,6 +44,13 @@ describe('3. Configuring eslint through the public zyplux entry point', () => {
       ].map(name => name.replace('@zyplux/', ''));
       expect(exported.length).toBeGreaterThan(0);
       expect(enabled).toContainExactElementsInAnyOrder(exported);
+    });
+
+    test.for(['mts', 'cts'])('3.1.3 enables Zod checks in .%s modules', async (extension, { resolveConfig }) => {
+      const config = await resolveConfig(`example.${extension}`);
+      expect(config.rules['@zyplux/no-function-scoped-schema']).toEqual([errorSeverity]);
+      expect(config.rules['@zyplux/prefer-validate']).toEqual([errorSeverity]);
+      expect(config.rules['zod/no-any-schema']).toEqual([errorSeverity]);
     });
 
     test('3.1.2 scopes vitest rules to test files', ({ zyplux }) => {

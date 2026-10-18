@@ -128,7 +128,7 @@ describe('18.3 replacing the upstream preference in the shipped config', () => {
   test('18.3.1 enables the rule for every typescript file', ({ zyplux }) => {
     const config = zyplux();
     const entries = config.filter(entry => entry.rules?.['@zyplux/type-over-interface'] !== undefined);
-    expect(entries.map(entry => entry.files)).toEqual([['**/*.{ts,tsx}']]);
+    expect(entries.map(entry => entry.files)).toEqual([['**/*.{ts,tsx,mts,cts}']]);
   });
 
   test('18.3.2 resolves the upstream consistent-type-definitions rule to off', ({ lint }) => {

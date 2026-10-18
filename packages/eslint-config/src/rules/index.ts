@@ -12,6 +12,7 @@ import { typeOverInterface } from './syntactic/type-over-interface.ts';
 import { constantsOnlyPrimitives } from './type-aware/constants-only-primitives.ts';
 import { contractsOnlySchemas } from './type-aware/contracts-only-schemas.ts';
 import { maxNestedCalls } from './type-aware/max-nested-calls.ts';
+import { noFunctionScopedSchema } from './type-aware/no-function-scoped-schema.ts';
 import { noReturnArrayPush } from './type-aware/no-return-array-push.ts';
 import { noSchemasOutsideContracts } from './type-aware/no-schemas-outside-contracts.ts';
 import { noStrayPascalConst } from './type-aware/no-stray-pascal-const.ts';
@@ -20,6 +21,7 @@ import { noTypeOnlyDependencies } from './type-aware/no-type-only-dependencies.t
 import { noUnvalidatedJson } from './type-aware/no-unvalidated-json.ts';
 import { noZodCustom } from './type-aware/no-zod-custom.ts';
 import { preferDestructuredParams } from './type-aware/prefer-destructured-params.ts';
+import { preferValidate } from './type-aware/prefer-validate.ts';
 import { usePackageTypeExports } from './type-aware/use-package-type-exports.ts';
 
 const upstreamPreferArrowFunctions = preferArrowFunctions.rules['prefer-arrow-functions'];
@@ -33,6 +35,7 @@ export const rules: Record<string, EslintRule> = {
   'contracts-only-schemas': contractsOnlySchemas,
   'max-nested-calls': maxNestedCalls,
   'no-anonymous-param-type': noAnonymousParamType,
+  'no-function-scoped-schema': noFunctionScopedSchema,
   'no-identity-cast': noIdentityCast,
   'no-return-array-push': noReturnArrayPush,
   'no-schemas-outside-contracts': noSchemasOutsideContracts,
@@ -44,6 +47,7 @@ export const rules: Record<string, EslintRule> = {
   'no-zod-custom': noZodCustom,
   'prefer-arrow-functions': castToEslintRule(upstreamPreferArrowFunctions),
   'prefer-destructured-params': preferDestructuredParams,
+  'prefer-validate': preferValidate,
   'test-seam-only-imports': testSeamOnlyImports,
   'type-only-modules': typeOnlyModules,
   'type-over-interface': typeOverInterface,

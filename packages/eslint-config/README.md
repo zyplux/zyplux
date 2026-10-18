@@ -18,7 +18,7 @@ import { zyplux } from '@zyplux/eslint-config';
 export default zyplux({ tsconfigRootDir: import.meta.dirname });
 ```
 
-One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), the custom `@zyplux` rules, vitest (recommended, on `*.{test,spec}.{ts,tsx}`), and prettier last. React is off until you ask for it.
+One call is the whole config: ESLint recommended, type-checked typescript-eslint, unicorn, perfectionist (natural sorting), selected Zod checks, the custom `@zyplux` rules, vitest (recommended, on `*.{test,spec}.{ts,tsx}`), and prettier last. React is off until you ask for it.
 
 ## React renderers
 
@@ -77,14 +77,17 @@ Rule implementations live in `src/rules/`; shared analysis and reporting live in
 - `no-type-only-dependencies` rejects dependencies on workspace implementation packages solely for types. Public `/contracts` and `/interfaces` entries are allowed; other public API types require a value import or re-export from the provider somewhere in the consumer package's TypeScript program.
 - `test-seam-only-imports` covers every `.test.ts` and `.test.tsx`, including tests outside story directories. Value imports are Vitest API bindings; type-only imports from the same suite API may describe fixtures. Executable helpers reach tests through fixture context. `testApis` maps suite globs to explicit API paths for colocated UI rigs.
 - Other custom rules enforce validated JSON, arrow functions, type declarations, clear parameter shapes, and nesting limits.
-- Type-checked TypeScript (the full `typescript-eslint` `all` preset), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
+- `no-function-scoped-schema` requires function-independent schemas to be constructed once outside the function. Input-dependent factories, recursive schema getters and `z.lazy()` callbacks remain valid.
+- `prefer-validate` requires `.validate()` or `.validateAsync()` when a Zod parse result is read only through `success`, including imported schemas and schema parameters. Parsing remains appropriate for parsed data, error details and throwing assertions. Requires Zod 4.6 for schema validation methods; no compilation is enabled by the lint config.
+- Seven `eslint-plugin-zod` checks enforce namespace imports and reject `z.any()`, boolean truthiness coercion, conflicting checks, duplicate schema methods, throws in refinements and transforms on record keys.
+- Type-checked TypeScript (`typescript-eslint`'s `strictTypeChecked` and `stylisticTypeChecked` presets), arrow-only functions, `type` over `interface` (except declaration-merging interfaces inside `declare module`/`declare global` blocks), no type assertions.
 - No parent-relative (`../`) imports — route through a tsconfig `paths` alias (`@/foo`).
 - unicorn + perfectionist (natural sorting); prettier last, so formatting rules are off.
 - Your `.gitignore` is honored — patterns from `<tsconfigRootDir>/.gitignore` become ESLint ignores (flat config doesn't read `.gitignore` on its own).
 
 ## zod at the boundary
 
-`consistent-type-assertions: 'never'` plus `no-zod-custom`, `no-type-predicate`, and `no-unvalidated-json` steer every deserialization boundary (`JSON.parse`, `await response.json()`, `event.data`, JSONL) toward a zod schema that _returns_ the typed value rather than `parse(x) as T`. `no-unvalidated-json` is the direct enforcer: a `JSON.parse(…)` (matched syntactically) or a `.json()` returning `any`/`Promise<any>` (matched by type, so a typed domain `.json()` is exempt) must flow into a schema `.parse()`/`.safeParse()`. Annotate hand-written schemas as `z.ZodType<T>` to keep their declared type. Blind spot: that annotation only rejects schemas producing values _outside_ `T` — a schema _missing_ a union member still type-checks (a narrower output is assignable to the wider `T`), so a discriminated union can silently drop a case. Keep wire schemas exhaustive by hand.
+`consistent-type-assertions: 'never'` plus `no-zod-custom`, `no-type-predicate`, and `no-unvalidated-json` steer every deserialization boundary (`JSON.parse`, `await response.json()`, `event.data`, JSONL) toward a zod schema that _returns_ the typed value rather than `parse(x) as T`. `no-unvalidated-json` is the direct enforcer: a `JSON.parse(…)` (matched syntactically) or a `.json()` returning `any`/`Promise<any>` (matched by type, so a typed domain `.json()` is exempt) must flow into schema parsing or boolean validation. Annotate hand-written schemas as `z.ZodType<T>` to keep their declared type. Blind spot: that annotation only rejects schemas producing values _outside_ `T` — a schema _missing_ a union member still type-checks (a narrower output is assignable to the wider `T`), so a discriminated union can silently drop a case. Keep wire schemas exhaustive by hand.
 
 ## Tweaking rules
 

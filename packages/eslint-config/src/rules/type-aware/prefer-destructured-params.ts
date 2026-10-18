@@ -4,6 +4,7 @@ import { isTypeAnyType } from '@typescript-eslint/type-utils';
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
+import { collectScopeTree } from '#rule-support/scope-tree';
 
 type AliasAbsorption = {
   declaration: TSESTree.VariableDeclaration;
@@ -107,18 +108,6 @@ const propertyReadOf = (identifier: TSESTree.Node) => {
     return;
   }
   return { member, property: member.property.name };
-};
-
-const collectScopeTree = (root: TSESLint.Scope.Scope) => {
-  const scopes: TSESLint.Scope.Scope[] = [];
-  const pending = [root];
-  while (pending.length > 0) {
-    const scope = pending.pop();
-    if (!scope) continue;
-    scopes.push(scope);
-    pending.push(...scope.childScopes);
-  }
-  return scopes;
 };
 
 const collectSortedReads = ({ references }: TSESLint.Scope.Variable) => {
