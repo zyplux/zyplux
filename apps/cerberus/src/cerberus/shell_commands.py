@@ -31,6 +31,8 @@ def list_command_args(command: Node) -> tuple[str, ...]:
 def matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) -> bool:
     if set(command) & {"--help", "-h", "--version", "-V"}:
         return False
+    if "pyrefly" in required and any(arg.partition("=")[0] == "--min-severity" for arg in command):
+        return False
     if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
         return False
     if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):

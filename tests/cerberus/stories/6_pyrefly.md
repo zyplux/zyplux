@@ -61,3 +61,7 @@
 ### 6.10.1 fails when the warning threshold is missing
 
 ### 6.10.2 fails when the warning threshold is not canonical
+
+## 6.11 requiring settings to be declared directly
+
+### 6.11.1 rejects configuration inheritance

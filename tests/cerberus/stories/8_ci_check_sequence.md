@@ -38,6 +38,8 @@
 
 ### 8.5.5 rejects skipped background or chained commands
 
+### 8.5.6 rejects pyrefly warning threshold overrides
+
 ## 8.6 selecting steps from source files
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests

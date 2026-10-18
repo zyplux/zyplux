@@ -186,6 +186,8 @@ The check recognizes commands starting with `uv run cerberus`. Mentions in comme
 
 Shell helpers start with `set -euo pipefail` and contain no other `set` commands.
 
+### 1.10.15 rejects pyrefly warning threshold overrides
+
 ## 1.11 requiring the clean recipe to run cz clean
 
 A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the

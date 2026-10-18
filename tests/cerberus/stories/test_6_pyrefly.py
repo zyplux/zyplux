@@ -247,3 +247,9 @@ def test_6_10_2_fails_when_the_warning_threshold_is_not_canonical(
     result = run_pyrefly(pyrefly=_PYREFLY_STRICT.replace('min-severity = "warn"', f'min-severity = "{severity}"'))
 
     assert result.findings == [fail(f'pyrefly.toml must set `min-severity = "warn"`; found {severity!r}')]
+
+
+def test_6_11_1_rejects_configuration_inheritance(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+    result = run_pyrefly(pyrefly=_PYREFLY_STRICT + '\nextends = "base.toml"\n')
+
+    assert result.findings == [fail("pyrefly.toml must declare its settings directly; `extends` is not supported")]

@@ -588,3 +588,13 @@ def test_1_16_1_requires_application_recipes_when_python_stubs_are_present(
     assert bool(result.problems) is bool(source)
     if source:
         assert "missing required recipe `typecheck`" in [problem.message for problem in result.problems]
+
+
+@requires_just
+@pytest.mark.parametrize("option", ["--min-severity error", "--min-severity=error", "--min-severity=warn"])
+def test_1_10_15_rejects_pyrefly_warning_threshold_overrides(run_justfile_check: RunJustfileCheck, option: str) -> None:
+    result = run_justfile_check(CONFORMING.replace("uv run pyrefly check", f"uv run pyrefly check {option}"))
+
+    assert [finding.message for finding in result.problems] == [
+        "recipe `typecheck` must run `uv run pyrefly check` without masking its failure"
+    ]
