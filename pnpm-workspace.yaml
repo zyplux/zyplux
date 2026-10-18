@@ -31,6 +31,7 @@ catalog:
   publint: ^0.3.25
   commonmark: ^0.31.2
   '@types/commonmark': ^0.27.10
+  eslint-plugin-zod: ^5.2.0
 
 minimumReleaseAge: 1440
 minimumReleaseAgeExcludePrune: true

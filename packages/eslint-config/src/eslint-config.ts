@@ -14,6 +14,7 @@ import { testSeamRules } from './configs/test-seam.ts';
 import { typescript } from './configs/typescript.ts';
 import { unicornConfig } from './configs/unicorn.ts';
 import { vitestConfig } from './configs/vitest.ts';
+import { zodConfig } from './configs/zod.ts';
 import { zypluxRules } from './configs/zyplux.ts';
 
 export type { ReactRenderer, RendererGlobs } from './configs/react.ts';
@@ -74,6 +75,7 @@ const create = (options: ZypluxOptions = {}) => {
     ...reactPresets(renderers, reactVersion),
     perfectionistConfig,
     unicornConfig,
+    zodConfig,
     ...(isTanstack ? [tanstackRoutes] : []),
     zypluxRules,
     contractsRules,

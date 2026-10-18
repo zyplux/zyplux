@@ -838,8 +838,16 @@
     "unicorn/throw-new-error": [2],
     "unicorn/try-complexity": [0, { "max": 1 }],
     "unicorn/prevent-abbreviations": [0],
+    "zod/consistent-import": [2, { "syntax": "namespace" }],
+    "zod/no-any-schema": [2],
+    "zod/no-coerce-boolean": [2],
+    "zod/no-conflicting-checks": [2],
+    "zod/no-duplicate-schema-methods": [2],
+    "zod/no-throw-in-refine": [2],
+    "zod/no-transform-in-record-key": [2],
     "@zyplux/max-nested-calls": [2, { "max": 3 }],
     "@zyplux/no-anonymous-param-type": [2],
+    "@zyplux/no-function-scoped-schema": [2],
     "@zyplux/no-identity-cast": [2],
     "@zyplux/no-return-array-push": [2],
     "@zyplux/no-stray-pascal-const": [2],
@@ -860,6 +868,7 @@
       }
     ],
     "@zyplux/prefer-destructured-params": [2],
+    "@zyplux/prefer-validate": [2],
     "@zyplux/type-over-interface": [2],
     "@zyplux/no-schemas-outside-contracts": [2],
     "@zyplux/no-type-only-dependencies": [2],
@@ -1224,7 +1233,8 @@
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.71.2",
     "perfectionist:eslint-plugin-perfectionist@5.12.1",
     "unicorn:eslint-plugin-unicorn@78.0.0",
-    "@zyplux:@zyplux/eslint-config@0.11.1"
+    "zod:eslint-plugin-zod@5.2.0",
+    "@zyplux:@zyplux/eslint-config@0.12.0"
   ],
   "language": "@/js"
 }

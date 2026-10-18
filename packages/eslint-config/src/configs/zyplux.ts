@@ -8,6 +8,7 @@ export const zypluxRules: ConfigWithExtends = {
   rules: {
     '@zyplux/max-nested-calls': 'error',
     '@zyplux/no-anonymous-param-type': 'error',
+    '@zyplux/no-function-scoped-schema': 'error',
     '@zyplux/no-identity-cast': 'error',
     '@zyplux/no-return-array-push': 'error',
     '@zyplux/no-stray-pascal-const': 'error',
@@ -17,6 +18,7 @@ export const zypluxRules: ConfigWithExtends = {
     '@zyplux/no-zod-custom': 'error',
     '@zyplux/prefer-arrow-functions': ['error', { returnStyle: 'implicit' }],
     '@zyplux/prefer-destructured-params': 'error',
+    '@zyplux/prefer-validate': 'error',
     '@zyplux/type-over-interface': 'error',
     'unicorn/max-nested-calls': 'off',
   },

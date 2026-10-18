@@ -1,6 +1,6 @@
 import { registerMatchers } from '@zyplux/spectra/test-matchers';
 import { isDeepStrictEqual } from 'node:util';
-import { ZodError } from 'zod';
+import * as z from 'zod';
 
 export type TomlOutcome = 'schemaError' | 'syntaxError' | 'valid';
 
@@ -20,8 +20,8 @@ registerMatchers({
       outcome === 'valid'
         ? thrown === undefined && isDeepStrictEqual(value, expectedValue)
         : outcome === 'schemaError'
-          ? thrown instanceof ZodError
-          : thrown !== undefined && !(thrown instanceof ZodError);
+          ? thrown instanceof z.ZodError
+          : thrown !== undefined && !(thrown instanceof z.ZodError);
 
     return {
       message: () =>

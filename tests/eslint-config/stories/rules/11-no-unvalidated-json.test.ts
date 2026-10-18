@@ -70,6 +70,11 @@ describe('11.2 permitting validated reads and non-boundary json calls', () => {
         'const sent = builder.json({ ok: true });',
       ].join('\n'),
     ],
+    ['8 allows JSON flowing into boolean validation', 'const valid = Schema.validate(JSON.parse(text));'],
+    [
+      '9 allows JSON flowing into asynchronous boolean validation',
+      'const valid = await Schema.validateAsync(JSON.parse(text));',
+    ],
   ])('11.2.%s', ([, code], { lintRule }) => {
     expect(lintRule(code)).toReportNothing();
   });

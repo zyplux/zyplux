@@ -21,3 +21,5 @@
 5. leaves JSON stringify alone, which is not a parse boundary
 6. leaves a json call returning a concrete type alone
 7. leaves a json call with a concrete return type built from an argument alone
+8. allows JSON flowing into boolean validation
+9. allows JSON flowing into asynchronous boolean validation
