@@ -55,3 +55,9 @@
 ### 6.9.1 type checks a configured production workspace outside the default globs
 
 ### 6.9.2 supports production roots at any directory depth
+
+## 6.10 requiring warnings to fail the quality gate
+
+### 6.10.1 fails when the warning threshold is missing
+
+### 6.10.2 fails when the warning threshold is not canonical

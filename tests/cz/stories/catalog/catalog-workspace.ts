@@ -29,9 +29,11 @@ const depsDevDefaultVersion = () =>
   Response.json({ versions: [{ isDefault: true, versionKey: { version: '1.0.0' } }] });
 
 const depsDevSourceRepoResponse = (sourceRepo: DepsDevSourceRepo) =>
-  typeof sourceRepo === 'string'
-    ? Response.json({ relatedProjects: [{ projectKey: { id: sourceRepo }, relationType: 'SOURCE_REPO' }] })
-    : Response.json({ links: [{ label: 'SOURCE_REPO', url: `https://${sourceRepo.repo}` }] });
+  Response.json(
+    typeof sourceRepo === 'string'
+      ? { relatedProjects: [{ projectKey: { id: sourceRepo }, relationType: 'SOURCE_REPO' }] }
+      : { links: [{ label: 'SOURCE_REPO', url: `https://${sourceRepo.repo}` }] },
+  );
 export const createCatalog = (cz: CliRunner, tempDir: TempDir, { logLines }: ConsoleCapture, network: FetchFake) => {
   const outPath = path.join(tempDir.path, 'catalog.json');
   const readOutput = (relativePath = 'catalog.json') => readFile(path.join(tempDir.path, relativePath), 'utf8');

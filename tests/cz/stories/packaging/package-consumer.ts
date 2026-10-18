@@ -28,15 +28,15 @@ type EmitPolicy = {
   tsBuildInfoFile: string;
 };
 const loadRecord = (file: string) => parseJson(readFileSync(file, 'utf8'), LooseRecordSchema);
-const loadBoolean = (record: Record<string, unknown>, key: string) => {
+const isOptionEnabled = (record: Record<string, unknown>, key: string) => {
   const value = record[key];
   ensure(typeof value === 'boolean', `${key} is not a boolean`);
   return value;
 };
 
 const loadEmitPolicy = (preset: Record<string, unknown>) => ({
-  declarationMap: loadBoolean(preset, 'declarationMap'),
-  emitDeclarationOnly: loadBoolean(preset, 'emitDeclarationOnly'),
+  declarationMap: isOptionEnabled(preset, 'declarationMap'),
+  emitDeclarationOnly: isOptionEnabled(preset, 'emitDeclarationOnly'),
   outDir: VersionFieldSchema.parse(preset['outDir']),
   rewriteRelativeImportExtensions: preset['rewriteRelativeImportExtensions'] === true,
   tsBuildInfoFile: VersionFieldSchema.parse(preset['tsBuildInfoFile']),
@@ -58,7 +58,7 @@ export const loadTsconfigPresets = (): TsconfigPresets => {
     }),
   );
   return {
-    base: { ...loadEmitPolicy(base), composite: loadBoolean(base, 'composite') },
+    base: { ...loadEmitPolicy(base), composite: isOptionEnabled(base, 'composite') },
     baseDeclaresModules: 'module' in base || 'moduleResolution' in base,
     nodePub: loadEmitPolicy(nodePub),
     variants,

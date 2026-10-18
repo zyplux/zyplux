@@ -551,7 +551,10 @@ def test_16_15_3_rejects_invalid_tool_configuration_without_source(
         (
             "pyrefly",
             "pyrefly.toml",
-            'preset = "strict"\ndisable-project-excludes-heuristics = true\nuse-ignore-files = false',
+            (
+                'preset = "strict"\nmin-severity = "warn"\n'
+                "disable-project-excludes-heuristics = true\nuse-ignore-files = false"
+            ),
         ),
         ("pytest", "pyproject.toml", "[tool.coverage.report]\nfail_under = 90"),
     ],

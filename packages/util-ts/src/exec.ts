@@ -81,7 +81,7 @@ const spawnProcess = (argv: string[], { cwd, env, nothrow, quiet, stdin }: Spawn
       const exitCode = code ?? (signal === null ? FAILURE_EXIT_CODE : SIGNAL_EXIT_OFFSET + constants.signals[signal]);
       const result = toExecResult(
         exitCode,
-        shouldMerge ? Buffer.concat(merged) : Buffer.concat(stdoutChunks),
+        Buffer.concat(shouldMerge ? merged : stdoutChunks),
         shouldMerge ? Buffer.alloc(0) : Buffer.concat(stderrChunks),
       );
       if (!nothrow && result.exitCode !== 0) {

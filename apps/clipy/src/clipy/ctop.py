@@ -208,7 +208,7 @@ def sample_exthost_profile(websocket_url: str, seconds: float) -> dict[str, Any]
     try:
         with connect(websocket_url, max_size=None, open_timeout=2) as inspector:
             result = run_profiler_session(inspector, seconds)
-    except OSError, ValueError, TimeoutError, WebSocketException:
+    except OSError, ValueError, WebSocketException:
         return None
     return result.get("profile") if result else None
 

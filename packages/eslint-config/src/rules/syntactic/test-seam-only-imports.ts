@@ -78,21 +78,21 @@ export const testSeamOnlyImports = createRule<Options, MessageId>({
         (resolved === undefined && specifier.startsWith('.') && path.resolve(directory, target) === expected)
       );
     };
-    const checkSource = (source: null | TSESTree.StringLiteral) => {
+    const didReportSource = (source: null | TSESTree.StringLiteral) => {
       if (source === null || isSuiteApi(source.value)) return false;
       context.report({ messageId: 'moduleOutsideSeam', node: source });
       return true;
     };
     return {
       ExportAllDeclaration: node => {
-        if (!checkSource(node.source)) context.report({ messageId: 'bindingOutsideSeam', node });
+        if (!didReportSource(node.source)) context.report({ messageId: 'bindingOutsideSeam', node });
       },
       ExportNamedDeclaration: node => {
-        if (node.source !== null && !checkSource(node.source))
+        if (node.source !== null && !didReportSource(node.source))
           context.report({ messageId: 'bindingOutsideSeam', node });
       },
       ImportDeclaration: node => {
-        if (checkSource(node.source) || node.importKind === 'type') return;
+        if (didReportSource(node.source) || node.importKind === 'type') return;
         for (const specifier of node.specifiers) {
           if (
             specifier.type !== AST_NODE_TYPES.ImportSpecifier ||

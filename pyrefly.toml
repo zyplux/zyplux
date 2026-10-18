@@ -1,4 +1,5 @@
 preset = "strict"
+min-severity = "warn"
 
 project-includes = [
     "apps/cerberus/src",

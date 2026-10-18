@@ -11,8 +11,8 @@ fix is bumping the pin here and releasing cerberus.
 from __future__ import annotations
 
 NPM_TOOL_PINS: dict[str, str] = {
-    "jscpd": "5.4.0",
-    "fallow": "3.32.0",
+    "jscpd": "5.4.1",
+    "fallow": "3.34.0",
 }
 
 
