@@ -13,7 +13,7 @@ def count_compiler_tokens(pure_code: str) -> int:
         for tok in tokenize.generate_tokens(io.StringIO(pure_code).readline):
             if tok.type in semantic_types:
                 count += 1
-    except tokenize.TokenError, SyntaxError, IndentationError:
+    except tokenize.TokenError, SyntaxError:
         pass
     return count
 

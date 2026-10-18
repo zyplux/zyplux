@@ -219,7 +219,7 @@ export const preferDestructuredParams = createRule({
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();
 
-    const bindsDeclaredProperties = (param: TSESTree.Identifier, propertyNames: readonly string[]) => {
+    const hasDeclaredProperties = (param: TSESTree.Identifier, propertyNames: readonly string[]) => {
       const paramType = services.getTypeAtLocation(param);
       return (
         isTypeAnyType(paramType) ||
@@ -240,7 +240,7 @@ export const preferDestructuredParams = createRule({
       const partition = partitionReads(sourceCode, reads);
       if (!partition) return;
       const { aliasAbsorptions, directReads, propertyNames } = partition;
-      if (hasAliasRenameConflict(aliasAbsorptions) || !bindsDeclaredProperties(param, propertyNames)) return;
+      if (hasAliasRenameConflict(aliasAbsorptions) || !hasDeclaredProperties(param, propertyNames)) return;
 
       const introducedNames = new Set(propertyNames);
       const functionScope = paramVariable.scope;

@@ -131,6 +131,13 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if config is None:
         return res
 
+    if "extends" in config:
+        res.fail(f"{PATH} must declare its settings directly; `extends` is not supported")
+
+    severity = config.get("min-severity")
+    if severity != "warn":
+        res.fail(f'{PATH} must set `min-severity = "warn"`; found {severity!r}')
+
     _check_top_level_errors(config, ctx.config.pyrefly_error_kinds, res)
     _check_coverage(config, production_roots, test_roots, res)
     _check_sub_configs(config, res)

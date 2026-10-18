@@ -15,7 +15,7 @@ type RunPyrefly = Callable[..., CheckResult]
 CHECK_ID = "pyrefly"
 
 _PYREFLY_STRICT = (
-    'preset = "strict"\n\n'
+    'preset = "strict"\nmin-severity = "warn"\n\n'
     'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
     "disable-project-excludes-heuristics = true\n"
     "use-ignore-files = false\n"
@@ -163,7 +163,7 @@ def test_6_8_1_fails_when_the_exclude_heuristic_overrides_are_missing(
     run_pyrefly: RunPyrefly, fail: MakeFinding
 ) -> None:
     pyrefly = (
-        'preset = "strict"\n\n'
+        'preset = "strict"\nmin-severity = "warn"\n\n'
         'project-includes = ["apps/cerberus/src", "tests/cerberus"]\n'
         'search-path = ["apps/cerberus/src"]\n'
     )
@@ -232,3 +232,24 @@ def test_6_9_2_supports_production_roots_at_any_directory_depth(run_pyrefly: Run
     )
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: services/internal/worker/src")]
+
+
+def test_6_10_1_fails_when_the_warning_threshold_is_missing(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+    result = run_pyrefly(pyrefly=_PYREFLY_STRICT.replace('min-severity = "warn"\n', ""))
+
+    assert result.findings == [fail('pyrefly.toml must set `min-severity = "warn"`; found None')]
+
+
+@pytest.mark.parametrize("severity", ["error", "info", "ignore"])
+def test_6_10_2_fails_when_the_warning_threshold_is_not_canonical(
+    run_pyrefly: RunPyrefly, fail: MakeFinding, severity: str
+) -> None:
+    result = run_pyrefly(pyrefly=_PYREFLY_STRICT.replace('min-severity = "warn"', f'min-severity = "{severity}"'))
+
+    assert result.findings == [fail(f'pyrefly.toml must set `min-severity = "warn"`; found {severity!r}')]
+
+
+def test_6_11_1_rejects_configuration_inheritance(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
+    result = run_pyrefly(pyrefly=_PYREFLY_STRICT + '\nextends = "base.toml"\n')
+
+    assert result.findings == [fail("pyrefly.toml must declare its settings directly; `extends` is not supported")]

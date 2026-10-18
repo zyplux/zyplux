@@ -311,3 +311,12 @@ def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
         },
     )
     assert result.findings == [sequence_pass]
+
+
+@pytest.mark.parametrize("option", ["--min-severity error", "--min-severity=error", "--min-severity=warn"])
+def test_8_5_6_rejects_pyrefly_warning_threshold_overrides(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, option: str
+) -> None:
+    result = run_ci_sequence(python=True, ci=_PY_CI.replace("pyrefly check", f"pyrefly check {option}"))
+
+    assert result.findings == [fail("python ci is missing `pyrefly check`")]

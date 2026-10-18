@@ -6,7 +6,7 @@ import { createRule } from '#create-rule';
 
 type FunctionLike = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
 
-const returnsParameterUnchanged = ({ body }: FunctionLike, parameterName: string) => {
+const doesReturnParameter = ({ body }: FunctionLike, parameterName: string) => {
   if (body.type === AST_NODE_TYPES.Identifier) {
     return body.name === parameterName;
   }
@@ -30,7 +30,7 @@ export const noIdentityCast = createRule({
         rest.length > 0 ||
         parameter?.type !== AST_NODE_TYPES.Identifier ||
         !parameter.typeAnnotation ||
-        !returnsParameterUnchanged(node, parameter.name)
+        !doesReturnParameter(node, parameter.name)
       )
         return;
 

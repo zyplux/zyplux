@@ -6,11 +6,11 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "26.10.0",
+      "version": "26.12.0",
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.9.1",
+  "packageManager": "pnpm@12.14.0",
   "scripts": {
     "knip": "knip",
     "format": "prettier --write --cache --log-level warn .",

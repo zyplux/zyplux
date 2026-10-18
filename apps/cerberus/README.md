@@ -103,6 +103,8 @@ Production roots are repository-relative directory globs; their descendants belo
 
 Knip intersects this ownership with registered TypeScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
 
+Pyrefly requires `min-severity = "warn"` so warnings are displayed and fail the quality gate. Settings must be declared directly in `pyrefly.toml`; `extends` and command-line `--min-severity` overrides are rejected.
+
 Other tools can consume the public API without scanning files or invoking the CLI:
 
 ```python

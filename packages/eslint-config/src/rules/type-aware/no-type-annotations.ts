@@ -90,11 +90,10 @@ const declarationContainers = new Set<TSESTree.Node['type']>([
 ]);
 
 const hasExportedAncestor = ({ parent }: TSESTree.Node): boolean =>
-  parent
-    ? parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
-      parent.type === AST_NODE_TYPES.ExportDefaultDeclaration ||
-      (declarationContainers.has(parent.type) && hasExportedAncestor(parent))
-    : false;
+  !!parent &&
+  (parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
+    parent.type === AST_NODE_TYPES.ExportDefaultDeclaration ||
+    (declarationContainers.has(parent.type) && hasExportedAncestor(parent)));
 
 const isTopLevel = ({ parent }: TSESTree.Node) => parent?.type === AST_NODE_TYPES.Program;
 
@@ -232,7 +231,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       });
     };
 
-    const checkRedundantArrowReturn = (arrow: TSESTree.ArrowFunctionExpression) => {
+    const didReportArrow = (arrow: TSESTree.ArrowFunctionExpression) => {
       const returnAnnotation = arrow.returnType;
       if (
         !returnAnnotation ||
@@ -332,7 +331,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
       }
     };
 
-    const checkRedundantInitializer = (
+    const didReportInitializer = (
       annotatedNode: TSESTree.Node,
       annotation: TSESTree.TSTypeAnnotation | undefined,
       initializer: null | TSESTree.Expression,
@@ -351,13 +350,13 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
     const didReportVariable = (declarator: TSESTree.VariableDeclarator) =>
       declarator.id.type === AST_NODE_TYPES.Identifier &&
       !isDeclaratorAtModuleBoundary(declarator, exportedNames) &&
-      checkRedundantInitializer(declarator.id, declarator.id.typeAnnotation, declarator.init);
+      didReportInitializer(declarator.id, declarator.id.typeAnnotation, declarator.init);
 
     const didReportProperty = (property: TSESTree.PropertyDefinition) =>
       !property.computed &&
       property.key.type === AST_NODE_TYPES.Identifier &&
       !hasExportedAncestor(property) &&
-      checkRedundantInitializer(property.key, property.typeAnnotation, property.value);
+      didReportInitializer(property.key, property.typeAnnotation, property.value);
 
     const reportNarrowing = ({ annotationNode, annotationType, fix, messageId, valueTypes }: NarrowingReport) => {
       if (!isClosedShape(annotationType)) return;
@@ -442,7 +441,7 @@ export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>
 
     return {
       ArrowFunctionExpression: arrow => {
-        const didReportReturn = redundant && checkRedundantArrowReturn(arrow);
+        const didReportReturn = redundant && didReportArrow(arrow);
         if (redundant) checkParams(arrow);
         if (narrowing && !didReportReturn) checkNarrowingReturn(arrow);
       },
