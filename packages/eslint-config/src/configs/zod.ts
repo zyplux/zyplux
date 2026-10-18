@@ -3,7 +3,7 @@ import zodPlugin from 'eslint-plugin-zod';
 import type { ConfigWithExtends } from './types.ts';
 
 export const zodConfig: ConfigWithExtends = {
-  files: ['**/*.{ts,tsx,js,mjs,cjs}'],
+  files: ['**/*.{ts,tsx,mts,cts,js,mjs,cjs}'],
   plugins: { zod: zodPlugin },
   rules: {
     'zod/consistent-import': ['error', { syntax: 'namespace' }],

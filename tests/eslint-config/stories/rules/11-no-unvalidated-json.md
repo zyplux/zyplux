@@ -12,6 +12,10 @@
 ### 11.1.6 flags a non-awaited any promise json call, caught by type rather than syntax
 ### 11.1.7 flags a synchronous json call returning any
 
+### 11.1.8 flags JSON passed to an unrelated validator
+### 11.1.9 flags JSON passed to an unrelated async validator
+### 11.1.10 flags JSON passed to an unrelated parser
+
 ## 11.2 permitting validated reads and non-boundary json calls
 
 1. allows a JSON parse flowing into schema parse

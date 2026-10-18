@@ -1,26 +1,48 @@
-import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
+import type { TSESTree } from '@typescript-eslint/utils';
 
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
+import ts from 'typescript';
 
 import { createRule } from '#create-rule';
 import { collectScopeTree } from '#rule-support/scope-tree';
-import { createZodCallName } from '#rule-support/zod-calls';
+import { createZodCallName, createZodTypeCheck } from '#rule-support/zod-calls';
 
 const isWithinRange = (container: TSESTree.Node, child: TSESTree.Node) =>
   container.range[0] <= child.range[0] && child.range[1] <= container.range[1];
-
-const hasLocalDependency = (node: TSESTree.Node, { identifier, resolved }: TSESLint.Scope.Reference) =>
-  resolved !== null &&
-  isWithinRange(node, identifier) &&
-  resolved.defs.every(definition => !isWithinRange(node, definition.name)) &&
-  (!['global', 'module'].includes(resolved.scope.type) ||
-    resolved.defs.some(({ parent }) => parent?.type === AST_NODE_TYPES.VariableDeclaration && parent.kind !== 'const'));
 
 export const noFunctionScopedSchema = createRule({
   create: context => {
     const services = ESLintUtils.getParserServices(context);
     const isSchema = (node: TSESTree.Node) => services.getTypeAtLocation(node).getProperty('_zod') !== undefined;
     const getCallName = createZodCallName(services);
+    const isZodType = createZodTypeCheck(services);
+    const checker = services.program.getTypeChecker();
+    const isStableBinding = (identifier: TSESTree.Identifier | TSESTree.JSXIdentifier) => {
+      const symbol = checker.getSymbolAtLocation(services.esTreeNodeToTSNodeMap.get(identifier));
+      if (symbol === undefined) return false;
+      const binding = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+      const type = services.getTypeAtLocation(identifier);
+      const isZod = isZodType(type);
+      return (binding.getDeclarations() ?? []).some(declaration => {
+        if (ts.isSourceFile(declaration) || ts.isFunctionDeclaration(declaration)) return isZod;
+        if (!ts.isVariableDeclaration(declaration) || !(declaration.parent.flags & ts.NodeFlags.Const)) return false;
+        return (
+          isZod ||
+          (type.isUnion() ? type.types : [type]).every(
+            member =>
+              (member.flags &
+                (ts.TypeFlags.StringLike |
+                  ts.TypeFlags.NumberLike |
+                  ts.TypeFlags.BooleanLike |
+                  ts.TypeFlags.BigIntLike |
+                  ts.TypeFlags.ESSymbolLike |
+                  ts.TypeFlags.Null |
+                  ts.TypeFlags.Undefined)) !==
+              0,
+          )
+        );
+      });
+    };
     const calls: TSESTree.CallExpression[] = [];
     const effects: TSESTree.Node[] = [];
     const references = collectScopeTree(context.sourceCode.getScope(context.sourceCode.ast)).flatMap(
@@ -80,7 +102,13 @@ export const noFunctionScopedSchema = createRule({
           if (
             fn === undefined ||
             isDeferredSchema(fn) ||
-            references.some(reference => hasLocalDependency(node, reference)) ||
+            references.some(
+              ({ identifier, resolved }) =>
+                isWithinRange(node, identifier) &&
+                (resolved === null ||
+                  (resolved.defs.every(definition => !isWithinRange(node, definition.name)) &&
+                    (!['global', 'module'].includes(resolved.scope.type) || !isStableBinding(identifier)))),
+            ) ||
             hasImmediateEffect(node)
           )
             continue;

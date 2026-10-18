@@ -4,6 +4,7 @@ import { AnyType, discriminateAnyType } from '@typescript-eslint/type-utils';
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
+import { createNodeSchemaCheck } from '#rule-support/schema-checks';
 
 const zodCheckMethods = new Set<string>([
   'parse',
@@ -28,7 +29,7 @@ const isJsonMethodCall = ({ callee }: TSESTree.CallExpression) =>
   callee.property.type === AST_NODE_TYPES.Identifier &&
   callee.property.name === 'json';
 
-const isSchemaConsumer = (source: TSESTree.CallExpression) => {
+const isSchemaConsumer = (source: TSESTree.CallExpression, isSchema: ReturnType<typeof createNodeSchemaCheck>) => {
   const consumed = source.parent.type === AST_NODE_TYPES.AwaitExpression ? source.parent : source;
   const { parent: host } = consumed;
   return (
@@ -37,6 +38,7 @@ const isSchemaConsumer = (source: TSESTree.CallExpression) => {
     !host.callee.computed &&
     host.callee.property.type === AST_NODE_TYPES.Identifier &&
     zodCheckMethods.has(host.callee.property.name) &&
+    isSchema(host.callee.object) &&
     host.arguments.includes(consumed)
   );
 };
@@ -45,6 +47,7 @@ export const noUnvalidatedJson = createRule({
   create: context => {
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();
+    const isSchema = createNodeSchemaCheck(services);
 
     return {
       CallExpression: node => {
@@ -55,7 +58,7 @@ export const noUnvalidatedJson = createRule({
           const resultType = checker.getTypeAtLocation(tsNode);
           if (discriminateAnyType(resultType, checker, services.program, tsNode) === AnyType.Safe) return;
         }
-        if (isSchemaConsumer(node)) return;
+        if (isSchemaConsumer(node, isSchema)) return;
         context.report({
           data: { api: isJsonParse ? 'JSON.parse(…)' : '….json()' },
           messageId: 'validateJson',

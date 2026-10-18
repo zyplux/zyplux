@@ -4,13 +4,14 @@ import type { TestAPI } from 'vitest';
 import { plugin, zyplux } from '@zyplux/eslint-config';
 import { libraryTest, makeFixture } from '@zyplux/spectra/library-test-api';
 import { parseJson, readJsonSync } from '@zyplux/util/json';
+import { ESLint } from 'eslint';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { PrintedConfig } from '#test-contracts';
 
-import { ParserOptionsSchema, PrintedConfigSchema } from '#test-contracts';
+import { ParserOptionsSchema, PrintedConfigSchema, ResolvedConfigSchema } from '#test-contracts';
 export type ZypluxConfig = ReturnType<typeof zyplux>;
 const eslintConfigDir = fileURLToPath(new URL('../../../../packages/eslint-config/', import.meta.url));
 const rulesSnapshotUrl = new URL('../../../../packages/eslint-config/rules.json', import.meta.url);
@@ -22,10 +23,16 @@ const tsconfigRootDirs = (config: ZypluxConfig) =>
     return parsed.success ? parsed.data.tsconfigRootDir : [];
   });
 
+const resolveConfig = async (filename: string) => {
+  const eslint = new ESLint({ overrideConfig: zyplux(), overrideConfigFile: true });
+  return ResolvedConfigSchema.parse(await eslint.calculateConfigForFile(filename));
+};
+
 type ConfigurationFixtures = {
   isAbsolutePath: typeof isAbsolutePath;
   plugin: typeof plugin;
   printedConfig: string;
+  resolveConfig: typeof resolveConfig;
   resolvedConfig: PrintedConfig;
   rulesSnapshot: PrintedConfig;
   tsconfigRootDirs: typeof tsconfigRootDirs;
@@ -41,6 +48,7 @@ export const test: TestAPI<ConfigurationFixtures & LibraryFixtures> = libraryTes
     },
     { scope: 'file' },
   ],
+  resolveConfig: makeFixture(resolveConfig),
   resolvedConfig: async ({ printedConfig }, use) => {
     await use(parseJson(printedConfig, PrintedConfigSchema));
   },

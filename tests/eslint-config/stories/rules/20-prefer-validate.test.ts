@@ -40,6 +40,8 @@ describe('20.2 retaining parsed data, errors and throwing assertions', () => {
     "import * as z from 'zod'; const Schema = z.string(); const ok = Schema.validate(input);",
     "import * as z from 'zod'; const Schema = z.string(); const { success = true } = Schema.safeParse(input);",
     "import * as z from 'zod'; const Schema = z.string(); Schema.safeParseAsync(input).then(parsed => parsed.success);",
+    "import * as z from 'zod'; const legacy: Pick<typeof z, 'safeParse' | 'string'> = z; const ok = legacy.safeParse(legacy.string(), input).success;",
+    "import * as z from 'zod'; const legacy: Pick<typeof z, 'safeParseAsync' | 'string'> = z; const ok = (await legacy.safeParseAsync(legacy.string(), input)).success;",
     "import * as z from 'zod/v3'; const Schema = z.string(); const ok = Schema.safeParse(input).success;",
     'const other = { safeParse: () => ({ success: true }) }; const ok = other.safeParse().success;',
   ])('20.2.1 leaves parsing semantics intact: %s', (code, { lintRule }) => {

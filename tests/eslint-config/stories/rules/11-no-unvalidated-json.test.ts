@@ -2,6 +2,8 @@ import { describe, expect, test } from './rules.ts';
 
 test.override({ ruleName: 'no-unvalidated-json' });
 
+const schemaImport = "import * as z from 'zod'; const Schema = z.string();";
+
 type Case = [shape: string, code: string];
 
 describe('11.1 flagging JSON reads that bypass schema validation', () => {
@@ -23,6 +25,18 @@ describe('11.1 flagging JSON reads that bypass schema validation', () => {
   test.for<Case>([
     ['3 flags a JSON parse annotated unknown', 'const parsed: unknown = JSON.parse(text);'],
     ['4 flags a JSON parse read off before validation', 'const version = JSON.parse(text).version;'],
+    [
+      '8 flags JSON passed to an unrelated validator',
+      'const form = { validate: (input: unknown) => true }; form.validate(JSON.parse(text));',
+    ],
+    [
+      '9 flags JSON passed to an unrelated async validator',
+      'const form = { validateAsync: async (input: unknown) => true }; await form.validateAsync(JSON.parse(text));',
+    ],
+    [
+      '10 flags JSON passed to an unrelated parser',
+      'const parser = { parse: (input: unknown) => input }; parser.parse(JSON.parse(text));',
+    ],
     ['5 flags a JSON parse passed to a non-zod consumer', 'normalizeRules(JSON.parse(printed));'],
     [
       '6 flags a non-awaited any promise json call, caught by type rather than syntax',
@@ -76,6 +90,6 @@ describe('11.2 permitting validated reads and non-boundary json calls', () => {
       'const valid = await Schema.validateAsync(JSON.parse(text));',
     ],
   ])('11.2.%s', ([, code], { lintRule }) => {
-    expect(lintRule(code)).toReportNothing();
+    expect(lintRule(`${schemaImport} ${code}`)).toReportNothing();
   });
 });

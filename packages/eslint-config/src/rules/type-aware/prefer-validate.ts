@@ -1,9 +1,9 @@
 import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
 
 import { AST_NODE_TYPES, ESLintUtils } from '@typescript-eslint/utils';
+import ts from 'typescript';
 
 import { createRule } from '#create-rule';
-import { createNodeSchemaCheck } from '#rule-support/schema-checks';
 import { createZodCallName } from '#rule-support/zod-calls';
 
 const parseMethods = new Map([
@@ -51,17 +51,21 @@ export const preferValidate = createRule({
   create: context => {
     const services = ESLintUtils.getParserServices(context);
     const getCallName = createZodCallName(services);
-    const isSchema = createNodeSchemaCheck(services);
+    const checker = services.program.getTypeChecker();
+    const hasValidation = (callee: TSESTree.CallExpression['callee'], method: string) => {
+      if (callee.type === AST_NODE_TYPES.MemberExpression)
+        return services.getTypeAtLocation(callee.object).getProperty(method) !== undefined;
+      const symbol = checker.getSymbolAtLocation(services.esTreeNodeToTSNodeMap.get(callee));
+      if (symbol === undefined) return false;
+      const binding = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+      const declaration = binding.getDeclarations()?.[0];
+      const module = declaration && checker.getSymbolAtLocation(declaration.getSourceFile());
+      return module !== undefined && checker.getExportsOfModule(module).some(member => member.getName() === method);
+    };
     return {
       CallExpression: node => {
         const method = parseMethods.get(getCallName(node) ?? '');
-        if (method === undefined) return;
-        if (
-          node.callee.type === AST_NODE_TYPES.MemberExpression &&
-          isSchema(node.callee.object) &&
-          services.getTypeAtLocation(node.callee.object).getProperty(method) === undefined
-        )
-          return;
+        if (method === undefined || !hasValidation(node.callee, method)) return;
         const parsed = node.parent.type === AST_NODE_TYPES.AwaitExpression ? node.parent : node;
         if (method === 'validateAsync' && parsed === node) return;
         const declaration = parsed.parent;

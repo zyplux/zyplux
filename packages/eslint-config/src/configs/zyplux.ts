@@ -3,7 +3,7 @@ import { plugin } from '#plugin';
 import type { ConfigWithExtends } from './types.ts';
 
 export const zypluxRules: ConfigWithExtends = {
-  files: ['**/*.{ts,tsx}'],
+  files: ['**/*.{ts,tsx,mts,cts}'],
   plugins: { '@zyplux': plugin },
   rules: {
     '@zyplux/max-nested-calls': 'error',

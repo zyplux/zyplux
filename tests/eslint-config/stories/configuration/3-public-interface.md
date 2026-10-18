@@ -6,6 +6,8 @@
 
 ### 3.1.2 scopes vitest rules to test files
 
+### 3.1.3 enables Zod checks in .%s modules
+
 ## 3.2 opting into react support
 
 ### 3.2.1 leaves react disabled by default
