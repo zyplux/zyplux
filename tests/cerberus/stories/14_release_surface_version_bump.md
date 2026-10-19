@@ -58,6 +58,10 @@
 
 ### 14.6.4 errors when publish config has no registry string
 
+### 14.6.5 accepts supported registry urls with a trailing slash
+
+### 14.6.6 prefers the package scopes registry setting
+
 ## 14.7 requiring a bump against the pull request target branch
 
 ### 14.7.1 passes when the release surface matches the target branch
@@ -73,3 +77,11 @@
 ### 14.7.6 errors when target branch history is unavailable
 
 ### 14.7.7 errors when the target branch version is not semver
+
+### 14.7.8 accepts one step from an unpublished target branch version
+
+### 14.7.9 rejects skipping steps from an unpublished target branch version
+
+### 14.7.10 uses the published baseline when it is newer than the target branch
+
+### 14.7.11 accepts an unchanged unpublished target branch version

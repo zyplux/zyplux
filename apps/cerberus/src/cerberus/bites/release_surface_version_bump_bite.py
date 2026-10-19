@@ -140,8 +140,12 @@ def _fetch_latest_published(repo: Repo, ctx: Context, target: _Target) -> tuple[
         except json.JSONDecodeError:
             package = None
         publish_config = package.get("publishConfig", {}) if isinstance(package, dict) else {}
+        scope = target.registry_name.partition("/")[0]
+        registry_key = f"{scope}:registry" if scope.startswith("@") else "registry"
         registry = (
-            publish_config.get("registry", "https://registry.npmjs.org") if isinstance(publish_config, dict) else None
+            publish_config.get(registry_key, publish_config.get("registry", "https://registry.npmjs.org"))
+            if isinstance(publish_config, dict)
+            else None
         )
         if not isinstance(registry, str):
             failure = f"{package_path}: publishConfig.registry must be a string"
@@ -169,10 +173,12 @@ def _fetch_all_latest(
         return dict(zip(targets, pool.map(lookup, targets), strict=True))
 
 
-def _verify_base(repo: Repo, ctx: Context, target: _Target, current: Semver, res: CheckResult) -> None:
+def _verify_base(
+    repo: Repo, ctx: Context, target: _Target, current: Semver, res: CheckResult
+) -> tuple[Semver, str] | None:
     base = os.environ.get("GITHUB_BASE_REF")
     if not base:
-        return
+        return None
     ref = f"origin/{base}"
     try:
         content = ctx.file_at_ref(repo, ref, target.version_file)
@@ -180,14 +186,36 @@ def _verify_base(repo: Repo, ctx: Context, target: _Target, current: Semver, res
         changed = ctx.changed_paths(repo, ref, target.surface) if content is not None else []
     except (GitHistoryUnavailableError, json.JSONDecodeError) as exc:
         res.error(f"{target.label}: cannot compare the target branch {ref}: {exc}")
-        return
+        return None
     if content is None:
-        return
+        return None
     baseline = _parse_semver(version) if version is not None else None
     if baseline is None:
         res.error(f"{target.label}: {ref} has no semver version")
     elif current < baseline or (current == baseline and changed):
         res.fail(f"{target.label}: release surface requires a version newer than {ref} ({version})")
+    else:
+        return baseline, f"{ref} ({version})"
+    return None
+
+
+def _verify_bump(target: _Target, current: tuple[Semver, str], baseline: tuple[Semver, str], res: CheckResult) -> None:
+    current_semver, version = current
+    baseline_semver, baseline_label = baseline
+    if current_semver == baseline_semver:
+        return
+    if current_semver < baseline_semver:
+        res.fail(f"{target.label}: version {version} is below {baseline_label}")
+        return
+    steps = _single_step_bumps(baseline_semver)
+    if current_semver in steps:
+        res.ok(f"{target.label}: {version} is ahead of {baseline_label}")
+    else:
+        patch_step, minor_step, major_step = map(_format_semver, steps)
+        res.fail(
+            f"{target.label}: version {version} skips ahead of {baseline_label} — "
+            f"bump one step ({patch_step}, {minor_step}, or {major_step})"
+        )
 
 
 def _verify(
@@ -202,7 +230,10 @@ def _verify(
         return
     current, version = resolved
 
-    _verify_base(repo, ctx, target, current, res)
+    problem_count = len(res.problems)
+    base = _verify_base(repo, ctx, target, current, res)
+    if len(res.problems) > problem_count:
+        return
 
     if isinstance(latest, registries.RegistryNotFoundError):
         res.ok(f"{target.label}: not yet released")
@@ -212,19 +243,11 @@ def _verify(
         return
 
     latest_semver, latest_version = latest
-    if current > latest_semver:
-        steps = _single_step_bumps(latest_semver)
-        if current in steps:
-            res.ok(f"{target.label}: {version} is ahead of published {latest_version}")
-        else:
-            patch_step, minor_step, major_step = map(_format_semver, steps)
-            res.fail(
-                f"{target.label}: version {version} skips ahead of published {latest_version} — "
-                f"bump one step ({patch_step}, {minor_step}, or {major_step})"
-            )
-        return
-    if current < latest_semver:
-        res.fail(f"{target.label}: version {version} is below published {latest_version}")
+    baseline = latest_semver, f"published {latest_version}"
+    if base is not None and base[0] > baseline[0]:
+        baseline = base
+    if current != latest_semver:
+        _verify_bump(target, resolved, baseline, res)
         return
 
     latest_tag = f"{target.tag_prefix}{latest_version}"

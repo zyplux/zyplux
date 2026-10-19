@@ -12,6 +12,7 @@ import {
   GhcrTokenSchema,
   ManifestSchema,
   NpmPackageSchema,
+  RegistryUrlSchema,
   VersionFieldSchema,
   VersionFileSchema,
 } from './contracts.ts';
@@ -75,14 +76,18 @@ const isGhcrImagePublished = (repo: string, tag: string) =>
 
 const isNpmPublished = async (directory: string, label: string, version: string) => {
   const { publishConfig } = parseJson(await readFile(path.join(directory, 'package.json'), 'utf8'), NpmPackageSchema);
+  const registryKey = label.startsWith('@') ? `${label.split('/', 1)[0]}:registry` : 'registry';
+  const registry = RegistryUrlSchema.parse(
+    Object.hasOwn(publishConfig, registryKey) ? publishConfig[registryKey] : publishConfig['registry'],
+  );
   const headers: Record<string, string> = {};
-  if (publishConfig.registry === 'https://npm.pkg.github.com') {
+  if (registry === 'https://npm.pkg.github.com') {
     const token = process.env['NODE_AUTH_TOKEN'];
     ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
     headers['Authorization'] = `Bearer ${token}`;
   }
   return isRegistryPublished(() =>
-    http.get(`${publishConfig.registry}/${encodeURIComponent(label)}/${version}`, { headers }).response(),
+    http.get(`${registry}/${encodeURIComponent(label)}/${version}`, { headers }).response(),
   );
 };
 

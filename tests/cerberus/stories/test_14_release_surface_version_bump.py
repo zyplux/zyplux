@@ -390,6 +390,42 @@ def test_14_6_4_errors_when_publish_config_has_no_registry_string(
     ]
 
 
+@pytest.mark.parametrize("registry", ["https://registry.npmjs.org/", "https://npm.pkg.github.com/"])
+def test_14_6_5_accepts_supported_registry_urls_with_a_trailing_slash(
+    run_release_bumps: RunReleaseBumps, monkeypatch: pytest.MonkeyPatch, registry: str, ok: MakeFinding
+) -> None:
+    monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
+    package = {"version": "0.1.0", "publishConfig": {"registry": registry}}
+
+    result = run_release_bumps(version_file_content=json.dumps(package), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+
+
+@pytest.mark.parametrize(
+    "publish_config",
+    [
+        {"@zyplux:registry": "https://npm.pkg.github.com/"},
+        {"@zyplux:registry": "https://npm.pkg.github.com/", "registry": "https://registry.npmjs.org"},
+    ],
+    ids=["scoped_only", "scoped_overrides_default"],
+)
+def test_14_6_6_prefers_the_package_scopes_registry_setting(
+    run_release_bumps: RunReleaseBumps,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_registry: FakeRegistry,
+    publish_config: dict[str, str],
+    ok: MakeFinding,
+) -> None:
+    monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
+    package = {"version": "0.1.0", "publishConfig": publish_config}
+
+    result = run_release_bumps(version_file_content=json.dumps(package), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+    assert fake_registry.requests == [("npm.pkg.github.com", "/@zyplux%2Fwidget")]
+
+
 def test_14_7_1_passes_when_the_release_surface_matches_the_target_branch(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
@@ -400,7 +436,7 @@ def test_14_7_1_passes_when_the_release_surface_matches_the_target_branch(
 
 
 def test_14_7_2_rejects_reusing_a_target_branch_version_before_publication(
-    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding, ok: MakeFinding
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
 ) -> None:
     target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
     result = run_release_bumps(
@@ -410,7 +446,6 @@ def test_14_7_2_rejects_reusing_a_target_branch_version_before_publication(
 
     assert result.findings == [
         fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)"),
-        ok(f"{LABEL}: 0.1.1 is ahead of published 0.1.0"),
     ]
 
 
@@ -465,3 +500,46 @@ def test_14_7_7_errors_when_the_target_branch_version_is_not_semver(
     result = run_release_bumps(published="0.1.0")
 
     assert result.findings == [error(f"{LABEL}: origin/main has no semver version")]
+
+
+@pytest.mark.parametrize(("base", "version"), [("0.1.1", "0.1.2"), ("1.0.0", "1.0.1"), ("0.1.1", "0.2.0")])
+def test_14_7_8_accepts_one_step_from_an_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, base: str, version: str, ok: MakeFinding
+) -> None:
+    target_branch(version_json(base), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json(version), published="0.1.0")
+
+    assert result.findings == [ok(f"{LABEL}: {version} is ahead of origin/main ({base})"), ok(DONE)]
+
+
+def test_14_7_9_rejects_skipping_steps_from_an_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("0.1.3"), published="0.1.0")
+
+    assert result.findings == [
+        fail(f"{LABEL}: version 0.1.3 skips ahead of origin/main (0.1.1) — bump one step (0.1.2, 0.2.0, or 1.0.0)")
+    ]
+
+
+def test_14_7_10_uses_the_published_baseline_when_it_is_newer_than_the_target_branch(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("0.1.2"), published="0.1.1")
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.2 is ahead of published 0.1.1"), ok(DONE)]
+
+
+def test_14_7_11_accepts_an_unchanged_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ())
+
+    result = run_release_bumps(version_file_content=version_json("1.0.0"), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]

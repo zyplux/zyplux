@@ -22,14 +22,14 @@ export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 
 export const NpmPackageSchema = z.object({
-  publishConfig: z
-    .object({
-      registry: z
-        .enum(['https://registry.npmjs.org', 'https://npm.pkg.github.com'])
-        .default('https://registry.npmjs.org'),
-    })
-    .default({ registry: 'https://registry.npmjs.org' }),
+  publishConfig: z.record(z.string(), z.unknown()).default({}),
 });
+
+export const RegistryUrlSchema = z
+  .url()
+  .transform(registry => registry.replace(/\/$/u, ''))
+  .pipe(z.enum(['https://registry.npmjs.org', 'https://npm.pkg.github.com']))
+  .default('https://registry.npmjs.org');
 
 export const GhcrTokenSchema = z.object({ token: z.string() });
 

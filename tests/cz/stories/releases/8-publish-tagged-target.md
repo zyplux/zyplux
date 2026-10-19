@@ -26,3 +26,7 @@
 ### 8.3.3 rejects registry failures without attempting publication
 
 ### 8.3.4 rejects unsupported registry destinations before making a request
+
+### 8.3.5 accepts supported registry URLs with a trailing slash
+
+### 8.3.6 prefers the package scope’s registry setting

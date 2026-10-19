@@ -62,6 +62,7 @@ def _extract(payload: object, *keys: str, source: str) -> object:
 
 
 def fetch_latest_npm(package: str, registry: str = "https://registry.npmjs.org") -> str:
+    registry = registry.removesuffix("/")
     hosts = {"https://registry.npmjs.org": "registry.npmjs.org", "https://npm.pkg.github.com": "npm.pkg.github.com"}
     if registry not in hosts:
         failure = f"unsupported npm registry {registry!r}"

@@ -177,4 +177,40 @@ describe('8.3 publishing a private GitHub npm package', () => {
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
     expect(network.requests).toEqual([]);
   });
+
+  test.for(['https://registry.npmjs.org/', 'https://npm.pkg.github.com/'])(
+    '8.3.5 accepts supported registry URLs with a trailing slash (%s)',
+    async (registry, { cz, env, logs, network, shell, tempDir }) => {
+      await tempDir.write(
+        'packages/util/package.json',
+        JSON.stringify({ publishConfig: { registry }, version: '1.2.3' }),
+      );
+      env.set('NODE_AUTH_TOKEN', 'package-read-token');
+      network.on(registry, () => new Response(undefined, { status: 200 }));
+
+      await cz.run('publish-tagged-target', 'util-v1.2.3');
+
+      expect(network.requests).toEqual([`${registry}%40zyplux%2Futil/1.2.3`]);
+      expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
+      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+    },
+  );
+
+  test.for([
+    { '@zyplux:registry': 'https://npm.pkg.github.com/' },
+    { '@zyplux:registry': 'https://npm.pkg.github.com/', registry: 'https://registry.npmjs.org' },
+  ])(
+    '8.3.6 prefers the package scope’s registry setting (%j)',
+    async (publishConfig, { cz, env, logs, network, shell, tempDir }) => {
+      await tempDir.write('packages/util/package.json', JSON.stringify({ publishConfig, version: '1.2.3' }));
+      env.set('NODE_AUTH_TOKEN', 'package-read-token');
+      network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 200 }));
+
+      await cz.run('publish-tagged-target', 'util-v1.2.3');
+
+      expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3']);
+      expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
+      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+    },
+  );
 });

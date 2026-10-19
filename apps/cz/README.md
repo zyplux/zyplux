@@ -30,7 +30,7 @@ cz lint-mermaid                       Check Mermaid diagrams in tracked and unig
 cz upgrade [--interactive] [PACKAGE...] Upgrade the pinned toolchain plus JavaScript and Python workspace dependencies.
 ```
 
-Npm targets use their package's `publishConfig.registry` and `publishConfig.access`. Supported registries are npmjs and GitHub Packages. GitHub package lookups require `NODE_AUTH_TOKEN`; publishing uses npm's registry authentication configuration.
+Npm targets use their package's `publishConfig` registry and access settings. A matching `@scope:registry` takes precedence over `registry`; either URL may end with a slash. Supported registries are npmjs and GitHub Packages. GitHub package lookups require `NODE_AUTH_TOKEN`; publishing uses npm's registry authentication configuration.
 
 ## License
 
