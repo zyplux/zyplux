@@ -61,17 +61,14 @@ class Usage:
 
 
 def _pnpm_usages(lock: str) -> Iterator[Usage]:
-    try:
-        doc = yaml.safe_load(lock)
-    except yaml.YAMLError:
-        return
-    packages = doc.get("packages") if isinstance(doc, dict) else None
-    if not isinstance(packages, dict):
-        return
-    for key in packages:
-        if isinstance(key, str) and (match := _PNPM_LOCKED_KEY.match(key)):
-            registry = "https://npm.pkg.github.com" if match.group(2) == "gh" else "https://registry.npmjs.org"
-            yield Usage("npm", match.group(1), match.group(3), "pnpm-lock.yaml", registry)
+    for document in yaml.safe_load_all(lock):
+        packages = document.get("packages") if isinstance(document, dict) else None
+        if not isinstance(packages, dict):
+            continue
+        for key in packages:
+            if isinstance(key, str) and (match := _PNPM_LOCKED_KEY.match(key)):
+                registry = "https://npm.pkg.github.com" if match.group(2) == "gh" else "https://registry.npmjs.org"
+                yield Usage("npm", match.group(1), match.group(3), "pnpm-lock.yaml", registry)
 
 
 def _uv_lock_usages(lock: str) -> Iterator[Usage]:
@@ -125,7 +122,11 @@ def _fetch_latest_versions(
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    usages = _collect_usages(repo, ctx)
+    try:
+        usages = _collect_usages(repo, ctx)
+    except yaml.YAMLError as err:
+        res.error(f"could not parse pnpm-lock.yaml: {err}")
+        return res
     if not usages:
         res.ok("no zyplux-published artifacts in use")
         return res

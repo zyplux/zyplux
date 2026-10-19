@@ -4,7 +4,7 @@ The org publishes its own tooling — npm packages under the `@zyplux/` scope,
 PyPI distributions named `zyplux-*`, and container images under
 `ghcr.io/zyplux/` — and every repo must consume those at the latest published
 release, or fixes never propagate. The `zyplux_deps_latest` bite
-(`apps/cerberus/src/cerberus/checks/zyplux_latest_check.py`) detects usages by
+(`apps/cerberus/src/cerberus/bites/zyplux_deps_latest_bite.py`) detects usages by
 namespace (never a hardcoded list, so future packages are auto-covered), reads
 resolved and pinned versions — `pnpm-lock.yaml`, `uv.lock`, `==` pins in the
 justfile and workflows, image tags in workflows and the justfile — and
@@ -37,8 +37,7 @@ concurrently off a shared result map.
 
 ## 22.2 keeping npm packages at the latest release
 
-Resolved versions in `pnpm-lock.yaml` are the consumption truth for the JS
-workspace.
+Resolved versions across all documents in `pnpm-lock.yaml` are the consumption truth for the JS workspace. This includes pnpm's separate toolchain and workspace documents.
 
 ### 22.2.1 passes when the locked npm version is the latest
 
@@ -54,6 +53,14 @@ found in, and points at `just upgrade`.
 ### 22.2.3 checks registry-qualified pnpm versions
 
 ### 22.2.4 reports an outdated private github package
+
+### 22.2.5 reports malformed lockfiles without registry lookups
+
+Invalid YAML in any lockfile document produces an ERROR naming `pnpm-lock.yaml`; partial contents never trigger registry requests or a successful freshness result.
+
+### 22.2.6 checks packages in each document
+
+Published packages in separate lockfile documents are checked together; an outdated version in an earlier document remains a finding even when a later document contains current packages.
 
 ## 22.3 keeping pypi distributions at the latest release
 
