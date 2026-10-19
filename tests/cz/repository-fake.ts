@@ -5,7 +5,6 @@ export type Repo = {
   queuePrFields: (
     fields: Record<string, [boolean | number | string, ...(boolean | number | string)[]] | boolean | number | string>,
   ) => void;
-  setCopilotReviewedHead: (sha: string) => void;
   setCurrentBranch: (branch: string) => void;
   setHeadSha: (sha: string) => void;
   setPrListState: (state: string) => void;
@@ -65,12 +64,6 @@ export const createRepo = (shell: ShellFake, { path: tempPath }: TempDir) => {
           ...later.map(value => JSON.stringify({ [field]: value })),
         );
       }
-    },
-    setCopilotReviewedHead: sha => {
-      shell.on(
-        /^gh api repos\//,
-        JSON.stringify([{ commit_id: sha, user: { login: 'copilot-pull-request-reviewer[bot]' } }]),
-      );
     },
     setCurrentBranch,
     setHeadSha,

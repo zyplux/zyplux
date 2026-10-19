@@ -66,77 +66,44 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
   });
 
   describe('9.4 flipping an already-ready PR to draft before pushing', () => {
-    test('9.4.5 uses the latest Copilot review despite other authors and deleted accounts', async ({
-      cz,
-      repo,
-      shell,
-    }) => {
-      repo.syncFeatureBranch('feat-x', 'sha-local');
-      repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: [false, true, false], mergeStateStatus: 'CLEAN', number: 7, url: PR_URL });
-      repo.setRepoSlug('zyplux/zyplux');
-      shell.on(
-        'gh api',
-        '[{"commit_id":"old","user":{"login":"copilot"}},{"commit_id":"sha-local","user":{"login":"Copilot[bot]"}},{"commit_id":"other","user":{"login":"human"}},{"commit_id":"deleted","user":null}]',
-      );
-      await cz.run('push-branch', '--ready');
-      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
-    });
-
-    test('9.4.1 rejects the flip when nothing new to push and Copilot has not reviewed HEAD', async ({
-      cz,
-      repo,
-      shell,
-    }) => {
-      repo.syncFeatureBranch('feat-x', 'sha-local');
-      repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: false, number: 7 });
-      repo.setRepoSlug('zyplux/zyplux');
-      repo.setCopilotReviewedHead('sha-different');
-
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow('Copilot has not reviewed HEAD');
-      expect(shell).not.toHaveRunMatching('gh pr ready');
-      expect(shell).not.toHaveRunMatching('git push');
-    });
-
-    test('9.4.2 flips to draft and pushes when Copilot already reviewed HEAD', async ({ cz, logs, repo, shell }) => {
+    test('9.4.1 refreshes an unchanged PR through its required checks', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('OPEN');
       repo.queuePrFields({
         isDraft: [false, true, false],
         mergeStateStatus: 'CLEAN',
-        number: 7,
         url: PR_URL,
       });
-      repo.setRepoSlug('zyplux/zyplux');
-      repo.setCopilotReviewedHead('sha-local');
 
       await cz.run('push-branch', '--ready');
 
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready --undo', 'gh pr ready']);
       expect(logs).toHaveLogged('flip: GitHub confirms PR is draft (was ready, HEAD sha-loc)');
       expect(shell).toHaveRun('git push --set-upstream origin feat-x');
-      expect(logs).toHaveLogged(
-        'flip: GitHub confirms PR is ready (draft→push→ready done; Copilot re-review triggered)',
-      );
+      expect(logs).toHaveLogged('flip: GitHub confirms PR is ready (draft→push→ready done)');
+      expect(shell).not.toHaveRunMatching('gh api');
       expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
     });
 
-    test('9.4.3 skips the Copilot check when there are new commits to push', async ({ cz, repo, shell }) => {
+    test('9.4.2 pushes between the draft and ready transitions', async ({ cz, repo, shell }) => {
       repo.setCurrentBranch('feat-x');
       repo.setHeadSha('sha-local');
       repo.setPrListState('OPEN');
       repo.queuePrFields({ isDraft: [false, true, false], mergeStateStatus: 'CLEAN', url: PR_URL });
-      repo.setRemoteBranchSha('feat-x', 'sha-remote-old', 'sha-local');
+      repo.setRemoteBranchSha('feat-x', 'sha-local');
 
       await cz.run('push-branch', '--ready');
 
       expect(shell).not.toHaveRunMatching('gh repo view');
       expect(shell).not.toHaveRunMatching('gh api');
-      expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready --undo', 'gh pr ready']);
+      expect(shell.commandsMatching(/gh pr ready|git push/u)).toEqual([
+        'gh pr ready --undo',
+        'git push --set-upstream origin feat-x',
+        'gh pr ready',
+      ]);
     });
 
-    test('9.4.4 rejects when the PR never reports draft state', async ({ cz, repo, shell }) => {
+    test('9.4.3 rejects when the PR never reports draft state', async ({ cz, repo, shell }) => {
       repo.setCurrentBranch('feat-x');
       repo.setHeadSha('sha-local');
       repo.setPrListState('OPEN');

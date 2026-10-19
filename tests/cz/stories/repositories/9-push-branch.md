@@ -20,15 +20,11 @@
 
 ## 9.4 flipping an already-ready PR to draft before pushing
 
-### 9.4.1 rejects the flip when nothing new to push and Copilot has not reviewed HEAD
+### 9.4.1 refreshes an unchanged PR through its required checks
 
-### 9.4.2 flips to draft and pushes when Copilot already reviewed HEAD
+### 9.4.2 pushes between the draft and ready transitions
 
-### 9.4.3 skips the Copilot check when there are new commits to push
-
-### 9.4.4 rejects when the PR never reports draft state
-
-### 9.4.5 uses the latest Copilot review despite other authors and deleted accounts
+### 9.4.3 rejects when the PR never reports draft state
 
 ## 9.5 flipping a draft PR back to ready
 
