@@ -47,3 +47,29 @@
 ### 14.5.2 fails and names the required bump when the surface changed without one
 
 ### 14.5.3 errors when the surface diff cannot be computed
+
+## 14.6 validating private GitHub npm packages
+
+### 14.6.1 reads a private github package using publish config
+
+### 14.6.2 errors when private registry credentials are missing
+
+### 14.6.3 errors when the npm registry is unsupported
+
+### 14.6.4 errors when publish config has no registry string
+
+## 14.7 requiring a bump against the pull request target branch
+
+### 14.7.1 passes when the release surface matches the target branch
+
+### 14.7.2 rejects reusing a target branch version before publication
+
+### 14.7.3 passes when changed surface has a new target branch version
+
+### 14.7.4 errors when the target branch version file is invalid json
+
+### 14.7.5 accepts a target introduced by the pull request
+
+### 14.7.6 errors when target branch history is unavailable
+
+### 14.7.7 errors when the target branch version is not semver

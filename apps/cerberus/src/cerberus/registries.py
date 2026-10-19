@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import re
 import urllib.parse
 
@@ -59,9 +60,20 @@ def _extract(payload: object, *keys: str, source: str) -> object:
     return payload
 
 
-def fetch_latest_npm(package: str) -> str:
+def fetch_latest_npm(package: str, registry: str = "https://registry.npmjs.org") -> str:
+    hosts = {"https://registry.npmjs.org": "registry.npmjs.org", "https://npm.pkg.github.com": "npm.pkg.github.com"}
+    if registry not in hosts:
+        failure = f"unsupported npm registry {registry!r}"
+        raise RegistryLookupError(failure)
+    headers: dict[str, str] = {}
+    if registry == "https://npm.pkg.github.com":
+        token = os.environ.get("NODE_AUTH_TOKEN")
+        if not token:
+            failure = "NODE_AUTH_TOKEN is required to read npm.pkg.github.com"
+            raise RegistryLookupError(failure)
+        headers["Authorization"] = f"Bearer {token}"
     path = "/" + urllib.parse.quote(package, safe="@")
-    payload = _fetch_json("registry.npmjs.org", path)
+    payload = _fetch_json(hosts[registry], path, headers)
     return str(_extract(payload, "dist-tags", "latest", source=package))
 
 

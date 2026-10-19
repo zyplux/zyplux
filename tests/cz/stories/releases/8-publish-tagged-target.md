@@ -16,3 +16,13 @@
 ### 8.2.5 tags and pushes a versioned and latest ghcr image
 
 ### 8.2.6 removes the temporary archive when npm publication fails
+
+## 8.3 publishing a private GitHub npm package
+
+### 8.3.1 authenticates the configured registry and lets npm apply publishConfig
+
+### 8.3.2 rejects missing credentials before checking a private registry
+
+### 8.3.3 rejects registry failures without attempting publication
+
+### 8.3.4 rejects unsupported registry destinations before making a request

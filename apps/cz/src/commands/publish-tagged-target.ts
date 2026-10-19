@@ -30,7 +30,7 @@ export const publishNpm = async (dir: string) => {
   try {
     const archive = path.join(archiveDir, 'package.tgz');
     await $`pnpm pack --out ${archive}`.cwd(dir);
-    await runPassthrough(['npm', 'publish', archive, '--access', 'public'], dir);
+    await runPassthrough(['npm', 'publish', archive], dir);
   } finally {
     await rm(archiveDir, { force: true, recursive: true });
   }

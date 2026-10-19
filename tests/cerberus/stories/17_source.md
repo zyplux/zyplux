@@ -51,3 +51,11 @@ Local checks include new story files before they enter Git's index, while standa
 ### 17.7.1 serves freshly written content to later reads in the same run
 
 ### 17.7.2 keys cached history reads by their arguments
+
+## 17.8 reading files from git history
+
+### 17.8.1 reads file content at each git ref
+
+### 17.8.2 returns nothing for a file missing at the ref
+
+### 17.8.3 errors for an unavailable git ref

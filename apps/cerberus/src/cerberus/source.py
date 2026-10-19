@@ -22,6 +22,7 @@ class RepoSource(Protocol):
 
     def repos(self) -> list[Repo]: ...
     def file(self, _repo: Repo, path: str) -> str | None: ...
+    def file_at_ref(self, _repo: Repo, ref: str, path: str) -> str | None: ...
     def list_paths(self, _repo: Repo) -> list[str]: ...
     def changed_paths(self, _repo: Repo, ref: str, surface: Sequence[str]) -> list[str]: ...
     def write_file(self, _repo: Repo, path: str, content: str) -> None: ...
@@ -81,6 +82,11 @@ class LocalSource:
         """Diffs `ref` against the working tree, so uncommitted local changes count too."""
         diff = self._git(["diff", "--name-only", ref, "--", *surface])
         return [path for path in diff.splitlines() if path]
+
+    def file_at_ref(self, _repo: Repo, ref: str, path: str) -> str | None:
+        if not self._git(["ls-tree", "--name-only", ref, "--", path]).strip():
+            return None
+        return self._git(["show", f"{ref}:{path}"])
 
     def _walk_files(self) -> list[str]:
         skip = {"node_modules", ".git", ".venv", "dist", ".output", "__pycache__"}

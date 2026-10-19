@@ -51,6 +51,10 @@ When `pnpm-lock.yaml` resolves an `@zyplux/` package below `dist-tags.latest`, t
 check fails naming the package, the used and latest versions, the file it was
 found in, and points at `just upgrade`.
 
+### 22.2.3 checks registry-qualified pnpm versions
+
+### 22.2.4 reports an outdated private github package
+
 ## 22.3 keeping pypi distributions at the latest release
 
 Locked versions in `uv.lock` and explicit `==` pins in the justfile or

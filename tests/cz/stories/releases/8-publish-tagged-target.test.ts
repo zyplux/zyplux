@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { describe, expect, test } from './releases.ts';
 
 const MISSING_GHCR_CREDENTIALS: [shape: string, missingName: string, ghToken: string, githubActor: string][] = [
@@ -98,5 +100,81 @@ describe('8.2 publishing to each registry kind', () => {
       'podman push ghcr.io/zyplux/ci:3.4.5',
       'podman push ghcr.io/zyplux/ci:latest',
     ]);
+  });
+});
+
+describe('8.3 publishing a private GitHub npm package', () => {
+  test('8.3.1 authenticates the configured registry and lets npm apply publishConfig', async ({
+    cz,
+    env,
+    expectNpmPackAndPublish,
+    network,
+    shell,
+    targets,
+    tempDir,
+  }) => {
+    await tempDir.write(
+      'packages/util/package.json',
+      JSON.stringify({
+        name: '@zyplux/util',
+        publishConfig: { access: 'restricted', registry: 'https://npm.pkg.github.com' },
+        version: '1.2.3',
+      }),
+    );
+    env.set('NODE_AUTH_TOKEN', 'package-read-token');
+    network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 404 }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    shell.on(/pnpm pack/, '');
+    shell.on(/^npm publish/, '');
+
+    await cz.run('publish-tagged-target', 'util-v1.2.3');
+
+    expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3']);
+    expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3', {
+      headers: { Authorization: 'Bearer package-read-token' },
+      method: 'GET',
+    });
+    await expectNpmPackAndPublish(shell, targets.util.dir);
+  });
+
+  test('8.3.2 rejects missing credentials before checking a private registry', async ({
+    cz,
+    env,
+    network,
+    tempDir,
+  }) => {
+    await tempDir.write(
+      'packages/util/package.json',
+      JSON.stringify({
+        publishConfig: { registry: 'https://npm.pkg.github.com' },
+        version: '1.2.3',
+      }),
+    );
+    env.set('NODE_AUTH_TOKEN', '');
+
+    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
+      'NODE_AUTH_TOKEN is required to read npm.pkg.github.com',
+    );
+    expect(network.requests).toEqual([]);
+  });
+
+  test('8.3.3 rejects registry failures without attempting publication', async ({ cz, network, shell }) => {
+    network.on('https://registry.npmjs.org/', () => new Response(undefined, { status: 403 }));
+
+    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('failed: 403');
+    expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+  });
+
+  test('8.3.4 rejects unsupported registry destinations before making a request', async ({ cz, network, tempDir }) => {
+    await tempDir.write(
+      'packages/util/package.json',
+      JSON.stringify({
+        publishConfig: { registry: 'https://example.com' },
+        version: '1.2.3',
+      }),
+    );
+
+    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
+    expect(network.requests).toEqual([]);
   });
 });

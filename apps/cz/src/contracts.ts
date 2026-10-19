@@ -21,6 +21,16 @@ export const DepsCatalogSchema = z.array(z.string());
 export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 
+export const NpmPackageSchema = z.object({
+  publishConfig: z
+    .object({
+      registry: z
+        .enum(['https://registry.npmjs.org', 'https://npm.pkg.github.com'])
+        .default('https://registry.npmjs.org'),
+    })
+    .default({ registry: 'https://registry.npmjs.org' }),
+});
+
 export const GhcrTokenSchema = z.object({ token: z.string() });
 
 const VersionEntrySchema = z.object({ isDefault: z.boolean().optional(), versionKey: VersionKeySchema });

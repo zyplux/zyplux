@@ -26,9 +26,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    expect(logs).toHaveLogged(
-      '@zyplux/util 1.2.3 is already on npm — enable its trusted publisher; no bootstrap needed',
-    );
+    expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; no bootstrap needed');
     expect(shell).not.toHaveRunMatching(/pnpm pack/);
   });
 
@@ -48,7 +46,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await expectNpmPackAndPublish(shell, targets.util.dir);
     expect(logs).toHaveLogged(
-      'Published @zyplux/util 1.2.3. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.',
+      'Published @zyplux/util 1.2.3. Configure registry authentication in the release workflow.',
     );
   });
 });

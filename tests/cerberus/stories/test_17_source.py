@@ -232,3 +232,31 @@ def test_17_7_2_keys_cached_history_reads_by_their_arguments(
 
     assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["tracked.txt"]) == ["tracked.txt"]
     assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["untouched.txt"]) == []
+
+
+@requires_git
+def test_17_8_1_reads_file_content_at_each_git_ref(
+    diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]
+) -> None:
+    disk_ctx = make_context(diffable_checkout)
+
+    assert disk_ctx.file_at_ref(repo, "widget-v0.1.0", "tracked.txt") == "one"
+    assert disk_ctx.file_at_ref(repo, "HEAD", "tracked.txt") == "two"
+
+
+@requires_git
+def test_17_8_2_returns_nothing_for_a_file_missing_at_the_ref(
+    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
+) -> None:
+    assert local_source(diffable_checkout).file_at_ref(repo, "HEAD", "missing.txt") is None
+
+
+@requires_git
+def test_17_8_3_errors_for_an_unavailable_git_ref(
+    diffable_checkout: Path,
+    repo: Repo,
+    local_source: type[LocalSource],
+    git_history_unavailable_error: type[GitHistoryUnavailableError],
+) -> None:
+    with pytest.raises(git_history_unavailable_error):
+        local_source(diffable_checkout).file_at_ref(repo, "missing-ref", "tracked.txt")

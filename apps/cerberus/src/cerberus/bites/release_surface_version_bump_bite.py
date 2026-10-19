@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from cerberus import registries
@@ -129,9 +131,24 @@ def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult)
     return current, version
 
 
-def _fetch_latest_published(target: _Target) -> tuple[Semver, str]:
+def _fetch_latest_published(repo: Repo, ctx: Context, target: _Target) -> tuple[Semver, str]:
     """Raises RegistryNotFoundError if nothing is published yet, RegistryLookupError on other failures."""
-    version = _FETCHERS[target.kind](target.registry_name)
+    if target.kind == "npm":
+        package_path = str(PurePosixPath(target.version_file).parent / "package.json")
+        try:
+            package = json.loads(ctx.file(repo, package_path) or "{}")
+        except json.JSONDecodeError:
+            package = None
+        publish_config = package.get("publishConfig", {}) if isinstance(package, dict) else {}
+        registry = (
+            publish_config.get("registry", "https://registry.npmjs.org") if isinstance(publish_config, dict) else None
+        )
+        if not isinstance(registry, str):
+            failure = f"{package_path}: publishConfig.registry must be a string"
+            raise registries.RegistryLookupError(failure)
+        version = registries.fetch_latest_npm(target.registry_name, registry)
+    else:
+        version = _FETCHERS[target.kind](target.registry_name)
     semver = _parse_semver(version)
     if semver is None:
         failure = f"published version {version!r} is not semver"
@@ -139,15 +156,38 @@ def _fetch_latest_published(target: _Target) -> tuple[Semver, str]:
     return semver, version
 
 
-def _fetch_all_latest(targets: list[_Target]) -> dict[_Target, tuple[Semver, str] | registries.RegistryLookupError]:
+def _fetch_all_latest(
+    repo: Repo, ctx: Context, targets: list[_Target]
+) -> dict[_Target, tuple[Semver, str] | registries.RegistryLookupError]:
     def lookup(target: _Target) -> tuple[Semver, str] | registries.RegistryLookupError:
         try:
-            return _fetch_latest_published(target)
+            return _fetch_latest_published(repo, ctx, target)
         except registries.RegistryLookupError as err:
             return err
 
     with ThreadPoolExecutor(max_workers=min(_MAX_CONCURRENT_LOOKUPS, len(targets))) as pool:
         return dict(zip(targets, pool.map(lookup, targets), strict=True))
+
+
+def _verify_base(repo: Repo, ctx: Context, target: _Target, current: Semver, res: CheckResult) -> None:
+    base = os.environ.get("GITHUB_BASE_REF")
+    if not base:
+        return
+    ref = f"origin/{base}"
+    try:
+        content = ctx.file_at_ref(repo, ref, target.version_file)
+        version = _read_version(content, target) if content is not None else None
+        changed = ctx.changed_paths(repo, ref, target.surface) if content is not None else []
+    except (GitHistoryUnavailableError, json.JSONDecodeError) as exc:
+        res.error(f"{target.label}: cannot compare the target branch {ref}: {exc}")
+        return
+    if content is None:
+        return
+    baseline = _parse_semver(version) if version is not None else None
+    if baseline is None:
+        res.error(f"{target.label}: {ref} has no semver version")
+    elif current < baseline or (current == baseline and changed):
+        res.fail(f"{target.label}: release surface requires a version newer than {ref} ({version})")
 
 
 def _verify(
@@ -161,6 +201,8 @@ def _verify(
     if resolved is None:
         return
     current, version = resolved
+
+    _verify_base(repo, ctx, target, current, res)
 
     if isinstance(latest, registries.RegistryNotFoundError):
         res.ok(f"{target.label}: not yet released")
@@ -215,7 +257,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.ok("every published target's version tracks its surface")
         return res
 
-    latest_by_target = _fetch_all_latest(targets)
+    latest_by_target = _fetch_all_latest(repo, ctx, targets)
     for target in targets:
         _verify(repo, ctx, target, latest_by_target[target], res)
 

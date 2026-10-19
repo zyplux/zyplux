@@ -39,6 +39,10 @@ class Context:
         key = ("changed_paths", repo.name, ref, tuple(surface))
         return self._cached(key, lambda: self.source.changed_paths(repo, ref, surface))
 
+    def file_at_ref(self, repo: Repo, ref: str, path: str) -> str | None:
+        key = ("file_at_ref", repo.name, ref, path)
+        return self._cached(key, lambda: self.source.file_at_ref(repo, ref, path))
+
     def write_file(self, repo: Repo, path: str, content: str) -> None:
         self.source.write_file(repo, path, content)
         self._cache["file", repo.name, path] = content
