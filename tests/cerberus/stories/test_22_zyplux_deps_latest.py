@@ -14,6 +14,20 @@ if TYPE_CHECKING:
 CHECK_ID = "zyplux_deps_latest"
 
 NPM_UTIL_LOCK = "packages:\n  '@zyplux/util@0.2.0':\n    resolution: {integrity: sha512-x}\n"
+PNPM_TOOLCHAIN_LOCK = """lockfileVersion: '9.0'
+importers:
+  .:
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.14.0
+        version: 12.14.0
+packages:
+  pnpm@12.14.0:
+    resolution: {integrity: sha512-pnpm}
+snapshots:
+  pnpm@12.14.0: {}
+---
+"""
 NPM_WORKSPACE_LOCK = (
     "importers:\n"
     "  packages/util-ts:\n"
@@ -62,10 +76,13 @@ def test_22_1_1_passes_a_repo_that_uses_no_zyplux_published_artifacts(
     assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])
 
 
+@pytest.mark.parametrize("lock_prefix", ["", PNPM_TOOLCHAIN_LOCK], ids=["single-document", "toolchain-and-workspace"])
 def test_22_1_2_ignores_workspace_local_zyplux_packages(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, status: type[Status]
+    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, lock_prefix: str, status: type[Status]
 ) -> None:
-    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": NPM_WORKSPACE_LOCK, "uv.lock": UV_WORKSPACE_LOCK})
+    result = run_check_on_disk(
+        CHECK_ID, {"pnpm-lock.yaml": lock_prefix + NPM_WORKSPACE_LOCK, "uv.lock": UV_WORKSPACE_LOCK}
+    )
     assert (result.status, result.problems, fake_registry.requests) == (status.PASS, [], [])
 
 
@@ -86,19 +103,22 @@ def test_22_1_3_queries_each_artifact_once_per_run(
     ]
 
 
+@pytest.mark.parametrize("lock_prefix", ["", PNPM_TOOLCHAIN_LOCK], ids=["single-document", "toolchain-and-workspace"])
 def test_22_2_1_passes_when_the_locked_npm_version_is_the_latest(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, status: type[Status]
+    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, lock_prefix: str, status: type[Status]
 ) -> None:
     fake_registry.serve_npm("@zyplux/util", "0.2.0")
-    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": NPM_UTIL_LOCK})
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock_prefix + NPM_UTIL_LOCK})
     assert (result.status, result.problems) == (status.PASS, [])
+    assert fake_registry.requests == [("registry.npmjs.org", "/@zyplux%2Futil")]
 
 
+@pytest.mark.parametrize("lock_prefix", ["", PNPM_TOOLCHAIN_LOCK], ids=["single-document", "toolchain-and-workspace"])
 def test_22_2_2_fails_naming_the_package_versions_and_location_when_the_lock_lags(
-    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, status: type[Status]
+    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, lock_prefix: str, status: type[Status]
 ) -> None:
     fake_registry.serve_npm("@zyplux/util", "0.3.1")
-    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": NPM_UTIL_LOCK})
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock_prefix + NPM_UTIL_LOCK})
     assert (result.status, [f.message for f in result.problems]) == (
         status.FAIL,
         ["`@zyplux/util` is 0.2.0 in pnpm-lock.yaml, latest is 0.3.1; run `just upgrade`"],
@@ -116,7 +136,7 @@ def test_22_2_3_checks_registry_qualified_pnpm_versions(
     host = "npm.pkg.github.com" if registry_alias == "gh" else "registry.npmjs.org"
     fake_registry.serve_npm("@zyplux/util", "0.2.0", host=host)
     monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
-    lock = NPM_UTIL_LOCK.replace("@0.2.0", f"@{registry_alias}:0.2.0")
+    lock = PNPM_TOOLCHAIN_LOCK + NPM_UTIL_LOCK.replace("@0.2.0", f"@{registry_alias}:0.2.0")
 
     result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock})
 
@@ -124,15 +144,17 @@ def test_22_2_3_checks_registry_qualified_pnpm_versions(
     assert fake_registry.requests == [(host, "/@zyplux%2Futil")]
 
 
+@pytest.mark.parametrize("lock_prefix", ["", PNPM_TOOLCHAIN_LOCK], ids=["single-document", "toolchain-and-workspace"])
 def test_22_2_4_reports_an_outdated_private_github_package(
     run_check_on_disk: RunCheckOnDisk,
     fake_registry: FakeRegistry,
     monkeypatch: pytest.MonkeyPatch,
+    lock_prefix: str,
     status: type[Status],
 ) -> None:
     fake_registry.serve_npm("@zyplux/util", "0.3.0", host="npm.pkg.github.com")
     monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
-    lock = NPM_UTIL_LOCK.replace("@0.2.0", "@gh:0.2.0")
+    lock = lock_prefix + NPM_UTIL_LOCK.replace("@0.2.0", "@gh:0.2.0")
 
     result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock})
 
@@ -140,6 +162,41 @@ def test_22_2_4_reports_an_outdated_private_github_package(
         status.FAIL,
         ["`@zyplux/util` is 0.2.0 in pnpm-lock.yaml, latest is 0.3.0; run `just upgrade`"],
     )
+
+
+@pytest.mark.parametrize(
+    "lock_prefix",
+    ["", PNPM_TOOLCHAIN_LOCK + NPM_UTIL_LOCK + "\n---\n"],
+    ids=["first-document", "after-valid-documents"],
+)
+def test_22_2_5_reports_malformed_lockfiles_without_registry_lookups(
+    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, lock_prefix: str, status: type[Status]
+) -> None:
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock_prefix + "packages: ["})
+
+    assert result.status is status.ERROR
+    assert len(result.problems) == 1
+    assert "could not parse pnpm-lock.yaml:" in result.problems[0].message
+    assert fake_registry.requests == []
+
+
+def test_22_2_6_checks_packages_in_each_document(
+    run_check_on_disk: RunCheckOnDisk, fake_registry: FakeRegistry, status: type[Status]
+) -> None:
+    fake_registry.serve_npm("@zyplux/util", "0.3.0")
+    fake_registry.serve_npm("@zyplux/cz", "0.2.0")
+    lock = NPM_UTIL_LOCK + "---\n" + NPM_UTIL_LOCK.replace("@zyplux/util", "@zyplux/cz")
+
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": lock})
+
+    assert (result.status, [finding.message for finding in result.problems]) == (
+        status.FAIL,
+        ["`@zyplux/util` is 0.2.0 in pnpm-lock.yaml, latest is 0.3.0; run `just upgrade`"],
+    )
+    assert sorted(fake_registry.requests) == [
+        ("registry.npmjs.org", "/@zyplux%2Fcz"),
+        ("registry.npmjs.org", "/@zyplux%2Futil"),
+    ]
 
 
 def test_22_3_1_fails_when_uv_lock_resolves_an_outdated_zyplux_distribution(
