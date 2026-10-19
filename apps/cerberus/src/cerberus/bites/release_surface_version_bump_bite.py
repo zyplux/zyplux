@@ -173,6 +173,27 @@ def _fetch_all_latest(
         return dict(zip(targets, pool.map(lookup, targets), strict=True))
 
 
+def _load_base_version(repo: Repo, ctx: Context, target: _Target, ref: str) -> str | None:
+    manifest = ctx.file_at_ref(repo, ref, _MANIFEST)
+    if manifest is None:
+        return None
+    base_target = next(
+        (entry for entry in _parse_targets(manifest) if entry.label == target.label and entry.kind == target.kind),
+        None,
+    )
+    if base_target is None:
+        return None
+    content = ctx.file_at_ref(repo, ref, base_target.version_file)
+    if content is None:
+        message = f"version file {base_target.version_file} is missing"
+        raise ValueError(message)
+    version = _read_version(content, base_target)
+    if version is None:
+        message = f"no version found in {base_target.version_file}"
+        raise ValueError(message)
+    return version
+
+
 def _verify_base(
     repo: Repo, ctx: Context, target: _Target, current: Semver, res: CheckResult
 ) -> tuple[Semver, str] | None:
@@ -181,15 +202,14 @@ def _verify_base(
         return None
     ref = f"origin/{base}"
     try:
-        content = ctx.file_at_ref(repo, ref, target.version_file)
-        version = _read_version(content, target) if content is not None else None
-        changed = ctx.changed_paths(repo, ref, target.surface) if content is not None else []
-    except (GitHistoryUnavailableError, json.JSONDecodeError) as exc:
+        version = _load_base_version(repo, ctx, target, ref)
+        changed = ctx.changed_paths(repo, ref, target.surface) if version is not None else []
+    except (GitHistoryUnavailableError, KeyError, TypeError, ValueError) as exc:
         res.error(f"{target.label}: cannot compare the target branch {ref}: {exc}")
         return None
-    if content is None:
+    if version is None:
         return None
-    baseline = _parse_semver(version) if version is not None else None
+    baseline = _parse_semver(version)
     if baseline is None:
         res.error(f"{target.label}: {ref} has no semver version")
     elif current < baseline or (current == baseline and changed):
@@ -236,7 +256,10 @@ def _verify(
         return
 
     if isinstance(latest, registries.RegistryNotFoundError):
-        res.ok(f"{target.label}: not yet released")
+        if base is None:
+            res.ok(f"{target.label}: not yet released")
+        else:
+            _verify_bump(target, resolved, base, res)
         return
     if isinstance(latest, registries.RegistryLookupError):
         res.error(f"{target.label}: cannot determine the latest published version: {latest}")

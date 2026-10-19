@@ -85,3 +85,15 @@
 ### 14.7.10 uses the published baseline when it is newer than the target branch
 
 ### 14.7.11 accepts an unchanged unpublished target branch version
+
+### 14.7.12 accepts one step before the first publication
+
+### 14.7.13 rejects skipping steps before the first publication
+
+### 14.7.14 reads the base version with its own extractor
+
+### 14.7.15 checks the base version when its file moves
+
+### 14.7.16 distinguishes targets that share a version file
+
+### 14.7.17 errors when an existing base target has no version file

@@ -60,7 +60,8 @@ const isRegistryPublished = async (request: () => Promise<unknown>) => {
 
 const isGhcrImagePublished = (repo: string, tag: string) =>
   isRegistryPublished(async () => {
-    const token = process.env['GH_TOKEN'] ?? process.env['NODE_AUTH_TOKEN'];
+    const ghToken = process.env['GH_TOKEN'];
+    const token = ghToken !== undefined && ghToken.length > 0 ? ghToken : process.env['NODE_AUTH_TOKEN'];
     const actor = process.env['GITHUB_ACTOR'];
     const headers: Record<string, string> = {};
     if (token && actor) headers['Authorization'] = `Basic ${Buffer.from(`${actor}:${token}`).toString('base64')}`;

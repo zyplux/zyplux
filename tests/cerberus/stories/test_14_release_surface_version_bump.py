@@ -59,18 +59,20 @@ class RunReleaseBumps(Protocol):
 
 
 class ConfigureBase(Protocol):
-    def __call__(self, content: str | None, changed: Sequence[str] | Exception) -> None: ...
+    def __call__(
+        self, content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = ...
+    ) -> None: ...
 
 
 @pytest.fixture
 def target_branch(monkeypatch: pytest.MonkeyPatch, ctx: Context, run_release_bumps: RunReleaseBumps) -> ConfigureBase:
     del run_release_bumps
 
-    def configure(content: str | None, changed: Sequence[str] | Exception) -> None:
+    def configure(content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = MANIFEST) -> None:
         monkeypatch.setenv("GITHUB_BASE_REF", "main")
 
-        def read_base(_repo: Repo, _ref: str, _path: str) -> str | None:
-            return content
+        def read_base(_repo: Repo, _ref: str, path: str) -> str | None:
+            return {"release-targets.toml": manifest, VERSION_FILE: content}.get(path)
 
         monkeypatch.setattr(ctx, "file_at_ref", read_base)
 
@@ -475,7 +477,7 @@ def test_14_7_4_errors_when_the_target_branch_version_file_is_invalid_json(
 def test_14_7_5_accepts_a_target_introduced_by_the_pull_request(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(None, ())
+    target_branch(None, (), manifest=None)
     result = run_release_bumps()
 
     assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
@@ -543,3 +545,77 @@ def test_14_7_11_accepts_an_unchanged_unpublished_target_branch_version(
     result = run_release_bumps(version_file_content=version_json("1.0.0"), published="0.1.0")
 
     assert result.findings == [ok(DONE)]
+
+
+def test_14_7_12_accepts_one_step_before_the_first_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("1.0.1"))
+
+    assert result.findings == [ok(f"{LABEL}: 1.0.1 is ahead of origin/main (1.0.0)"), ok(DONE)]
+
+
+def test_14_7_13_rejects_skipping_steps_before_the_first_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("9.0.0"))
+
+    assert result.findings == [
+        fail(f"{LABEL}: version 9.0.0 skips ahead of origin/main (1.0.0) — bump one step (1.0.1, 1.1.0, or 2.0.0)")
+    ]
+
+
+def test_14_7_14_reads_the_base_version_with_its_own_extractor(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(
+        manifest=MANIFEST.replace('json = "version"', 'json = "metadata.version"'),
+        version_file_content=json.dumps({"metadata": {"version": "0.1.1"}}),
+        published="0.1.0",
+    )
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.1 is ahead of published 0.1.0"), ok(DONE)]
+
+
+def test_14_7_15_checks_the_base_version_when_its_file_moves(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    moved_path = "packages/relocated/package.json"
+
+    result = run_release_bumps(
+        manifest=MANIFEST.replace(VERSION_FILE, moved_path),
+        version_path=moved_path,
+        version_file_content=version_json("0.1.1"),
+        published="0.1.0",
+    )
+
+    assert result.findings == [fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)")]
+
+
+def test_14_7_16_distinguishes_targets_that_share_a_version_file(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), (), manifest=MANIFEST.replace(LABEL, "@zyplux/other"))
+
+    result = run_release_bumps()
+
+    assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
+
+
+def test_14_7_17_errors_when_an_existing_base_target_has_no_version_file(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
+) -> None:
+    target_branch(None, ())
+
+    result = run_release_bumps()
+
+    assert result.findings == [
+        error(f"{LABEL}: cannot compare the target branch origin/main: version file {VERSION_FILE} is missing")
+    ]
