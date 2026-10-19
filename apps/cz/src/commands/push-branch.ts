@@ -11,10 +11,10 @@ export const pushBranchCommand = command(
   object({
     command: constant('push-branch' as const),
     hold: option('--hold', {
-      description: message`With --ready, re-trigger the Copilot review but hold off auto-merge; the caller decides when to merge.`,
+      description: message`With --ready, leave auto-merge disabled so the caller decides when to merge.`,
     }),
     ready: option('-r', '--ready', {
-      description: message`Flip the PR to draft, push, then mark it ready and enable auto-merge. New commits re-trigger Copilot review; with nothing to push it refreshes the gate (re-count resolved threads), provided Copilot already reviewed HEAD.`,
+      description: message`Flip the PR to draft, push, then mark it ready and enable auto-merge. Required checks decide whether the PR can merge; the ready event refreshes the review gate even when there are no new commits.`,
     }),
   }),
   {
@@ -31,12 +31,6 @@ const shortSha = (sha: string) => sha.slice(0, SHORT_SHA_LENGTH);
 const readRemoteHead = async (branch: string) => {
   const refLine = await readTrimmed($.git.lsRemote('origin', `refs/heads/${branch}`));
   return refLine.split(/\s+/, 1)[0] ?? '';
-};
-
-const readCopilotReviewedHead = async (slug: string, number: number) => {
-  // This workflow has at most ten reviews per PR, so one page is sufficient.
-  const reviews = await $.gh.pr.reviews(slug, number);
-  return reviews.findLast(review => review.user?.login.toLowerCase().includes('copilot'))?.commit_id;
 };
 
 export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
@@ -60,20 +54,9 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   const currentPr = ready && existing === 'OPEN' ? await $.gh.pr.view({ json: ['isDraft'] }) : undefined;
   const willFlipToDraft = currentPr?.isDraft === false;
   if (willFlipToDraft) {
-    const remoteHead = await readRemoteHead(branch);
-    if (remoteHead === localHead) {
-      const { nameWithOwner } = await $.gh.repo.view({ json: ['nameWithOwner'] });
-      const { number } = await $.gh.pr.view({ json: ['number'] });
-      const reviewedHead = await readCopilotReviewedHead(nameWithOwner, number);
-      ensure(
-        reviewedHead === localHead,
-        'nothing to push and Copilot has not reviewed HEAD: a draft→ready flip would re-trigger neither Copilot nor a useful gate run. Commit your fix and let this command push it during the cycle — do not pre-push the branch.',
-      );
-    }
     await $.gh.pr.ready({ undo: true });
     await poll(() => $.gh.pr.view({ json: ['isDraft'] }), {
-      onExpiry:
-        'PR did not enter draft state before push; aborting so the push is not seen on a ready PR (Copilot needs flip→push→flip)',
+      onExpiry: 'PR did not enter draft state before push; aborting so the push is not seen on a ready PR',
       until: ({ isDraft }) => isDraft,
     });
     console.log(`flip: GitHub confirms PR is draft (was ready, HEAD ${shortSha(localHead)})`);
@@ -102,9 +85,7 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
     onExpiry: 'PR did not return to ready state; check the PR on GitHub',
     until: ({ isDraft }) => !isDraft,
   });
-  console.log(
-    `flip: GitHub confirms PR is ready${willFlipToDraft ? ' (draft→push→ready done; Copilot re-review triggered)' : ''}`,
-  );
+  console.log(`flip: GitHub confirms PR is ready${willFlipToDraft ? ' (draft→push→ready done)' : ''}`);
 
   if (hold) {
     await $.gh.pr.disableAutoMerge();
