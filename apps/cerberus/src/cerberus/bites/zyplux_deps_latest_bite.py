@@ -30,7 +30,7 @@ ID = "zyplux_deps_latest"
 SUMMARY = "every @zyplux/* npm package, zyplux-* PyPI distribution, and ghcr.io/zyplux image is at latest release"
 SCOPE = Scope.CONTENT
 
-_PNPM_LOCKED_KEY = re.compile(r"^/?(@zyplux/[\w.-]+)@(\d[\w.+-]*)")
+_PNPM_LOCKED_KEY = re.compile(r"^/?(@zyplux/[\w.-]+)@(?:(gh|npmjs):)?(\d[\w.+-]*)")
 _PYPI_PINNED = re.compile(r"\b(zyplux-[\w.-]+)==(\d[\w.!+-]*)")
 _GHCR_IMAGE = re.compile(r"ghcr\.io/(zyplux/[\w./-]+?):([\w.-]+)")
 _FLOATING_IMAGE_TAG = "latest"
@@ -49,10 +49,15 @@ class Usage:
     name: str
     version: str
     location: str
+    registry: str = ""
 
     @property
     def label(self) -> str:
         return f"ghcr.io/{self.name}" if self.kind == "ghcr" else self.name
+
+    @property
+    def artifact(self) -> tuple[str, str, str]:
+        return self.kind, self.name, self.registry
 
 
 def _pnpm_usages(lock: str) -> Iterator[Usage]:
@@ -65,7 +70,8 @@ def _pnpm_usages(lock: str) -> Iterator[Usage]:
         return
     for key in packages:
         if isinstance(key, str) and (match := _PNPM_LOCKED_KEY.match(key)):
-            yield Usage("npm", match.group(1), match.group(2), "pnpm-lock.yaml")
+            registry = "https://npm.pkg.github.com" if match.group(2) == "gh" else "https://registry.npmjs.org"
+            yield Usage("npm", match.group(1), match.group(3), "pnpm-lock.yaml", registry)
 
 
 def _uv_lock_usages(lock: str) -> Iterator[Usage]:
@@ -101,11 +107,13 @@ def _collect_usages(repo: Repo, ctx: Context) -> list[Usage]:
 
 
 def _fetch_latest_versions(
-    artifacts: Iterable[tuple[str, str]],
-) -> dict[tuple[str, str], str | registries.RegistryLookupError]:
-    def lookup(artifact: tuple[str, str]) -> str | registries.RegistryLookupError:
-        kind, name = artifact
+    artifacts: Iterable[tuple[str, str, str]],
+) -> dict[tuple[str, str, str], str | registries.RegistryLookupError]:
+    def lookup(artifact: tuple[str, str, str]) -> str | registries.RegistryLookupError:
+        kind, name, registry = artifact
         try:
+            if kind == "npm":
+                return registries.fetch_latest_npm(name, registry)
             return _FETCHERS[kind](name)
         except registries.RegistryLookupError as err:
             return err
@@ -122,13 +130,13 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.ok("no zyplux-published artifacts in use")
         return res
 
-    latest_versions = _fetch_latest_versions({(usage.kind, usage.name) for usage in usages})
-    labels = {(usage.kind, usage.name): usage.label for usage in usages}
+    latest_versions = _fetch_latest_versions({usage.artifact for usage in usages})
+    labels = {usage.artifact: usage.label for usage in usages}
     for artifact, outcome in sorted(latest_versions.items()):
         if isinstance(outcome, registries.RegistryLookupError):
             res.error(f"could not determine the latest `{labels[artifact]}`: {outcome}")
     for usage in usages:
-        latest = latest_versions[usage.kind, usage.name]
+        latest = latest_versions[usage.artifact]
         if isinstance(latest, str) and usage.version != latest:
             res.fail(f"`{usage.label}` is {usage.version} in {usage.location}, latest is {latest}; run `just upgrade`")
 

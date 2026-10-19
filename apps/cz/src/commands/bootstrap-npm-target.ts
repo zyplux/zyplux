@@ -16,7 +16,7 @@ export const bootstrapNpmTargetCommand = command(
   object({ command: constant('bootstrap-npm-target' as const), label: labelArgument }),
   {
     aliases: ['bn'],
-    brief: message`First-publish a new npm target using local npm authentication, then enable trusted publishing.`,
+    brief: message`First-publish a new npm target using local registry authentication.`,
   },
 );
 
@@ -30,13 +30,11 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
 
   const version = await target.readVersion();
   if (await target.isPublished(version)) {
-    console.log(`${label} ${version} is already on npm — enable its trusted publisher; no bootstrap needed`);
+    console.log(`${label} ${version} is already published; no bootstrap needed`);
     return;
   }
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
   await publishNpm(target.dir);
-  console.log(
-    `Published ${label} ${version}. Enable its trusted publisher on npmjs.com; later releases publish via OIDC.`,
-  );
+  console.log(`Published ${label} ${version}. Configure registry authentication in the release workflow.`);
 };

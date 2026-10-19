@@ -348,11 +348,12 @@ class FakeRegistry:
 
     payloads: dict[tuple[str, str], object] = field(default_factory=dict)
     requests: list[tuple[str, str]] = field(default_factory=list)
+    request_headers: list[dict[str, str]] = field(default_factory=list)
     not_found: set[tuple[str, str]] = field(default_factory=set)
 
-    def serve_npm(self, package: str, latest: str) -> None:
+    def serve_npm(self, package: str, latest: str, *, host: str = "registry.npmjs.org") -> None:
         encoded = package.replace("/", "%2F")
-        self.payloads["registry.npmjs.org", f"/{encoded}"] = {"dist-tags": {"latest": latest}}
+        self.payloads[host, f"/{encoded}"] = {"dist-tags": {"latest": latest}}
 
     def serve_pypi(self, distribution: str, latest: str) -> None:
         self.payloads["pypi.org", f"/pypi/{distribution}/json"] = {"info": {"version": latest}}
@@ -361,16 +362,16 @@ class FakeRegistry:
         self.payloads["ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull"] = {"token": "anonymous"}
         self.payloads["ghcr.io", f"/v2/{image}/tags/list"] = {"tags": tags}
 
-    def serve_npm_missing(self, package: str) -> None:
+    def serve_npm_missing(self, package: str, *, host: str = "registry.npmjs.org") -> None:
         encoded = package.replace("/", "%2F")
-        self.not_found.add(("registry.npmjs.org", f"/{encoded}"))
+        self.not_found.add((host, f"/{encoded}"))
 
     def serve_pypi_missing(self, distribution: str) -> None:
         self.not_found.add(("pypi.org", f"/pypi/{distribution}/json"))
 
     def fetch_json(self, host: str, path: str, headers: dict[str, str] | None = None) -> object:
-        del headers
         self.requests.append((host, path))
+        self.request_headers.append(headers or {})
         if (host, path) in self.not_found:
             failure = f"https://{host}{path}: HTTP 404"
             raise registries.RegistryNotFoundError(failure)

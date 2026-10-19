@@ -1,5 +1,5 @@
 import { ensure } from '@zyplux/util/assert';
-import { fetchJson, isHttpOk } from '@zyplux/util/http';
+import { FetchError, http, isHttpOk } from '@zyplux/util/http';
 import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { parseToml } from '@zyplux/util/toml';
@@ -8,7 +8,14 @@ import path from 'node:path';
 
 import type { Target, VersionSource } from './contracts.ts';
 
-import { GhcrTokenSchema, ManifestSchema, VersionFieldSchema, VersionFileSchema } from './contracts.ts';
+import {
+  GhcrTokenSchema,
+  ManifestSchema,
+  NpmPackageSchema,
+  RegistryUrlSchema,
+  VersionFieldSchema,
+  VersionFileSchema,
+} from './contracts.ts';
 
 export type ReleaseTarget = {
   dir: string;
@@ -39,24 +46,55 @@ const MANIFEST_MEDIA_TYPES = [
   'application/vnd.docker.distribution.manifest.v2+json',
 ].join(', ');
 
-const fetchGhcrAuth = (repo: string) =>
-  fetchJson(`https://ghcr.io/token?scope=repository:${repo}:pull`, GhcrTokenSchema);
+const HTTP_NOT_FOUND = 404;
 
-const isGhcrImagePublished = async (repo: string, tag: string) => {
-  const auth = await fetchGhcrAuth(repo);
-  if (!auth) return false;
-  return isHttpOk(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
-    headers: {
-      Accept: MANIFEST_MEDIA_TYPES,
-      Authorization: `Bearer ${auth.token}`,
-    },
-    method: 'HEAD',
-  });
+const isRegistryPublished = async (request: () => Promise<unknown>) => {
+  try {
+    await request();
+    return true;
+  } catch (error) {
+    if (error instanceof FetchError && error.response.status === HTTP_NOT_FOUND) return false;
+    throw error;
+  }
 };
 
-const isPackagePublished = async ({ kind, label }: Target, version: string) => {
+const isGhcrImagePublished = (repo: string, tag: string) =>
+  isRegistryPublished(async () => {
+    const ghToken = process.env['GH_TOKEN'];
+    const token = ghToken !== undefined && ghToken.length > 0 ? ghToken : process.env['NODE_AUTH_TOKEN'];
+    const actor = process.env['GITHUB_ACTOR'];
+    const headers: Record<string, string> = {};
+    if (token && actor) headers['Authorization'] = `Basic ${Buffer.from(`${actor}:${token}`).toString('base64')}`;
+    const auth = await http
+      .get(`https://ghcr.io/token?service=ghcr.io&scope=repository:${repo}:pull`, { headers })
+      .json(GhcrTokenSchema);
+    return http
+      .head(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
+        headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${auth.token}` },
+      })
+      .response();
+  });
+
+const isNpmPublished = async (directory: string, label: string, version: string) => {
+  const { publishConfig } = parseJson(await readFile(path.join(directory, 'package.json'), 'utf8'), NpmPackageSchema);
+  const registryKey = label.startsWith('@') ? `${label.split('/', 1)[0]}:registry` : 'registry';
+  const registry = RegistryUrlSchema.parse(
+    Object.hasOwn(publishConfig, registryKey) ? publishConfig[registryKey] : publishConfig['registry'],
+  );
+  const headers: Record<string, string> = {};
+  if (registry === 'https://npm.pkg.github.com') {
+    const token = process.env['NODE_AUTH_TOKEN'];
+    ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return isRegistryPublished(() =>
+    http.get(`${registry}/${encodeURIComponent(label)}/${version}`, { headers }).response(),
+  );
+};
+
+const isPackagePublished = async ({ kind, label }: Target, version: string, directory: string) => {
   if (kind === 'npm') {
-    return isHttpOk(`https://registry.npmjs.org/${label.replace('/', '%2f')}/${version}`);
+    return isNpmPublished(directory, label, version);
   }
   return kind === 'pypi'
     ? isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`)
@@ -68,7 +106,8 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
     dir: path.join(repoRoot, path.dirname(spec.version.file)),
-    isPublished: async (version: string) => isPackagePublished(spec, version),
+    isPublished: async (version: string) =>
+      isPackagePublished(spec, version, path.join(repoRoot, path.dirname(spec.version.file))),
     kind: spec.kind,
     label: spec.label,
     readVersion: async () => readVersion(repoRoot, spec.version),

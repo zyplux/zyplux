@@ -7,8 +7,10 @@ scheme by construction, leaving no way to smuggle in a non-https URL.
 
 from __future__ import annotations
 
+import base64
 import http.client
 import json
+import os
 import re
 import urllib.parse
 
@@ -59,9 +61,21 @@ def _extract(payload: object, *keys: str, source: str) -> object:
     return payload
 
 
-def fetch_latest_npm(package: str) -> str:
+def fetch_latest_npm(package: str, registry: str = "https://registry.npmjs.org") -> str:
+    registry = registry.removesuffix("/")
+    hosts = {"https://registry.npmjs.org": "registry.npmjs.org", "https://npm.pkg.github.com": "npm.pkg.github.com"}
+    if registry not in hosts:
+        failure = f"unsupported npm registry {registry!r}"
+        raise RegistryLookupError(failure)
+    headers: dict[str, str] = {}
+    if registry == "https://npm.pkg.github.com":
+        token = os.environ.get("NODE_AUTH_TOKEN")
+        if not token:
+            failure = "NODE_AUTH_TOKEN is required to read npm.pkg.github.com"
+            raise RegistryLookupError(failure)
+        headers["Authorization"] = f"Bearer {token}"
     path = "/" + urllib.parse.quote(package, safe="@")
-    payload = _fetch_json("registry.npmjs.org", path)
+    payload = _fetch_json(hosts[registry], path, headers)
     return str(_extract(payload, "dist-tags", "latest", source=package))
 
 
@@ -75,7 +89,13 @@ def _version_sort_key(tag: str) -> tuple[int, ...]:
 
 
 def fetch_latest_ghcr(image: str) -> str:
-    token_payload = _fetch_json("ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull")
+    headers: dict[str, str] = {}
+    credential = os.environ.get("GH_TOKEN") or os.environ.get("NODE_AUTH_TOKEN")
+    actor = os.environ.get("GITHUB_ACTOR")
+    if credential and actor:
+        encoded = base64.b64encode(f"{actor}:{credential}".encode()).decode()
+        headers["Authorization"] = f"Basic {encoded}"
+    token_payload = _fetch_json("ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull", headers)
     token = str(_extract(token_payload, "token", source=image))
     tags_payload = _fetch_json("ghcr.io", f"/v2/{image}/tags/list", {"Authorization": f"Bearer {token}"})
     tags = _extract(tags_payload, "tags", source=image)
@@ -85,5 +105,5 @@ def fetch_latest_ghcr(image: str) -> str:
     version_tags = [tag for tag in tags if isinstance(tag, str) and _VERSION_TAG.fullmatch(tag)]
     if not version_tags:
         failure = f"{image}: no version tags published"
-        raise RegistryLookupError(failure)
+        raise RegistryNotFoundError(failure)
     return max(version_tags, key=_version_sort_key)

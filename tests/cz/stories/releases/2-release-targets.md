@@ -12,6 +12,8 @@
 
 ### 2.3.1 treats a failed registry auth handshake as not published
 
+### 2.3.2 authenticates private image probes and propagates registry failures
+
 ## 2.4 conforming the repo's own release manifest
 
 ### 2.4.1 loads a version for every target declared in release-targets.toml

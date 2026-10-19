@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
@@ -10,7 +11,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
     from cerberus.source import GitHistoryUnavailableError
-    from seam_fixtures import MakeFinding, RunCheck
+    from seam_fixtures import FakeRegistry, MakeFinding, RunCheck
 
 
 MANIFEST = """
@@ -42,21 +43,6 @@ def version_json(version: str) -> str:
     return f'{{"version": "{version}"}}'
 
 
-class RegistryDouble(Protocol):
-    """The shape of the registry lookup test double `fake_registry` hands back.
-
-    A structural type, not a nominal import of the concrete class conftest.py
-    builds — keeps this file free of any dependency on where that class lives.
-    """
-
-    not_found: set[tuple[str, str]]
-
-    def serve_npm(self, package: str, latest: str) -> None: ...
-    def serve_pypi(self, distribution: str, latest: str) -> None: ...
-    def serve_npm_missing(self, package: str) -> None: ...
-    def serve_pypi_missing(self, distribution: str) -> None: ...
-
-
 UNREACHABLE = "unreachable"
 
 
@@ -72,14 +58,58 @@ class RunReleaseBumps(Protocol):
     ) -> CheckResult: ...
 
 
+class ConfigureBase(Protocol):
+    def __call__(
+        self, content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = ...
+    ) -> None: ...
+
+
+@pytest.fixture
+def target_branch(monkeypatch: pytest.MonkeyPatch, ctx: Context, run_release_bumps: RunReleaseBumps) -> ConfigureBase:
+    del run_release_bumps
+
+    def configure(content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = MANIFEST) -> None:
+        monkeypatch.setenv("GITHUB_BASE_REF", "main")
+
+        def read_base(_repo: Repo, _ref: str, path: str) -> str | None:
+            return {"release-targets.toml": manifest, VERSION_FILE: content}.get(path)
+
+        monkeypatch.setattr(ctx, "file_at_ref", read_base)
+
+        def read_changed(*_: object) -> list[str]:
+            if isinstance(changed, Exception):
+                raise changed
+            return list(changed)
+
+        monkeypatch.setattr(ctx.source, "changed_paths", read_changed)
+
+    return configure
+
+
+def serve_release(registry: FakeRegistry, manifest: str | None, version: str | None, published: str | None) -> None:
+    is_pypi = "pypi" in (manifest or "")
+    package = "zyplux-widget" if is_pypi else "@zyplux/widget"
+    host = "npm.pkg.github.com" if "npm.pkg.github.com" in (version or "") else "registry.npmjs.org"
+    if published == UNREACHABLE:
+        return
+    if published is None:
+        registry.serve_pypi_missing(package) if is_pypi else registry.serve_npm_missing(package, host=host)
+    elif is_pypi:
+        registry.serve_pypi(package, published)
+    else:
+        registry.serve_npm(package, published, host=host)
+
+
 @pytest.fixture
 def run_release_bumps(
     monkeypatch: pytest.MonkeyPatch,
     repo: Repo,
     ctx: Context,
     run_check: RunCheck,
-    fake_registry: RegistryDouble,
+    fake_registry: FakeRegistry,
 ) -> RunReleaseBumps:
+    monkeypatch.delenv("GITHUB_BASE_REF", raising=False)
+
     def run(
         *,
         manifest: str | None = MANIFEST,
@@ -98,19 +128,11 @@ def run_release_bumps(
             return files.get(path)
 
         monkeypatch.setattr(ctx, "file", read_file)
+        serve_release(fake_registry, manifest, version_file_content, published)
 
-        is_pypi = "pypi" in (manifest or "")
-        package = "zyplux-widget" if is_pypi else "@zyplux/widget"
-        if published == UNREACHABLE:
-            pass
-        elif published is None:
-            fake_registry.serve_pypi_missing(package) if is_pypi else fake_registry.serve_npm_missing(package)
-        elif is_pypi:
-            fake_registry.serve_pypi(package, published)
-        else:
-            fake_registry.serve_npm(package, published)
-
-        def read_changed(*_: object) -> list[str]:
+        def read_changed(_repo: Repo, ref: str, _surface: Sequence[str]) -> list[str]:
+            if ref.startswith("origin/"):
+                return ctx.source.changed_paths(_repo, ref, _surface)
             if isinstance(changed, Exception):
                 raise changed
             return list(changed)
@@ -119,6 +141,10 @@ def run_release_bumps(
         return run_check(CHECK_ID, repo, ctx)
 
     return run
+
+
+def private_version_json(version: str) -> str:
+    return json.dumps({"version": version, "publishConfig": {"registry": "https://npm.pkg.github.com"}})
 
 
 def test_14_1_1_skips_repos_that_publish_nothing(run_release_bumps: RunReleaseBumps, skip: MakeFinding) -> None:
@@ -308,3 +334,288 @@ def test_14_5_3_errors_when_the_surface_diff_cannot_be_computed(
 ) -> None:
     result = run_release_bumps(published="0.1.0", changed=git_history_unavailable_error("git diff failed"))
     assert result.findings == [error(f"{LABEL}: cannot diff against widget-v0.1.0: git diff failed")]
+
+
+def test_14_6_1_reads_a_private_github_package_using_publish_config(
+    run_release_bumps: RunReleaseBumps, monkeypatch: pytest.MonkeyPatch, fake_registry: FakeRegistry, ok: MakeFinding
+) -> None:
+    monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
+    result = run_release_bumps(version_file_content=private_version_json("0.1.0"), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+    assert fake_registry.requests == [("npm.pkg.github.com", "/@zyplux%2Fwidget")]
+    assert fake_registry.request_headers == [{"Authorization": "Bearer package-read-token"}]
+
+
+def test_14_6_2_errors_when_private_registry_credentials_are_missing(
+    run_release_bumps: RunReleaseBumps,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_registry: FakeRegistry,
+    error: MakeFinding,
+) -> None:
+    monkeypatch.delenv("NODE_AUTH_TOKEN", raising=False)
+    result = run_release_bumps(version_file_content=private_version_json("0.1.0"))
+
+    assert result.findings == [
+        error(
+            f"{LABEL}: cannot determine the latest published version: "
+            "NODE_AUTH_TOKEN is required to read npm.pkg.github.com"
+        )
+    ]
+    assert fake_registry.requests == []
+
+
+def test_14_6_3_errors_when_the_npm_registry_is_unsupported(
+    run_release_bumps: RunReleaseBumps, fake_registry: FakeRegistry, error: MakeFinding
+) -> None:
+    result = run_release_bumps(
+        version_file_content=private_version_json("0.1.0").replace("npm.pkg.github.com", "example.com")
+    )
+
+    assert result.findings == [
+        error(f"{LABEL}: cannot determine the latest published version: unsupported npm registry 'https://example.com'")
+    ]
+    assert fake_registry.requests == []
+
+
+@pytest.mark.parametrize("publish_config", [{"registry": 42}, "github"])
+def test_14_6_4_errors_when_publish_config_has_no_registry_string(
+    run_release_bumps: RunReleaseBumps, publish_config: object, error: MakeFinding
+) -> None:
+    result = run_release_bumps(version_file_content=json.dumps({"version": "0.1.0", "publishConfig": publish_config}))
+
+    assert result.findings == [
+        error(
+            f"{LABEL}: cannot determine the latest published version: "
+            f"{VERSION_FILE}: publishConfig.registry must be a string"
+        )
+    ]
+
+
+@pytest.mark.parametrize("registry", ["https://registry.npmjs.org/", "https://npm.pkg.github.com/"])
+def test_14_6_5_accepts_supported_registry_urls_with_a_trailing_slash(
+    run_release_bumps: RunReleaseBumps, monkeypatch: pytest.MonkeyPatch, registry: str, ok: MakeFinding
+) -> None:
+    monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
+    package = {"version": "0.1.0", "publishConfig": {"registry": registry}}
+
+    result = run_release_bumps(version_file_content=json.dumps(package), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+
+
+@pytest.mark.parametrize(
+    "publish_config",
+    [
+        {"@zyplux:registry": "https://npm.pkg.github.com/"},
+        {"@zyplux:registry": "https://npm.pkg.github.com/", "registry": "https://registry.npmjs.org"},
+    ],
+    ids=["scoped_only", "scoped_overrides_default"],
+)
+def test_14_6_6_prefers_the_package_scopes_registry_setting(
+    run_release_bumps: RunReleaseBumps,
+    monkeypatch: pytest.MonkeyPatch,
+    fake_registry: FakeRegistry,
+    publish_config: dict[str, str],
+    ok: MakeFinding,
+) -> None:
+    monkeypatch.setenv("NODE_AUTH_TOKEN", "package-read-token")
+    package = {"version": "0.1.0", "publishConfig": publish_config}
+
+    result = run_release_bumps(version_file_content=json.dumps(package), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+    assert fake_registry.requests == [("npm.pkg.github.com", "/@zyplux%2Fwidget")]
+
+
+def test_14_7_1_passes_when_the_release_surface_matches_the_target_branch(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ())
+    result = run_release_bumps(published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+
+
+def test_14_7_2_rejects_reusing_a_target_branch_version_before_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    result = run_release_bumps(
+        version_file_content=version_json("0.1.1"),
+        published="0.1.0",
+    )
+
+    assert result.findings == [
+        fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)"),
+    ]
+
+
+def test_14_7_3_passes_when_changed_surface_has_a_new_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+    result = run_release_bumps(
+        version_file_content=version_json("0.1.1"),
+        published="0.1.0",
+    )
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.1 is ahead of published 0.1.0"), ok(DONE)]
+
+
+def test_14_7_4_errors_when_the_target_branch_version_file_is_invalid_json(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
+) -> None:
+    target_branch("invalid json", ())
+    result = run_release_bumps(published="0.1.0")
+
+    assert result.findings == [
+        error(f"{LABEL}: cannot compare the target branch origin/main: Expecting value: line 1 column 1 (char 0)")
+    ]
+
+
+def test_14_7_5_accepts_a_target_introduced_by_the_pull_request(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(None, (), manifest=None)
+    result = run_release_bumps()
+
+    assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
+
+
+def test_14_7_6_errors_when_target_branch_history_is_unavailable(
+    run_release_bumps: RunReleaseBumps,
+    git_history_unavailable_error: type[GitHistoryUnavailableError],
+    target_branch: ConfigureBase,
+    error: MakeFinding,
+) -> None:
+    target_branch(version_json("0.1.0"), git_history_unavailable_error("git diff failed"))
+    result = run_release_bumps(published="0.1.0")
+
+    assert result.findings == [error(f"{LABEL}: cannot compare the target branch origin/main: git diff failed")]
+
+
+def test_14_7_7_errors_when_the_target_branch_version_is_not_semver(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
+) -> None:
+    target_branch(version_json("invalid"), ())
+    result = run_release_bumps(published="0.1.0")
+
+    assert result.findings == [error(f"{LABEL}: origin/main has no semver version")]
+
+
+@pytest.mark.parametrize(("base", "version"), [("0.1.1", "0.1.2"), ("1.0.0", "1.0.1"), ("0.1.1", "0.2.0")])
+def test_14_7_8_accepts_one_step_from_an_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, base: str, version: str, ok: MakeFinding
+) -> None:
+    target_branch(version_json(base), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json(version), published="0.1.0")
+
+    assert result.findings == [ok(f"{LABEL}: {version} is ahead of origin/main ({base})"), ok(DONE)]
+
+
+def test_14_7_9_rejects_skipping_steps_from_an_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("0.1.3"), published="0.1.0")
+
+    assert result.findings == [
+        fail(f"{LABEL}: version 0.1.3 skips ahead of origin/main (0.1.1) — bump one step (0.1.2, 0.2.0, or 1.0.0)")
+    ]
+
+
+def test_14_7_10_uses_the_published_baseline_when_it_is_newer_than_the_target_branch(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("0.1.2"), published="0.1.1")
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.2 is ahead of published 0.1.1"), ok(DONE)]
+
+
+def test_14_7_11_accepts_an_unchanged_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ())
+
+    result = run_release_bumps(version_file_content=version_json("1.0.0"), published="0.1.0")
+
+    assert result.findings == [ok(DONE)]
+
+
+def test_14_7_12_accepts_one_step_before_the_first_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("1.0.1"))
+
+    assert result.findings == [ok(f"{LABEL}: 1.0.1 is ahead of origin/main (1.0.0)"), ok(DONE)]
+
+
+def test_14_7_13_rejects_skipping_steps_before_the_first_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(version_file_content=version_json("9.0.0"))
+
+    assert result.findings == [
+        fail(f"{LABEL}: version 9.0.0 skips ahead of origin/main (1.0.0) — bump one step (1.0.1, 1.1.0, or 2.0.0)")
+    ]
+
+
+def test_14_7_14_reads_the_base_version_with_its_own_extractor(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+
+    result = run_release_bumps(
+        manifest=MANIFEST.replace('json = "version"', 'json = "metadata.version"'),
+        version_file_content=json.dumps({"metadata": {"version": "0.1.1"}}),
+        published="0.1.0",
+    )
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.1 is ahead of published 0.1.0"), ok(DONE)]
+
+
+def test_14_7_15_checks_the_base_version_when_its_file_moves(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    moved_path = "packages/relocated/package.json"
+
+    result = run_release_bumps(
+        manifest=MANIFEST.replace(VERSION_FILE, moved_path),
+        version_path=moved_path,
+        version_file_content=version_json("0.1.1"),
+        published="0.1.0",
+    )
+
+    assert result.findings == [fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)")]
+
+
+def test_14_7_16_distinguishes_targets_that_share_a_version_file(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("1.0.0"), (), manifest=MANIFEST.replace(LABEL, "@zyplux/other"))
+
+    result = run_release_bumps()
+
+    assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
+
+
+def test_14_7_17_errors_when_an_existing_base_target_has_no_version_file(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
+) -> None:
+    target_branch(None, ())
+
+    result = run_release_bumps()
+
+    assert result.findings == [
+        error(f"{LABEL}: cannot compare the target branch origin/main: version file {VERSION_FILE} is missing")
+    ]
