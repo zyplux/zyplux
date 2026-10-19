@@ -3,14 +3,7 @@ import { describe, expect, test } from './repositories.ts';
 
 const PR_URL = 'https://github.com/zyplux/zyplux/pull/1';
 
-const GATE_COMMAND = 'gh api repos/{owner}/{repo}/commits/sha-local/statuses';
-const OLD_GATE = { context: 'bot-review-complete', id: 100, state: 'success' };
-const NEW_GATE = { ...OLD_GATE, id: 101 };
-
 describe('9. Pushing a branch and advancing its draft PR', () => {
-  test.beforeEach(({ shell }) => {
-    shell.on(GATE_COMMAND, JSON.stringify([OLD_GATE]), JSON.stringify([NEW_GATE, OLD_GATE]));
-  });
   describe('9.1 validating preconditions', () => {
     test('9.1.1 rejects --hold without --ready', async ({ cz, shell }) => {
       await expect(cz.run('push-branch', '--hold')).rejects.toThrow('--hold requires --ready');
@@ -88,7 +81,8 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       expect(logs).toHaveLogged('flip: GitHub confirms PR is draft (was ready, HEAD sha-loc)');
       expect(shell).toHaveRun('git push --set-upstream origin feat-x');
       expect(logs).toHaveLogged('flip: GitHub confirms PR is ready (draft→push→ready done)');
-      expect(shell).toHaveRun('gh pr merge --delete-branch --match-head-commit sha-local --squash');
+      expect(shell).not.toHaveRunMatching('gh api');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
     });
 
     test('9.4.2 pushes between the draft and ready transitions', async ({ cz, repo, shell }) => {
@@ -101,6 +95,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       await cz.run('push-branch', '--ready');
 
       expect(shell).not.toHaveRunMatching('gh repo view');
+      expect(shell).not.toHaveRunMatching('gh api');
       expect(shell.commandsMatching(/gh pr ready|git push/u)).toEqual([
         'gh pr ready --undo',
         'git push --set-upstream origin feat-x',
@@ -130,7 +125,7 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
 
       expect(shell.commandsMatching('gh pr ready')).toEqual(['gh pr ready']);
       expect(logs).toHaveLogged('flip: GitHub confirms PR is ready');
-      expect(shell).toHaveRun('gh pr merge --delete-branch --match-head-commit sha-local --squash');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
       expect(logs).toHaveLogged(`PR merged: ${PR_URL}`);
     });
 
@@ -158,20 +153,20 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
   });
 
   describe('9.6 merging a ready PR', () => {
-    test.beforeEach(({ repo }) => {
+    test('9.6.1 merges immediately when the merge state is clean', async ({ cz, logs, repo, shell }) => {
       repo.syncFeatureBranch('feat-x', 'sha-local');
       repo.setPrListState('');
       repo.queuePrFields({ isDraft: false, mergeStateStatus: 'CLEAN', url: PR_URL });
-    });
 
-    test('9.6.1 merges the checked head after the refreshed gate succeeds', async ({ cz, logs, shell }) => {
       await cz.run('push-branch', '--ready');
 
-      expect(shell).toHaveRun('gh pr merge --delete-branch --match-head-commit sha-local --squash');
+      expect(shell).toHaveRun('gh pr merge --delete-branch --squash');
       expect(logs).toHaveLogged(`PR merged: ${PR_URL}`);
     });
 
     test('9.6.2 rejects a dirty merge state', async ({ cz, repo, shell }) => {
+      repo.syncFeatureBranch('feat-x', 'sha-local');
+      repo.setPrListState('');
       repo.queuePrFields({ isDraft: false, mergeStateStatus: 'DIRTY', url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow('merge conflict');
@@ -179,15 +174,19 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
     });
 
     test('9.6.3 schedules auto-merge for any other mergeable state', async ({ cz, logs, repo, shell }) => {
+      repo.syncFeatureBranch('feat-x', 'sha-local');
+      repo.setPrListState('');
       repo.queuePrFields({ isDraft: false, mergeStateStatus: 'BEHIND', url: PR_URL });
 
       await cz.run('push-branch', '--ready');
 
-      expect(shell).toHaveRun('gh pr merge --auto --delete-branch --match-head-commit sha-local --squash');
+      expect(shell).toHaveRun('gh pr merge --auto --delete-branch --squash');
       expect(logs).toHaveLogged(`PR ready, auto-merge scheduled (BEHIND): ${PR_URL}`);
     });
 
     test('9.6.4 rejects when the merge state stays UNKNOWN', async ({ cz, repo, shell, sleep }) => {
+      repo.syncFeatureBranch('feat-x', 'sha-local');
+      repo.setPrListState('');
       repo.queuePrFields({ isDraft: false, mergeStateStatus: 'UNKNOWN', url: PR_URL });
 
       await expect(cz.run('push-branch', '--ready')).rejects.toThrow(
@@ -198,53 +197,6 @@ describe('9. Pushing a branch and advancing its draft PR', () => {
       const intervalMs = 1000;
       expect(sleep).toHaveBeenCalledTimes(attempts - 1);
       expect(sleep).toHaveBeenLastCalledWith(intervalMs);
-    });
-
-    test('9.6.5 waits for a fresh gate on the pushed head before merging an unchanged clean PR', async ({
-      cz,
-      repo,
-      shell,
-    }) => {
-      repo.setPrListState('OPEN');
-      repo.queuePrFields({ isDraft: [false, true, false], mergeStateStatus: 'CLEAN', url: PR_URL });
-      shell.on(
-        GATE_COMMAND,
-        JSON.stringify([OLD_GATE]),
-        JSON.stringify([OLD_GATE]),
-        JSON.stringify([{ ...NEW_GATE, state: 'pending' }, OLD_GATE]),
-        () => {
-          expect(shell).not.toHaveRunMatching('gh pr merge');
-          expect(shell).not.toHaveRunMatching('gh pr view --json mergeStateStatus');
-          return JSON.stringify([NEW_GATE, OLD_GATE]);
-        },
-      );
-
-      await cz.run('push-branch', '--ready');
-
-      const gatePolls = 4;
-      expect(shell.commandsMatching(GATE_COMMAND)).toHaveLength(gatePolls);
-      expect(shell).toHaveRun('gh pr merge --delete-branch --match-head-commit sha-local --squash');
-    });
-
-    test('9.6.6 refuses to merge when the refreshed gate fails', async ({ cz, shell }) => {
-      shell.on(GATE_COMMAND, JSON.stringify([OLD_GATE]), JSON.stringify([{ ...NEW_GATE, state: 'failure' }, OLD_GATE]));
-
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow("refreshed review gate concluded 'failure'");
-      expect(shell).not.toHaveRunMatching('gh pr merge');
-    });
-
-    test('9.6.7 refuses to merge when no fresh gate appears', async ({ cz, shell }) => {
-      shell.on(GATE_COMMAND, JSON.stringify([OLD_GATE]));
-
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow('refreshed review gate did not complete');
-      expect(shell).not.toHaveRunMatching('gh pr merge');
-    });
-
-    test('9.6.8 refuses to merge when the refreshed gate never completes', async ({ cz, shell }) => {
-      shell.on(GATE_COMMAND, '[]', JSON.stringify([{ ...NEW_GATE, state: 'pending' }]));
-
-      await expect(cz.run('push-branch', '--ready')).rejects.toThrow('refreshed review gate did not complete');
-      expect(shell).not.toHaveRunMatching('gh pr merge');
     });
   });
 });
