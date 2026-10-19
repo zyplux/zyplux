@@ -221,3 +221,20 @@ def test_22_5_1_errors_instead_of_passing_when_a_registry_lookup_fails(
     result = run_check_on_disk(CHECK_ID, files)
     assert result.status is status.ERROR
     assert [f.message for f in result.problems] == [f"could not determine the latest `ghcr.io/zyplux/ci`: {failure}"]
+
+
+def test_22_5_2_reads_private_ghcr_images_with_the_workflow_credential(
+    run_check_on_disk: RunCheckOnDisk,
+    fake_registry: FakeRegistry,
+    monkeypatch: pytest.MonkeyPatch,
+    status: type[Status],
+) -> None:
+    monkeypatch.setenv("GH_TOKEN", "read-token")
+    monkeypatch.setenv("GITHUB_ACTOR", "bot")
+    fake_registry.serve_ghcr("zyplux/ci", ["0.1.0"])
+    result = run_check_on_disk(CHECK_ID, {".github/workflows/ci.yml": CI_IMAGE_WORKFLOW})
+    assert result.status is status.PASS
+    assert fake_registry.request_headers == [
+        {"Authorization": "Basic Ym90OnJlYWQtdG9rZW4="},
+        {"Authorization": "Bearer anonymous"},
+    ]

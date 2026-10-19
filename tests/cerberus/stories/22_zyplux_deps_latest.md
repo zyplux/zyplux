@@ -96,3 +96,7 @@ silent pass.
 When the lookup for a used artifact raises, the check emits an ERROR finding
 naming the artifact and the failure, once per artifact, so the coverage gap
 stays visible.
+
+### 22.5.2 reads private ghcr images with the workflow credential
+
+Registry authentication uses the workflow credential and actor; the returned bearer token authorizes image metadata reads.

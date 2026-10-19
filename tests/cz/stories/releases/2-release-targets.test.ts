@@ -1,4 +1,6 @@
 // unparametrized
+import { vi } from 'vitest';
+
 import { describe, expect, test } from './releases.ts';
 
 const BROKEN_TARGET_MANIFEST = [
@@ -55,6 +57,25 @@ describe('2.3 checking whether the ghcr image target is published', () => {
 
     expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (release ci-image-v3.4.5 already exists)');
     expect(logs).not.toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
+  });
+
+  test('2.3.2 authenticates private image probes and propagates registry failures', async ({
+    cz,
+    env,
+    network,
+    registries,
+  }) => {
+    registries.setPublished({ ghcrPublished: true });
+    env.set('GH_TOKEN', 'read-token');
+    env.set('GITHUB_ACTOR', 'bot');
+    network.on('https://ghcr.io/token', () => Response.json({ token: 'private-token' }));
+    network.on('https://ghcr.io/v2/', () => new Response(undefined, { status: 403 }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    await expect(cz.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow('403');
+    expect(fetchSpy).toHaveBeenCalledWith('https://ghcr.io/token?service=ghcr.io&scope=repository:zyplux/ci:pull', {
+      headers: { Authorization: 'Basic Ym90OnJlYWQtdG9rZW4=' },
+      method: 'GET',
+    });
   });
 });
 

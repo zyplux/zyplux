@@ -1,5 +1,5 @@
 import { ensure } from '@zyplux/util/assert';
-import { FetchError, fetchJson, http, isHttpOk } from '@zyplux/util/http';
+import { FetchError, http, isHttpOk } from '@zyplux/util/http';
 import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { parseToml } from '@zyplux/util/toml';
@@ -47,20 +47,31 @@ const MANIFEST_MEDIA_TYPES = [
 
 const HTTP_NOT_FOUND = 404;
 
-const fetchGhcrAuth = (repo: string) =>
-  fetchJson(`https://ghcr.io/token?scope=repository:${repo}:pull`, GhcrTokenSchema);
-
-const isGhcrImagePublished = async (repo: string, tag: string) => {
-  const auth = await fetchGhcrAuth(repo);
-  if (!auth) return false;
-  return isHttpOk(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
-    headers: {
-      Accept: MANIFEST_MEDIA_TYPES,
-      Authorization: `Bearer ${auth.token}`,
-    },
-    method: 'HEAD',
-  });
+const isRegistryPublished = async (request: () => Promise<unknown>) => {
+  try {
+    await request();
+    return true;
+  } catch (error) {
+    if (error instanceof FetchError && error.response.status === HTTP_NOT_FOUND) return false;
+    throw error;
+  }
 };
+
+const isGhcrImagePublished = (repo: string, tag: string) =>
+  isRegistryPublished(async () => {
+    const token = process.env['GH_TOKEN'] ?? process.env['NODE_AUTH_TOKEN'];
+    const actor = process.env['GITHUB_ACTOR'];
+    const headers: Record<string, string> = {};
+    if (token && actor) headers['Authorization'] = `Basic ${Buffer.from(`${actor}:${token}`).toString('base64')}`;
+    const auth = await http
+      .get(`https://ghcr.io/token?service=ghcr.io&scope=repository:${repo}:pull`, { headers })
+      .json(GhcrTokenSchema);
+    return http
+      .head(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
+        headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${auth.token}` },
+      })
+      .response();
+  });
 
 const isNpmPublished = async (directory: string, label: string, version: string) => {
   const { publishConfig } = parseJson(await readFile(path.join(directory, 'package.json'), 'utf8'), NpmPackageSchema);
@@ -70,13 +81,9 @@ const isNpmPublished = async (directory: string, label: string, version: string)
     ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
     headers['Authorization'] = `Bearer ${token}`;
   }
-  try {
-    await http.get(`${publishConfig.registry}/${encodeURIComponent(label)}/${version}`, { headers }).response();
-    return true;
-  } catch (error) {
-    if (error instanceof FetchError && error.response.status === HTTP_NOT_FOUND) return false;
-    throw error;
-  }
+  return isRegistryPublished(() =>
+    http.get(`${publishConfig.registry}/${encodeURIComponent(label)}/${version}`, { headers }).response(),
+  );
 };
 
 const isPackagePublished = async ({ kind, label }: Target, version: string, directory: string) => {
