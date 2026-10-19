@@ -33,6 +33,27 @@ const readRemoteHead = async (branch: string) => {
   return refLine.split(/\s+/, 1)[0] ?? '';
 };
 
+const fetchReviewGate = async (head: string) => {
+  const statuses = await $.gh.commit.statuses(head);
+  return statuses.find(({ context }) => context === 'bot-review-complete');
+};
+
+const waitForGate = async (head: string, previousId: number | undefined) => {
+  console.log('Waiting for the refreshed review gate ...');
+  const gate = await poll(
+    async () => {
+      const status = await fetchReviewGate(head);
+      return status?.id === previousId || status?.state === 'pending' ? undefined : status;
+    },
+    {
+      attempts: 241,
+      intervalMs: 10_000,
+      onExpiry: 'refreshed review gate did not complete; check the Actions tab before merging',
+    },
+  );
+  ensure(gate.state === 'success', `refreshed review gate concluded '${gate.state}'; resolve it before merging`);
+};
+
 export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   ensure(!hold || ready, '--hold requires --ready');
 
@@ -80,6 +101,7 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
     return;
   }
 
+  const previousGate = hold ? undefined : await fetchReviewGate(pushedHead);
   await $.gh.pr.ready();
   await poll(() => $.gh.pr.view({ json: ['isDraft'] }), {
     onExpiry: 'PR did not return to ready state; check the PR on GitHub',
@@ -93,6 +115,8 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
     return;
   }
 
+  await waitForGate(pushedHead, previousGate?.id);
+
   const { mergeStateStatus } = await poll(() => $.gh.pr.view({ json: ['mergeStateStatus'] }), {
     attempts: 10,
     onExpiry: 'merge state stayed UNKNOWN; check the PR on GitHub',
@@ -101,10 +125,10 @@ export const runPushBranch = async ({ hold, ready }: PushBranchConfig) => {
   ensure(mergeStateStatus !== 'DIRTY', 'merge conflict with main — rebase or resolve, then retry');
 
   if (mergeStateStatus === 'CLEAN') {
-    await $.gh.pr.merge({ deleteBranch: true, squash: true });
+    await $.gh.pr.merge({ deleteBranch: true, matchHeadCommit: pushedHead, squash: true });
     console.log(`PR merged: ${url}`);
   } else {
-    await $.gh.pr.merge({ auto: true, deleteBranch: true, squash: true });
+    await $.gh.pr.merge({ auto: true, deleteBranch: true, matchHeadCommit: pushedHead, squash: true });
     console.log(`PR ready, auto-merge scheduled (${mergeStateStatus}): ${url}`);
   }
 };

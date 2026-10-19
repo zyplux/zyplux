@@ -36,7 +36,7 @@
 
 ## 9.6 merging a ready PR
 
-### 9.6.1 merges immediately when the merge state is clean
+### 9.6.1 merges the checked head after the refreshed gate succeeds
 
 ### 9.6.2 rejects a dirty merge state
 
@@ -45,3 +45,11 @@
 ### 9.6.4 rejects when the merge state stays UNKNOWN
 
 Check at most ten times, one second apart, to allow GitHub to calculate mergeability.
+
+### 9.6.5 waits for a fresh gate on the pushed head before merging an unchanged clean PR
+
+### 9.6.6 refuses to merge when the refreshed gate fails
+
+### 9.6.7 refuses to merge when no fresh gate appears
+
+### 9.6.8 refuses to merge when the refreshed gate never completes

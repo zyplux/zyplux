@@ -11,6 +11,7 @@ export const PackageVersionSchema = z.object({ version: z.string() });
 export const VersionKeySchema = z.object({ version: z.string() });
 
 export const GhSchema = {
+  commitStatuses: z.array(z.object({ context: z.string(), id: z.int(), state: z.string() })),
   pr: z.object({
     isDraft: z.boolean(),
     mergeStateStatus: z.string(),

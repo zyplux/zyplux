@@ -45,7 +45,7 @@ type PrListFlags<Field extends keyof GhPr> = JsonFields<Field> & {
   state?: 'all' | 'closed' | 'merged' | 'open';
 };
 
-type PrMergeFlags = { auto?: boolean; deleteBranch?: boolean; squash?: boolean };
+type PrMergeFlags = { auto?: boolean; deleteBranch?: boolean; matchHeadCommit?: string; squash?: boolean };
 
 type PrReadyFlags = { undo?: boolean };
 
@@ -89,6 +89,10 @@ const readGh = async <T>(argv: string[], schema: z.ZodType<T>) => {
 };
 
 const gh = {
+  commit: {
+    statuses: async (sha: string) =>
+      readGh(['api', ['repos/{owner}/{repo}/commits', sha, 'statuses'].join('/')], GhSchema.commitStatuses),
+  },
   pr: {
     create: async (flags: PrCreateFlags) => {
       await sh`gh ${['pr', 'create', ...toArgs(flags)]}`;
