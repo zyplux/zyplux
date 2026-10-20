@@ -1,13 +1,13 @@
 import { ensure } from '@zyplux/util/assert';
 import { run, runPassthrough } from '@zyplux/util/exec';
-import { $ } from '@zyplux/util/shell';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import type { InferValue } from '#optique';
 
-import { argument, command, constant, message, object, string } from '#optique';
+import { argument, command, constant, message, object, option, string } from '#optique';
 import { resolveReleaseTag } from '#release-targets';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {
@@ -16,7 +16,13 @@ const tagArgument = argument(string({ metavar: 'TAG' }), {
 
 export const publishTaggedTargetCommand = command(
   'publish-tagged-target',
-  object({ command: constant('publish-tagged-target' as const), tag: tagArgument }),
+  object({
+    command: constant('publish-tagged-target' as const),
+    shouldRelease: option('--release', {
+      description: message`Create a GitHub release at HEAD after the artifact is published.`,
+    }),
+    tag: tagArgument,
+  }),
   {
     aliases: ['pt'],
     brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
@@ -59,28 +65,30 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
   await $`podman push ${latest}`;
 };
 
-export const runPublishTaggedTarget = async ({ tag }: PublishTaggedTargetConfig) => {
+export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTaggedTargetConfig) => {
   const { target, version } = await resolveReleaseTag(tag);
 
   if (await target.isPublished(version)) {
     console.log(`${target.label} ${version} is already published; nothing to do`);
-    return;
+  } else {
+    console.log(`Publishing ${target.label} ${version} to ${target.kind} ...`);
+    switch (target.kind) {
+      case 'ghcr': {
+        await publishGhcr(target.label, target.dir, version);
+        break;
+      }
+      case 'npm': {
+        await publishNpm(target.dir);
+        break;
+      }
+      case 'pypi': {
+        await publishPypi(target.label);
+        break;
+      }
+    }
+    console.log(`Published ${target.label} ${version}`);
   }
-
-  console.log(`Publishing ${target.label} ${version} to ${target.kind} ...`);
-  switch (target.kind) {
-    case 'ghcr': {
-      await publishGhcr(target.label, target.dir, version);
-      break;
-    }
-    case 'npm': {
-      await publishNpm(target.dir);
-      break;
-    }
-    case 'pypi': {
-      await publishPypi(target.label);
-      break;
-    }
-  }
-  console.log(`Published ${target.label} ${version}`);
+  if (!shouldRelease || (await $.gh.release.exists(tag))) return;
+  const head = await readTrimmed($.git.revParse('HEAD'));
+  await $.gh.release.create(tag, { generateNotes: true, target: head, title: tag });
 };

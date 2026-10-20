@@ -21,7 +21,7 @@
 | [zyplux-util](packages/util_py)                  | PyPI     | Python counterpart of the shared utilities                                       |
 | [@zyplux/spectra](packages/spectra)         | npm      | Vitest fixtures, matchers, polling, and journal reporting                            |
 
-Each package's README covers usage. Releases are cut per package from [release-targets.toml](release-targets.toml) via `cz release-bumped-targets`.
+Each package's README covers usage. The [release workflow](.github/workflows/release.yml) publishes configured versions automatically on pushes to `main`, using CZ to select pending targets from [release-targets.toml](release-targets.toml). Complete releases are skipped; failed publications and missing GitHub releases are retried. Each artifact version has its own concurrency group. CI and version-bump enforcement run on pull requests. The release workflow also supports manual retries on `main` and per-tag GitHub release events.
 
 ## Develop
 

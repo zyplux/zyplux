@@ -27,13 +27,13 @@ describe('8.2 publishing to each registry kind', () => {
   test('8.2.1 packs and publishes an npm target', async ({
     cz,
     expectNpmPackAndPublish,
+    npmTarget,
     registries,
     shell,
     targets,
   }) => {
     registries.setPublished({ npmPublished: false });
-    shell.on(/pnpm pack/, '');
-    shell.on(/^npm publish/, '');
+    npmTarget.stagePublish();
 
     await cz.run('publish-tagged-target', 'util-v1.2.3');
 
@@ -43,13 +43,13 @@ describe('8.2 publishing to each registry kind', () => {
   test('8.2.6 removes the temporary archive when npm publication fails', async ({
     cz,
     expectNpmPackAndPublish,
+    npmTarget,
     registries,
     shell,
     targets,
   }) => {
     registries.setPublished({ npmPublished: false });
-    shell.on(/pnpm pack/, '');
-    shell.on(/^npm publish/, { exitCode: 1, stdout: '' });
+    npmTarget.stagePublish(1);
 
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('command failed with exit code 1');
 
@@ -109,28 +109,20 @@ describe('8.3 publishing a private GitHub npm package', () => {
     env,
     expectNpmPackAndPublish,
     network,
+    npmTarget,
     shell,
     targets,
-    tempDir,
   }) => {
-    await tempDir.write(
-      'packages/util/package.json',
-      JSON.stringify({
-        name: '@zyplux/util',
-        publishConfig: { access: 'restricted', registry: 'https://npm.pkg.github.com' },
-        version: '1.2.3',
-      }),
-    );
+    await npmTarget.setPublishConfig({ access: 'restricted', registry: 'https://npm.pkg.github.com' });
     env.set('NODE_AUTH_TOKEN', 'package-read-token');
     network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 404 }));
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    shell.on(/pnpm pack/, '');
-    shell.on(/^npm publish/, '');
+    npmTarget.stagePublish();
 
     await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-    expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3']);
-    expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3', {
+    expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil']);
+    expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil', {
       headers: { Authorization: 'Bearer package-read-token' },
       method: 'GET',
     });
@@ -141,15 +133,9 @@ describe('8.3 publishing a private GitHub npm package', () => {
     cz,
     env,
     network,
-    tempDir,
+    npmTarget,
   }) => {
-    await tempDir.write(
-      'packages/util/package.json',
-      JSON.stringify({
-        publishConfig: { registry: 'https://npm.pkg.github.com' },
-        version: '1.2.3',
-      }),
-    );
+    await npmTarget.setPublishConfig({ registry: 'https://npm.pkg.github.com' });
     env.set('NODE_AUTH_TOKEN', '');
 
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
@@ -158,39 +144,42 @@ describe('8.3 publishing a private GitHub npm package', () => {
     expect(network.requests).toEqual([]);
   });
 
-  test('8.3.3 rejects registry failures without attempting publication', async ({ cz, network, shell }) => {
-    network.on('https://registry.npmjs.org/', () => new Response(undefined, { status: 403 }));
+  test.for(['https://registry.npmjs.org', 'https://npm.pkg.github.com'])(
+    '8.3.3 rejects registry failures without attempting publication (%s)',
+    async (registry, { cz, env, network, npmTarget, shell }) => {
+      await npmTarget.setPublishConfig({ registry });
+      env.set('NODE_AUTH_TOKEN', 'package-read-token');
+      network.on(registry, () => new Response(undefined, { status: 403 }));
 
-    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('failed: 403');
-    expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
-  });
+      await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('failed: 403');
+      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+    },
+  );
 
-  test('8.3.4 rejects unsupported registry destinations before making a request', async ({ cz, network, tempDir }) => {
-    await tempDir.write(
-      'packages/util/package.json',
-      JSON.stringify({
-        publishConfig: { registry: 'https://example.com' },
-        version: '1.2.3',
-      }),
-    );
+  test('8.3.4 rejects unsupported registry destinations before making a request', async ({
+    cz,
+    network,
+    npmTarget,
+  }) => {
+    await npmTarget.setPublishConfig({ registry: 'https://example.com' });
 
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
     expect(network.requests).toEqual([]);
   });
 
-  test.for(['https://registry.npmjs.org/', 'https://npm.pkg.github.com/'])(
-    '8.3.5 accepts supported registry URLs with a trailing slash (%s)',
-    async (registry, { cz, env, logs, network, shell, tempDir }) => {
-      await tempDir.write(
-        'packages/util/package.json',
-        JSON.stringify({ publishConfig: { registry }, version: '1.2.3' }),
-      );
+  test.for([
+    { packageUrl: 'https://registry.npmjs.org/%40zyplux%2Futil/1.2.3', registry: 'https://registry.npmjs.org/' },
+    { packageUrl: 'https://npm.pkg.github.com/%40zyplux%2Futil', registry: 'https://npm.pkg.github.com/' },
+  ])(
+    '8.3.5 accepts supported registry URLs with a trailing slash (%j)',
+    async ({ packageUrl, registry }, { cz, env, logs, network, npmTarget, shell }) => {
+      await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
-      network.on(registry, () => new Response(undefined, { status: 200 }));
+      network.on(registry, () => Response.json({ versions: { '1.2.3': {} } }));
 
       await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-      expect(network.requests).toEqual([`${registry}%40zyplux%2Futil/1.2.3`]);
+      expect(network.requests).toEqual([packageUrl]);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
       expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
     },
@@ -201,16 +190,109 @@ describe('8.3 publishing a private GitHub npm package', () => {
     { '@zyplux:registry': 'https://npm.pkg.github.com/', registry: 'https://registry.npmjs.org' },
   ])(
     '8.3.6 prefers the package scope’s registry setting (%j)',
-    async (publishConfig, { cz, env, logs, network, shell, tempDir }) => {
-      await tempDir.write('packages/util/package.json', JSON.stringify({ publishConfig, version: '1.2.3' }));
+    async (publishConfig, { cz, env, logs, network, npmTarget, shell }) => {
+      await npmTarget.setPublishConfig(publishConfig);
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
-      network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 200 }));
+      network.on('https://npm.pkg.github.com/', () => Response.json({ versions: { '1.2.3': {} } }));
 
       await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-      expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil/1.2.3']);
+      expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil']);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
       expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
     },
   );
+
+  test.for([
+    { isPublished: false, versions: { '1.2.2': {} } },
+    { isPublished: true, versions: { '1.2.2': {}, '1.2.3': {} } },
+  ])(
+    '8.3.7 checks the requested version in GitHub package metadata (%j)',
+    async (
+      { isPublished, versions },
+      { cz, env, expectNpmPackAndPublish, logs, network, npmTarget, shell, targets },
+    ) => {
+      await npmTarget.setPublishConfig({ registry: 'https://npm.pkg.github.com' });
+      env.set('NODE_AUTH_TOKEN', 'package-read-token');
+      network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 405 }));
+      network.on(/^https:\/\/npm\.pkg\.github\.com\/%40zyplux%2Futil$/u, () => Response.json({ versions }));
+      npmTarget.stagePublish();
+
+      await cz.run('publish-tagged-target', 'util-v1.2.3');
+
+      if (isPublished) {
+        expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
+        expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      } else {
+        await expectNpmPackAndPublish(shell, targets.util.dir);
+      }
+    },
+  );
+
+  test('8.3.8 rejects malformed package metadata without attempting publication', async ({
+    cz,
+    env,
+    network,
+    npmTarget,
+    shell,
+  }) => {
+    await npmTarget.setPublishConfig({ registry: 'https://npm.pkg.github.com' });
+    env.set('NODE_AUTH_TOKEN', 'package-read-token');
+    network.on('https://npm.pkg.github.com/', () => Response.json({}));
+
+    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
+    expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+  });
+});
+
+describe('8.4 completing GitHub release metadata after publication', () => {
+  test.for([
+    { isArtifactPublished: false, isReleaseCreated: false },
+    { isArtifactPublished: true, isReleaseCreated: false },
+    { isArtifactPublished: false, isReleaseCreated: true },
+    { isArtifactPublished: true, isReleaseCreated: true },
+  ])(
+    '8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD (%j)',
+    async (
+      { isArtifactPublished, isReleaseCreated },
+      { cz, expectNpmPackAndPublish, npmTarget, registries, repo, shell, targets },
+    ) => {
+      registries.setPublished({ npmPublished: isArtifactPublished });
+      repo.setHeadSha('reviewed-sha');
+      shell.on(
+        'gh api graphql',
+        isReleaseCreated
+          ? '{"data":{"repository":{"release":{"id":"release-id"}}}}'
+          : '{"data":{"repository":{"release":null}}}',
+      );
+      npmTarget.stagePublish();
+
+      await cz.run('publish-tagged-target', '--release', 'util-v1.2.3');
+
+      if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      else await expectNpmPackAndPublish(shell, targets.util.dir);
+      if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
+      else {
+        expect(shell).toHaveRun(
+          'gh release create util-v1.2.3 --generate-notes --target reviewed-sha --title util-v1.2.3',
+        );
+      }
+    },
+  );
+
+  test('8.4.2 leaves GitHub release metadata unpublished when the registry rejects publication', async ({
+    cz,
+    npmTarget,
+    registries,
+    shell,
+  }) => {
+    registries.setPublished({ npmPublished: false });
+    npmTarget.stagePublish(1);
+
+    await expect(cz.run('publish-tagged-target', '--release', 'util-v1.2.3')).rejects.toThrow(
+      'command failed with exit code 1',
+    );
+
+    expect(shell).not.toHaveRunMatching(/gh api graphql|gh release create/);
+  });
 });

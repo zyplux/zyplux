@@ -2,13 +2,20 @@ import { makeFixture } from '@zyplux/spectra/library-test-api';
 
 import { czTest } from '#cli-test';
 
-import type { LiveWorkspace, Registries, Release, SeededTargets } from './release-scenario.ts';
+import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } from './release-scenario.ts';
 
 import { expectNpmPackAndPublish } from './publish-assertions.ts';
-import { createLiveWorkspace, createRegistries, createRelease, seedReleaseTargets } from './release-scenario.ts';
+import {
+  createLiveWorkspace,
+  createNpmTarget,
+  createRegistries,
+  createRelease,
+  seedReleaseTargets,
+} from './release-scenario.ts';
 export const test = czTest.extend<{
   expectNpmPackAndPublish: typeof expectNpmPackAndPublish;
   liveWorkspace: LiveWorkspace;
+  npmTarget: NpmTarget;
   registries: Registries;
   release: Release;
   targets: SeededTargets;
@@ -16,6 +23,9 @@ export const test = czTest.extend<{
   expectNpmPackAndPublish: makeFixture(expectNpmPackAndPublish),
   liveWorkspace: async ({}, use) => {
     await use(createLiveWorkspace());
+  },
+  npmTarget: async ({ shell, tempDir }, use) => {
+    await use(createNpmTarget(shell, tempDir));
   },
   registries: async ({ network }, use) => {
     await use(createRegistries(network));

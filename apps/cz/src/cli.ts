@@ -86,7 +86,7 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
       return runPushBranch(result);
     }
     case 'release-bumped-targets': {
-      return runReleaseBumpedTargets();
+      return runReleaseBumpedTargets(result);
     }
     case 'upgrade': {
       return runUpgrade(result);

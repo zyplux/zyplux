@@ -90,6 +90,6 @@ dump-rules:
 totchef:
     uv run totchef up --recipe apps/totchef/examples/totchef_recipe.toml
 
-# Publish any bumped release target (eslint-config → npm, cerberus → PyPI, ci image → GHCR) via GitHub releases.
+# Manually publish pending versions through the release workflow.
 release:
     pnpm run --silent cz release-bumped-targets

@@ -53,3 +53,23 @@ Read status and conclusion together on each attempt, accepting a conclusion only
 ### 10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end
 
 ### 10.4.3 reports failures in manifest order even when a later target fails first
+
+## 10.5 selecting pending releases for automation
+
+### 10.5.1 lists unpublished configured versions without local main preconditions
+
+### 10.5.2 prints an empty selection when every configured release is complete
+
+### 10.5.3 retries an unpublished artifact whose GitHub release already exists
+
+### 10.5.4 selects published artifacts with missing GitHub releases
+
+### 10.5.5 limits a release event to its declared tag
+
+### 10.5.6 rejects a tag that does not match a configured version
+
+### 10.5.7 requires list mode when selecting a tag
+
+### 10.5.8 prints an empty selection for a repository with no release targets
+
+### 10.5.9 propagates release lookup failures without emitting a publish selection

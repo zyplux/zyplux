@@ -288,4 +288,108 @@ describe('10. Releasing every target whose version was bumped', () => {
       );
     });
   });
+
+  describe('10.5 selecting pending releases for automation', () => {
+    test('10.5.1 lists unpublished configured versions without local main preconditions', async ({
+      cz,
+      logs,
+      registries,
+      repo,
+      shell,
+    }) => {
+      repo.setCurrentBranch('HEAD');
+      registries.setPublished({});
+
+      await cz.run('release-bumped-targets', '--list');
+
+      expect(logs.logLines).toEqual([
+        JSON.stringify([
+          { kind: 'npm', tag: 'util-v1.2.3' },
+          { kind: 'pypi', tag: 'cerberus-v2.3.4' },
+          { kind: 'ghcr', tag: 'ci-image-v3.4.5' },
+        ]),
+      ]);
+      expect(shell).not.toHaveRunMatching(/git fetch|gh release create|gh run/);
+    });
+
+    test('10.5.2 prints an empty selection when every configured release is complete', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      release.stageAllPublished();
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+
+      await cz.run('release-bumped-targets', '--list');
+
+      expect(logs.logLines).toEqual(['[]']);
+      expect(shell).not.toHaveRunMatching('gh release create');
+    });
+
+    test('10.5.3 retries an unpublished artifact whose GitHub release already exists', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      release.stagePendingCerberus();
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+
+      await cz.run('release-bumped-targets', '--list');
+
+      expect(logs.logLines).toEqual(['[{"kind":"pypi","tag":"cerberus-v2.3.4"}]']);
+    });
+
+    test('10.5.4 selects published artifacts with missing GitHub releases', async ({ cz, logs, release, shell }) => {
+      release.stageAllPublished();
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+      shell.on(/tag=util-v1\.2\.3 /u, '{"data":{"repository":{"release":null}}}');
+
+      await cz.run('release-bumped-targets', '--list');
+
+      expect(logs.logLines).toEqual(['[{"kind":"npm","tag":"util-v1.2.3"}]']);
+    });
+
+    test('10.5.5 limits a release event to its declared tag', async ({ cz, logs, registries }) => {
+      registries.setPublished({});
+
+      await cz.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.3');
+
+      expect(logs.logLines).toEqual(['[{"kind":"npm","tag":"util-v1.2.3"}]']);
+    });
+
+    test('10.5.6 rejects a tag that does not match a configured version', async ({ cz }) => {
+      await expect(cz.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.2')).rejects.toThrow(
+        "no configured release target matches 'util-v1.2.2'",
+      );
+    });
+
+    test('10.5.7 requires list mode when selecting a tag', async ({ cz }) => {
+      await expect(cz.run('release-bumped-targets', '--tag', 'util-v1.2.3')).rejects.toThrow('--tag requires --list');
+    });
+
+    test('10.5.8 prints an empty selection for a repository with no release targets', async ({ cz, logs, tempDir }) => {
+      await tempDir.write('release-targets.toml', 'target = []\n');
+
+      await cz.run('release-bumped-targets', '--list');
+
+      expect(logs.logLines).toEqual(['[]']);
+    });
+
+    test('10.5.9 propagates release lookup failures without emitting a publish selection', async ({
+      cz,
+      logs,
+      release,
+      shell,
+    }) => {
+      release.stageAllPublished();
+      shell.on('gh api graphql', { exitCode: 1, stdout: 'authentication failed' });
+
+      await expect(cz.run('release-bumped-targets', '--list')).rejects.toMatchObject({ exitCode: 1 });
+
+      expect(logs.logLines).toEqual([]);
+      expect(shell).not.toHaveRunMatching('gh release create');
+    });
+  });
 });

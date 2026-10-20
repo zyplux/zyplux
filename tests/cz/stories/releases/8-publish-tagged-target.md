@@ -30,3 +30,13 @@
 ### 8.3.5 accepts supported registry URLs with a trailing slash
 
 ### 8.3.6 prefers the package scope’s registry setting
+
+### 8.3.7 checks the requested version in GitHub package metadata
+
+### 8.3.8 rejects malformed package metadata without attempting publication
+
+## 8.4 completing GitHub release metadata after publication
+
+### 8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD
+
+### 8.4.2 leaves GitHub release metadata unpublished when the registry rejects publication
