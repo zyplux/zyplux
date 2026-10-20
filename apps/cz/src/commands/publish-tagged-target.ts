@@ -60,9 +60,13 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
   const versioned = `${label}:${version}`;
   const latest = `${label}:latest`;
   await podmanLogin(actor, token);
-  await $`podman build -t ${versioned} -t ${latest} ${dir}`;
-  await $`podman push ${versioned}`;
-  await $`podman push ${latest}`;
+  try {
+    await $`podman build -t ${versioned} -t ${latest} ${dir}`;
+    await $`podman push ${versioned}`;
+    await $`podman push ${latest}`;
+  } finally {
+    await $`podman logout ghcr.io`;
+  }
 };
 
 export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTaggedTargetConfig) => {

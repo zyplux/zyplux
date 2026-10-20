@@ -99,8 +99,30 @@ describe('8.2 publishing to each registry kind', () => {
       `podman build -t ghcr.io/zyplux/ci:3.4.5 -t ghcr.io/zyplux/ci:latest ${targets.ci.dir}`,
       'podman push ghcr.io/zyplux/ci:3.4.5',
       'podman push ghcr.io/zyplux/ci:latest',
+      'podman logout ghcr.io',
     ]);
   });
+
+  test.for([
+    { command: 'podman login', shouldLogout: false },
+    { command: 'podman build', shouldLogout: true },
+    { command: 'podman push', shouldLogout: true },
+  ])(
+    '8.2.7 removes GHCR credentials after a successful login when publication fails (%j)',
+    async ({ command, shouldLogout }, { cz, env, registries, shell }) => {
+      registries.setPublished({ ghcrPublished: false });
+      env.set('GH_TOKEN', 'gh-token');
+      env.set('GITHUB_ACTOR', 'zyplux-bot');
+      shell.on('podman', '');
+      shell.on(command, { exitCode: 1, stdout: '' });
+
+      await expect(cz.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
+        'command failed with exit code 1',
+      );
+
+      expect(shell.commandsMatching('podman logout')).toEqual(shouldLogout ? ['podman logout ghcr.io'] : []);
+    },
+  );
 });
 
 describe('8.3 publishing a private GitHub npm package', () => {
@@ -294,5 +316,23 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     );
 
     expect(shell).not.toHaveRunMatching(/gh api graphql|gh release create/);
+  });
+
+  test('8.4.3 repairs GHCR release metadata without logging in or out when the image exists', async ({
+    cz,
+    registries,
+    repo,
+    shell,
+  }) => {
+    registries.setPublished({ ghcrPublished: true });
+    repo.setHeadSha('reviewed-sha');
+    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+
+    await cz.run('publish-tagged-target', '--release', 'ci-image-v3.4.5');
+
+    expect(shell).not.toHaveRunMatching('podman');
+    expect(shell).toHaveRun(
+      'gh release create ci-image-v3.4.5 --generate-notes --target reviewed-sha --title ci-image-v3.4.5',
+    );
   });
 });

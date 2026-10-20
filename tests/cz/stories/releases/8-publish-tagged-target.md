@@ -17,6 +17,8 @@
 
 ### 8.2.6 removes the temporary archive when npm publication fails
 
+### 8.2.7 removes GHCR credentials after a successful login when publication fails
+
 ## 8.3 publishing a private GitHub npm package
 
 ### 8.3.1 authenticates the configured registry and lets npm apply publishConfig
@@ -40,3 +42,5 @@
 ### 8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD
 
 ### 8.4.2 leaves GitHub release metadata unpublished when the registry rejects publication
+
+### 8.4.3 repairs GHCR release metadata without logging in or out when the image exists

@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     outputs:
       npm: ${{ steps.targets.outputs.npm }}
       pypi: ${{ steps.targets.outputs.pypi }}
@@ -127,6 +128,3 @@ jobs:
       - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
         env:
           RELEASE_TAG: ${{ matrix.tag }}
-      - name: Remove registry login
-        if: always()
-        run: podman logout ghcr.io
