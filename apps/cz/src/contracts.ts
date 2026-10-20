@@ -25,6 +25,8 @@ export const NpmPackageSchema = z.object({
   publishConfig: z.record(z.string(), z.unknown()).default({}),
 });
 
+export const NpmVersionsSchema = z.object({ versions: z.record(z.string(), z.unknown()) });
+
 export const RegistryUrlSchema = z
   .url()
   .transform(registry => registry.replace(/\/$/u, ''))

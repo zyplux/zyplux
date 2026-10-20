@@ -12,6 +12,7 @@ import {
   GhcrTokenSchema,
   ManifestSchema,
   NpmPackageSchema,
+  NpmVersionsSchema,
   RegistryUrlSchema,
   VersionFieldSchema,
   VersionFileSchema,
@@ -48,10 +49,9 @@ const MANIFEST_MEDIA_TYPES = [
 
 const HTTP_NOT_FOUND = 404;
 
-const isRegistryPublished = async (request: () => Promise<unknown>) => {
+const isRegistryPublished = async (isPublished: () => Promise<boolean>) => {
   try {
-    await request();
-    return true;
+    return await isPublished();
   } catch (error) {
     if (error instanceof FetchError && error.response.status === HTTP_NOT_FOUND) return false;
     throw error;
@@ -68,11 +68,12 @@ const isGhcrImagePublished = (repo: string, tag: string) =>
     const auth = await http
       .get(`https://ghcr.io/token?service=ghcr.io&scope=repository:${repo}:pull`, { headers })
       .json(GhcrTokenSchema);
-    return http
+    await http
       .head(`https://ghcr.io/v2/${repo}/manifests/${tag}`, {
         headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${auth.token}` },
       })
       .response();
+    return true;
   });
 
 const isNpmPublished = async (directory: string, label: string, version: string) => {
@@ -87,9 +88,15 @@ const isNpmPublished = async (directory: string, label: string, version: string)
     ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
     headers['Authorization'] = `Bearer ${token}`;
   }
-  return isRegistryPublished(() =>
-    http.get(`${registry}/${encodeURIComponent(label)}/${version}`, { headers }).response(),
-  );
+  const packageUrl = `${registry}/${encodeURIComponent(label)}`;
+  return isRegistryPublished(async () => {
+    if (registry === 'https://npm.pkg.github.com') {
+      const { versions } = await http.get(packageUrl, { headers }).json(NpmVersionsSchema);
+      return Object.hasOwn(versions, version);
+    }
+    await http.get(`${packageUrl}/${version}`, { headers }).response();
+    return true;
+  });
 };
 
 const isPackagePublished = async ({ kind, label }: Target, version: string, directory: string) => {

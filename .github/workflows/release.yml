@@ -1,21 +1,30 @@
 name: release
 
 on:
+  push:
+    branches: [main]
+  workflow_dispatch:
   release:
     types: [published]
 
-concurrency:
-  group: release-${{ github.event.release.tag_name }}
-  cancel-in-progress: false
+permissions:
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   resolve:
-    name: resolve target kind
+    name: select pending releases
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: read
     outputs:
-      kind: ${{ steps.kind.outputs.kind }}
+      npm: ${{ steps.targets.outputs.npm }}
+      pypi: ${{ steps.targets.outputs.pypi }}
+      ghcr: ${{ steps.targets.outputs.ghcr }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -24,19 +33,33 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - id: kind
+      - id: targets
         run: |
-          kind="$(pnpm run cz print-tag-kind "$GITHUB_REF_NAME" | tail -n1)"
-          test -n "$kind" || { echo "cz print-tag-kind produced no kind for $GITHUB_REF_NAME" >&2; exit 1; }
-          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+          arguments=(--list)
+          if [ -n "$RELEASE_TAG" ]; then arguments+=(--tag "$RELEASE_TAG"); fi
+          targets="$(pnpm run --silent cz release-bumped-targets "${arguments[@]}")"
+          {
+            echo "npm=$(jq -c '[.[] | select(.kind == "npm") | .tag]' <<< "$targets")"
+            echo "pypi=$(jq -c '[.[] | select(.kind == "pypi") | .tag]' <<< "$targets")"
+            echo "ghcr=$(jq -c '[.[] | select(.kind == "ghcr") | .tag]' <<< "$targets")"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
 
   npm:
-    name: publish to npm
+    name: publish ${{ matrix.tag }}
     needs: resolve
-    if: needs.resolve.outputs.kind == 'npm'
+    if: needs.resolve.outputs.npm != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.resolve.outputs.npm) }}
+    concurrency:
+      group: release-${{ matrix.tag }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v7
@@ -46,16 +69,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run cz publish-tagged-target "$GITHUB_REF_NAME"
+      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ matrix.tag }}
 
   pypi:
-    name: publish to PyPI
+    name: publish ${{ matrix.tag }}
     needs: resolve
-    if: needs.resolve.outputs.kind == 'pypi'
+    if: needs.resolve.outputs.pypi != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.resolve.outputs.pypi) }}
+    concurrency:
+      group: release-${{ matrix.tag }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v7
@@ -66,4 +98,33 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run cz publish-tagged-target "$GITHUB_REF_NAME"
+      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ matrix.tag }}
+
+  ghcr:
+    name: publish ${{ matrix.tag }}
+    needs: resolve
+    if: needs.resolve.outputs.ghcr != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.resolve.outputs.ghcr) }}
+    concurrency:
+      group: release-${{ matrix.tag }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ matrix.tag }}

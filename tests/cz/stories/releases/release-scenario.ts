@@ -16,6 +16,11 @@ export type LiveWorkspace = {
   targetLabels: () => Promise<string[]>;
 };
 
+export type NpmTarget = {
+  setPublishConfig: (publishConfig: Record<string, unknown>) => Promise<void>;
+  stagePublish: (exitCode?: number) => void;
+};
+
 export type Registries = {
   denyGhcrAuth: () => void;
   setPublished: (published: RegistryPublishedState) => void;
@@ -49,6 +54,21 @@ type RegistryPublishedState = {
 type RunState = { conclusion?: string; status: string };
 
 type TargetFacts = { dir: string; label: string; tag: string; version: string };
+
+export const createNpmTarget = (shell: ShellFake, tempDir: TempDir) =>
+  ({
+    setPublishConfig: async publishConfig => {
+      await tempDir.write(
+        'packages/util/package.json',
+        JSON.stringify({ name: '@zyplux/util', publishConfig, version: '1.2.3' }),
+      );
+    },
+    stagePublish: (exitCode = 0) => {
+      shell.on('pnpm pack', '');
+      shell.on('npm publish', { exitCode, stdout: '' });
+    },
+  }) satisfies NpmTarget;
+
 export const createRegistries = (network: FetchFake) =>
   ({
     denyGhcrAuth: () => {

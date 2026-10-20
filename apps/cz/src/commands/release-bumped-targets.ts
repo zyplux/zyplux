@@ -2,13 +2,26 @@ import { ensure } from '@zyplux/util/assert';
 import { poll } from '@zyplux/util/poll';
 import { $, readTrimmed } from '@zyplux/util/shell';
 
-import { command, constant, message, object } from '#optique';
+import type { InferValue } from '#optique';
+import type { ReleaseTarget } from '#release-targets';
+
+import { command, constant, message, object, option, optional, string } from '#optique';
 import { loadReleaseTargets } from '#release-targets';
+
+const tagOption = optional(
+  option('--tag', string({ metavar: 'TAG' }), {
+    description: message`Limit --list to one configured release tag.`,
+  }),
+);
 
 export const releaseBumpedTargetsCommand = command(
   'release-bumped-targets',
   object({
     command: constant('release-bumped-targets' as const),
+    shouldList: option('--list', {
+      description: message`Print pending artifact kinds and tags as JSON without publishing.`,
+    }),
+    tag: tagOption,
   }),
   {
     aliases: ['r', 'release'],
@@ -16,8 +29,11 @@ export const releaseBumpedTargetsCommand = command(
   },
 );
 
+type ReleaseBumpedTargetsConfig = InferValue<typeof releaseBumpedTargetsCommand>;
+
 type Target = {
   isPublished: () => Promise<boolean>;
+  kind: ReleaseTarget['kind'];
   label: string;
   tag: string;
   version: string;
@@ -33,12 +49,26 @@ const buildTargets = async () => {
       const version = await target.readVersion();
       return {
         isPublished: async () => target.isPublished(version),
+        kind: target.kind,
         label: target.label,
         tag: `${target.tagPrefix}${version}`,
         version,
       };
     }),
   );
+};
+
+const listPendingTargets = async (tag: string | undefined) => {
+  const targets = await buildTargets();
+  const selectedTargets = tag === undefined ? targets : targets.filter(target => target.tag === tag);
+  ensure(tag === undefined || selectedTargets.length > 0, `no configured release target matches '${tag}'`);
+  const pendingTargets = [];
+  for (const target of selectedTargets) {
+    if (!(await target.isPublished()) || !(await $.gh.release.exists(target.tag))) {
+      pendingTargets.push({ kind: target.kind, tag: target.tag });
+    }
+  }
+  console.log(JSON.stringify(pendingTargets));
 };
 
 const publish = async ({ isPublished, label, tag, version }: Target, remoteHead: string) => {
@@ -84,7 +114,9 @@ const publish = async ({ isPublished, label, tag, version }: Target, remoteHead:
   }
 };
 
-export const runReleaseBumpedTargets = async () => {
+export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumpedTargetsConfig) => {
+  if (shouldList) return listPendingTargets(tag);
+  ensure(tag === undefined, '--tag requires --list');
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch === 'main', `releases are cut from main, not '${branch}'`);
 
