@@ -39,7 +39,6 @@ export const noAnonymousParamType = createRule({
       FunctionExpression: checkFunction,
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

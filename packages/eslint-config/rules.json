@@ -3,7 +3,7 @@
     "parserOptions": { "tsconfigRootDir": "<rootDir>", "projectService": true },
     "sourceType": "module",
     "ecmaVersion": 2026,
-    "parser": "typescript-eslint/parser@8.71.2",
+    "parser": "typescript-eslint/parser@8.72.0",
     "globals": {
       "AggregateError": false,
       "Array": false,
@@ -850,8 +850,8 @@
     "@zyplux/no-function-scoped-schema": [2],
     "@zyplux/no-identity-cast": [2],
     "@zyplux/no-return-array-push": [2],
-    "@zyplux/no-stray-pascal-const": [2],
-    "@zyplux/no-type-annotations": [2],
+    "@zyplux/no-stray-pascal-const": [2, { "allowedFactories": [] }],
+    "@zyplux/no-type-annotations": [2, { "narrowing": true, "redundant": true }],
     "@zyplux/no-type-predicate": [2],
     "@zyplux/no-unvalidated-json": [2],
     "@zyplux/no-zod-custom": [2],
@@ -1230,8 +1230,8 @@
   },
   "plugins": [
     "@",
-    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.71.2",
-    "perfectionist:eslint-plugin-perfectionist@5.12.1",
+    "@typescript-eslint:@typescript-eslint/eslint-plugin@8.72.0",
+    "perfectionist:eslint-plugin-perfectionist@5.13.0",
     "unicorn:eslint-plugin-unicorn@78.0.0",
     "zod:eslint-plugin-zod@5.2.0",
     "@zyplux:@zyplux/eslint-config@0.12.1"

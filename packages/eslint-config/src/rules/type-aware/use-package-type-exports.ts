@@ -11,7 +11,6 @@ export const usePackageTypeExports = createRule({
       });
     },
   }),
-  defaultOptions: [],
   meta: {
     docs: {
       description: 'Require cross-package type references to use public package exports.',

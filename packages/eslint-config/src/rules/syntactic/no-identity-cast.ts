@@ -43,7 +43,6 @@ export const noIdentityCast = createRule({
       FunctionExpression: checkFunction,
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

@@ -38,7 +38,6 @@ export const typeOverInterface = createRule({
       });
     },
   }),
-  defaultOptions: [],
   meta: {
     docs: {
       description:

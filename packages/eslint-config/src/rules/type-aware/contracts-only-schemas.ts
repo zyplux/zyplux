@@ -49,7 +49,6 @@ export const contractsOnlySchemas = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:
