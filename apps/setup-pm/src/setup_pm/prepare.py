@@ -22,6 +22,9 @@ def load_node_versions(workspace: Path) -> tuple[str, str]:
         message = "package.json must declare packageManager: pnpm@<version>"
         raise ValueError(message)
     pnpm_version = validate_version(manager.removeprefix("pnpm@"), "packageManager")
+    if tuple(map(int, pnpm_version.split("."))) < (11, 1, 0):
+        message = "packageManager must pin pnpm 11.1.0 or newer for --no-runtime"
+        raise ValueError(message)
     runtime = manifest["devEngines"]["runtime"]
     if runtime["name"] != "node":
         message = "devEngines.runtime must declare Node.js"
@@ -46,11 +49,6 @@ def main() -> None:
     plan = build_setup_plan(
         Path(os.environ["GITHUB_WORKSPACE"]),
         uv_version=os.environ["UV_VERSION"],
-    )
-    pnpm_prefix = Path(os.environ["RUNNER_TOOL_CACHE"]) / "zyplux-pnpm" / plan["pnpm-version"]
-    pnpm_prefix.mkdir(parents=True, exist_ok=True)
-    (pnpm_prefix / "package.json").write_text(
-        json.dumps({"private": True, "allowScripts": {f"pnpm@{plan['pnpm-version']}": True}}), encoding="utf-8"
     )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         stream.writelines(f"{name}={version}\n" for name, version in plan.items())

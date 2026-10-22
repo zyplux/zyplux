@@ -79,15 +79,15 @@ def _is_root_checkout(step: dict[str, Any]) -> bool:
     )
 
 
-def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> bool:
+def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> int | None:
     setup_index = next((index for index, step in enumerate(steps) if _is_shared_setup(step)), None)
     if setup_index is None:
         res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
-        return False
+        return None
     if not any(_is_root_checkout(step) for step in steps[:setup_index]):
         res.fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")
-        return False
-    return True
+        return None
+    return setup_index
 
 
 def _parse_shell_command(script: str) -> tuple[str, ...]:
@@ -146,15 +146,16 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     job = _find_ci_job(doc)
-    if job is None or not _is_required(job):
-        res.fail("ci.yml must run an unconditional ci job")
+    if job is None or not _is_required(job) or job.get("needs"):
+        res.fail("ci.yml must run an unconditional ci job without prerequisites")
         return res
     steps = workflow.job_steps({"jobs": {"ci": job}})
-    if not _validate_setup(steps, res):
+    setup_index = _validate_setup(steps, res)
+    if setup_index is None:
         return res
 
     cfg = ctx.config
-    commands = [command for step in steps for command in _parse_step_commands(step)]
+    commands = [command for step in steps[setup_index:] for command in _parse_step_commands(step)]
 
     if has_ts:
         _verify_sequence(

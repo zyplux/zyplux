@@ -67,3 +67,5 @@
 ### 8.7.7 accepts a ci display name on another job id
 
 ### 8.7.8 accepts explicit root checkout paths
+
+### 8.7.9 rejects ci job prerequisites

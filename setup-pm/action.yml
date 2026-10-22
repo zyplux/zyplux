@@ -35,24 +35,30 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
-        key: setup-pm-pnpm-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}
+        key: setup-pm-pnpm-v4-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}
     - name: Install pnpm executable
       if: steps.pnpm-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: npm install --prefix "$PNPM_PREFIX" --strict-allow-scripts --save-exact "pnpm@$PNPM_VERSION"
+      run: |
+        command -v openssl
+        curl -fsSL https://get.pnpm.io/install.sh -o "$RUNNER_TEMP/pnpm-install.sh"
+        PATH="$PNPM_HOME/bin:$PATH" sh "$RUNNER_TEMP/pnpm-install.sh"
       env:
         PNPM_VERSION: ${{ steps.config.outputs.pnpm-version }}
-        PNPM_PREFIX: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+        PNPM_HOME: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+        ENV: ${{ runner.temp }}/setup-pm-shell
+        SHELL: /bin/sh
     - name: Activate pnpm
       shell: bash
       run: |
-        echo "$PNPM_PREFIX/node_modules/.bin" >> "$GITHUB_PATH"
-        test "$("$PNPM_PREFIX/node_modules/.bin/pnpm" --version)" = "$PNPM_VERSION"
+        echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
+        echo "PNPM_HOME=$PNPM_HOME" >> "$GITHUB_ENV"
+        test "$("$PNPM_HOME/bin/pnpm" --version)" = "$PNPM_VERSION"
         echo "pnpm_config_store_dir=$RUNNER_TEMP/setup-pm-store" >> "$GITHUB_ENV"
         echo "pnpm_config_cache_dir=$RUNNER_TEMP/setup-pm-metadata" >> "$GITHUB_ENV"
       env:
         PNPM_VERSION: ${{ steps.config.outputs.pnpm-version }}
-        PNPM_PREFIX: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+        PNPM_HOME: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
     - name: Restore pnpm dependencies and metadata
       uses: actions/cache@v6
       with:

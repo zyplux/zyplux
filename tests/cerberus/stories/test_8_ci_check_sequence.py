@@ -350,15 +350,15 @@ def test_8_7_2_requires_the_shared_action_even_with_a_manual_frozen_install(
     ]
 
 
-def test_8_7_3_requires_shared_setup_before_quality_checks(run_ci_sequence: RunCiSequence, fail: MakeFinding) -> None:
-    ci = _TS_CI.replace("      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n", "")
-    ci += "      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
-    result = run_ci_sequence(ts=True, ci=ci)
-    assert result.findings == [
-        fail(
-            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
-            "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']"
-        )
+@pytest.mark.parametrize("install", ["", "      - run: pnpm install --frozen-lockfile\n"])
+def test_8_7_3_requires_shared_setup_before_quality_checks(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, install: str
+) -> None:
+    ci = _TS_CI.replace("      - uses: ./setup-pm\n", install)
+    ci += "      - uses: ./setup-pm\n"
+    assert run_ci_sequence(ts=True, ci=ci).findings == [
+        fail(f"ts ci is missing `{step}`")
+        for step in ("pnpm run knip", "pnpm run typecheck", "pnpm run lint", "prettier --check", "pnpm run test")
     ]
 
 
@@ -380,8 +380,11 @@ def test_8_7_4_requires_unconditional_successful_setup(
             _TS_CI.replace("  ci:\n", "  prepare:\n") + "  ci:\n    steps:\n      - run: pnpm run test\n",
             "ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks",
         ),
-        (_TS_CI.replace("  ci:\n", "  ci:\n    if: false\n"), "ci.yml must run an unconditional ci job"),
-        ("jobs: []", "ci.yml must run an unconditional ci job"),
+        (
+            _TS_CI.replace("  ci:\n", "  ci:\n    if: false\n"),
+            "ci.yml must run an unconditional ci job without prerequisites",
+        ),
+        ("jobs: []", "ci.yml must run an unconditional ci job without prerequisites"),
     ],
 )
 def test_8_7_5_requires_setup_and_checks_in_the_unconditional_ci_job(
@@ -423,3 +426,11 @@ def test_8_7_8_accepts_explicit_root_checkout_paths(
 ) -> None:
     ci = _TS_CI.replace("uses: actions/checkout@v7", f"uses: actions/checkout@v7\n        with: {{path: '{path}'}}")
     assert run_ci_sequence(ts=True, ci=ci).findings == [sequence_pass]
+
+
+@pytest.mark.parametrize("needs", ["prepare", "[prepare]"])
+def test_8_7_9_rejects_ci_job_prerequisites(run_ci_sequence: RunCiSequence, fail: MakeFinding, needs: str) -> None:
+    ci = _TS_CI.replace("  ci:\n", f"  ci:\n    needs: {needs}\n")
+    assert run_ci_sequence(ts=True, ci=ci).findings == [
+        fail("ci.yml must run an unconditional ci job without prerequisites")
+    ]

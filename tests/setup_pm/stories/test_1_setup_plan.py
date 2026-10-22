@@ -75,7 +75,6 @@ def test_1_3_1_writes_github_action_outputs(workspace: Path, monkeypatch: pytest
     action_output = workspace / "action-output"
     monkeypatch.setenv("GITHUB_WORKSPACE", str(workspace))
     monkeypatch.setenv("GITHUB_OUTPUT", str(action_output))
-    monkeypatch.setenv("RUNNER_TOOL_CACHE", str(workspace / "tool-cache"))
     monkeypatch.setenv("UV_VERSION", "0.13.4")
     runpy.run_path(prepare.__file__, run_name="__main__")
     assert action_output.read_text().splitlines() == [
@@ -83,5 +82,19 @@ def test_1_3_1_writes_github_action_outputs(workspace: Path, monkeypatch: pytest
         "node-version=26.12.1",
         "uv-version=0.13.4",
     ]
-    manifest = workspace / "tool-cache/zyplux-pnpm/12.14.0/package.json"
-    assert json.loads(manifest.read_text()) == {"private": True, "allowScripts": {"pnpm@12.14.0": True}}
+
+
+@pytest.mark.parametrize("version", ["10.32.0", "11.0.0", "11.0.9"])
+def test_1_2_6_rejects_pnpm_without_runtime_install_control(workspace: Path, version: str) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] = f"pnpm@{version}"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=r"pnpm 11\.1\.0 or newer"):
+        prepare.load_node_versions(workspace)
+
+
+def test_1_1_2_accepts_the_minimum_supported_pnpm(workspace: Path) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] = "pnpm@11.1.0"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    assert prepare.load_node_versions(workspace) == ("11.1.0", "26.12.1")
