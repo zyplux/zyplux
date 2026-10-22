@@ -74,6 +74,11 @@ const ghArgvCases: ArgvCase[] = [
     $ => $.gh.release.create('v1.0.0', { generateNotes: true, target: 'sha', title: 'v1.0.0' }),
     ['release', 'create', 'v1.0.0', '--generate-notes', '--target', 'sha', '--title', 'v1.0.0'],
   ],
+  [
+    'release create with reviewed notes',
+    $ => $.gh.release.create('v1.0.0', { notesFile: '/tmp/release notes.md', target: 'sha', title: 'v1.0.0' }),
+    ['release', 'create', 'v1.0.0', '--notes-file', '/tmp/release notes.md', '--target', 'sha', '--title', 'v1.0.0'],
+  ],
 ];
 
 describe('6.3 building gh subcommands', () => {

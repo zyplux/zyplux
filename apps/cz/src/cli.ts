@@ -2,10 +2,13 @@ import { loadPackageVersion } from '@zyplux/util/manifest';
 
 import { assertTagVersionCommand, runAssertTagVersion } from './commands/assert-tag-version.ts';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/bootstrap-npm-target.ts';
+import { checkReleaseNotesCommand, runCheckReleaseNotes } from './commands/check-release-notes.ts';
 import { cleanCommand, runClean } from './commands/clean.ts';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from './commands/clone-reference-repo.ts';
 import { depsCatalogCommand, runDepsCatalog } from './commands/deps-catalog.ts';
 import { lintMermaidCommand, runLintMermaid } from './commands/lint-mermaid.ts';
+import { listPreparedReleasesCommand, runListPreparedReleases } from './commands/list-prepared-releases.ts';
+import { prepareReleaseCommand, runPrepareRelease } from './commands/prepare-release.ts';
 import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.ts';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
@@ -33,6 +36,9 @@ const program = defineProgram({
     lintMermaidCommand,
     cleanCommand,
     upgradeCommand,
+    checkReleaseNotesCommand,
+    listPreparedReleasesCommand,
+    prepareReleaseCommand,
   ),
 });
 
@@ -64,6 +70,9 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     case 'bootstrap-npm-target': {
       return runBootstrapNpmTarget(result);
     }
+    case 'check-release-notes': {
+      return runCheckReleaseNotes();
+    }
     case 'clean': {
       return runClean(result);
     }
@@ -75,6 +84,12 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'lint-mermaid': {
       return runLintMermaid();
+    }
+    case 'list-prepared-releases': {
+      return runListPreparedReleases();
+    }
+    case 'prepare-release': {
+      return runPrepareRelease();
     }
     case 'print-tag-kind': {
       return runPrintTagKind(result);

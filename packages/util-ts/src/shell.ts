@@ -53,7 +53,7 @@ type PullFlags = { ffOnly?: boolean };
 
 type PushFlags = { setUpstream?: boolean };
 
-type ReleaseCreateFlags = { generateNotes?: boolean; target?: string; title?: string };
+type ReleaseCreateFlags = { generateNotes?: boolean; notesFile?: string; target?: string; title?: string };
 
 type ReleaseDeleteFlags = { cleanupTag?: boolean; yes?: boolean };
 

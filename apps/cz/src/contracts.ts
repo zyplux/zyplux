@@ -21,6 +21,8 @@ export const DepsCatalogSchema = z.array(z.string());
 export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 
+export const PythonReleaseSchema = z.object({ name: z.string(), private: z.literal(true), version: z.string() });
+
 export const NpmPackageSchema = z.object({
   publishConfig: z.record(z.string(), z.unknown()).default({}),
 });

@@ -277,7 +277,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     '8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD (%j)',
     async (
       { isArtifactPublished, isReleaseCreated },
-      { cz, expectNpmPackAndPublish, npmTarget, registries, repo, shell, targets },
+      { cz, expectGithubRelease, expectNpmPackAndPublish, npmTarget, registries, repo, shell, targets },
     ) => {
       registries.setPublished({ npmPublished: isArtifactPublished });
       repo.setHeadSha('reviewed-sha');
@@ -295,9 +295,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
       else await expectNpmPackAndPublish(shell, targets.util.dir);
       if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
       else {
-        expect(shell).toHaveRun(
-          'gh release create util-v1.2.3 --generate-notes --target reviewed-sha --title util-v1.2.3',
-        );
+        await expectGithubRelease(shell, 'util-v1.2.3', 'reviewed-sha');
       }
     },
   );
@@ -320,6 +318,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
 
   test('8.4.3 repairs GHCR release metadata without logging in or out when the image exists', async ({
     cz,
+    expectGithubRelease,
     registries,
     repo,
     shell,
@@ -331,8 +330,6 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     await cz.run('publish-tagged-target', '--release', 'ci-image-v3.4.5');
 
     expect(shell).not.toHaveRunMatching('podman');
-    expect(shell).toHaveRun(
-      'gh release create ci-image-v3.4.5 --generate-notes --target reviewed-sha --title ci-image-v3.4.5',
-    );
+    await expectGithubRelease(shell, 'ci-image-v3.4.5', 'reviewed-sha');
   });
 });

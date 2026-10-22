@@ -6,6 +6,8 @@ import type { InferValue } from '#optique';
 import type { ReleaseTarget } from '#release-targets';
 
 import { command, constant, message, object, option, optional, string } from '#optique';
+import { validatePythonVersions } from '#python-releases';
+import { createGithubRelease, loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
 import { loadReleaseTargets } from '#release-targets';
 
 const tagOption = optional(
@@ -32,6 +34,7 @@ export const releaseBumpedTargetsCommand = command(
 type ReleaseBumpedTargetsConfig = InferValue<typeof releaseBumpedTargetsCommand>;
 
 type Target = {
+  dir: string;
   isPublished: () => Promise<boolean>;
   kind: ReleaseTarget['kind'];
   label: string;
@@ -48,6 +51,7 @@ const buildTargets = async () => {
     targets.map(async target => {
       const version = await target.readVersion();
       return {
+        dir: target.dir,
         isPublished: async () => target.isPublished(version),
         kind: target.kind,
         label: target.label,
@@ -71,11 +75,11 @@ const listPendingTargets = async (tag: string | undefined) => {
   console.log(JSON.stringify(pendingTargets));
 };
 
-const publish = async ({ isPublished, label, tag, version }: Target, remoteHead: string) => {
+const publish = async ({ isPublished, label, tag, version }: Target, remoteHead: string, notes: string) => {
   console.log(`Creating GitHub release ${tag} ...`);
   const releaseRuns = await listReleaseWorkflowRuns(tag);
   const knownReleaseRuns = new Set(releaseRuns.map(({ databaseId }) => databaseId));
-  await $.gh.release.create(tag, { generateNotes: true, target: remoteHead, title: tag });
+  await createGithubRelease(tag, notes, remoteHead);
 
   console.log(`Waiting for a new publish workflow run for ${tag} ...`);
   const releaseRunId = await poll(
@@ -144,10 +148,19 @@ export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumped
     'nothing to release; all configured versions are already published or have a GitHub release',
   );
 
+  await validateConsumedChangesets();
+  await validatePythonVersions(await loadReleaseTargets());
+  const prepared = await Promise.all(
+    pending.map(async target => ({
+      notes: await loadReleaseNotes(target.dir, target.version),
+      target,
+    })),
+  );
+
   const outcomes = await Promise.all(
-    pending.map(async target => {
+    prepared.map(async ({ notes, target }) => {
       try {
-        await publish(target, remoteHead);
+        await publish(target, remoteHead, notes);
         return [];
       } catch (error) {
         return [{ reason: error instanceof Error ? error.message : String(error), target }];
