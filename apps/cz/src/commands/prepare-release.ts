@@ -1,5 +1,6 @@
 import { runPassthrough } from '@zyplux/util/exec';
 import { $, readTrimmed } from '@zyplux/util/shell';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { command, constant, message, object } from '#optique';
@@ -23,6 +24,6 @@ export const runPrepareRelease = async () => {
   await runPassthrough([process.execPath, changeset, 'version'], root);
   await syncPythonVersions(targets, root);
   await $`pnpm install --lockfile-only`.cwd(root);
-  if (targets.some(target => target.kind === 'pypi')) await $`uv lock`.cwd(root);
+  if (targets.some(target => path.basename(target.versionFile) === 'pyproject.toml')) await $`uv lock`.cwd(root);
   await loadPreparedReleases();
 };

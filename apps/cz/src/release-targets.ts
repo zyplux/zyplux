@@ -6,8 +6,9 @@ import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { Target, VersionSource } from './contracts.ts';
+import type { ActionTarget, Target, VersionSource } from './contracts.ts';
 
+import { isActionPublished } from './action-releases.ts';
 import {
   GhcrTokenSchema,
   ManifestSchema,
@@ -19,12 +20,14 @@ import {
 } from './contracts.ts';
 
 export type ReleaseTarget = {
+  action: ActionTarget | undefined;
   dir: string;
   isPublished: (version: string) => Promise<boolean>;
   kind: Target['kind'];
   label: string;
   readVersion: () => Promise<string>;
   tagPrefix: string;
+  versionFile: string;
 };
 
 const readVersion = async (repoRoot: string, source: VersionSource) => {
@@ -95,7 +98,9 @@ const isNpmPublished = async (directory: string, label: string, version: string)
   });
 };
 
-const isPackagePublished = async ({ kind, label }: Target, version: string, directory: string) => {
+const isPackagePublished = async (target: Target, version: string, directory: string) => {
+  if (target.kind === 'action') return isActionPublished(target, version);
+  const { kind, label } = target;
   if (kind === 'npm') {
     return isNpmPublished(directory, label, version);
   }
@@ -108,6 +113,7 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const repoRoot = await readTrimmed($.git.showToplevel());
   const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
   return manifest.target.map(spec => ({
+    action: spec.kind === 'action' ? spec : undefined,
     dir: path.join(repoRoot, path.dirname(spec.version.file)),
     isPublished: async (version: string) =>
       isPackagePublished(spec, version, path.join(repoRoot, path.dirname(spec.version.file))),
@@ -115,6 +121,7 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
     label: spec.label,
     readVersion: async () => readVersion(repoRoot, spec.version),
     tagPrefix: spec.tag_prefix,
+    versionFile: spec.version.file,
   }));
 };
 

@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.25.0
+
+### Minor Changes
+
+- Require version bumps when a GitHub Action's release surface changes, using its published GitHub releases as the baseline.
+
 ## 0.24.0
 
 ### Minor Changes

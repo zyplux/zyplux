@@ -7,7 +7,7 @@ import { makeReleaseTagCommand } from './release-tag-command.ts';
 
 export const printTagKindCommand = makeReleaseTagCommand('print-tag-kind', {
   alias: 'pk',
-  brief: message`Print the registry kind (npm, pypi, ghcr) of the target that owns a release tag.`,
+  brief: message`Print the publication kind (npm, pypi, ghcr, action) of the target that owns a release tag.`,
   tagDescription: message`Release tag to classify (e.g. eslint-config-v1.2.3).`,
 });
 

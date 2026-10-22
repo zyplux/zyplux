@@ -16,6 +16,8 @@ Tooling-only repositories carry a Python tooling manifest and run Rumdl for Mark
 
 Release targets declare their source inputs in `release-targets.toml`. Npm lookups follow the version package's `publishConfig` registry, preferring a matching `@scope:registry` over `registry`; GitHub Packages requires `NODE_AUTH_TOKEN`. Pull request checks use `GITHUB_BASE_REF` to prevent version regressions against the target branch. Unpublished versions can be repaired without a bump; changes to a published version require a bump. Single-step bumps use the newer of the published and target-branch versions. Fetch complete Git history and the target branch before running the check.
 
+Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching `tag_prefix`, across all pages. Include both the action entrypoint and its implementation in `surface`; floating major tags do not define the version baseline.
+
 ## Lint a repo
 
 ```sh

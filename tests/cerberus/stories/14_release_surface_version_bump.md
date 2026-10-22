@@ -101,3 +101,15 @@
 ### 14.7.18 rejects changes to a published target branch version
 
 ### 14.7.19 accepts repairs before the first publication
+
+## 14.8 versioning GitHub Actions
+
+### 14.8.1 accepts an action before its first versioned release
+
+### 14.8.2 requires an action version bump for changed release files
+
+### 14.8.3 accepts one step after the latest action release
+
+### 14.8.4 reads all pages and compares only stable published action versions
+
+### 14.8.5 reports malformed github release metadata

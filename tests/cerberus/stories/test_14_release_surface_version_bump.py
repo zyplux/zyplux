@@ -32,6 +32,11 @@ version = { file = "apps/widget/pyproject.toml", regex = '^version = "([^"]+)"' 
 surface = ["apps/widget/src"]
 """
 
+ACTION_MANIFEST = (
+    MANIFEST.replace('kind = "npm"', 'kind = "action"') + '\nrepository = "zyplux/zyplux"\nmajor_tag_prefix = "v"\n'
+)
+ACTION_RELEASES = "/repos/zyplux/zyplux/releases?per_page=100&page=1"
+
 MALFORMED_MANIFEST = "not = valid = toml"
 VERSION_FILE = "packages/widget/package.json"
 LABEL = "@zyplux/widget"
@@ -84,6 +89,11 @@ def serve_release(registry: FakeRegistry, manifest: str | None, version: str | N
     package = "zyplux-widget" if is_pypi else "@zyplux/widget"
     host = "npm.pkg.github.com" if "npm.pkg.github.com" in (version or "") else "registry.npmjs.org"
     if published == UNREACHABLE:
+        return
+    if 'kind = "action"' in (manifest or ""):
+        registry.payloads["api.github.com", ACTION_RELEASES] = (
+            [] if published is None else [{"tag_name": f"widget-v{published}", "draft": False, "prerelease": False}]
+        )
         return
     if published is None:
         registry.serve_pypi_missing(package) if is_pypi else registry.serve_npm_missing(package, host=host)
@@ -168,7 +178,7 @@ def test_14_1_4_errors_when_a_target_has_an_unknown_kind(
     assert result.findings == [
         error(
             "release-targets.toml is malformed: target '@zyplux/widget' has unknown kind 'cargo' "
-            "(expected one of ['ghcr', 'npm', 'pypi'])",
+            "(expected one of ['action', 'ghcr', 'npm', 'pypi'])",
         )
     ]
 
@@ -631,3 +641,80 @@ def test_14_7_19_accepts_repairs_before_the_first_publication(
     result = run_release_bumps(changed=["packages/widget/src/a.ts"])
 
     assert result.findings == [ok(DONE)]
+
+
+def test_14_8_1_accepts_an_action_before_its_first_versioned_release(
+    run_release_bumps: RunReleaseBumps, ok: MakeFinding
+) -> None:
+    result = run_release_bumps(manifest=ACTION_MANIFEST)
+
+    assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
+
+
+@pytest.mark.parametrize("changed", ["setup-pm/action.yml", "apps/setup-pm/src/setup_pm/prepare.py"])
+def test_14_8_2_requires_an_action_version_bump_for_changed_release_files(
+    run_release_bumps: RunReleaseBumps, changed: str, fail: MakeFinding
+) -> None:
+    result = run_release_bumps(manifest=ACTION_MANIFEST, published="0.1.0", changed=[changed])
+
+    assert result.findings == [
+        fail(f"{LABEL}: surface changed since widget-v0.1.0 but version is still 0.1.0 — bump it (e.g. 0.1.1)")
+    ]
+
+
+def test_14_8_3_accepts_one_step_after_the_latest_action_release(
+    run_release_bumps: RunReleaseBumps, ok: MakeFinding
+) -> None:
+    result = run_release_bumps(manifest=ACTION_MANIFEST, published="0.1.0", version_file_content=version_json("0.1.1"))
+
+    assert result.findings == [ok(f"{LABEL}: 0.1.1 is ahead of published 0.1.0"), ok(DONE)]
+
+
+def test_14_8_4_reads_all_pages_and_compares_only_stable_published_action_versions(
+    run_release_bumps: RunReleaseBumps, fake_registry: FakeRegistry, monkeypatch: pytest.MonkeyPatch, ok: MakeFinding
+) -> None:
+    monkeypatch.setenv("GH_TOKEN", "github-read-token")
+    fake_registry.payloads["api.github.com", ACTION_RELEASES] = [
+        {"tag_name": "other-v99.0.0", "draft": False, "prerelease": False}
+    ] * 100
+    fake_registry.payloads["api.github.com", ACTION_RELEASES.replace("&page=1", "&page=2")] = [
+        {"tag_name": tag, "draft": draft, "prerelease": prerelease}
+        for tag, draft, prerelease in [
+            ("widget-v1.9.0", False, False),
+            ("widget-v1.10.0", False, False),
+            ("widget-v1.11.0", True, False),
+            ("widget-v1.12.0", False, True),
+            ("widget-v1.13.0-beta.1", False, False),
+            ("widget-vinvalid", False, False),
+        ]
+    ]
+
+    result = run_release_bumps(
+        manifest=ACTION_MANIFEST, published=UNREACHABLE, version_file_content=version_json("1.10.1")
+    )
+
+    assert result.findings == [ok(f"{LABEL}: 1.10.1 is ahead of published 1.10.0"), ok(DONE)]
+    assert (
+        fake_registry.request_headers
+        == [
+            {
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "zyplux-cerberus",
+                "Authorization": "Bearer github-read-token",
+            }
+        ]
+        * 2
+    )
+
+
+@pytest.mark.parametrize("payload", [{}, [{"tag_name": "widget-v0.1.0"}]])
+def test_14_8_5_reports_malformed_github_release_metadata(
+    run_release_bumps: RunReleaseBumps, fake_registry: FakeRegistry, payload: object, error: MakeFinding
+) -> None:
+    fake_registry.payloads["api.github.com", ACTION_RELEASES] = payload
+
+    result = run_release_bumps(manifest=ACTION_MANIFEST, published=UNREACHABLE)
+
+    assert len(result.findings) == 1
+    assert result.findings[0].status == error("").status
+    assert "cannot determine the latest published version" in result.findings[0].message

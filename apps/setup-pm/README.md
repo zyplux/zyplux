@@ -4,10 +4,10 @@ The [shared action](../../setup-pm/action.yml) prepares pnpm and uv workspaces o
 
 ```yaml
 - uses: actions/checkout@v7
-- uses: zyplux/zyplux/setup-pm@main
+- uses: zyplux/zyplux/setup-pm@v1
 ```
 
-Pin a reviewed commit SHA for a fixed action version. Zyplux uses `./setup-pm` to test the action from each PR.
+`v1` points to the latest published compatible action release. Changesets prepares the action's version and changelog; the release workflow creates a fixed `setup-pm-v1.0.0` release with those notes, then updates the matching major tag. Retries repair missing tags and retain the newest published version in that major. Breaking changes get a new major tag. Zyplux uses `./setup-pm` in its own workflows to test the checked-out action.
 
 The action requires root `package.json`, `pyproject.toml`, `pnpm-lock.yaml` and `uv.lock` files. pnpm requires a plain `pnpm@<version>` pin of 11.1.0 or newer in `packageManager` and an exact Node.js version in `devEngines.runtime`. uv defaults to `0.13.4`, configurable through `uv-version`, and selects Python through the repository's `.python-version` or project requirements.
 

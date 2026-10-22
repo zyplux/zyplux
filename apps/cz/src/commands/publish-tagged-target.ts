@@ -7,9 +7,11 @@ import path from 'node:path';
 
 import type { InferValue } from '#optique';
 
+import { publishAction } from '#action-releases';
+import { createGithubRelease } from '#github-releases';
 import { argument, command, constant, message, object, option, string } from '#optique';
 import { validatePythonVersions } from '#python-releases';
-import { createGithubRelease, loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
+import { loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
 import { resolveReleaseTag } from '#release-targets';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {
@@ -27,7 +29,7 @@ export const publishTaggedTargetCommand = command(
   }),
   {
     aliases: ['pt'],
-    brief: message`Publish the target that owns a release tag to its registry (npm, PyPI, GHCR).`,
+    brief: message`Publish the target that owns a release tag (npm, PyPI, GHCR or GitHub Action).`,
   },
 );
 
@@ -78,6 +80,8 @@ export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTagg
     await validatePythonVersions([target]);
   }
   const notes = shouldRelease ? await loadReleaseNotes(target.dir, version) : undefined;
+
+  if (target.action !== undefined) return publishAction(target.action, version, notes);
 
   if (await target.isPublished(version)) {
     console.log(`${target.label} ${version} is already published; nothing to do`);

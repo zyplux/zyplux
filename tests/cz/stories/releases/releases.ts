@@ -4,8 +4,10 @@ import path from 'node:path';
 
 import { czTest } from '#cli-test';
 
+import type { ActionRelease } from './action-release.ts';
 import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } from './release-scenario.ts';
 
+import { createActionRelease } from './action-release.ts';
 import { createNotesCapture, expectGithubRelease, expectNpmPackAndPublish } from './publish-assertions.ts';
 import { createPreparation } from './release-preparation.ts';
 import {
@@ -16,6 +18,7 @@ import {
   seedReleaseTargets,
 } from './release-scenario.ts';
 export const test = czTest.extend<{
+  actionRelease: ActionRelease;
   expectGithubRelease: typeof expectGithubRelease;
   expectNpmPackAndPublish: typeof expectNpmPackAndPublish;
   liveWorkspace: LiveWorkspace;
@@ -27,6 +30,9 @@ export const test = czTest.extend<{
   releaseNotes: ReturnType<typeof createNotesCapture>;
   targets: SeededTargets;
 }>({
+  actionRelease: async ({ repo, shell, tempDir }, use) => {
+    await use(await createActionRelease({ repo, shell, tempDir }));
+  },
   expectGithubRelease: makeFixture(expectGithubRelease),
   expectNpmPackAndPublish: makeFixture(expectNpmPackAndPublish),
   liveWorkspace: async ({}, use) => {

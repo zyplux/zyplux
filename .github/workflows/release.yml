@@ -25,6 +25,7 @@ jobs:
       npm: ${{ steps.targets.outputs.npm }}
       pypi: ${{ steps.targets.outputs.pypi }}
       ghcr: ${{ steps.targets.outputs.ghcr }}
+      action: ${{ steps.targets.outputs.action }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
@@ -37,9 +38,31 @@ jobs:
             echo "npm=$(jq -c '[.[] | select(.kind == "npm") | .tag]' <<< "$targets")"
             echo "pypi=$(jq -c '[.[] | select(.kind == "pypi") | .tag]' <<< "$targets")"
             echo "ghcr=$(jq -c '[.[] | select(.kind == "ghcr") | .tag]' <<< "$targets")"
+            echo "action=$(jq -c '[.[] | select(.kind == "action") | .tag]' <<< "$targets")"
           } >> "$GITHUB_OUTPUT"
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+
+  action:
+    name: publish ${{ matrix.tag }}
+    needs: resolve
+    if: needs.resolve.outputs.action != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.resolve.outputs.action) }}
+    concurrency:
+      group: release-actions
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./setup-pm
+      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
+        env:
+          RELEASE_TAG: ${{ matrix.tag }}
 
   npm:
     name: publish ${{ matrix.tag }}

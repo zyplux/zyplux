@@ -3,6 +3,15 @@
 # changes). A repo with no release-targets.toml publishes nothing and is skipped.
 
 [[target]]
+kind = "action"
+label = "zyplux-setup-pm"
+repository = "zyplux/zyplux"
+tag_prefix = "setup-pm-v"
+major_tag_prefix = "v"
+version = { file = "apps/setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["setup-pm", "apps/setup-pm/src", "apps/setup-pm/pyproject.toml", "apps/setup-pm/README.md"]
+
+[[target]]
 kind = "npm"
 label = "@zyplux/eslint-config"
 tag_prefix = "eslint-config-v"
