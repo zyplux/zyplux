@@ -33,6 +33,7 @@ _FETCHERS: dict[str, Callable[[str], str]] = {
     "pypi": registries.fetch_latest_pypi,
     "ghcr": registries.fetch_latest_ghcr,
 }
+_TARGET_KINDS = sorted([*_FETCHERS, "action"])
 
 Semver = tuple[int, int, int]
 
@@ -41,6 +42,7 @@ Semver = tuple[int, int, int]
 class _Target:
     label: str
     kind: str
+    repository: str
     tag_prefix: str
     version_file: str
     version_json: str | None
@@ -65,14 +67,15 @@ def _parse_targets(manifest: str) -> list[_Target]:
     for entry in raw:
         version = entry["version"]
         kind = entry["kind"]
-        if kind not in _FETCHERS:
+        if kind not in _TARGET_KINDS:
             label = entry.get("label", "?")
-            failure = f"target {label!r} has unknown kind {kind!r} (expected one of {sorted(_FETCHERS)})"
+            failure = f"target {label!r} has unknown kind {kind!r} (expected one of {_TARGET_KINDS})"
             raise ValueError(failure)
         targets.append(
             _Target(
                 label=entry["label"],
                 kind=kind,
+                repository=entry["repository"] if kind == "action" else "",
                 tag_prefix=entry["tag_prefix"],
                 version_file=version["file"],
                 version_json=version.get("json"),
@@ -133,7 +136,9 @@ def _current_semver(repo: Repo, ctx: Context, target: _Target, res: CheckResult)
 
 def _fetch_latest_published(repo: Repo, ctx: Context, target: _Target) -> tuple[Semver, str]:
     """Raises RegistryNotFoundError if nothing is published yet, RegistryLookupError on other failures."""
-    if target.kind == "npm":
+    if target.kind == "action":
+        version = registries.fetch_latest_action(target.repository, target.tag_prefix)
+    elif target.kind == "npm":
         package_path = str(PurePosixPath(target.version_file).parent / "package.json")
         try:
             package = json.loads(ctx.file(repo, package_path) or "{}")

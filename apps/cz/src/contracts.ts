@@ -6,13 +6,25 @@ export const VersionSourceSchema = z.union([
   z.object({ file: z.string(), regex: z.string() }),
 ]);
 
-export const TargetSchema = z.object({
-  kind: z.enum(['ghcr', 'npm', 'pypi']),
+const TargetBaseSchema = z.object({
   label: z.string(),
   surface: z.array(z.string()),
   tag_prefix: z.string(),
   version: VersionSourceSchema,
 });
+
+export const TargetSchema = z.discriminatedUnion('kind', [
+  TargetBaseSchema.extend({ kind: z.enum(['ghcr', 'npm', 'pypi']) }),
+  TargetBaseSchema.extend({
+    kind: z.literal('action'),
+    major_tag_prefix: z.string().min(1),
+    repository: z.string().regex(/^[\w.-]+\/[\w.-]+$/u),
+  }),
+]);
+
+export const ActionReleasesSchema = z.array(
+  z.array(z.object({ draft: z.boolean(), prerelease: z.boolean(), tag_name: z.string() })),
+);
 
 export const ManifestSchema = z.object({ target: z.array(TargetSchema) });
 
@@ -52,6 +64,7 @@ export const NpmRegistrySchema = z.object({ homepage: z.string().optional(), rep
 const PypiInfoSchema = z.object({ home_page: z.string().nullish(), project_urls: StringRecordSchema.nullish() });
 export const PypiProjectSchema = z.object({ info: PypiInfoSchema });
 
+export type ActionTarget = Extract<Target, { kind: 'action' }>;
 export type DepsDevPackage = z.infer<typeof DepsDevPackageSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type Target = z.infer<typeof TargetSchema>;

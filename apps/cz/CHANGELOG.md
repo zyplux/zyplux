@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.14.0
+
+### Minor Changes
+
+- Publish GitHub Actions through prepared Changesets releases, and keep major tags on the newest compatible published version with retry-safe updates.
+
 ## 0.13.0
 
 ### Minor Changes

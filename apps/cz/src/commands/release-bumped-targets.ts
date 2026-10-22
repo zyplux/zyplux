@@ -5,9 +5,10 @@ import { $, readTrimmed } from '@zyplux/util/shell';
 import type { InferValue } from '#optique';
 import type { ReleaseTarget } from '#release-targets';
 
+import { createGithubRelease } from '#github-releases';
 import { command, constant, message, object, option, optional, string } from '#optique';
 import { validatePythonVersions } from '#python-releases';
-import { createGithubRelease, loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
+import { loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
 import { loadReleaseTargets } from '#release-targets';
 
 const tagOption = optional(
@@ -27,7 +28,7 @@ export const releaseBumpedTargetsCommand = command(
   }),
   {
     aliases: ['r', 'release'],
-    brief: message`Publish unpublished configured versions (npm, PyPI, GHCR) that have no GitHub release.`,
+    brief: message`Publish unpublished configured versions (npm, PyPI, GHCR or GitHub Actions) that have no GitHub release.`,
   },
 );
 

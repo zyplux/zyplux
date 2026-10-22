@@ -18,6 +18,8 @@ Zyplux's preparation script also regenerates the resolved ESLint rules snapshot 
 
 Python targets have a private `package.json` beside `pyproject.toml` for Changesets discovery. Preparation maintains the mirrored versions; checks require them to agree. Publishing reads the native Python manifest.
 
+GitHub Actions use `kind = "action"` with their GitHub `repository`, versioned `tag_prefix` and floating `major_tag_prefix` in `release-targets.toml`. Their private `package.json` provides Changesets discovery without npm publication. The release workflow creates the fixed versioned GitHub release and updates the corresponding major tag to the newest published stable version in that major. Only versioned tags have GitHub releases; retries also repair the floating tag. Include both the action entrypoint and its implementation in the release surface.
+
 Prepare once for the complete PR. With no pending fragments, preparation fails; use `release:check` to validate an already prepared release. Additional fragments calculate another bump from the branch's current versions.
 
 When integrating a newer `main`, preserve the feature and release-note text, restore this PR's generated release edits to the new `main` baseline, then recreate its fragments and prepare again. Preserve existing release history and dependency changes.

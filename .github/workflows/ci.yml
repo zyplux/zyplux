@@ -1,8 +1,6 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
@@ -35,17 +33,3 @@ jobs:
       - run: pnpm run test
       - run: uv run --no-sync pytest
       - run: uv run --no-sync cerberus
-
-  publish-action:
-    name: publish setup-pm v1
-    needs: ci
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: setup-pm-v1
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v7
-      - run: python3 apps/setup-pm/src/setup_pm/publish.py

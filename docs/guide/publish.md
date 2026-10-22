@@ -18,6 +18,14 @@ Established npm and PyPI packages use OIDC trusted publishing. New packages need
 3. Add a Changeset and prepare its versions and changelog. Python targets also need a private `package.json` beside `pyproject.toml` for Changesets tracking. Preparation synchronizes their versions through uv.
 4. Review and merge the prepared release. The workflow publishes it through OIDC.
 
+## GitHub Actions
+
+Declare `kind = "action"`, `repository`, `tag_prefix` and `major_tag_prefix` in `release-targets.toml`, and add a private Changesets `package.json` for the action version. Include its entrypoint and implementation in `surface`. Preparation synchronizes a native Python version when the version source is `pyproject.toml`.
+
+Merging the prepared release creates a fixed GitHub release such as `setup-pm-v1.0.0` with the reviewed changelog entry, then updates `v1` to the newest published stable release in that major. The floating tag has no GitHub release. Workflow retries also repair a missing or stale floating tag. GitHub Actions require `contents: write` for publication.
+
+## Registry setup
+
 ### npm — bootstrap with a token, then switch to OIDC
 
 npm has no pending publishers: the package must already exist before trusted publishing can be enabled, and that first publish needs a credential.

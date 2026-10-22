@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "cli",
@@ -31,7 +31,9 @@
     "#optique": "./src/optique.ts",
     "#python-releases": "./src/python-releases.ts",
     "#release-notes": "./src/release-notes.ts",
-    "#release-targets": "./src/release-targets.ts"
+    "#release-targets": "./src/release-targets.ts",
+    "#action-releases": "./src/action-releases.ts",
+    "#github-releases": "./src/github-releases.ts"
   },
   "files": [
     "README.md",
@@ -44,7 +46,9 @@
       "#optique": "./dist/src/optique.js",
       "#python-releases": "./dist/src/python-releases.js",
       "#release-notes": "./dist/src/release-notes.js",
-      "#release-targets": "./dist/src/release-targets.js"
+      "#release-targets": "./dist/src/release-targets.js",
+      "#action-releases": "./dist/src/action-releases.js",
+      "#github-releases": "./dist/src/github-releases.js"
     },
     "bin": {
       "cz": "./dist/src/index.js"
@@ -73,11 +77,13 @@
     "@zyplux/util": "workspace:*",
     "commonmark": "catalog:",
     "mermaid": "catalog:",
+    "semver": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/commonmark": "catalog:",
     "@types/node": "catalog:",
+    "@types/semver": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
     "publint": "catalog:"
   }

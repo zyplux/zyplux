@@ -17,7 +17,7 @@ const loadPythonVersion = async ({ dir, label }: ReleaseTarget) => {
 
 export const validatePythonVersions = async (targets: ReleaseTarget[]) => {
   for (const target of targets) {
-    if (target.kind !== 'pypi') continue;
+    if (path.basename(target.versionFile) !== 'pyproject.toml') continue;
     const trackingVersion = await loadPythonVersion(target);
     const nativeVersion = await target.readVersion();
     ensure(trackingVersion === nativeVersion, `${target.label}: package.json and pyproject.toml versions must match`);
@@ -26,7 +26,7 @@ export const validatePythonVersions = async (targets: ReleaseTarget[]) => {
 
 export const syncPythonVersions = async (targets: ReleaseTarget[], root: string) => {
   for (const target of targets) {
-    if (target.kind !== 'pypi') continue;
+    if (path.basename(target.versionFile) !== 'pyproject.toml') continue;
     const version = await loadPythonVersion(target);
     await $`uv version --package ${target.label} --frozen ${version}`.cwd(root);
   }
