@@ -27,7 +27,7 @@ For releasable changes, run `pnpm run change`, then `pnpm release:prepare` befor
 
 ## Develop
 
-The [setup-pm action](apps/setup-pm/README.md) provides cached pnpm and uv toolchains with locked installs for consuming repositories. Reference it as `zyplux/zyplux/setup-pm@main` or pin a reviewed commit SHA.
+The [setup-pm action](apps/setup-pm/README.md) provides cached pnpm and uv toolchains with locked installs for consuming repositories. Reference it as `zyplux/zyplux/setup-pm@v1`.
 
 Dual workspace: pnpm (TS) + uv (Python), orchestrated by [just](https://github.com/casey/just).
 
