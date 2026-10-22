@@ -67,7 +67,7 @@ export const createNpmTarget = (shell: ShellFake, tempDir: TempDir) =>
     },
     stagePublish: (exitCode = 0) => {
       shell.on('pnpm pack', '');
-      shell.on('npm publish', { exitCode, stdout: '' });
+      shell.on('pnpm publish', { exitCode, stdout: '' });
     },
   }) satisfies NpmTarget;
 

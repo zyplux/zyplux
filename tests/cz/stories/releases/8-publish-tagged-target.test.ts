@@ -126,7 +126,7 @@ describe('8.2 publishing to each registry kind', () => {
 });
 
 describe('8.3 publishing a private GitHub npm package', () => {
-  test('8.3.1 authenticates the configured registry and lets npm apply publishConfig', async ({
+  test('8.3.1 authenticates the configured registry and lets pnpm apply publishConfig', async ({
     cz,
     env,
     expectNpmPackAndPublish,
@@ -179,7 +179,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
       network.on(registry, () => new Response(undefined, { status }));
 
       await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(`failed: ${status}`);
-      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
     },
   );
 
@@ -208,7 +208,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
 
       expect(network.requests).toEqual([packageUrl]);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
-      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
     },
   );
 
@@ -226,7 +226,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
 
       expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil']);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
-      expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
     },
   );
 
@@ -255,7 +255,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
 
       if (isPublished) {
         expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
-        expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+        expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       } else {
         await expectNpmPackAndPublish(shell, targets.util.dir);
       }
@@ -274,7 +274,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     network.on('https://npm.pkg.github.com/', () => Response.json({}));
 
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
-    expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+    expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
   });
 });
 
@@ -302,7 +302,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
 
       await cz.run('publish-tagged-target', '--release', 'util-v1.2.3');
 
-      if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
+      if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       else await expectNpmPackAndPublish(shell, targets.util.dir);
       if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
       else {

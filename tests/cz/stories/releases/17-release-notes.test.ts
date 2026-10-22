@@ -133,7 +133,7 @@ describe('17.3 publishing reviewed notes', () => {
       await tempDir.write(`${directory}/CHANGELOG.md`, '# Releases\n');
 
       await expect(cz.run(...args)).rejects.toThrow('no release notes');
-      expect(shell).not.toHaveRunMatching(/gh release create|npm publish|uv publish|podman build/);
+      expect(shell).not.toHaveRunMatching(/gh release create|pnpm publish|uv publish|podman build/);
     },
   );
 });

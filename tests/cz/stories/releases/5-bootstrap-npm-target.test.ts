@@ -40,7 +40,7 @@ describe('5.2 bootstrapping an npm target', () => {
   }) => {
     registries.setPublished({ npmPublished: false });
     shell.on(/pnpm pack/, '');
-    shell.on(/^npm publish/, '');
+    shell.on(/^pnpm publish/, '');
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
