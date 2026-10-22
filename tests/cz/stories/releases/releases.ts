@@ -1,10 +1,13 @@
 import { makeFixture } from '@zyplux/spectra/library-test-api';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import { czTest } from '#cli-test';
 
 import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } from './release-scenario.ts';
 
-import { expectNpmPackAndPublish } from './publish-assertions.ts';
+import { createNotesCapture, expectGithubRelease, expectNpmPackAndPublish } from './publish-assertions.ts';
+import { createPreparation } from './release-preparation.ts';
 import {
   createLiveWorkspace,
   createNpmTarget,
@@ -13,25 +16,39 @@ import {
   seedReleaseTargets,
 } from './release-scenario.ts';
 export const test = czTest.extend<{
+  expectGithubRelease: typeof expectGithubRelease;
   expectNpmPackAndPublish: typeof expectNpmPackAndPublish;
   liveWorkspace: LiveWorkspace;
+  loadArtifact: (relativePath: string) => Promise<string>;
   npmTarget: NpmTarget;
+  prepareWorkspace: () => Promise<void>;
   registries: Registries;
   release: Release;
+  releaseNotes: ReturnType<typeof createNotesCapture>;
   targets: SeededTargets;
 }>({
+  expectGithubRelease: makeFixture(expectGithubRelease),
   expectNpmPackAndPublish: makeFixture(expectNpmPackAndPublish),
   liveWorkspace: async ({}, use) => {
     await use(createLiveWorkspace());
   },
+  loadArtifact: async ({ tempDir }, use) => {
+    await use(async relativePath => readFile(path.join(tempDir.path, relativePath), 'utf8'));
+  },
   npmTarget: async ({ shell, tempDir }, use) => {
     await use(createNpmTarget(shell, tempDir));
+  },
+  prepareWorkspace: async ({ liveWorkspace, shell, tempDir }, use) => {
+    await use(async () => createPreparation({ root: liveWorkspace.root, shell, tempDir }));
   },
   registries: async ({ network }, use) => {
     await use(createRegistries(network));
   },
   release: async ({ registries, repo, shell }, use) => {
     await use(createRelease(repo, registries, shell));
+  },
+  releaseNotes: async ({ shell }, use) => {
+    await use(createNotesCapture(shell));
   },
   targets: [
     async ({ repo, tempDir }, use) => {

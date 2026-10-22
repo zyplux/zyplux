@@ -70,6 +70,7 @@ describe('10. Releasing every target whose version was bumped', () => {
   describe('10.3 publishing a pending target', () => {
     test('10.3.1 cuts a release, watches its workflow to success, and confirms registry visibility', async ({
       cz,
+      expectGithubRelease,
       logs,
       release,
       shell,
@@ -79,9 +80,7 @@ describe('10. Releasing every target whose version was bumped', () => {
 
       await cz.run('release-bumped-targets');
 
-      expect(shell).toHaveRun(
-        'gh release create cerberus-v2.3.4 --generate-notes --target sha-head --title cerberus-v2.3.4',
-      );
+      await expectGithubRelease(shell, 'cerberus-v2.3.4', 'sha-head');
       expect(shell).toHaveRun(renderRunViewCommand('999'));
       expect(logs).toHaveLogged('Published zyplux-cerberus 2.3.4');
     });

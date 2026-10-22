@@ -25,6 +25,7 @@ jobs:
       - uses: astral-sh/setup-uv@v9.0.0
       - run: pnpm install --frozen-lockfile
       - run: uv sync --locked --all-packages --all-groups
+      - run: pnpm release:check
       - run: pnpm run knip
       - run: uv run --no-sync vulture
       - run: pnpm run typecheck

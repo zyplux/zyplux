@@ -7,7 +7,9 @@ import { notFoundResponse, okResponse } from '@zyplux/spectra/fetch-fake';
 import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { vi } from 'vitest';
 
 import type { Repo } from '#repository-fake';
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
@@ -109,8 +111,11 @@ export const createRelease = (repo: Repo, registries: Registries, shell: ShellFa
   return {
     completeRunAfter: (runId, predecessorId, conclusion) => {
       let isPredecessorCompleted = false;
+      const predecessorCompletion = Promise.withResolvers<undefined>();
+      vi.mocked(sleep).mockImplementation(() => predecessorCompletion.promise);
       shell.on(`gh run view ${predecessorId}`, () => {
         isPredecessorCompleted = true;
+        predecessorCompletion.resolve(undefined);
         return renderRun({ conclusion, status: 'completed' });
       });
       shell.on(`gh run view ${runId}`, () =>
@@ -167,7 +172,22 @@ export const seedReleaseTargets = async (tempDir: TempDir) => {
   await tempDir.write('release-targets.toml', SEEDED_MANIFEST);
   await tempDir.write('packages/util/package.json', '{ "name": "@zyplux/util", "version": "1.2.3" }\n');
   await tempDir.write('apps/cerberus/pyproject.toml', '[project]\nname = "zyplux-cerberus"\nversion = "2.3.4"\n');
+  await tempDir.write(
+    'apps/cerberus/package.json',
+    JSON.stringify({ name: 'zyplux-cerberus', private: true, version: '2.3.4' }),
+  );
   await tempDir.write('containers/ci/Containerfile', 'FROM scratch\nLABEL org.opencontainers.image.version="3.4.5"\n');
+  await tempDir.write('.changeset/README.md', '# Release notes\n');
+  for (const [directory, version, notes] of [
+    ['packages/util', '1.2.3', 'Publish the reviewed utility changes.'],
+    ['apps/cerberus', '2.3.4', 'Validate repository release contracts.'],
+    ['containers/ci', '3.4.5', 'Refresh the CI container.'],
+  ]) {
+    await tempDir.write(
+      `${directory}/CHANGELOG.md`,
+      `# Releases\n\n## ${version}\n\n### Patch Changes\n\n- ${notes}\n`,
+    );
+  }
 
   return {
     cerberus: {

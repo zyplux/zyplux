@@ -4,6 +4,8 @@ packages:
   - 'tests/*'
 
 catalog:
+  '@changesets/cli': ^3.0.3
+  '@changesets/read': ^1.0.1
   '@happy-dom/global-registrator': ^21.0.3
   mermaid: ^12.2.0
   '@eslint/js': '^10.0.1'

@@ -8,6 +8,8 @@ import path from 'node:path';
 import type { InferValue } from '#optique';
 
 import { argument, command, constant, message, object, option, string } from '#optique';
+import { validatePythonVersions } from '#python-releases';
+import { createGithubRelease, loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
 import { resolveReleaseTag } from '#release-targets';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {
@@ -71,6 +73,11 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
 
 export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTaggedTargetConfig) => {
   const { target, version } = await resolveReleaseTag(tag);
+  if (shouldRelease) {
+    await validateConsumedChangesets();
+    await validatePythonVersions([target]);
+  }
+  const notes = shouldRelease ? await loadReleaseNotes(target.dir, version) : undefined;
 
   if (await target.isPublished(version)) {
     console.log(`${target.label} ${version} is already published; nothing to do`);
@@ -92,7 +99,7 @@ export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTagg
     }
     console.log(`Published ${target.label} ${version}`);
   }
-  if (!shouldRelease || (await $.gh.release.exists(tag))) return;
+  if (notes === undefined || (await $.gh.release.exists(tag))) return;
   const head = await readTrimmed($.git.revParse('HEAD'));
-  await $.gh.release.create(tag, { generateNotes: true, target: head, title: tag });
+  await createGithubRelease(tag, notes, head);
 };
