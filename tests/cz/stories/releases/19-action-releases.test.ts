@@ -1,5 +1,8 @@
 import { describe, expect, test } from './releases.ts';
 
+const DELAYED_VISIBILITY_ATTEMPTS = 2;
+const VISIBILITY_ATTEMPTS = 12;
+
 test.override('targets', ({ actionRelease }) => actionRelease.targets);
 
 describe('19.1 publishing versioned action releases', () => {
@@ -90,6 +93,23 @@ describe('19.1 publishing versioned action releases', () => {
 
     expect(shell.commandsMatching('git push')[0]).toContain('origin release-sha:refs/tags/v1');
   });
+
+  test('19.1.7 waits for a newly created release to appear before advancing its alias', async ({ cz, shell }) => {
+    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+    shell.on(
+      'gh api --paginate --slurp',
+      '[[]]',
+      '[[{"draft":false,"prerelease":false,"tag_name":"setup-pm-v1.0.0"}]]',
+    );
+
+    await cz.run('publish-tagged-target', '--release', 'setup-pm-v1.0.0');
+
+    expect(shell.commandsMatching('gh release create')).toHaveLength(1);
+    expect(shell.commandsMatching('gh api --paginate --slurp')).toHaveLength(DELAYED_VISIBILITY_ATTEMPTS);
+    expect(shell.commandsMatching('git push')).toEqual([
+      'git push --force-with-lease=refs/tags/v1:old-sha origin release-sha:refs/tags/v1',
+    ]);
+  });
 });
 
 describe('19.2 rejecting incomplete or racing publications', () => {
@@ -102,7 +122,8 @@ describe('19.2 rejecting incomplete or racing publications', () => {
     async ({ releases }, { actionRelease, cz, shell }) => {
       actionRelease.setPublished(releases);
 
-      await expect(cz.run('publish-tagged-target', 'setup-pm-v1.0.0')).rejects.toThrow('before updating its major tag');
+      await expect(cz.run('publish-tagged-target', 'setup-pm-v1.0.0')).rejects.toThrow('not visible after waiting');
+      expect(shell.commandsMatching('gh api --paginate --slurp')).toHaveLength(VISIBILITY_ATTEMPTS);
       expect(shell).not.toHaveRunMatching(/git fetch|git push/);
     },
   );

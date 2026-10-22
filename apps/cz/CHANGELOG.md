@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.14.1
+
+### Patch Changes
+
+- Wait for newly published GitHub Actions to appear in GitHub's release list before advancing their major tags, avoiding failed publications caused by briefly stale API responses.
+
 ## 0.14.0
 
 ### Minor Changes
