@@ -4,6 +4,7 @@
 
 ### Patch Changes
 
+- Allow repairs to unpublished release versions while preventing version regressions and changes to published versions without a bump.
 - Require pnpm/setup@v3 for pnpm setup and recognize its frozen installs in the CI check sequence.
 - Run duplication checks with jscpd 5.4.2.
 

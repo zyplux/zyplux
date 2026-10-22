@@ -14,7 +14,7 @@ CI uses one unquoted canonical command with literal arguments per `run` step. Py
 
 Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.
 
-Release targets declare their source inputs in `release-targets.toml`. Npm lookups follow the version package's `publishConfig` registry, preferring a matching `@scope:registry` over `registry`; GitHub Packages requires `NODE_AUTH_TOKEN`. Pull request checks use `GITHUB_BASE_REF` to require a newer version whenever the declared release surface differs from the target branch, including changes awaiting publication. Single-step bumps use the newer of the published and target-branch versions. Fetch complete Git history and the target branch before running the check.
+Release targets declare their source inputs in `release-targets.toml`. Npm lookups follow the version package's `publishConfig` registry, preferring a matching `@scope:registry` over `registry`; GitHub Packages requires `NODE_AUTH_TOKEN`. Pull request checks use `GITHUB_BASE_REF` to prevent version regressions against the target branch. Unpublished versions can be repaired without a bump; changes to a published version require a bump. Single-step bumps use the newer of the published and target-branch versions. Fetch complete Git history and the target branch before running the check.
 
 ## Lint a repo
 

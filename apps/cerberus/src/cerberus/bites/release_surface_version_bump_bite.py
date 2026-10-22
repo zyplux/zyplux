@@ -203,7 +203,6 @@ def _verify_base(
     ref = f"origin/{base}"
     try:
         version = _load_base_version(repo, ctx, target, ref)
-        changed = ctx.changed_paths(repo, ref, target.surface) if version is not None else []
     except (GitHistoryUnavailableError, KeyError, TypeError, ValueError) as exc:
         res.error(f"{target.label}: cannot compare the target branch {ref}: {exc}")
         return None
@@ -212,8 +211,8 @@ def _verify_base(
     baseline = _parse_semver(version)
     if baseline is None:
         res.error(f"{target.label}: {ref} has no semver version")
-    elif current < baseline or (current == baseline and changed):
-        res.fail(f"{target.label}: release surface requires a version newer than {ref} ({version})")
+    elif current < baseline:
+        res.fail(f"{target.label}: version must not decrease from {ref} ({version})")
     else:
         return baseline, f"{ref} ({version})"
     return None
