@@ -30,7 +30,6 @@ export const maxNestedCalls = createRule<[{ max: number }], 'max-nested-calls'>(
     };
     return { ...listeners, CallExpression: checkCall, NewExpression: checkCall };
   },
-  defaultOptions: [{ max: 3 }],
   meta: {
     defaultOptions: [{ max: 3 }],
     docs: {

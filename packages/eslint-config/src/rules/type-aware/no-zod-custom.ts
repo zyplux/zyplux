@@ -34,7 +34,6 @@ export const noZodCustom = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

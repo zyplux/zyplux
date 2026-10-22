@@ -129,7 +129,6 @@ export const noFunctionScopedSchema = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

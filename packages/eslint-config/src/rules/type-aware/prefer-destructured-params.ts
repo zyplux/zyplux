@@ -307,7 +307,6 @@ export const preferDestructuredParams = createRule({
       FunctionExpression: checkFunction,
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

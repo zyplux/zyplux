@@ -41,7 +41,6 @@ export const typeOnlyModules = createRule({
       }
     },
   }),
-  defaultOptions: [],
   meta: {
     docs: { description: 'Types and interfaces modules contain only type-level statements.' },
     messages: {

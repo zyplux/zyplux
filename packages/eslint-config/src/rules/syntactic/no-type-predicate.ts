@@ -10,7 +10,6 @@ export const noTypePredicate = createRule({
       });
     },
   }),
-  defaultOptions: [],
   meta: {
     docs: {
       description:

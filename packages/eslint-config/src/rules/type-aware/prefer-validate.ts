@@ -80,7 +80,6 @@ export const preferValidate = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

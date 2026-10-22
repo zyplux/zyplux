@@ -12,6 +12,8 @@
 
 ### 4.1.5 flags piping a downloaded script into a shell
 
+### 4.1.6 requires the supported pnpm setup action
+
 ## 4.2 avoiding false positives on legitimate workflow steps
 
 ### 4.2.1 passes when workflows only set up the workspace toolchain

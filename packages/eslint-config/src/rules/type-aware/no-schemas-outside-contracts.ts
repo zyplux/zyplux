@@ -31,7 +31,6 @@ export const noSchemasOutsideContracts = createRule<[], MessageId>({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

@@ -142,8 +142,8 @@ export const noStrayPascalConst = createRule<NoStrayPascalConstOptions, MessageI
       },
     };
   },
-  defaultOptions: [{ allowedFactories: [] }],
   meta: {
+    defaultOptions: [{ allowedFactories: [] }],
     docs: {
       description:
         'Reserve PascalCase constants for Zod schemas, schema-only plain objects, React components, and allowed factory results. Schemas and schema collections use a Schema suffix. Shared type-aware detection recognizes composition, factories, aliases, and destructured schema values.',

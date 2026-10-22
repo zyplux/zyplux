@@ -59,29 +59,22 @@ class RunReleaseBumps(Protocol):
 
 
 class ConfigureBase(Protocol):
-    def __call__(
-        self, content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = ...
-    ) -> None: ...
+    def __call__(self, content: str | Exception | None, *, manifest: str | None = ...) -> None: ...
 
 
 @pytest.fixture
 def target_branch(monkeypatch: pytest.MonkeyPatch, ctx: Context, run_release_bumps: RunReleaseBumps) -> ConfigureBase:
     del run_release_bumps
 
-    def configure(content: str | None, changed: Sequence[str] | Exception, *, manifest: str | None = MANIFEST) -> None:
+    def configure(content: str | Exception | None, *, manifest: str | None = MANIFEST) -> None:
         monkeypatch.setenv("GITHUB_BASE_REF", "main")
 
         def read_base(_repo: Repo, _ref: str, path: str) -> str | None:
+            if isinstance(content, Exception):
+                raise content
             return {"release-targets.toml": manifest, VERSION_FILE: content}.get(path)
 
         monkeypatch.setattr(ctx, "file_at_ref", read_base)
-
-        def read_changed(*_: object) -> list[str]:
-            if isinstance(changed, Exception):
-                raise changed
-            return list(changed)
-
-        monkeypatch.setattr(ctx.source, "changed_paths", read_changed)
 
     return configure
 
@@ -130,9 +123,7 @@ def run_release_bumps(
         monkeypatch.setattr(ctx, "file", read_file)
         serve_release(fake_registry, manifest, version_file_content, published)
 
-        def read_changed(_repo: Repo, ref: str, _surface: Sequence[str]) -> list[str]:
-            if ref.startswith("origin/"):
-                return ctx.source.changed_paths(_repo, ref, _surface)
+        def read_changed(_repo: Repo, _ref: str, _surface: Sequence[str]) -> list[str]:
             if isinstance(changed, Exception):
                 raise changed
             return list(changed)
@@ -431,30 +422,29 @@ def test_14_6_6_prefers_the_package_scopes_registry_setting(
 def test_14_7_1_passes_when_the_release_surface_matches_the_target_branch(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.0"), ())
+    target_branch(version_json("0.1.0"))
     result = run_release_bumps(published="0.1.0")
 
     assert result.findings == [ok(DONE)]
 
 
-def test_14_7_2_rejects_reusing_a_target_branch_version_before_publication(
-    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+def test_14_7_2_accepts_repairs_to_an_unpublished_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.1"))
     result = run_release_bumps(
         version_file_content=version_json("0.1.1"),
         published="0.1.0",
+        changed=["packages/widget/src/a.ts"],
     )
 
-    assert result.findings == [
-        fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)"),
-    ]
+    assert result.findings == [ok(DONE)]
 
 
 def test_14_7_3_passes_when_changed_surface_has_a_new_target_branch_version(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.0"))
     result = run_release_bumps(
         version_file_content=version_json("0.1.1"),
         published="0.1.0",
@@ -466,7 +456,7 @@ def test_14_7_3_passes_when_changed_surface_has_a_new_target_branch_version(
 def test_14_7_4_errors_when_the_target_branch_version_file_is_invalid_json(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
 ) -> None:
-    target_branch("invalid json", ())
+    target_branch("invalid json")
     result = run_release_bumps(published="0.1.0")
 
     assert result.findings == [
@@ -477,7 +467,7 @@ def test_14_7_4_errors_when_the_target_branch_version_file_is_invalid_json(
 def test_14_7_5_accepts_a_target_introduced_by_the_pull_request(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(None, (), manifest=None)
+    target_branch(None, manifest=None)
     result = run_release_bumps()
 
     assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
@@ -489,16 +479,16 @@ def test_14_7_6_errors_when_target_branch_history_is_unavailable(
     target_branch: ConfigureBase,
     error: MakeFinding,
 ) -> None:
-    target_branch(version_json("0.1.0"), git_history_unavailable_error("git diff failed"))
+    target_branch(git_history_unavailable_error("git show failed"))
     result = run_release_bumps(published="0.1.0")
 
-    assert result.findings == [error(f"{LABEL}: cannot compare the target branch origin/main: git diff failed")]
+    assert result.findings == [error(f"{LABEL}: cannot compare the target branch origin/main: git show failed")]
 
 
 def test_14_7_7_errors_when_the_target_branch_version_is_not_semver(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
 ) -> None:
-    target_branch(version_json("invalid"), ())
+    target_branch(version_json("invalid"))
     result = run_release_bumps(published="0.1.0")
 
     assert result.findings == [error(f"{LABEL}: origin/main has no semver version")]
@@ -508,7 +498,7 @@ def test_14_7_7_errors_when_the_target_branch_version_is_not_semver(
 def test_14_7_8_accepts_one_step_from_an_unpublished_target_branch_version(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, base: str, version: str, ok: MakeFinding
 ) -> None:
-    target_branch(version_json(base), ["packages/widget/src/a.ts"])
+    target_branch(version_json(base))
 
     result = run_release_bumps(version_file_content=version_json(version), published="0.1.0")
 
@@ -518,7 +508,7 @@ def test_14_7_8_accepts_one_step_from_an_unpublished_target_branch_version(
 def test_14_7_9_rejects_skipping_steps_from_an_unpublished_target_branch_version(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.1"))
 
     result = run_release_bumps(version_file_content=version_json("0.1.3"), published="0.1.0")
 
@@ -530,7 +520,7 @@ def test_14_7_9_rejects_skipping_steps_from_an_unpublished_target_branch_version
 def test_14_7_10_uses_the_published_baseline_when_it_is_newer_than_the_target_branch(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.0"))
 
     result = run_release_bumps(version_file_content=version_json("0.1.2"), published="0.1.1")
 
@@ -540,7 +530,7 @@ def test_14_7_10_uses_the_published_baseline_when_it_is_newer_than_the_target_br
 def test_14_7_11_accepts_an_unchanged_unpublished_target_branch_version(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("1.0.0"), ())
+    target_branch(version_json("1.0.0"))
 
     result = run_release_bumps(version_file_content=version_json("1.0.0"), published="0.1.0")
 
@@ -550,7 +540,7 @@ def test_14_7_11_accepts_an_unchanged_unpublished_target_branch_version(
 def test_14_7_12_accepts_one_step_before_the_first_publication(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("1.0.0"))
 
     result = run_release_bumps(version_file_content=version_json("1.0.1"))
 
@@ -560,7 +550,7 @@ def test_14_7_12_accepts_one_step_before_the_first_publication(
 def test_14_7_13_rejects_skipping_steps_before_the_first_publication(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
 ) -> None:
-    target_branch(version_json("1.0.0"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("1.0.0"))
 
     result = run_release_bumps(version_file_content=version_json("9.0.0"))
 
@@ -572,7 +562,7 @@ def test_14_7_13_rejects_skipping_steps_before_the_first_publication(
 def test_14_7_14_reads_the_base_version_with_its_own_extractor(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.0"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.0"))
 
     result = run_release_bumps(
         manifest=MANIFEST.replace('json = "version"', 'json = "metadata.version"'),
@@ -586,23 +576,23 @@ def test_14_7_14_reads_the_base_version_with_its_own_extractor(
 def test_14_7_15_checks_the_base_version_when_its_file_moves(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
 ) -> None:
-    target_branch(version_json("0.1.1"), ["packages/widget/src/a.ts"])
+    target_branch(version_json("0.1.1"))
     moved_path = "packages/relocated/package.json"
 
     result = run_release_bumps(
         manifest=MANIFEST.replace(VERSION_FILE, moved_path),
         version_path=moved_path,
-        version_file_content=version_json("0.1.1"),
+        version_file_content=version_json("0.1.0"),
         published="0.1.0",
     )
 
-    assert result.findings == [fail(f"{LABEL}: release surface requires a version newer than origin/main (0.1.1)")]
+    assert result.findings == [fail(f"{LABEL}: version must not decrease from origin/main (0.1.1)")]
 
 
 def test_14_7_16_distinguishes_targets_that_share_a_version_file(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("1.0.0"), (), manifest=MANIFEST.replace(LABEL, "@zyplux/other"))
+    target_branch(version_json("1.0.0"), manifest=MANIFEST.replace(LABEL, "@zyplux/other"))
 
     result = run_release_bumps()
 
@@ -612,10 +602,32 @@ def test_14_7_16_distinguishes_targets_that_share_a_version_file(
 def test_14_7_17_errors_when_an_existing_base_target_has_no_version_file(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, error: MakeFinding
 ) -> None:
-    target_branch(None, ())
+    target_branch(None)
 
     result = run_release_bumps()
 
     assert result.findings == [
         error(f"{LABEL}: cannot compare the target branch origin/main: version file {VERSION_FILE} is missing")
     ]
+
+
+def test_14_7_18_rejects_changes_to_a_published_target_branch_version(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, fail: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"))
+
+    result = run_release_bumps(published="0.1.0", changed=["packages/widget/src/a.ts"])
+
+    assert result.findings == [
+        fail(f"{LABEL}: surface changed since widget-v0.1.0 but version is still 0.1.0 — bump it (e.g. 0.1.1)")
+    ]
+
+
+def test_14_7_19_accepts_repairs_before_the_first_publication(
+    run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
+) -> None:
+    target_branch(version_json("0.1.0"))
+
+    result = run_release_bumps(changed=["packages/widget/src/a.ts"])
+
+    assert result.findings == [ok(DONE)]

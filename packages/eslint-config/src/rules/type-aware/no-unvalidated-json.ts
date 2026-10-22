@@ -64,7 +64,6 @@ export const noUnvalidatedJson = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

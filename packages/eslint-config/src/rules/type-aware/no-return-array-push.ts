@@ -81,7 +81,6 @@ export const noReturnArrayPush = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: {
       description:

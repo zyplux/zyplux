@@ -111,8 +111,8 @@ export const testSeamOnlyImports = createRule<Options, MessageId>({
       },
     };
   },
-  defaultOptions: [{}],
   meta: {
+    defaultOptions: [{}],
     docs: {
       description:
         'Stories import test API bindings from Vitest or their resolved local suite API; fixture types may accompany that API.',

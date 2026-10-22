@@ -45,7 +45,17 @@ def _matches_step(command: tuple[str, ...], step: str) -> bool:
     return matches_tool_command(command, required)
 
 
-def _parse_step_command(script: str) -> tuple[str, ...]:
+def _is_frozen_install(step: dict[str, Any]) -> bool:
+    inputs = step.get("with")
+    if step.get("uses") != "pnpm/setup@v3" or not isinstance(inputs, dict):
+        return False
+    return all(
+        setting is True or setting == "true"
+        for setting in (inputs.get("require-lockfile"), inputs.get("install", True))
+    )
+
+
+def _parse_shell_command(script: str) -> tuple[str, ...]:
     root = get_shell_parser().parse(script.encode()).root_node
     statements = [child for child in root.named_children if child.type != "comment"]
     if root.has_error or len(statements) != 1 or statements[0].type != "command":
@@ -59,6 +69,13 @@ def _parse_step_command(script: str) -> tuple[str, ...]:
     if any(word.type != "word" or word.named_children for word in words):
         return ()
     return list_command_args(statements[0])
+
+
+def _parse_step_command(step: dict[str, Any]) -> tuple[str, ...]:
+    if _is_frozen_install(step):
+        return ("pnpm", "install", "--frozen-lockfile")
+    script = step.get("run")
+    return _parse_shell_command(script) if isinstance(script, str) else ()
 
 
 def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
@@ -94,7 +111,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    commands = [_parse_step_command(script) for script in workflow.run_commands(doc)]
+    commands = [_parse_step_command(step) for step in workflow.job_steps(doc)]
 
     if has_ts:
         _verify_sequence(

@@ -49,3 +49,11 @@
 ### 8.6.3 requires typescript quality steps for executable tool configuration
 
 ### 8.6.4 does not require prettier for javascript tool configuration
+
+## 8.7 recognizing frozen installs from pnpm setup
+
+### 8.7.1 accepts a frozen install from pnpm setup
+
+### 8.7.2 rejects setup actions without a guaranteed frozen install
+
+### 8.7.3 requires the setup install before quality checks

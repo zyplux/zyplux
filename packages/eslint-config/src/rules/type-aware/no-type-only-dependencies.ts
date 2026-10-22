@@ -11,7 +11,6 @@ export const noTypeOnlyDependencies = createRule({
       });
     },
   }),
-  defaultOptions: [],
   meta: {
     docs: {
       description: 'Disallow type-only dependencies on workspace implementation packages.',

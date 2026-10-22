@@ -96,7 +96,9 @@ export const createRegistries = (network: FetchFake) =>
         if (pypiProbeCount === 1) return pypiPublished ? okResponse() : notFoundResponse();
         return pypiEverVisible === false ? notFoundResponse() : okResponse();
       });
-      network.on('https://registry.npmjs.org/', () => (npmPublished ? okResponse() : notFoundResponse()));
+      network.on('https://registry.npmjs.org/', () =>
+        npmPublished ? Response.json({ versions: { '1.2.3': {} } }) : notFoundResponse(),
+      );
     },
   }) satisfies Registries;
 const renderRunIds = (ids: string[]) => JSON.stringify(ids.map(id => ({ databaseId: Number(id) })));

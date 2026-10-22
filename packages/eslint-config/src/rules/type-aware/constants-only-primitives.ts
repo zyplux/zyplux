@@ -50,7 +50,6 @@ export const constantsOnlyPrimitives = createRule({
       },
     };
   },
-  defaultOptions: [],
   meta: {
     docs: { description: 'Constants surfaces export only immutable primitive values.', requiresTypeChecking: true },
     messages: { nonPrimitive: 'A constants surface exports only immutable primitive values.' },

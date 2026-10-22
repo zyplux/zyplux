@@ -58,7 +58,7 @@ python = [
 [workflow_toolchain_only]
 allowed_setup_actions = [
     "astral-sh/setup-uv",
-    "pnpm/action-setup",
+    "pnpm/setup@v3",
     "actions/setup-node",
 ]
 

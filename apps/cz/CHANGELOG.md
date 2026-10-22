@@ -8,6 +8,7 @@
 
 ### Patch Changes
 
+- Check npm package metadata for unpublished versions when selecting and publishing releases.
 - Updated dependencies
   - @zyplux/util@0.9.3
 

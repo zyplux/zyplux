@@ -62,11 +62,11 @@
 
 ### 14.6.6 prefers the package scopes registry setting
 
-## 14.7 requiring a bump against the pull request target branch
+## 14.7 comparing versions against the pull request target branch
 
 ### 14.7.1 passes when the release surface matches the target branch
 
-### 14.7.2 rejects reusing a target branch version before publication
+### 14.7.2 accepts repairs to an unpublished target branch version
 
 ### 14.7.3 passes when changed surface has a new target branch version
 
@@ -97,3 +97,7 @@
 ### 14.7.16 distinguishes targets that share a version file
 
 ### 14.7.17 errors when an existing base target has no version file
+
+### 14.7.18 rejects changes to a published target branch version
+
+### 14.7.19 accepts repairs before the first publication
