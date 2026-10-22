@@ -473,8 +473,8 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
         CONFORMING_CI.replace(
             "      - run: echo ci",
             (
-                "      - run: pnpm install --frozen-lockfile\n"
-                "      - run: uv sync --locked\n"
+                "      - uses: actions/checkout@v7\n"
+                "      - uses: zyplux/zyplux/setup-pm@main\n"
                 "      - run: uv run --no-sync rumdl check"
             ),
         )

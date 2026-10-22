@@ -19,7 +19,8 @@ _PY_CI = (
     "  gate:\n"
     "    uses: zyplux/.github/.github/workflows/gate.yml@main\n"
     "  ci:\n    steps:\n"
-    "      - run: uv sync --locked --all-groups\n"
+    "      - uses: actions/checkout@v7\n"
+    "      - uses: ./setup-pm\n"
     "      - run: uv run --no-sync vulture\n"
     "      - run: uv run --no-sync rumdl check\n"
     "      - run: uv run --no-sync ruff check\n"
@@ -29,7 +30,8 @@ _PY_CI = (
 )
 _TS_CI = (
     "jobs:\n  ci:\n    steps:\n"
-    "      - run: pnpm install --frozen-lockfile\n"
+    "      - uses: actions/checkout@v7\n"
+    "      - uses: ./setup-pm\n"
     "      - run: pnpm run knip\n"
     "      - run: pnpm run typecheck\n"
     "      - run: pnpm run lint\n"
@@ -91,10 +93,9 @@ def test_8_3_1_passes_a_python_ci_workflow_that_runs_every_required_step_in_orde
     ("ci", "missing_step"),
     [
         (_PY_CI.replace("      - run: uv run --no-sync pytest\n", ""), "pytest"),
-        (_PY_CI.replace("uv sync --locked --all-groups", "uv sync --all-groups"), "uv sync --locked"),
         (_PY_CI.replace("uv run --no-sync vulture", "uv run vulture"), "vulture"),
     ],
-    ids=["step_missing", "step_command_wrong", "runner_command_wrong"],
+    ids=["step_missing", "runner_command_wrong"],
 )
 def test_8_3_2_fails_when_a_required_python_step_is_missing_or_does_not_match_its_required_command(
     run_ci_sequence: RunCiSequence, ci: str, missing_step: str, fail: MakeFinding
@@ -108,7 +109,8 @@ def test_8_3_3_fails_when_the_required_python_steps_run_out_of_canonical_order(
 ) -> None:
     ci = (
         "jobs:\n  ci:\n    steps:\n"
-        "      - run: uv sync --locked --all-groups\n"
+        "      - uses: actions/checkout@v7\n"
+        "      - uses: ./setup-pm\n"
         "      - run: uv run --no-sync pyrefly check\n"
         "      - run: uv run --no-sync vulture\n"
         "      - run: uv run --no-sync rumdl check\n"
@@ -151,7 +153,8 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
 ) -> None:
     ci = (
         "jobs:\n  ci:\n    steps:\n"
-        "      - run: pnpm install --frozen-lockfile\n"
+        "      - uses: actions/checkout@v7\n"
+        "      - uses: ./setup-pm\n"
         "      - run: pnpm run typecheck\n"
         "      - run: pnpm run knip\n"
         "      - run: pnpm run lint\n"
@@ -240,18 +243,13 @@ def test_8_5_5_rejects_skipped_background_or_chained_commands(
     assert result.findings == [fail("ts ci is missing `pnpm run lint`")]
 
 
-@pytest.mark.parametrize("missing", ["", "uv sync --locked", "rumdl check", "pnpm install --frozen-lockfile"])
+@pytest.mark.parametrize("missing", ["", "rumdl check"])
 def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
 ) -> None:
-    steps = (
-        "pnpm install --frozen-lockfile",
-        "uv sync --locked",
-        "uv run --no-sync rumdl check",
-    )
-    ci = "jobs:\n  ci:\n    steps:\n" + "".join(
-        f"      - run: {step}\n" for step in steps if not missing or missing not in step
-    )
+    ci = "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
+    if not missing:
+        ci += "      - run: uv run --no-sync rumdl check\n"
     result = run_check_with_files(
         CHECK_ID,
         {
@@ -260,8 +258,7 @@ def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
             ".github/workflows/ci.yml": ci,
         },
     )
-    label = "ts" if missing.startswith("pnpm") else "python"
-    assert result.findings == ([fail(f"{label} ci is missing `{missing}`")] if missing else [sequence_pass])
+    assert result.findings == ([fail(f"python ci is missing `{missing}`")] if missing else [sequence_pass])
 
 
 def test_8_6_2_requires_python_quality_steps_for_stub_only_packages(
@@ -288,9 +285,8 @@ def test_8_6_3_requires_typescript_quality_steps_for_executable_tool_configurati
             path: "export default {};\n",
             "package.json": "{}",
             ".github/workflows/ci.yml": (
-                "jobs:\n  ci:\n    steps:\n"
-                "      - run: pnpm install --frozen-lockfile\n"
-                "      - run: pnpm exec prettier --check .\n"
+                "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n"
+                "      - uses: ./setup-pm\n      - run: pnpm exec prettier --check .\n"
             ),
         },
     )
@@ -307,7 +303,9 @@ def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
         {
             "eslint.config.js": "export default {};\n",
             "package.json": "{}",
-            ".github/workflows/ci.yml": "jobs:\n  ci:\n    steps:\n      - run: pnpm install --frozen-lockfile\n",
+            ".github/workflows/ci.yml": (
+                "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
+            ),
         },
     )
     assert result.findings == [sequence_pass]
@@ -322,55 +320,117 @@ def test_8_5_6_rejects_pyrefly_warning_threshold_overrides(
     assert result.findings == [fail("python ci is missing `pyrefly check`")]
 
 
-@pytest.mark.parametrize("enabled", ["true", "'true'"])
-def test_8_7_1_accepts_a_frozen_install_from_pnpm_setup(
-    run_ci_sequence: RunCiSequence, sequence_pass: Finding, enabled: str
+@pytest.mark.parametrize("action", ["./setup-pm", "zyplux/zyplux/setup-pm@main", "zyplux/zyplux/setup-pm@abc123"])
+def test_8_7_1_accepts_both_locked_installs_from_the_shared_action(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding, action: str
 ) -> None:
-    setup = f"      - uses: pnpm/setup@v3\n        with: {{require-lockfile: {enabled}}}\n"
-    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", setup)
-
-    result = run_ci_sequence(ts=True, ci=ci)
-
+    ci = _TS_CI.replace("./setup-pm", action)
+    ci += _PY_CI.split("      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n", 1)[1]
+    result = run_ci_sequence(ts=True, python=True, ci=ci)
     assert result.findings == [sequence_pass]
 
 
 @pytest.mark.parametrize(
-    ("action", "inputs"),
+    "setup",
     [
-        ("pnpm/setup@v3", "{}"),
-        ("pnpm/setup@v3", "{require-lockfile: false}"),
-        ("pnpm/setup@v3", "{require-lockfile: true, install: false}"),
-        ("pnpm/setup@v3", "{require-lockfile: true, install: 'false'}"),
-        ("pnpm/setup@v3", "{require-lockfile: '${{ inputs.frozen }}'}"),
-        ("pnpm/setup@v3", "{require-lockfile: true, install: '${{ inputs.install }}'}"),
-        ("pnpm/setup@v3", "{require-lockfile: 1}"),
-        ("pnpm/setup@v3", "false"),
-        ("pnpm/setup@v2", "{require-lockfile: true}"),
-        ("other/setup@v3", "{require-lockfile: true}"),
+        "run: pnpm install --frozen-lockfile",
+        "uses: pnpm/setup@v3\n        with: {require-lockfile: true}",
+        "uses: zyplux/zyplux/setup-pm@",
+        "uses: other/zyplux/setup-pm@main",
+        "uses: false",
     ],
 )
-def test_8_7_2_rejects_setup_actions_without_a_guaranteed_frozen_install(
-    run_ci_sequence: RunCiSequence, fail: MakeFinding, action: str, inputs: str
+def test_8_7_2_requires_the_shared_action_even_with_a_manual_frozen_install(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, setup: str
 ) -> None:
-    setup = f"      - uses: {action}\n        with: {inputs}\n"
-    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", setup)
-
+    ci = _TS_CI.replace("uses: ./setup-pm", setup)
     result = run_ci_sequence(ts=True, ci=ci)
-
-    assert result.findings == [fail("ts ci is missing `pnpm install --frozen-lockfile`")]
-
-
-def test_8_7_3_requires_the_setup_install_before_quality_checks(
-    run_ci_sequence: RunCiSequence, fail: MakeFinding
-) -> None:
-    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", "")
-    ci += "      - uses: pnpm/setup@v3\n        with: {require-lockfile: true}\n"
-
-    result = run_ci_sequence(ts=True, ci=ci)
-
     assert result.findings == [
-        fail(
-            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
-            "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']"
-        )
+        fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+    ]
+
+
+@pytest.mark.parametrize("install", ["", "      - run: pnpm install --frozen-lockfile\n"])
+def test_8_7_3_requires_shared_setup_before_quality_checks(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, install: str
+) -> None:
+    ci = _TS_CI.replace("      - uses: ./setup-pm\n", install)
+    ci += "      - uses: ./setup-pm\n"
+    assert run_ci_sequence(ts=True, ci=ci).findings == [
+        fail(f"ts ci is missing `{step}`")
+        for step in ("pnpm run knip", "pnpm run typecheck", "pnpm run lint", "prettier --check", "pnpm run test")
+    ]
+
+
+@pytest.mark.parametrize("setting", ["if: false", "if: '${{ inputs.setup }}'", "continue-on-error: true"])
+def test_8_7_4_requires_unconditional_successful_setup(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, setting: str
+) -> None:
+    ci = _TS_CI.replace("uses: ./setup-pm", f"uses: ./setup-pm\n        {setting}")
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [
+        fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("ci", "message"),
+    [
+        (
+            _TS_CI.replace("  ci:\n", "  prepare:\n") + "  ci:\n    steps:\n      - run: pnpm run test\n",
+            "ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks",
+        ),
+        (
+            _TS_CI.replace("  ci:\n", "  ci:\n    if: false\n"),
+            "ci.yml must run an unconditional ci job without prerequisites",
+        ),
+        ("jobs: []", "ci.yml must run an unconditional ci job without prerequisites"),
+    ],
+)
+def test_8_7_5_requires_setup_and_checks_in_the_unconditional_ci_job(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, ci: str, message: str
+) -> None:
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [fail(message)]
+
+
+@pytest.mark.parametrize(
+    "ci",
+    [
+        _TS_CI.replace("      - uses: actions/checkout@v7\n", ""),
+        _TS_CI.replace("uses: actions/checkout@v7", "uses: actions/checkout@v7\n        if: false"),
+        _TS_CI.replace("actions/checkout@v7", "actions/checkout@"),
+        _TS_CI.replace("uses: actions/checkout@v7", "uses: actions/checkout@v7\n        with: {path: source}"),
+        _TS_CI.replace("      - uses: actions/checkout@v7\n", "") + "      - uses: actions/checkout@v7\n",
+    ],
+)
+def test_8_7_6_requires_root_checkout_before_shared_setup(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, ci: str
+) -> None:
+    result = run_ci_sequence(ts=True, ci=ci)
+    assert result.findings == [
+        fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")
+    ]
+
+
+def test_8_7_7_accepts_a_ci_display_name_on_another_job_id(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding
+) -> None:
+    ci = _TS_CI.replace("  ci:\n", "  checks:\n    name: ci\n")
+    assert run_ci_sequence(ts=True, ci=ci).findings == [sequence_pass]
+
+
+@pytest.mark.parametrize("path", ["", ".", "./"])
+def test_8_7_8_accepts_explicit_root_checkout_paths(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding, path: str
+) -> None:
+    ci = _TS_CI.replace("uses: actions/checkout@v7", f"uses: actions/checkout@v7\n        with: {{path: '{path}'}}")
+    assert run_ci_sequence(ts=True, ci=ci).findings == [sequence_pass]
+
+
+@pytest.mark.parametrize("needs", ["prepare", "[prepare]"])
+def test_8_7_9_rejects_ci_job_prerequisites(run_ci_sequence: RunCiSequence, fail: MakeFinding, needs: str) -> None:
+    ci = _TS_CI.replace("  ci:\n", f"  ci:\n    needs: {needs}\n")
+    assert run_ci_sequence(ts=True, ci=ci).findings == [
+        fail("ci.yml must run an unconditional ci job without prerequisites")
     ]

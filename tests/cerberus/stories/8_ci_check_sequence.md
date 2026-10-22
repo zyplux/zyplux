@@ -50,10 +50,22 @@
 
 ### 8.6.4 does not require prettier for javascript tool configuration
 
-## 8.7 recognizing frozen installs from pnpm setup
+## 8.7 Requiring shared package manager setup
 
-### 8.7.1 accepts a frozen install from pnpm setup
+### 8.7.1 accepts both locked installs from the shared action
 
-### 8.7.2 rejects setup actions without a guaranteed frozen install
+### 8.7.2 requires the shared action even with a manual frozen install
 
-### 8.7.3 requires the setup install before quality checks
+### 8.7.3 requires shared setup before quality checks
+
+### 8.7.4 requires unconditional successful setup
+
+### 8.7.5 requires setup and checks in the unconditional ci job
+
+### 8.7.6 requires root checkout before shared setup
+
+### 8.7.7 accepts a ci display name on another job id
+
+### 8.7.8 accepts explicit root checkout paths
+
+### 8.7.9 rejects ci job prerequisites

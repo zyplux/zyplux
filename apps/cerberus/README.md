@@ -40,9 +40,9 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
 | `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
-| `ci_check_sequence`            | content     | `ci.yml` runs the canonical check sequence per stack          |
+| `ci_check_sequence`            | content     | `ci.yml` uses shared package-manager setup before the canonical checks             |
 | `ci_cerberus_step`             | content     | A CI workflow runs cerberus to self-verify org invariants                           |
-| `workflow_toolchain_only`      | content     | Workflows set up only the workspace toolchain (uv, pnpm), not extra tools            |
+| `workflow_toolchain_only`      | content     | Workflows use shared package-manager setup and install no extra tools              |
 | `pyrefly`                      | content     | All code, tests included, type-checks under strict pyrefly with no relaxations       |
 | `ruff`                         | content     | ruff runs standalone in preview with `select = ["ALL"]`; relaxations stay sanctioned |
 | `line_length`                  | content     | ruff `line-length` and prettier `printWidth` both match the configured width (120)   |

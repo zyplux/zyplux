@@ -4,6 +4,7 @@ min-severity = "warn"
 project-includes = [
     "apps/cerberus/src",
     "apps/clipy/src",
+    "apps/setup-pm/src",
     "apps/totchef",
     "apps/token_stats/src",
     "packages/util_py/src",
@@ -14,6 +15,7 @@ disable-project-excludes-heuristics = true
 project-excludes = ["**/node_modules"]
 use-ignore-files = false
 search-path = [
+    "apps/setup-pm/src",
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/totchef/src",

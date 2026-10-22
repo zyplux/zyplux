@@ -27,10 +27,7 @@ jobs:
       ghcr: ${{ steps.targets.outputs.ghcr }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/setup@v3
-        with:
-          cache: true
-          require-lockfile: true
+      - uses: ./setup-pm
       - id: targets
         run: |
           arguments=(--list)
@@ -61,10 +58,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/setup@v3
-        with:
-          cache: true
-          require-lockfile: true
+      - uses: ./setup-pm
       - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
         env:
           RELEASE_TAG: ${{ matrix.tag }}
@@ -87,11 +81,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v9.0.0
-      - uses: pnpm/setup@v3
-        with:
-          cache: true
-          require-lockfile: true
+      - uses: ./setup-pm
       - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
         env:
           RELEASE_TAG: ${{ matrix.tag }}
@@ -113,10 +103,7 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/setup@v3
-        with:
-          cache: true
-          require-lockfile: true
+      - uses: ./setup-pm
       - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
         env:
           RELEASE_TAG: ${{ matrix.tag }}

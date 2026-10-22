@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "ci_check_sequence"
-SUMMARY = "ci.yml runs the canonical check sequence per stack"
+SUMMARY = "ci.yml uses shared package-manager setup before the canonical check sequence"
 SCOPE = Scope.CONTENT
 
 _CI_PATHS = (".github/workflows/ci.yml", ".github/workflows/ci.yaml")
@@ -45,14 +45,49 @@ def _matches_step(command: tuple[str, ...], step: str) -> bool:
     return matches_tool_command(command, required)
 
 
-def _is_frozen_install(step: dict[str, Any]) -> bool:
-    inputs = step.get("with")
-    if step.get("uses") != "pnpm/setup@v3" or not isinstance(inputs, dict):
-        return False
-    return all(
-        setting is True or setting == "true"
-        for setting in (inputs.get("require-lockfile"), inputs.get("install", True))
+def _is_required(step: dict[str, Any]) -> bool:
+    return step.get("if", True) is True and step.get("continue-on-error", False) is False
+
+
+def _is_shared_setup(step: dict[str, Any]) -> bool:
+    uses = step.get("uses", "")
+    identity, _, ref = uses.partition("@") if isinstance(uses, str) else ("", "", "")
+    return (uses == "./setup-pm" or (identity == "zyplux/zyplux/setup-pm" and bool(ref))) and _is_required(step)
+
+
+def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:
+    jobs = doc.get("jobs")
+    if not isinstance(jobs, dict):
+        return None
+    return next(
+        (job for name, job in jobs.items() if isinstance(job, dict) and (name == "ci" or job.get("name") == "ci")),
+        None,
     )
+
+
+def _is_root_checkout(step: dict[str, Any]) -> bool:
+    uses = step.get("uses", "")
+    inputs = step.get("with", {})
+    return (
+        isinstance(uses, str)
+        and uses.startswith("actions/checkout@")
+        and bool(uses.partition("@")[2])
+        and _is_required(step)
+        and isinstance(inputs, dict)
+        and isinstance(path := inputs.get("path", ""), str)
+        and path in {"", ".", "./"}
+    )
+
+
+def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> int | None:
+    setup_index = next((index for index, step in enumerate(steps) if _is_shared_setup(step)), None)
+    if setup_index is None:
+        res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        return None
+    if not any(_is_root_checkout(step) for step in steps[:setup_index]):
+        res.fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")
+        return None
+    return setup_index
 
 
 def _parse_shell_command(script: str) -> tuple[str, ...]:
@@ -71,11 +106,11 @@ def _parse_shell_command(script: str) -> tuple[str, ...]:
     return list_command_args(statements[0])
 
 
-def _parse_step_command(step: dict[str, Any]) -> tuple[str, ...]:
-    if _is_frozen_install(step):
-        return ("pnpm", "install", "--frozen-lockfile")
+def _parse_step_commands(step: dict[str, Any]) -> list[tuple[str, ...]]:
+    if _is_shared_setup(step):
+        return [("pnpm", "install", "--frozen-lockfile"), ("uv", "sync", "--locked")]
     script = step.get("run")
-    return _parse_shell_command(script) if isinstance(script, str) else ()
+    return [_parse_shell_command(script)] if isinstance(script, str) else []
 
 
 def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
@@ -110,8 +145,17 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error("ci.yml is not valid YAML")
         return res
 
+    job = _find_ci_job(doc)
+    if job is None or not _is_required(job) or job.get("needs"):
+        res.fail("ci.yml must run an unconditional ci job without prerequisites")
+        return res
+    steps = workflow.job_steps({"jobs": {"ci": job}})
+    setup_index = _validate_setup(steps, res)
+    if setup_index is None:
+        return res
+
     cfg = ctx.config
-    commands = [_parse_step_command(step) for step in workflow.job_steps(doc)]
+    commands = [command for step in steps[setup_index:] for command in _parse_step_commands(step)]
 
     if has_ts:
         _verify_sequence(

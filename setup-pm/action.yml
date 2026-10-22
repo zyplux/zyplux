@@ -1,0 +1,89 @@
+name: Set up package managers
+description: Set up cached pnpm and uv toolchains and install locked workspace dependencies on Linux.
+inputs:
+  uv-version:
+    description: Exact uv version.
+    default: '0.13.4'
+outputs:
+  pnpm-cache-hit:
+    description: Whether the pinned pnpm executable was restored.
+    value: ${{ steps.pnpm-cache.outputs.cache-hit }}
+  uv-cache-hit:
+    description: Whether the pinned uv executable was restored.
+    value: ${{ steps.uv-cache.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Read workspace toolchain
+      id: config
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/../apps/setup-pm/src/setup_pm/prepare.py"
+      env:
+        UV_VERSION: ${{ inputs.uv-version }}
+    - name: Restore Node.js
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.tool_cache }}/node/${{ steps.config.outputs.node-version }}
+        key: setup-pm-node-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.node-version }}
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ steps.config.outputs.node-version }}
+        package-manager-cache: false
+    - name: Restore pnpm executable
+      id: pnpm-cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+        key: setup-pm-pnpm-v4-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}
+    - name: Install pnpm executable
+      if: steps.pnpm-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        command -v openssl
+        curl -fsSL https://get.pnpm.io/install.sh -o "$RUNNER_TEMP/pnpm-install.sh"
+        PATH="$PNPM_HOME/bin:$PATH" sh "$RUNNER_TEMP/pnpm-install.sh"
+      env:
+        PNPM_VERSION: ${{ steps.config.outputs.pnpm-version }}
+        PNPM_HOME: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+        ENV: ${{ runner.temp }}/setup-pm-shell
+        SHELL: /bin/sh
+    - name: Activate pnpm
+      shell: bash
+      run: |
+        echo "$PNPM_HOME/bin" >> "$GITHUB_PATH"
+        echo "PNPM_HOME=$PNPM_HOME" >> "$GITHUB_ENV"
+        test "$("$PNPM_HOME/bin/pnpm" --version)" = "$PNPM_VERSION"
+        echo "pnpm_config_store_dir=$RUNNER_TEMP/setup-pm-store" >> "$GITHUB_ENV"
+        echo "pnpm_config_cache_dir=$RUNNER_TEMP/setup-pm-metadata" >> "$GITHUB_ENV"
+      env:
+        PNPM_VERSION: ${{ steps.config.outputs.pnpm-version }}
+        PNPM_HOME: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
+    - name: Restore pnpm dependencies and metadata
+      uses: actions/cache@v6
+      with:
+        path: |
+          ${{ runner.temp }}/setup-pm-store
+          ${{ runner.temp }}/setup-pm-metadata
+        key: setup-pm-store-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: setup-pm-store-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}-
+    - name: Install pnpm dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --no-runtime
+    - name: Restore uv executable
+      id: uv-cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.tool_cache }}/uv/${{ steps.config.outputs.uv-version }}
+        key: setup-pm-uv-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.uv-version }}
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v9.0.0
+      with:
+        version: ${{ steps.config.outputs.uv-version }}
+        enable-cache: true
+        cache-dependency-glob: |
+          uv.lock
+          .python-version
+    - name: Install uv dependencies
+      shell: bash
+      run: uv sync --locked --all-packages --all-groups
