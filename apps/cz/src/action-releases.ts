@@ -1,5 +1,6 @@
 import { ensure } from '@zyplux/util/assert';
 import { parseJson } from '@zyplux/util/json';
+import { poll } from '@zyplux/util/poll';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { parse, rcompare } from 'semver';
 
@@ -59,8 +60,11 @@ export const publishAction = async (target: ActionTarget, version: string, notes
   if (notes !== undefined && !(await $.gh.release.exists(tag))) {
     await createGithubRelease(tag, notes, await readTrimmed($.git.revParse('HEAD')));
   }
-  const alias = await resolveActionAlias(target, version);
-  ensure(alias !== undefined, `publish GitHub release ${tag} before updating its major tag`);
+  const alias = await poll(() => resolveActionAlias(target, version), {
+    attempts: 12,
+    intervalMs: 5000,
+    onExpiry: `published GitHub release ${tag} was not visible after waiting; retry publication`,
+  });
   if (alias.previousSha === alias.commit) return;
   await $`git fetch --no-tags origin ${alias.releaseRef}`;
   const commit = await readTrimmed($.git.revParse('FETCH_HEAD^{commit}'));

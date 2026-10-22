@@ -5,6 +5,8 @@ import { PythonReleaseSchema } from '@zyplux/cz/contracts';
 import { parseJson } from '@zyplux/util/json';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { vi } from 'vitest';
 
 import type { Repo } from '#repository-fake';
 
@@ -15,6 +17,7 @@ type ActionContext = { repo: Repo; shell: ShellFake; tempDir: TempDir };
 type PublishedRelease = string | { draft?: boolean; prerelease?: boolean; tag: string };
 
 export const createActionRelease = async ({ repo, shell, tempDir }: ActionContext) => {
+  vi.mocked(sleep).mockResolvedValue(undefined);
   const targets = await seedReleaseTargets(tempDir);
   await tempDir.write(
     'release-targets.toml',

@@ -14,6 +14,8 @@
 
 ### 19.1.6 promotes the commit behind an annotated versioned tag
 
+### 19.1.7 waits for a newly created release to appear before advancing its alias
+
 ## 19.2 rejecting incomplete or racing publications
 
 ### 19.2.1 requires a published stable release before moving its alias
