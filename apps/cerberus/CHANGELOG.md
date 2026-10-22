@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.24.0
+
+### Minor Changes
+
+- Require the shared setup-pm action for locked pnpm and uv installs before CI checks, and reject standalone toolchain setup actions in workflows.
+
 ## 0.23.2
 
 ### Patch Changes

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "workflow_toolchain_only"
-SUMMARY = "workflows set up only the workspace toolchain (uv, pnpm), not extra tools"
+SUMMARY = "workflows use shared package-manager setup and install no extra tools"
 SCOPE = Scope.CONTENT
 
 _SETUP_ACTION = re.compile(r"^(setup(?:-|$)|action-setup$|.*-toolchain$)", re.IGNORECASE)
@@ -39,7 +39,8 @@ def _action_repo(uses: str) -> str:
 
 def _is_setup_action(uses: str) -> bool:
     repo = _action_repo(uses)
-    return bool(_SETUP_ACTION.match(repo)) or "install-action" in repo.lower()
+    directory = uses.split("@", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+    return bool(_SETUP_ACTION.match(repo) or _SETUP_ACTION.match(directory)) or "install-action" in repo.lower()
 
 
 def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckResult) -> None:

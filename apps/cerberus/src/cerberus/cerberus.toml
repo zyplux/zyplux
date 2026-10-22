@@ -57,9 +57,8 @@ python = [
 
 [workflow_toolchain_only]
 allowed_setup_actions = [
-    "astral-sh/setup-uv",
-    "pnpm/setup@v3",
-    "actions/setup-node",
+    "zyplux/zyplux/setup-pm",
+    "./setup-pm",
 ]
 
 [source]

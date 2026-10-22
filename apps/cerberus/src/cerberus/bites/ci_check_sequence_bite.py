@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "ci_check_sequence"
-SUMMARY = "ci.yml runs the canonical check sequence per stack"
+SUMMARY = "ci.yml uses shared package-manager setup before the canonical check sequence"
 SCOPE = Scope.CONTENT
 
 _CI_PATHS = (".github/workflows/ci.yml", ".github/workflows/ci.yaml")
@@ -45,13 +45,13 @@ def _matches_step(command: tuple[str, ...], step: str) -> bool:
     return matches_tool_command(command, required)
 
 
-def _is_frozen_install(step: dict[str, Any]) -> bool:
-    inputs = step.get("with")
-    if step.get("uses") != "pnpm/setup@v3" or not isinstance(inputs, dict):
-        return False
-    return all(
-        setting is True or setting == "true"
-        for setting in (inputs.get("require-lockfile"), inputs.get("install", True))
+def _is_shared_setup(step: dict[str, Any]) -> bool:
+    uses = step.get("uses", "")
+    identity, _, ref = uses.partition("@") if isinstance(uses, str) else ("", "", "")
+    return (
+        (uses == "./setup-pm" or (identity == "zyplux/zyplux/setup-pm" and bool(ref)))
+        and step.get("if", True) is True
+        and step.get("continue-on-error", False) is False
     )
 
 
@@ -71,11 +71,11 @@ def _parse_shell_command(script: str) -> tuple[str, ...]:
     return list_command_args(statements[0])
 
 
-def _parse_step_command(step: dict[str, Any]) -> tuple[str, ...]:
-    if _is_frozen_install(step):
-        return ("pnpm", "install", "--frozen-lockfile")
+def _parse_step_commands(step: dict[str, Any]) -> list[tuple[str, ...]]:
+    if _is_shared_setup(step):
+        return [("pnpm", "install", "--frozen-lockfile"), ("uv", "sync", "--locked")]
     script = step.get("run")
-    return _parse_shell_command(script) if isinstance(script, str) else ()
+    return [_parse_shell_command(script)] if isinstance(script, str) else []
 
 
 def _verify_sequence(res: CheckResult, label: str, required: tuple[str, ...], commands: list[tuple[str, ...]]) -> None:
@@ -110,8 +110,13 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error("ci.yml is not valid YAML")
         return res
 
+    steps = workflow.job_steps(doc)
+    if not any(_is_shared_setup(step) for step in steps):
+        res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        return res
+
     cfg = ctx.config
-    commands = [_parse_step_command(step) for step in workflow.job_steps(doc)]
+    commands = [command for step in steps for command in _parse_step_commands(step)]
 
     if has_ts:
         _verify_sequence(

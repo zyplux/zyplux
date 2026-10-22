@@ -15,17 +15,7 @@ type RunWorkflowTooling = Callable[[dict[str, str]], CheckResult]
 
 CHECK_ID = "workflow_toolchain_only"
 
-_CLEAN_WORKFLOW = (
-    "jobs:\n"
-    "  ci:\n"
-    "    steps:\n"
-    "      - uses: actions/checkout@v6\n"
-    "      - uses: astral-sh/setup-uv@v8.2.0\n"
-    "      - uses: pnpm/setup@v3\n"
-    "      - uses: actions/setup-node@v5\n"
-    "      - run: uv sync --locked\n"
-    "      - run: pnpm install --frozen-lockfile\n"
-)
+_CLEAN_WORKFLOW = "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
 
 
 @pytest.fixture
@@ -42,16 +32,15 @@ def test_4_1_1_flags_a_github_action_that_sets_up_a_disallowed_tool(
 
     assert result.findings == [
         fail(
-            "ci.yml: unsupported toolchain setup `actions/setup-python@v5`; "
-            "allowed: actions/setup-node, astral-sh/setup-uv, pnpm/setup@v3"
+            "ci.yml: unsupported toolchain setup `actions/setup-python@v5`; allowed: ./setup-pm, zyplux/zyplux/setup-pm"
         )
     ]
 
 
 @pytest.mark.parametrize(
     "identity",
-    ["taiki-e/install-action", "someorg/action-setup", "someorg/setup"],
-    ids=["install-action", "action-setup", "setup"],
+    ["taiki-e/install-action", "someorg/action-setup", "someorg/setup", "someorg/monorepo/setup-tool"],
+    ids=["install-action", "action-setup", "setup", "nested-setup"],
 )
 def test_4_1_2_flags_a_github_action_recognized_by_the_install_action_naming_convention(
     run_workflow_tooling: RunWorkflowTooling, identity: str, fail: MakeFinding
@@ -61,15 +50,15 @@ def test_4_1_2_flags_a_github_action_recognized_by_the_install_action_naming_con
     result = run_workflow_tooling({"ci.yml": wf})
 
     assert result.findings == [
-        fail(
-            f"ci.yml: unsupported toolchain setup `{identity}@v1`; "
-            "allowed: actions/setup-node, astral-sh/setup-uv, pnpm/setup@v3"
-        )
+        fail(f"ci.yml: unsupported toolchain setup `{identity}@v1`; allowed: ./setup-pm, zyplux/zyplux/setup-pm")
     ]
 
 
-@pytest.mark.parametrize("action", ["pnpm/action-setup@v6", "pnpm/setup@v2", "pnpm/setup@main"])
-def test_4_1_6_requires_the_supported_pnpm_setup_action(
+@pytest.mark.parametrize(
+    "action",
+    ["pnpm/action-setup@v6", "pnpm/setup@v3", "astral-sh/setup-uv@v9.0.0", "actions/setup-node@v7"],
+)
+def test_4_1_6_requires_the_shared_package_manager_setup_action(
     run_workflow_tooling: RunWorkflowTooling, action: str, fail: MakeFinding
 ) -> None:
     wf = f"jobs:\n  ci:\n    steps:\n      - uses: {action}\n"
@@ -77,10 +66,7 @@ def test_4_1_6_requires_the_supported_pnpm_setup_action(
     result = run_workflow_tooling({"ci.yml": wf})
 
     assert result.findings == [
-        fail(
-            f"ci.yml: unsupported toolchain setup `{action}`; "
-            "allowed: actions/setup-node, astral-sh/setup-uv, pnpm/setup@v3"
-        )
+        fail(f"ci.yml: unsupported toolchain setup `{action}`; allowed: ./setup-pm, zyplux/zyplux/setup-pm")
     ]
 
 
@@ -121,6 +107,14 @@ def test_4_2_1_passes_when_workflows_only_set_up_the_workspace_toolchain(
 ) -> None:
     result = run_workflow_tooling({"ci.yml": _CLEAN_WORKFLOW})
 
+    assert result.findings == [ok("workflows install no extra tools")]
+
+
+@pytest.mark.parametrize("action", ["./setup-pm", "zyplux/zyplux/setup-pm@main"])
+def test_4_2_4_accepts_the_shared_package_manager_setup(
+    run_workflow_tooling: RunWorkflowTooling, ok: MakeFinding, action: str
+) -> None:
+    result = run_workflow_tooling({"ci.yml": f"jobs:\n  ci:\n    steps:\n      - uses: {action}\n"})
     assert result.findings == [ok("workflows install no extra tools")]
 
 
