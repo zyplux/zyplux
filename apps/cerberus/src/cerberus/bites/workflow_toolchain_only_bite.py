@@ -15,7 +15,7 @@ ID = "workflow_toolchain_only"
 SUMMARY = "workflows set up only the workspace toolchain (uv, pnpm), not extra tools"
 SCOPE = Scope.CONTENT
 
-_SETUP_ACTION = re.compile(r"^(setup-|action-setup$|.*-toolchain$)", re.IGNORECASE)
+_SETUP_ACTION = re.compile(r"^(setup(?:-|$)|action-setup$|.*-toolchain$)", re.IGNORECASE)
 
 _INSTALL_COMMANDS = (
     re.compile(r"\bapt(?:-get)?(?:\s+-{1,2}[\w=-]+)*\s+(?:install|add)\b", re.IGNORECASE),
@@ -46,8 +46,8 @@ def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckRe
     uses = step.get("uses")
     if isinstance(uses, str) and _is_setup_action(uses):
         identity = uses.split("@", 1)[0].strip()
-        if identity not in allowed:
-            res.fail(f"{name}: installs a tool via `{identity}`; the toolchain is uv + pnpm")
+        if identity not in allowed and uses not in allowed:
+            res.fail(f"{name}: unsupported toolchain setup `{uses}`; allowed: {', '.join(sorted(allowed))}")
 
     script = step.get("run")
     if isinstance(script, str):

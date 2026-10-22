@@ -4,6 +4,7 @@
 
 ### Patch Changes
 
+- Require pnpm/setup@v3 for pnpm setup and recognize its frozen installs in the CI check sequence.
 - Run duplication checks with jscpd 5.4.2.
 
 ## 0.23.1

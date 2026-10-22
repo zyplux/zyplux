@@ -320,3 +320,57 @@ def test_8_5_6_rejects_pyrefly_warning_threshold_overrides(
     result = run_ci_sequence(python=True, ci=_PY_CI.replace("pyrefly check", f"pyrefly check {option}"))
 
     assert result.findings == [fail("python ci is missing `pyrefly check`")]
+
+
+@pytest.mark.parametrize("enabled", ["true", "'true'"])
+def test_8_7_1_accepts_a_frozen_install_from_pnpm_setup(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding, enabled: str
+) -> None:
+    setup = f"      - uses: pnpm/setup@v3\n        with: {{require-lockfile: {enabled}}}\n"
+    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", setup)
+
+    result = run_ci_sequence(ts=True, ci=ci)
+
+    assert result.findings == [sequence_pass]
+
+
+@pytest.mark.parametrize(
+    ("action", "inputs"),
+    [
+        ("pnpm/setup@v3", "{}"),
+        ("pnpm/setup@v3", "{require-lockfile: false}"),
+        ("pnpm/setup@v3", "{require-lockfile: true, install: false}"),
+        ("pnpm/setup@v3", "{require-lockfile: true, install: 'false'}"),
+        ("pnpm/setup@v3", "{require-lockfile: '${{ inputs.frozen }}'}"),
+        ("pnpm/setup@v3", "{require-lockfile: true, install: '${{ inputs.install }}'}"),
+        ("pnpm/setup@v3", "{require-lockfile: 1}"),
+        ("pnpm/setup@v3", "false"),
+        ("pnpm/setup@v2", "{require-lockfile: true}"),
+        ("other/setup@v3", "{require-lockfile: true}"),
+    ],
+)
+def test_8_7_2_rejects_setup_actions_without_a_guaranteed_frozen_install(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding, action: str, inputs: str
+) -> None:
+    setup = f"      - uses: {action}\n        with: {inputs}\n"
+    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", setup)
+
+    result = run_ci_sequence(ts=True, ci=ci)
+
+    assert result.findings == [fail("ts ci is missing `pnpm install --frozen-lockfile`")]
+
+
+def test_8_7_3_requires_the_setup_install_before_quality_checks(
+    run_ci_sequence: RunCiSequence, fail: MakeFinding
+) -> None:
+    ci = _TS_CI.replace("      - run: pnpm install --frozen-lockfile\n", "")
+    ci += "      - uses: pnpm/setup@v3\n        with: {require-lockfile: true}\n"
+
+    result = run_ci_sequence(ts=True, ci=ci)
+
+    assert result.findings == [
+        fail(
+            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
+            "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']"
+        )
+    ]
