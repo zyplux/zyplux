@@ -90,12 +90,8 @@ const isNpmPublished = async (directory: string, label: string, version: string)
   }
   const packageUrl = `${registry}/${encodeURIComponent(label)}`;
   return isRegistryPublished(async () => {
-    if (registry === 'https://npm.pkg.github.com') {
-      const { versions } = await http.get(packageUrl, { headers }).json(NpmVersionsSchema);
-      return Object.hasOwn(versions, version);
-    }
-    await http.get(`${packageUrl}/${version}`, { headers }).response();
-    return true;
+    const { versions } = await http.get(packageUrl, { headers }).json(NpmVersionsSchema);
+    return Object.hasOwn(versions, version);
   });
 };
 

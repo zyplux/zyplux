@@ -166,14 +166,19 @@ describe('8.3 publishing a private GitHub npm package', () => {
     expect(network.requests).toEqual([]);
   });
 
-  test.for(['https://registry.npmjs.org', 'https://npm.pkg.github.com'])(
-    '8.3.3 rejects registry failures without attempting publication (%s)',
-    async (registry, { cz, env, network, npmTarget, shell }) => {
+  test.for([
+    { registry: 'https://registry.npmjs.org', status: 403 },
+    { registry: 'https://registry.npmjs.org', status: 502 },
+    { registry: 'https://npm.pkg.github.com', status: 403 },
+    { registry: 'https://npm.pkg.github.com', status: 502 },
+  ])(
+    '8.3.3 rejects registry failures without attempting publication (%j)',
+    async ({ registry, status }, { cz, env, network, npmTarget, shell }) => {
       await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
-      network.on(registry, () => new Response(undefined, { status: 403 }));
+      network.on(registry, () => new Response(undefined, { status }));
 
-      await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('failed: 403');
+      await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(`failed: ${status}`);
       expect(shell).not.toHaveRunMatching(/pnpm pack|npm publish/);
     },
   );
@@ -190,7 +195,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
   });
 
   test.for([
-    { packageUrl: 'https://registry.npmjs.org/%40zyplux%2Futil/1.2.3', registry: 'https://registry.npmjs.org/' },
+    { packageUrl: 'https://registry.npmjs.org/%40zyplux%2Futil', registry: 'https://registry.npmjs.org/' },
     { packageUrl: 'https://npm.pkg.github.com/%40zyplux%2Futil', registry: 'https://npm.pkg.github.com/' },
   ])(
     '8.3.5 accepts supported registry URLs with a trailing slash (%j)',
@@ -226,21 +231,27 @@ describe('8.3 publishing a private GitHub npm package', () => {
   );
 
   test.for([
-    { isPublished: false, versions: { '1.2.2': {} } },
-    { isPublished: true, versions: { '1.2.2': {}, '1.2.3': {} } },
+    { isPublished: false, registry: 'https://registry.npmjs.org', versions: { '1.2.2': {} } },
+    { isPublished: true, registry: 'https://registry.npmjs.org', versions: { '1.2.2': {}, '1.2.3': {} } },
+    { isPublished: false, registry: 'https://npm.pkg.github.com', versions: { '1.2.2': {} } },
+    { isPublished: true, registry: 'https://npm.pkg.github.com', versions: { '1.2.2': {}, '1.2.3': {} } },
   ])(
-    '8.3.7 checks the requested version in GitHub package metadata (%j)',
+    '8.3.7 checks the requested version in registry package metadata (%j)',
     async (
-      { isPublished, versions },
+      { isPublished, registry, versions },
       { cz, env, expectNpmPackAndPublish, logs, network, npmTarget, shell, targets },
     ) => {
-      await npmTarget.setPublishConfig({ registry: 'https://npm.pkg.github.com' });
+      await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
-      network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 405 }));
-      network.on(/^https:\/\/npm\.pkg\.github\.com\/%40zyplux%2Futil$/u, () => Response.json({ versions }));
+      network.on(registry, () => new Response(undefined, { status: 502 }));
+      network.on(/^https:\/\/(?:registry\.npmjs\.org|npm\.pkg\.github\.com)\/%40zyplux%2Futil$/u, () =>
+        Response.json({ versions }),
+      );
       npmTarget.stagePublish();
 
       await cz.run('publish-tagged-target', 'util-v1.2.3');
+
+      expect(network.requests).toEqual([`${registry}/%40zyplux%2Futil`]);
 
       if (isPublished) {
         expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');

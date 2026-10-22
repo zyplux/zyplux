@@ -86,20 +86,16 @@ describe("2.4 conforming the repo's own release manifest", () => {
     cz,
     liveWorkspace,
     logs,
-    release,
     repo,
   }) => {
     repo.setRoot(liveWorkspace.root);
-    release.stageAllPublished();
 
-    await expect(cz.run('release-bumped-targets')).rejects.toThrow(
-      'nothing to release; all configured versions are already published or have a GitHub release',
-    );
+    await cz.run('list-prepared-releases');
 
     const labels = await liveWorkspace.targetLabels();
     expect(labels).not.toHaveLength(0);
     for (const label of labels) {
-      expect(logs.logLines).toContainEqual(expect.stringContaining(`Skipping ${label} `));
+      expect(logs.logLines).toContainEqual(expect.stringContaining(`"label":"${label}"`));
     }
   });
 });

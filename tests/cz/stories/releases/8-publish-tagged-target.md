@@ -33,7 +33,7 @@
 
 ### 8.3.6 prefers the package scope’s registry setting
 
-### 8.3.7 checks the requested version in GitHub package metadata
+### 8.3.7 checks the requested version in registry package metadata
 
 ### 8.3.8 rejects malformed package metadata without attempting publication
 
