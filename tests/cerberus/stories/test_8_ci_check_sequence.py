@@ -397,15 +397,16 @@ def test_8_7_5_requires_setup_and_checks_in_the_unconditional_ci_job(
         _TS_CI.replace("      - uses: actions/checkout@v7\n", ""),
         _TS_CI.replace("uses: actions/checkout@v7", "uses: actions/checkout@v7\n        if: false"),
         _TS_CI.replace("actions/checkout@v7", "actions/checkout@"),
+        _TS_CI.replace("uses: actions/checkout@v7", "uses: actions/checkout@v7\n        with: {path: source}"),
         _TS_CI.replace("      - uses: actions/checkout@v7\n", "") + "      - uses: actions/checkout@v7\n",
     ],
 )
-def test_8_7_6_requires_checkout_before_shared_setup(
+def test_8_7_6_requires_root_checkout_before_shared_setup(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, ci: str
 ) -> None:
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [
-        fail("ci job must check out the repository with actions/checkout@<ref> before shared setup")
+        fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")
     ]
 
 
@@ -413,4 +414,12 @@ def test_8_7_7_accepts_a_ci_display_name_on_another_job_id(
     run_ci_sequence: RunCiSequence, sequence_pass: Finding
 ) -> None:
     ci = _TS_CI.replace("  ci:\n", "  checks:\n    name: ci\n")
+    assert run_ci_sequence(ts=True, ci=ci).findings == [sequence_pass]
+
+
+@pytest.mark.parametrize("path", ["", ".", "./"])
+def test_8_7_8_accepts_explicit_root_checkout_paths(
+    run_ci_sequence: RunCiSequence, sequence_pass: Finding, path: str
+) -> None:
+    ci = _TS_CI.replace("uses: actions/checkout@v7", f"uses: actions/checkout@v7\n        with: {{path: '{path}'}}")
     assert run_ci_sequence(ts=True, ci=ci).findings == [sequence_pass]

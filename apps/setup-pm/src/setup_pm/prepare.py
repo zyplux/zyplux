@@ -21,7 +21,7 @@ def load_node_versions(workspace: Path) -> tuple[str, str]:
     if not isinstance(manager, str) or not manager.startswith("pnpm@"):
         message = "package.json must declare packageManager: pnpm@<version>"
         raise ValueError(message)
-    pnpm_version = validate_version(manager.removeprefix("pnpm@").split("+", 1)[0], "packageManager")
+    pnpm_version = validate_version(manager.removeprefix("pnpm@"), "packageManager")
     runtime = manifest["devEngines"]["runtime"]
     if runtime["name"] != "node":
         message = "devEngines.runtime must declare Node.js"

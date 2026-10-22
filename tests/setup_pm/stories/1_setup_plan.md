@@ -14,8 +14,8 @@
 
 ### 1.2.4 requires a node runtime
 
+### 1.2.5 rejects package manager integrity suffixes
+
 ## 1.3 GitHub Actions integration
 
-### 1.3.1 accepts package manager integrity suffixes
-
-### 1.3.2 writes github action outputs
+### 1.3.1 writes github action outputs

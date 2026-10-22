@@ -63,14 +63,15 @@ def test_1_2_4_requires_a_node_runtime(workspace: Path) -> None:
         prepare.load_node_versions(workspace)
 
 
-def test_1_3_1_accepts_package_manager_integrity_suffixes(workspace: Path) -> None:
+def test_1_2_5_rejects_package_manager_integrity_suffixes(workspace: Path) -> None:
     manifest = json.loads((workspace / "package.json").read_text())
     manifest["packageManager"] += "+sha512.integrity"
     (workspace / "package.json").write_text(json.dumps(manifest))
-    assert prepare.load_node_versions(workspace) == ("12.14.0", "26.12.1")
+    with pytest.raises(ValueError, match="must pin an exact stable version"):
+        prepare.load_node_versions(workspace)
 
 
-def test_1_3_2_writes_github_action_outputs(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_1_3_1_writes_github_action_outputs(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     action_output = workspace / "action-output"
     monkeypatch.setenv("GITHUB_WORKSPACE", str(workspace))
     monkeypatch.setenv("GITHUB_OUTPUT", str(action_output))

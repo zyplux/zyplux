@@ -65,19 +65,27 @@ def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:
     )
 
 
+def _is_root_checkout(step: dict[str, Any]) -> bool:
+    uses = step.get("uses", "")
+    inputs = step.get("with", {})
+    return (
+        isinstance(uses, str)
+        and uses.startswith("actions/checkout@")
+        and bool(uses.partition("@")[2])
+        and _is_required(step)
+        and isinstance(inputs, dict)
+        and isinstance(path := inputs.get("path", ""), str)
+        and path in {"", ".", "./"}
+    )
+
+
 def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> bool:
     setup_index = next((index for index, step in enumerate(steps) if _is_shared_setup(step)), None)
     if setup_index is None:
         res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
         return False
-    if not any(
-        isinstance(uses := step.get("uses"), str)
-        and uses.startswith("actions/checkout@")
-        and bool(uses.partition("@")[2])
-        and _is_required(step)
-        for step in steps[:setup_index]
-    ):
-        res.fail("ci job must check out the repository with actions/checkout@<ref> before shared setup")
+    if not any(_is_root_checkout(step) for step in steps[:setup_index]):
+        res.fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")
         return False
     return True
 

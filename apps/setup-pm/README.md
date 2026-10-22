@@ -9,7 +9,7 @@ The [shared action](../../setup-pm/action.yml) prepares pnpm and uv workspaces o
 
 Pin a reviewed commit SHA for a fixed action version. Zyplux uses `./setup-pm` to test the action from each PR.
 
-The action requires root `package.json`, `pyproject.toml`, `pnpm-lock.yaml` and `uv.lock` files. pnpm requires an exact `packageManager` pin and an exact Node.js version in `devEngines.runtime`. uv defaults to `0.13.4`, configurable through `uv-version`, and selects Python through the repository's `.python-version` or project requirements.
+The action requires root `package.json`, `pyproject.toml`, `pnpm-lock.yaml` and `uv.lock` files. pnpm requires a plain `pnpm@<version>` pin in `packageManager` and an exact Node.js version in `devEngines.runtime`. uv defaults to `0.13.4`, configurable through `uv-version`, and selects Python through the repository's `.python-version` or project requirements.
 
 Executables are cached by version, operating system and architecture independently of dependency lockfiles. Node.js and uv use their upstream setup actions. A cold pnpm install uses npm once with strict install-script approval limited to the exact pinned pnpm package; warm runs restore it without contacting the npm registry. pnpm's store and metadata cache share a lockfile key with a version-specific fallback. uv hashes the exact root lockfile and Python version file. GitHub scopes caches to the consuming repository and permitted branches.
 

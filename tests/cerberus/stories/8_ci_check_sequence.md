@@ -62,6 +62,8 @@
 
 ### 8.7.5 requires setup and checks in the unconditional ci job
 
-### 8.7.6 requires checkout before shared setup
+### 8.7.6 requires root checkout before shared setup
 
 ### 8.7.7 accepts a ci display name on another job id
+
+### 8.7.8 accepts explicit root checkout paths
