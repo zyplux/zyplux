@@ -55,3 +55,31 @@ def test_2_2_1_skips_stale_successful_ci_commits(checkout: Path) -> None:
     run_git("checkout", "--detach", first_commit)
     runpy.run_path(publish.__file__, run_name="__main__")
     assert run_git("ls-remote", "--refs", "origin", "refs/tags/v1").split()[0] == latest_commit
+
+
+@pytest.mark.usefixtures("checkout")
+@pytest.mark.parametrize("has_newer_publication", [False, True])
+def test_2_2_2_preserves_validated_releases_when_main_changes_during_publication(
+    monkeypatch: pytest.MonkeyPatch, *, has_newer_publication: bool
+) -> None:
+    first_commit = run_git("rev-parse", "HEAD")
+    next_commit = run_git("commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "Next main commit")
+    publish_git = publish.run_git
+
+    def advance_main(*args: str) -> str:
+        stdout = publish_git(*args)
+        if args == ("rev-parse", "FETCH_HEAD"):
+            refs = [f"{next_commit}:refs/heads/main"]
+            if has_newer_publication:
+                refs.append(f"{next_commit}:refs/tags/v1")
+            run_git("push", "origin", *refs)
+        return stdout
+
+    monkeypatch.setattr(publish, "run_git", advance_main)
+    if has_newer_publication:
+        with pytest.raises(subprocess.CalledProcessError):
+            publish.main()
+    else:
+        publish.main()
+    tag_commit = run_git("ls-remote", "--refs", "origin", "refs/tags/v1").split()[0]
+    assert tag_commit == (next_commit if has_newer_publication else first_commit)
