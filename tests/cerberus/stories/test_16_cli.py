@@ -472,7 +472,11 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
     (conforming_repo / ".github/workflows/ci.yml").write_text(
         CONFORMING_CI.replace(
             "      - run: echo ci",
-            ("      - uses: zyplux/zyplux/setup-pm@main\n      - run: uv run --no-sync rumdl check"),
+            (
+                "      - uses: actions/checkout@v7\n"
+                "      - uses: zyplux/zyplux/setup-pm@main\n"
+                "      - run: uv run --no-sync rumdl check"
+            ),
         )
     )
     result = invoke_lint()

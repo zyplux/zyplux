@@ -35,7 +35,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
-        key: setup-pm-pnpm-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}
+        key: setup-pm-pnpm-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}
     - name: Install pnpm executable
       if: steps.pnpm-cache.outputs.cache-hit != 'true'
       shell: bash

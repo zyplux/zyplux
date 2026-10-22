@@ -59,3 +59,9 @@
 ### 8.7.3 requires shared setup before quality checks
 
 ### 8.7.4 requires unconditional successful setup
+
+### 8.7.5 requires setup and checks in the unconditional ci job
+
+### 8.7.6 requires checkout before shared setup
+
+### 8.7.7 accepts a ci display name on another job id

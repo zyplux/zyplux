@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Require the shared setup-pm action for locked pnpm and uv installs before CI checks, and reject standalone toolchain setup actions in workflows.
+- Require checkout and the shared setup-pm action before checks in the unconditional CI job, and reject standalone toolchain setup actions in workflows.
 
 ## 0.23.2
 

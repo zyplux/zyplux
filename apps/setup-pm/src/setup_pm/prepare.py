@@ -47,6 +47,11 @@ def main() -> None:
         Path(os.environ["GITHUB_WORKSPACE"]),
         uv_version=os.environ["UV_VERSION"],
     )
+    pnpm_prefix = Path(os.environ["RUNNER_TOOL_CACHE"]) / "zyplux-pnpm" / plan["pnpm-version"]
+    pnpm_prefix.mkdir(parents=True, exist_ok=True)
+    (pnpm_prefix / "package.json").write_text(
+        json.dumps({"private": True, "allowScripts": {f"pnpm@{plan['pnpm-version']}": True}}), encoding="utf-8"
+    )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         stream.writelines(f"{name}={version}\n" for name, version in plan.items())
 

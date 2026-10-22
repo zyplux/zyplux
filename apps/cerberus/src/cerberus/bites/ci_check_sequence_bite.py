@@ -45,14 +45,41 @@ def _matches_step(command: tuple[str, ...], step: str) -> bool:
     return matches_tool_command(command, required)
 
 
+def _is_required(step: dict[str, Any]) -> bool:
+    return step.get("if", True) is True and step.get("continue-on-error", False) is False
+
+
 def _is_shared_setup(step: dict[str, Any]) -> bool:
     uses = step.get("uses", "")
     identity, _, ref = uses.partition("@") if isinstance(uses, str) else ("", "", "")
-    return (
-        (uses == "./setup-pm" or (identity == "zyplux/zyplux/setup-pm" and bool(ref)))
-        and step.get("if", True) is True
-        and step.get("continue-on-error", False) is False
+    return (uses == "./setup-pm" or (identity == "zyplux/zyplux/setup-pm" and bool(ref))) and _is_required(step)
+
+
+def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:
+    jobs = doc.get("jobs")
+    if not isinstance(jobs, dict):
+        return None
+    return next(
+        (job for name, job in jobs.items() if isinstance(job, dict) and (name == "ci" or job.get("name") == "ci")),
+        None,
     )
+
+
+def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> bool:
+    setup_index = next((index for index, step in enumerate(steps) if _is_shared_setup(step)), None)
+    if setup_index is None:
+        res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        return False
+    if not any(
+        isinstance(uses := step.get("uses"), str)
+        and uses.startswith("actions/checkout@")
+        and bool(uses.partition("@")[2])
+        and _is_required(step)
+        for step in steps[:setup_index]
+    ):
+        res.fail("ci job must check out the repository with actions/checkout@<ref> before shared setup")
+        return False
+    return True
 
 
 def _parse_shell_command(script: str) -> tuple[str, ...]:
@@ -110,9 +137,12 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         res.error("ci.yml is not valid YAML")
         return res
 
-    steps = workflow.job_steps(doc)
-    if not any(_is_shared_setup(step) for step in steps):
-        res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+    job = _find_ci_job(doc)
+    if job is None or not _is_required(job):
+        res.fail("ci.yml must run an unconditional ci job")
+        return res
+    steps = workflow.job_steps({"jobs": {"ci": job}})
+    if not _validate_setup(steps, res):
         return res
 
     cfg = ctx.config
