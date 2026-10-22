@@ -39,7 +39,7 @@ export const expectNpmPackAndPublish = async ({ calls }: ShellFake, dir: string)
   const archive = calls.find(call => call.program === 'pnpm' && call.argv[0] === 'pack')?.argv.at(-1);
   ensure(archive !== undefined, 'npm publication must pack an archive');
   expect(calls).toContainEqual({ argv: ['pack', '--out', archive], cwd: dir, program: 'pnpm' });
-  expect(vi.mocked(spawn)).toHaveBeenCalledWith('npm', ['publish', archive], {
+  expect(vi.mocked(spawn)).toHaveBeenCalledWith('pnpm', ['publish', archive], {
     cwd: dir,
     stdio: 'inherit',
   });

@@ -21,7 +21,7 @@
 
 ## 8.3 publishing a private GitHub npm package
 
-### 8.3.1 authenticates the configured registry and lets npm apply publishConfig
+### 8.3.1 authenticates the configured registry and lets pnpm apply publishConfig
 
 ### 8.3.2 rejects missing credentials before checking a private registry
 

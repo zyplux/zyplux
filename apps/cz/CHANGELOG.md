@@ -4,6 +4,8 @@
 
 ### Minor Changes
 
+- Publish npm artifacts with pnpm’s native publisher so trusted publishing uses the pinned toolchain.
+
 - Prepare reviewed changelogs with Changesets and publish each target's notes on its GitHub release. Share release preparation, validation and JSON metadata through CZ, including Python version synchronization.
 
 ### Patch Changes
