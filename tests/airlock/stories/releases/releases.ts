@@ -16,6 +16,7 @@ import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } fro
 
 import { createActionRelease } from './action-release.ts';
 import { createContainerPublication } from './container-publication.ts';
+import { createBundledConsumer, createDependencyWorkspace } from './npm-dependencies.ts';
 import { createNotesCapture, expectGithubRelease, expectNpmPublish, expectPypiPublish } from './publish-assertions.ts';
 import { createPreparation } from './release-preparation.ts';
 import {
@@ -27,12 +28,20 @@ import {
 } from './release-scenario.ts';
 import { extendSurfaceChecks } from './surface-check.ts';
 
+const DIGEST_HEX_LENGTH = 64;
+
 const releaseTest = repositoryTest
   .extend('airlock', () => createCliRunner(runAirlock))
   .extend<{
     actionRelease: ActionRelease;
     configureTarget: (kind: string, fields: string) => Promise<void>;
-    containerRelease: { batch: ReleaseBatch; readManifest: () => string };
+    consumer: SeededTargets['util'];
+    containerRelease: {
+      batch: ReleaseBatch;
+      readManifest: () => string;
+      setDigest: (digest: string) => void;
+      setImagePublished: (isPublished: boolean) => void;
+    };
     expectGithubRelease: typeof expectGithubRelease;
     expectNpmPublish: typeof expectNpmPublish;
     expectPypiPublish: typeof expectPypiPublish;
@@ -45,7 +54,6 @@ const releaseTest = repositoryTest
     prepareWorkspace: () => Promise<void>;
     registries: Registries;
     release: Release;
-    releaseAssetPath: string;
     releaseNotes: ReturnType<typeof createNotesCapture>;
     targets: SeededTargets;
   }>({
@@ -55,16 +63,15 @@ const releaseTest = repositoryTest
     configureTarget: async ({ targets }, use) => {
       await use(targets.configureTarget);
     },
-    containerRelease: async ({ configureTarget, env, planReleases, registries, repo, shell }, use) => {
-      await configureTarget(
-        'ghcr',
-        'artifact_command = ["uv", "run", "--no-sync", "python", "-m", "vps_deployment.build_release"]\nassets = ["release.json"]',
-      );
+    consumer: async ({ loadArtifact, shell, targets, tempDir }, use) => {
+      await use(await createDependencyWorkspace({ loadArtifact, shell, targets, tempDir }));
+    },
+    containerRelease: async ({ env, planReleases, registries, repo, shell, targets }, use) => {
       env.set('GH_TOKEN', 'package-token');
       env.set('GITHUB_ACTOR', 'publisher');
       repo.setHeadSha('reviewed-sha');
       registries.setPublished({});
-      const [batch] = await planReleases('ci-image-v3.4.5');
+      const [batch] = await planReleases(targets.ci.tag);
       ensure(batch !== undefined, 'container batch must be planned');
       await use({ batch, ...createContainerPublication(shell, registries) });
     },
@@ -105,9 +112,6 @@ const releaseTest = repositoryTest
     release: async ({ registries, repo, shell }, use) => {
       await use(createRelease(repo, registries, shell));
     },
-    releaseAssetPath: async ({ tempDir }, use) => {
-      await use(path.join(tempDir.path, 'release.json'));
-    },
     releaseNotes: async ({ shell }, use) => {
       await use(createNotesCapture(shell));
     },
@@ -115,6 +119,21 @@ const releaseTest = repositoryTest
       async ({ repo, shell, tempDir }, use) => {
         repo.setRoot(tempDir.path);
         const targets = await seedReleaseTargets(tempDir);
+        shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+        shell.on(
+          'gh release download',
+          JSON.stringify({
+            image: `${targets.ci.label}@sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`,
+            version: targets.ci.version,
+          }),
+        );
+        shell.on('pnpm pack', '');
+        shell.on('tar -xOf', () => {
+          const archive = shell.calls.at(-1)?.argv[1];
+          const packed = shell.calls.findLast(call => call.program === 'pnpm' && call.argv.includes(archive ?? ''));
+          ensure(packed?.cwd !== undefined, 'packed package directory must be supplied');
+          return readFileSync(path.join(packed.cwd, 'package.json'), 'utf8');
+        });
         shell.on('pnpm list', () => {
           const manifest = readFileSync(path.join(targets.util.dir, 'package.json'), 'utf8');
           return JSON.stringify([
@@ -129,7 +148,18 @@ const releaseTest = repositoryTest
       },
       { auto: true },
     ],
-  });
+  })
+  .extend('stageNpmPublication', ({ registries, shell }) => (beforePublish?: () => void) => {
+    shell.on('pnpm publish', () => {
+      beforePublish?.();
+      registries.setPublished({ npmPublished: true });
+      return '';
+    });
+    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+  })
+  .extend('bundledConsumer', async ({ loadArtifact, shell, targets, tempDir }) =>
+    createBundledConsumer({ loadArtifact, shell, targets, tempDir }),
+  );
 export type ReleaseTest = typeof releaseTest;
 export const test = extendSurfaceChecks(releaseTest);
 export { describe, expect } from 'vitest';

@@ -14,12 +14,10 @@ const TargetBaseSchema = z.object({
 
 export const TargetSchema = z.discriminatedUnion('kind', [
   TargetBaseSchema.extend({ kind: z.enum(['npm', 'pypi']) }),
-  TargetBaseSchema.extend({
-    artifact_command: z
-      .tuple([z.string().min(1)])
-      .rest(z.string())
-      .optional(),
-    assets: z.array(z.string().min(1)).default([]),
+  z.strictObject({
+    ...TargetBaseSchema.shape,
+    build_context: z.string().min(1).optional(),
+    dockerfile: z.string().min(1).optional(),
     kind: z.literal('ghcr'),
   }),
   TargetBaseSchema.extend({
@@ -55,8 +53,21 @@ export const ManifestSchema = z
 export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 export const PythonReleaseSchema = z.object({ name: z.string(), private: z.literal(true), version: z.string() });
-export const NpmPackageSchema = z.object({ publishConfig: z.record(z.string(), z.unknown()).default({}) });
+const BundledDependenciesSchema = z.union([z.boolean(), z.array(z.string())]);
+export const NpmPackageSchema = z.object({
+  bundledDependencies: BundledDependenciesSchema.optional(),
+  bundleDependencies: BundledDependenciesSchema.optional(),
+  dependencies: z.record(z.string(), z.string()).default({}),
+  optionalDependencies: z.record(z.string(), z.string()).default({}),
+  publishConfig: z.record(z.string(), z.unknown()).default({}),
+  scripts: z.record(z.string(), z.string()).default({}),
+});
+export const NpmArchiveSchema = NpmPackageSchema.extend({ name: z.string(), version: z.string() });
 export const NpmVersionsSchema = z.object({ versions: z.record(z.string(), z.unknown()) });
+export const NpmArtifactSchema = z.object({ dist: z.object({ tarball: z.url() }) });
+export const WorkspacePackagesSchema = z.array(
+  z.object({ name: z.string().optional(), path: z.string(), private: z.boolean(), version: z.string().optional() }),
+);
 export const PypiFilesSchema = z.object({ urls: z.array(z.object({ packagetype: z.string() })) });
 export const RegistryUrlSchema = z
   .url()
@@ -65,6 +76,11 @@ export const RegistryUrlSchema = z
   .default('https://registry.npmjs.org');
 export const GhcrTokenSchema = z.object({ token: z.string() });
 export const GhcrTagsSchema = z.object({ tags: z.array(z.string()).nullable() });
+export const ContainerDigestSchema = z
+  .string()
+  .trim()
+  .regex(/^sha256:[\da-f]{64}$/u);
+export const ContainerManifestSchema = z.object({ image: z.string(), version: z.string() });
 export const NpmLatestSchema = z.object({ 'dist-tags': z.object({ latest: z.string() }) });
 export const PypiLatestSchema = z.object({ info: z.object({ version: z.string() }) });
 export const SurfaceFindingsSchema = z

@@ -12,8 +12,7 @@ import { isPackagePublished, loadNpmRegistry } from './release-registries.ts';
 
 export type ReleaseTarget = {
   action: ActionTarget | undefined;
-  artifactCommand: [string, ...string[]] | undefined;
-  assets: string[];
+  container: undefined | { buildContext: string; dockerfile: string | undefined };
   dir: string;
   environment: string;
   isPublished: () => Promise<boolean>;
@@ -56,6 +55,15 @@ export const loadRegistryArgs = async (targets: ReleaseTarget[]) => {
   return Array.from(registries, ([key, registry]) => `--config.${key}=${registry}`);
 };
 
+const resolveBuildPath = (root: string, relative: string) => {
+  const resolved = path.resolve(root, relative);
+  ensure(
+    !path.isAbsolute(relative) && (resolved === root || resolved.startsWith(`${root}${path.sep}`)),
+    `container build paths must be repository-relative: ${relative}`,
+  );
+  return resolved;
+};
+
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const repoRoot = await readTrimmed($.git.showToplevel());
   const targets = await loadReleaseSpecs(repoRoot);
@@ -65,8 +73,13 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
       const version = parseTargetVersion(await readFile(path.join(repoRoot, spec.version.file), 'utf8'), spec.version);
       return {
         action: spec.kind === 'action' ? spec : undefined,
-        artifactCommand: spec.kind === 'ghcr' ? spec.artifact_command : undefined,
-        assets: spec.kind === 'ghcr' ? spec.assets : [],
+        container:
+          spec.kind === 'ghcr'
+            ? {
+                buildContext: resolveBuildPath(repoRoot, spec.build_context ?? path.dirname(spec.version.file)),
+                dockerfile: spec.dockerfile === undefined ? undefined : resolveBuildPath(repoRoot, spec.dockerfile),
+              }
+            : undefined,
         dir,
         environment: spec.environment ?? (spec.kind === 'action' ? 'actions' : spec.kind),
         isPublished: async () => isPackagePublished(spec, version, dir),

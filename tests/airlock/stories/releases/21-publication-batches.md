@@ -2,7 +2,7 @@
 
 ## 21.1 planning isolated publication batches
 
-### 21.1.1 separates publication kinds and groups npm packages
+### 21.1.1 plans one job per release target
 
 ### 21.1.2 honors target environments
 

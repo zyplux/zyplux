@@ -6,11 +6,13 @@ import path from 'node:path';
 import { rcompare, valid } from 'semver';
 
 import type { Target } from './contracts.ts';
+import type { ReleaseTarget } from './release-targets.ts';
 
 import { fetchActionReleases, isActionPublished } from './action-releases.ts';
 import {
   GhcrTagsSchema,
   GhcrTokenSchema,
+  NpmArtifactSchema,
   NpmLatestSchema,
   NpmPackageSchema,
   NpmVersionsSchema,
@@ -27,6 +29,11 @@ const MANIFEST_MEDIA_TYPES = [
 ].join(', ');
 
 const HTTP_NOT_FOUND = 404;
+const HTTP_OK = 200;
+const HTTP_REQUEST_TIMEOUT = 408;
+const HTTP_TOO_MANY_REQUESTS = 429;
+const HTTP_SERVER_ERROR = 500;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 const findRegistryEntry = async <Entry>(fetchEntry: () => Promise<Entry>) => {
   try {
@@ -64,8 +71,55 @@ const loadNpmRequest = async (directory: string, label: string) => {
     ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
     headers['Authorization'] = `Bearer ${token}`;
   }
-  return http.get(`${registry}/${encodeURIComponent(label)}`, { headers });
+  return { headers, url: `${registry}/${encodeURIComponent(label)}` };
 };
+
+export const isNpmVersionAvailable = async ({
+  dir,
+  label,
+  version,
+}: Pick<ReleaseTarget, 'dir' | 'label' | 'version'>) => {
+  try {
+    const { headers, url } = await loadNpmRequest(dir, label);
+    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const { versions } = await http.get(url, { headers, signal }).json(NpmVersionsSchema);
+    const entry = versions[version];
+    if (entry === undefined) return false;
+    const { dist } = NpmArtifactSchema.parse(entry);
+    const response = await http
+      .head(dist.tarball, {
+        headers: new URL(dist.tarball).origin === new URL(url).origin ? headers : {},
+        signal,
+      })
+      .response();
+    return response.status === HTTP_OK;
+  } catch (error) {
+    if (error instanceof FetchError) {
+      const { status } = error.response;
+      if (
+        status === HTTP_NOT_FOUND ||
+        status === HTTP_REQUEST_TIMEOUT ||
+        status === HTTP_TOO_MANY_REQUESTS ||
+        status >= HTTP_SERVER_ERROR
+      )
+        return false;
+    }
+    if (error instanceof DOMException && error.name === 'TimeoutError') return false;
+    throw error;
+  }
+};
+
+export const isContainerImageAvailable = async (label: string, reference: string) =>
+  (await findRegistryEntry(async () => {
+    const image = label.replace(/^ghcr\.io\//u, '');
+    const { token } = await fetchGhcrToken(image);
+    await http
+      .head(`https://ghcr.io/v2/${image}/manifests/${reference}`, {
+        headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${token}` },
+      })
+      .response();
+    return true;
+  })) ?? false;
 
 export const isPackagePublished = async (target: Target, version: string, directory: string) => {
   if (target.kind === 'action') return isActionPublished(target, version);
@@ -73,22 +127,15 @@ export const isPackagePublished = async (target: Target, version: string, direct
     (await findRegistryEntry(async () => {
       const { kind, label } = target;
       if (kind === 'npm') {
-        const request = await loadNpmRequest(directory, label);
-        const { versions } = await request.json(NpmVersionsSchema);
+        const { headers, url } = await loadNpmRequest(directory, label);
+        const { versions } = await http.get(url, { headers }).json(NpmVersionsSchema);
         return Object.hasOwn(versions, version);
       }
       if (kind === 'pypi') {
         const { urls } = await http.get(`https://pypi.org/pypi/${label}/${version}/json`).json(PypiFilesSchema);
         return ['bdist_wheel', 'sdist'].every(kind => urls.some(file => file.packagetype === kind));
       }
-      const image = label.replace(/^ghcr\.io\//u, '');
-      const { token } = await fetchGhcrToken(image);
-      await http
-        .head(`https://ghcr.io/v2/${image}/manifests/${version}`, {
-          headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${token}` },
-        })
-        .response();
-      return true;
+      return isContainerImageAvailable(label, version);
     })) ?? false
   );
 };
@@ -101,8 +148,8 @@ export const fetchLatestVersion = async (target: Target, directory: string) =>
     }
     const { kind, label } = target;
     if (kind === 'npm') {
-      const request = await loadNpmRequest(directory, label);
-      const metadata = await request.json(NpmLatestSchema);
+      const { headers, url } = await loadNpmRequest(directory, label);
+      const metadata = await http.get(url, { headers }).json(NpmLatestSchema);
       return metadata['dist-tags'].latest;
     }
     if (kind === 'pypi') {

@@ -73,7 +73,9 @@ export const createRegistries = (network: FetchFake) =>
           : notFoundResponse(),
       );
       network.on('https://registry.npmjs.org/', () =>
-        npmPublished ? Response.json({ versions: { '1.2.3': {} } }) : notFoundResponse(),
+        npmPublished
+          ? Response.json({ versions: { '1.2.3': { dist: { tarball: 'https://registry.npmjs.org/util.tgz' } } } })
+          : notFoundResponse(),
       );
     },
   }) satisfies Registries;
@@ -82,12 +84,18 @@ export const createRelease = (repo: RepositoryFake, registries: Registries, shel
     stageAllPublished: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
-      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+      shell.on(
+        'gh api graphql',
+        '{"data":{"repository":{"release":{"id":"release-id","isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
+      );
     },
     stagePendingCerberus: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
-      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+      shell.on(
+        'gh api graphql',
+        '{"data":{"repository":{"release":{"id":"release-id","isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
+      );
     },
   }) satisfies Release;
 

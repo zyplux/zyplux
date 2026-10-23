@@ -1,5 +1,17 @@
 # @zyplux/airlock
 
+## 1.1.0
+
+### Minor Changes
+
+- Publish GHCR targets from declared Dockerfiles and build contexts, add OCI version and revision labels, and attach release.json manifests containing the version and digest-pinned image.
+
+### Patch Changes
+
+- Pack each npm target once in its publication job, inspect packing hooks' final manifest, wait for retained workspace dependency versions and tarballs, and upload the inspected archive. Packing failures leave unrelated releases running.
+
+- Publish each npm package in its own job so a failed package does not block other releases or their GitHub changelog entries.
+
 ## 1.0.0
 
 ### Major Changes

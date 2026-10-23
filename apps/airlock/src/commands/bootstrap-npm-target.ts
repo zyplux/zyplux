@@ -5,7 +5,7 @@ import { ensure } from '@zyplux/util/assert';
 
 import { loadReleaseTargets } from '#release-targets';
 
-import { publishNpm } from './publish-tagged-target.ts';
+import { publishNpm } from './publish-npm.ts';
 
 const labelArgument = argument(string({ metavar: 'LABEL' }), {
   description: message`npm target label to first-publish, e.g. @zyplux/util.`,
@@ -35,6 +35,6 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
   }
 
   console.log(`Bootstrapping ${label} ${version} to npm ...`);
-  await publishNpm(target.dir);
+  await publishNpm([target]);
   console.log(`Published ${label} ${version}. Configure registry authentication in the release workflow.`);
 };

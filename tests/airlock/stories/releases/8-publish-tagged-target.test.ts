@@ -37,7 +37,7 @@ describe('8.2 publishing to each registry kind', () => {
 
     await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.2.6 propagates native npm publication failures', async ({
@@ -55,7 +55,7 @@ describe('8.2 publishing to each registry kind', () => {
       'command failed with exit code 1',
     );
 
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test.for([
@@ -88,20 +88,21 @@ describe('8.2 publishing to each registry kind', () => {
 
   test.for(MISSING_GHCR_CREDENTIALS)(
     '8.2.%s',
-    async ([, missingName, ghToken, githubActor], { airlock, env, registries, shell }) => {
+    async ([, missingName, ghToken, githubActor], { airlock, containerRelease, env, registries, shell }) => {
       registries.setPublished({ ghcrPublished: false });
       env.set('GH_TOKEN', ghToken);
       env.set('GITHUB_ACTOR', githubActor);
 
-      await expect(airlock.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
-        `${missingName} is required to push to GHCR`,
-      );
+      await expect(
+        airlock.run('publish-tagged-target', '--release', containerRelease.batch.tags[0] ?? ''),
+      ).rejects.toThrow(`${missingName} is required to push to GHCR`);
       expect(shell).not.toHaveRunMatching('podman');
     },
   );
 
-  test('8.2.5 tags and pushes a versioned and latest ghcr image', async ({
+  test('8.2.5 publishes a versioned ghcr image and its release manifest', async ({
     airlock,
+    containerRelease,
     env,
     registries,
     shell,
@@ -110,9 +111,8 @@ describe('8.2 publishing to each registry kind', () => {
     registries.setPublished({ ghcrPublished: false });
     env.set('GH_TOKEN', 'gh-token');
     env.set('GITHUB_ACTOR', 'zyplux-bot');
-    shell.on('podman', '');
 
-    await airlock.run('publish-tagged-target', 'ci-image-v3.4.5');
+    await airlock.run('publish-tagged-target', '--release', containerRelease.batch.tags[0] ?? '');
 
     expect(shell.calls).toContainEqual({
       argv: ['login', 'ghcr.io', '-u', 'zyplux-bot', '--password-stdin'],
@@ -121,9 +121,8 @@ describe('8.2 publishing to each registry kind', () => {
     });
     expect(shell.commandsMatching('podman')).toEqual([
       'podman login ghcr.io -u zyplux-bot --password-stdin',
-      `podman build -t ghcr.io/zyplux/ci:3.4.5 -t ghcr.io/zyplux/ci:latest ${targets.ci.dir}`,
-      'podman push ghcr.io/zyplux/ci:3.4.5',
-      'podman push ghcr.io/zyplux/ci:latest',
+      `podman build --label org.opencontainers.image.version=3.4.5 --label org.opencontainers.image.revision=reviewed-sha -t ghcr.io/zyplux/ci:3.4.5 ${targets.ci.dir}`,
+      expect.stringMatching(/^podman push --digestfile .+ ghcr\.io\/zyplux\/ci:3\.4\.5$/u),
       'podman logout ghcr.io',
     ]);
   });
@@ -134,16 +133,16 @@ describe('8.2 publishing to each registry kind', () => {
     { command: 'podman push', shouldLogout: true },
   ])(
     '8.2.7 removes GHCR credentials after a successful login when publication fails (%j)',
-    async ({ command, shouldLogout }, { airlock, env, registries, shell }) => {
+    async ({ command, shouldLogout }, { airlock, containerRelease, env, registries, shell }) => {
       registries.setPublished({ ghcrPublished: false });
       env.set('GH_TOKEN', 'gh-token');
       env.set('GITHUB_ACTOR', 'zyplux-bot');
       shell.on('podman', '');
       shell.on(command, { exitCode: 1, stdout: '' });
 
-      await expect(airlock.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
-        'command failed with exit code 1',
-      );
+      await expect(
+        airlock.run('publish-tagged-target', '--release', containerRelease.batch.tags[0] ?? ''),
+      ).rejects.toThrow('command failed with exit code 1');
 
       expect(shell.commandsMatching('podman logout')).toEqual(shouldLogout ? ['podman logout ghcr.io'] : []);
     },
@@ -173,7 +172,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
       headers: { Authorization: 'Bearer package-read-token' },
       method: 'GET',
     });
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.3.2 rejects missing credentials before checking a private registry', async ({
@@ -282,7 +281,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
         expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
         expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       } else {
-        expectNpmPublish(shell, targets.util.dir);
+        await expectNpmPublish(shell, targets.util.dir);
       }
     },
   );
@@ -328,7 +327,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
       await airlock.run('publish-tagged-target', '--release', 'util-v1.2.3');
 
       if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
-      else expectNpmPublish(shell, targets.util.dir);
+      else await expectNpmPublish(shell, targets.util.dir);
       if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
       else {
         await expectGithubRelease(shell, 'util-v1.2.3', 'reviewed-sha');
@@ -352,20 +351,18 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     expect(shell).not.toHaveRunMatching(/gh api graphql|gh release create/);
   });
 
-  test('8.4.3 repairs GHCR release metadata without logging in or out when the image exists', async ({
+  test('8.4.3 rebuilds incomplete GHCR releases from a pushed digest', async ({
     airlock,
-    expectGithubRelease,
+    containerRelease,
     registries,
-    repo,
     shell,
   }) => {
     registries.setPublished({ ghcrPublished: true });
-    repo.setHeadSha('reviewed-sha');
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
-    await airlock.run('publish-tagged-target', '--release', 'ci-image-v3.4.5');
+    await airlock.run('publish-tagged-target', '--release', containerRelease.batch.tags[0] ?? '');
 
-    expect(shell).not.toHaveRunMatching('podman');
-    await expectGithubRelease(shell, 'ci-image-v3.4.5', 'reviewed-sha');
+    expect(shell).toHaveRunMatching('podman build');
+    expect(shell).toHaveRunMatching('podman push --digestfile');
+    expect(shell).toHaveRunMatching('gh release upload ci-image-v3.4.5');
   });
 });

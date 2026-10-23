@@ -10,7 +10,7 @@
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "knip": "knip",
     "format": "prettier --write --cache --log-level warn .",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
+    "@zyplux/airlock": "workspace:*",
     "@zyplux/eslint-config": "workspace:*",
     "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
@@ -34,7 +35,6 @@
     "knip": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@zyplux/airlock": "workspace:*"
+    "vitest": "catalog:"
   }
 }

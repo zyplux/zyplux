@@ -44,7 +44,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await airlock.run('bootstrap-npm-target', '@zyplux/util');
 
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
     expect(logs).toHaveLogged(
       'Published @zyplux/util 1.2.3. Configure registry authentication in the release workflow.',
     );
