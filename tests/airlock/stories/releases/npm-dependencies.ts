@@ -44,7 +44,7 @@ export const createDependencyWorkspace = async ({ loadArtifact, shell, targets, 
   await tempDir.write(
     'packages/consumer/package.json',
     JSON.stringify({
-      dependencies: { '@zyplux/util': 'workspace:*' },
+      dependencies: { '@zyplux/util': '^1.2.0' },
       name: consumer.label,
       version: consumer.version,
     }),

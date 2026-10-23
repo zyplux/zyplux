@@ -22,4 +22,4 @@
 
 ### 24.3.2 waits for the real package behind an npm alias
 
-### 24.3.3 publishes dependencies embedded in the archive without registry waits
+### 24.3.3 skips workspace waits for bundled or incompatible dependencies

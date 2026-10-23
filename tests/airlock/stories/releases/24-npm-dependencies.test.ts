@@ -49,7 +49,7 @@ describe('24.1 isolating npm publication jobs', () => {
 
   test.for([
     { override: { private: true }, reason: 'is private' },
-    { override: { version: '9.9.9' }, reason: 'configured name and version' },
+    { override: { version: '1.2.4' }, reason: 'configured name and version' },
     { override: { path: '/unconfigured' }, reason: 'declare an npm target' },
   ])(
     '24.1.3 rejects invalid workspace dependencies (%j)',
@@ -84,7 +84,7 @@ describe('24.1 isolating npm publication jobs', () => {
     await tempDir.write(
       'packages/util/package.json',
       JSON.stringify({
-        dependencies: { [consumer.label]: 'workspace:*' },
+        dependencies: { [consumer.label]: consumer.version },
         name: targets.util.label,
         version: targets.util.version,
       }),
@@ -114,8 +114,10 @@ describe('24.3 packed publication dependencies', () => {
     { bundledDependencies: ['@zyplux/util'] },
     { bundleDependencies: true },
     { bundledDependencies: true },
+    { dependencies: { '@zyplux/util': '^9.0.0' } },
+    { dependencies: { utility: 'npm:@zyplux/util@^9.0.0' } },
   ])(
-    '24.3.3 publishes dependencies embedded in the archive without registry waits (%j)',
+    '24.3.3 skips workspace waits for bundled or incompatible dependencies (%j)',
     async (bundling, { airlock, consumer, planReleases, repo, shell, stageNpmPublication }) => {
       shell.on('tar -xOf', JSON.stringify({ dependencies: { '@zyplux/util': '1.2.3' }, ...bundling }));
       const [batch] = await planReleases(consumer.tag);

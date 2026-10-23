@@ -3,7 +3,7 @@ import { parseJson } from '@zyplux/util/json';
 import { poll } from '@zyplux/util/poll';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import path from 'node:path';
-import { validRange } from 'semver';
+import { satisfies, validRange } from 'semver';
 
 import type { ReleaseTarget } from './release-targets.ts';
 
@@ -14,12 +14,14 @@ import { loadReleaseTargets } from './release-targets.ts';
 const DEPENDENCY_POLL_ATTEMPTS = 61;
 const DEPENDENCY_POLL_INTERVAL_MS = 10_000;
 
-const resolveDependencyName = (name: string, specifier: string) => {
-  if (!specifier.startsWith('npm:')) return name;
+const parseDependency = (name: string, specifier: string) => {
+  if (!specifier.startsWith('npm:')) return { name, range: specifier };
   const packageSpec = specifier.slice('npm:'.length);
-  if (validRange(packageSpec) !== null) return name;
+  if (validRange(packageSpec) !== null) return { name, range: packageSpec };
   const versionIndex = packageSpec.lastIndexOf('@');
-  return versionIndex > 0 ? packageSpec.slice(0, versionIndex) : packageSpec;
+  return versionIndex > 0
+    ? { name: packageSpec.slice(0, versionIndex), range: packageSpec.slice(versionIndex + 1) }
+    : { name: packageSpec, range: '*' };
 };
 
 export const loadNpmDependencies = async ({ label }: ReleaseTarget, archive: string) => {
@@ -28,10 +30,10 @@ export const loadNpmDependencies = async ({ label }: ReleaseTarget, archive: str
   const bundledNames = new Set(
     bundled === true ? Object.keys(manifest.dependencies) : Array.isArray(bundled) ? bundled : [],
   );
-  const names = Object.entries({ ...manifest.dependencies, ...manifest.optionalDependencies })
+  const requirements = Object.entries({ ...manifest.dependencies, ...manifest.optionalDependencies })
     .filter(([name]) => !bundledNames.has(name))
-    .map(([name, specifier]) => resolveDependencyName(name, specifier));
-  if (names.length === 0) return [];
+    .map(([name, specifier]) => parseDependency(name, specifier));
+  if (requirements.length === 0) return [];
   const root = await readTrimmed($.git.showToplevel());
   const configuredTargets = await loadReleaseTargets();
   const configured = configuredTargets.filter(target => target.kind === 'npm');
@@ -40,7 +42,12 @@ export const loadNpmDependencies = async ({ label }: ReleaseTarget, archive: str
     WorkspacePackagesSchema,
   );
   return workspaces
-    .filter(workspace => workspace.name !== undefined && names.includes(workspace.name))
+    .filter(workspace =>
+      requirements.some(
+        ({ name, range }) =>
+          workspace.name === name && workspace.version !== undefined && satisfies(workspace.version, range),
+      ),
+    )
     .map(workspace => {
       const dependency = configured.find(candidate => candidate.dir === path.resolve(workspace.path));
       ensure(dependency !== undefined, `${label}: declare an npm target for dependency ${workspace.path}`);
