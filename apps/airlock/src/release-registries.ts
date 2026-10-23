@@ -30,6 +30,9 @@ const MANIFEST_MEDIA_TYPES = [
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_OK = 200;
+const HTTP_REQUEST_TIMEOUT = 408;
+const HTTP_TOO_MANY_REQUESTS = 429;
+const HTTP_SERVER_ERROR = 500;
 const REQUEST_TIMEOUT_MS = 10_000;
 
 const findRegistryEntry = async <Entry>(fetchEntry: () => Promise<Entry>) => {
@@ -75,8 +78,8 @@ export const isNpmVersionAvailable = async ({
   dir,
   label,
   version,
-}: Pick<ReleaseTarget, 'dir' | 'label' | 'version'>) =>
-  (await findRegistryEntry(async () => {
+}: Pick<ReleaseTarget, 'dir' | 'label' | 'version'>) => {
+  try {
     const { headers, url } = await loadNpmRequest(dir, label);
     const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
     const { versions } = await http.get(url, { headers, signal }).json(NpmVersionsSchema);
@@ -90,7 +93,21 @@ export const isNpmVersionAvailable = async ({
       })
       .response();
     return response.status === HTTP_OK;
-  })) ?? false;
+  } catch (error) {
+    if (error instanceof FetchError) {
+      const { status } = error.response;
+      if (
+        status === HTTP_NOT_FOUND ||
+        status === HTTP_REQUEST_TIMEOUT ||
+        status === HTTP_TOO_MANY_REQUESTS ||
+        status >= HTTP_SERVER_ERROR
+      )
+        return false;
+    }
+    if (error instanceof DOMException && error.name === 'TimeoutError') return false;
+    throw error;
+  }
+};
 
 export const isPackagePublished = async (target: Target, version: string, directory: string) => {
   if (target.kind === 'action') return isActionPublished(target, version);

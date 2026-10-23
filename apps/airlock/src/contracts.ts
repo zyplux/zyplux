@@ -53,7 +53,10 @@ export const ManifestSchema = z
 export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 export const PythonReleaseSchema = z.object({ name: z.string(), private: z.literal(true), version: z.string() });
+const BundledDependenciesSchema = z.union([z.boolean(), z.array(z.string())]);
 export const NpmPackageSchema = z.object({
+  bundledDependencies: BundledDependenciesSchema.optional(),
+  bundleDependencies: BundledDependenciesSchema.optional(),
   dependencies: z.record(z.string(), z.string()).default({}),
   optionalDependencies: z.record(z.string(), z.string()).default({}),
   publishConfig: z.record(z.string(), z.unknown()).default({}),

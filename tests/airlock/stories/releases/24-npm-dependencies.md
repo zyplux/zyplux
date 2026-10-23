@@ -19,3 +19,7 @@
 ## 24.3 packed publication dependencies
 
 ### 24.3.1 publishes a bundle after its packing hook removes private workspace dependencies
+
+### 24.3.2 waits for the real package behind an npm alias
+
+### 24.3.3 publishes dependencies embedded in the archive without registry waits

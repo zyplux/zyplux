@@ -3,6 +3,7 @@ import { parseJson } from '@zyplux/util/json';
 import { poll } from '@zyplux/util/poll';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import path from 'node:path';
+import { validRange } from 'semver';
 
 import type { ReleaseTarget } from './release-targets.ts';
 
@@ -13,9 +14,23 @@ import { loadReleaseTargets } from './release-targets.ts';
 const DEPENDENCY_POLL_ATTEMPTS = 61;
 const DEPENDENCY_POLL_INTERVAL_MS = 10_000;
 
+const resolveDependencyName = (name: string, specifier: string) => {
+  if (!specifier.startsWith('npm:')) return name;
+  const packageSpec = specifier.slice('npm:'.length);
+  if (validRange(packageSpec) !== null) return name;
+  const versionIndex = packageSpec.lastIndexOf('@');
+  return versionIndex > 0 ? packageSpec.slice(0, versionIndex) : packageSpec;
+};
+
 export const loadNpmDependencies = async ({ label }: ReleaseTarget, archive: string) => {
   const manifest = parseJson(await readTrimmed($`tar -xOf ${archive} package/package.json`), NpmPackageSchema);
-  const names = Object.keys({ ...manifest.dependencies, ...manifest.optionalDependencies });
+  const bundled = manifest.bundledDependencies ?? manifest.bundleDependencies;
+  const bundledNames = new Set(
+    bundled === true ? Object.keys(manifest.dependencies) : Array.isArray(bundled) ? bundled : [],
+  );
+  const names = Object.entries({ ...manifest.dependencies, ...manifest.optionalDependencies })
+    .filter(([name]) => !bundledNames.has(name))
+    .map(([name, specifier]) => resolveDependencyName(name, specifier));
   if (names.length === 0) return [];
   const root = await readTrimmed($.git.showToplevel());
   const configuredTargets = await loadReleaseTargets();
