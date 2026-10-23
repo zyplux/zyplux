@@ -1,18 +1,17 @@
-import { runPassthrough } from '@zyplux/util/exec';
+import { command, constant, message, object } from '@optique/core';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { command, constant, message, object } from '#optique';
 import { syncPythonVersions, validatePythonVersions } from '#python-releases';
 import { loadPreparedReleases } from '#release-notes';
-import { loadReleaseTargets } from '#release-targets';
+import { loadRegistryArgs, loadReleaseTargets } from '#release-targets';
 
 export const prepareReleaseCommand = command(
   'prepare-release',
   object({ command: constant('prepare-release' as const) }),
   {
-    brief: message`Prepare Changesets changelogs, package versions and lockfiles for review.`,
+    aliases: ['prepare'],
+    brief: message`Prepare native pnpm changelogs, package versions and lockfiles for review.`,
   },
 );
 
@@ -20,8 +19,8 @@ export const runPrepareRelease = async () => {
   const root = await readTrimmed($.git.showToplevel());
   const targets = await loadReleaseTargets();
   await validatePythonVersions(targets);
-  const changeset = fileURLToPath(import.meta.resolve('@changesets/cli/bin.js'));
-  await runPassthrough([process.execPath, changeset, 'version'], root);
+  const registryArgs = await loadRegistryArgs(targets);
+  await $`pnpm version -r --no-git-checks ${registryArgs}`.cwd(root);
   await syncPythonVersions(targets, root);
   await $`pnpm install --lockfile-only`.cwd(root);
   if (targets.some(target => path.basename(target.versionFile) === 'pyproject.toml')) await $`uv lock`.cwd(root);

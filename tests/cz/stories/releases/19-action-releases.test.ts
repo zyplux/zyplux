@@ -168,7 +168,7 @@ describe('19.2 rejecting incomplete or racing publications', () => {
   });
 });
 
-describe('19.3 preparing action versions through Changesets', () => {
+describe('19.3 preparing action versions through pnpm', () => {
   test('19.3.1 synchronizes the private manifest, native helper and lockfiles without a PyPI target', async ({
     actionRelease,
     cz,

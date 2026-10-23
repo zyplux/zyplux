@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from cerberus import workspaces
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -13,7 +14,6 @@ ID = "pnpm_release_age"
 SUMMARY = "pnpm workspaces quarantine new releases for one day, except @zyplux packages"
 SCOPE = Scope.CONTENT
 
-_RELEASE_AGE_MINUTES = 1440
 _OWN_PACKAGE_PREFIX = "@zyplux/"
 
 
@@ -31,8 +31,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     workspace: dict[object, object] = workspace if isinstance(workspace, dict) else {}
-    if workspace.get("minimumReleaseAge") != _RELEASE_AGE_MINUTES:
-        res.fail(f"minimumReleaseAge must be {_RELEASE_AGE_MINUTES} minutes")
+    if workspace.get("minimumReleaseAge") != workspaces.RELEASE_AGE_MINUTES:
+        res.fail(f"minimumReleaseAge must be {workspaces.RELEASE_AGE_MINUTES} minutes")
     if workspace.get("minimumReleaseAgeExcludePrune") is not True:
         res.fail("minimumReleaseAgeExcludePrune must be true")
 

@@ -4,8 +4,6 @@ packages:
   - 'tests/*'
 
 catalog:
-  '@changesets/cli': ^3.0.3
-  '@changesets/read': ^1.0.1
   '@happy-dom/global-registrator': ^21.0.4
   mermaid: ^12.2.0
   '@eslint/js': '^10.0.1'
@@ -46,3 +44,9 @@ minimumReleaseAgeExclude:
 updateConfig:
   ignoreDependencies:
     - typescript
+
+versioning:
+  changelog:
+    storage: repository
+
+publishWaitTimeout: 600000

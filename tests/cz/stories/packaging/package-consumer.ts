@@ -1,6 +1,6 @@
 import type { TempDir } from '@zyplux/spectra/temp-directory';
 
-import { ManifestSchema, VersionFieldSchema } from '@zyplux/cz/contracts';
+import { ManifestSchema, VersionFieldSchema } from '@zyplux/release/contracts';
 import { ensure } from '@zyplux/util/assert';
 import { LooseRecordSchema, PackageJsonSchema } from '@zyplux/util/contracts';
 import { parseJson } from '@zyplux/util/json';

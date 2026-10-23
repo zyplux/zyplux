@@ -1177,7 +1177,7 @@ type = [
 
 [[package]]
 name = "zyplux-cerberus"
-version = "0.25.0"
+version = "0.25.1"
 source = { editable = "apps/cerberus" }
 dependencies = [
     { name = "networkx" },
@@ -1204,7 +1204,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-setup-pm"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "apps/setup-pm" }
 
 [[package]]

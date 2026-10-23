@@ -351,9 +351,21 @@ class FakeRegistry:
     request_headers: list[dict[str, str]] = field(default_factory=list)
     not_found: set[tuple[str, str]] = field(default_factory=set)
 
-    def serve_npm(self, package: str, latest: str, *, host: str = "registry.npmjs.org") -> None:
+    def serve_npm(
+        self,
+        package: str,
+        latest: str,
+        *,
+        host: str = "registry.npmjs.org",
+        release_times: dict[str, str] | None = None,
+    ) -> None:
         encoded = package.replace("/", "%2F")
-        self.payloads[host, f"/{encoded}"] = {"dist-tags": {"latest": latest}}
+        release_times = {latest: "2000-01-01T00:00:00Z"} if release_times is None else release_times
+        self.payloads[host, f"/{encoded}"] = {
+            "dist-tags": {"latest": latest},
+            "versions": {version: {} for version in release_times},
+            "time": release_times,
+        }
 
     def serve_pypi(self, distribution: str, latest: str) -> None:
         self.payloads["pypi.org", f"/pypi/{distribution}/json"] = {"info": {"version": latest}}

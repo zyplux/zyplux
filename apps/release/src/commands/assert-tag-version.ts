@@ -1,6 +1,7 @@
-import type { InferValue } from '#optique';
+import type { InferValue } from '@optique/core';
 
-import { message } from '#optique';
+import { message } from '@optique/core';
+
 import { resolveReleaseTag } from '#release-targets';
 
 import { makeReleaseTagCommand } from './release-tag-command.ts';

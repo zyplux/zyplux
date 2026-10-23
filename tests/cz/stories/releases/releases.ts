@@ -1,4 +1,10 @@
+import type { CliRunner } from '@zyplux/spectra/cli-runner';
+
+import { runRelease } from '@zyplux/release/cli';
+import { VersionFieldSchema, VersionFileSchema } from '@zyplux/release/contracts';
+import { createCliRunner } from '@zyplux/spectra/cli-runner';
 import { makeFixture } from '@zyplux/spectra/library-test-api';
+import { parseJson } from '@zyplux/util/json';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -8,7 +14,7 @@ import type { ActionRelease } from './action-release.ts';
 import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } from './release-scenario.ts';
 
 import { createActionRelease } from './action-release.ts';
-import { createNotesCapture, expectGithubRelease, expectNpmPackAndPublish } from './publish-assertions.ts';
+import { createNotesCapture, expectGithubRelease, expectNpmPublish } from './publish-assertions.ts';
 import { createPreparation } from './release-preparation.ts';
 import {
   createLiveWorkspace,
@@ -20,13 +26,17 @@ import {
 export const test = czTest.extend<{
   actionRelease: ActionRelease;
   expectGithubRelease: typeof expectGithubRelease;
-  expectNpmPackAndPublish: typeof expectNpmPackAndPublish;
+  expectNpmPublish: typeof expectNpmPublish;
   liveWorkspace: LiveWorkspace;
+  loadActionOutputs: () => Promise<string>;
   loadArtifact: (relativePath: string) => Promise<string>;
+  loadPackageVersion: (relativePath: string) => Promise<string>;
+  nativeRelease: CliRunner;
   npmTarget: NpmTarget;
   prepareWorkspace: () => Promise<void>;
   registries: Registries;
   release: Release;
+  releaseAssetPath: string;
   releaseNotes: ReturnType<typeof createNotesCapture>;
   targets: SeededTargets;
 }>({
@@ -34,12 +44,25 @@ export const test = czTest.extend<{
     await use(await createActionRelease({ repo, shell, tempDir }));
   },
   expectGithubRelease: makeFixture(expectGithubRelease),
-  expectNpmPackAndPublish: makeFixture(expectNpmPackAndPublish),
+  expectNpmPublish: makeFixture(expectNpmPublish),
   liveWorkspace: async ({}, use) => {
     await use(createLiveWorkspace());
   },
+  loadActionOutputs: async ({ env, loadArtifact, tempDir }, use) => {
+    env.set('GITHUB_OUTPUT', path.join(tempDir.path, 'outputs'));
+    await use(async () => loadArtifact('outputs'));
+  },
   loadArtifact: async ({ tempDir }, use) => {
     await use(async relativePath => readFile(path.join(tempDir.path, relativePath), 'utf8'));
+  },
+  loadPackageVersion: async ({ loadArtifact }, use) => {
+    await use(async relativePath => {
+      const manifest = parseJson(await loadArtifact(relativePath), VersionFileSchema);
+      return VersionFieldSchema.parse(manifest['version']);
+    });
+  },
+  nativeRelease: async ({}, use) => {
+    await use(createCliRunner(runRelease));
   },
   npmTarget: async ({ shell, tempDir }, use) => {
     await use(createNpmTarget(shell, tempDir));
@@ -52,6 +75,9 @@ export const test = czTest.extend<{
   },
   release: async ({ registries, repo, shell }, use) => {
     await use(createRelease(repo, registries, shell));
+  },
+  releaseAssetPath: async ({ tempDir }, use) => {
+    await use(path.join(tempDir.path, 'release.json'));
   },
   releaseNotes: async ({ shell }, use) => {
     await use(createNotesCapture(shell));

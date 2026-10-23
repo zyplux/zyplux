@@ -30,18 +30,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
       - id: targets
-        run: |
-          arguments=(--list)
-          if [ -n "$RELEASE_TAG" ]; then arguments+=(--tag "$RELEASE_TAG"); fi
-          targets="$(pnpm run --silent cz release-bumped-targets "${arguments[@]}")"
-          {
-            echo "npm=$(jq -c '[.[] | select(.kind == "npm") | .tag]' <<< "$targets")"
-            echo "pypi=$(jq -c '[.[] | select(.kind == "pypi") | .tag]' <<< "$targets")"
-            echo "ghcr=$(jq -c '[.[] | select(.kind == "ghcr") | .tag]' <<< "$targets")"
-            echo "action=$(jq -c '[.[] | select(.kind == "action") | .tag]' <<< "$targets")"
-          } >> "$GITHUB_OUTPUT"
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        uses: ./release
+        with:
+          command: plan
+          tag: ${{ github.event.release.tag_name }}
 
   action:
     name: publish ${{ matrix.tag }}
@@ -60,20 +52,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
-      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
-        env:
-          RELEASE_TAG: ${{ matrix.tag }}
+      - uses: ./release
+        with:
+          command: publish
+          tag: ${{ matrix.tag }}
 
   npm:
-    name: publish ${{ matrix.tag }}
+    name: publish npm packages
     needs: resolve
     if: needs.resolve.outputs.npm != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        tag: ${{ fromJSON(needs.resolve.outputs.npm) }}
     concurrency:
-      group: release-${{ matrix.tag }}
+      group: release-npm
       cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
@@ -82,9 +71,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
-      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
-        env:
-          RELEASE_TAG: ${{ matrix.tag }}
+      - uses: ./release
+        with:
+          command: publish-npm
 
   pypi:
     name: publish ${{ matrix.tag }}
@@ -105,9 +94,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
-      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
-        env:
-          RELEASE_TAG: ${{ matrix.tag }}
+      - uses: ./release
+        with:
+          command: publish
+          tag: ${{ matrix.tag }}
 
   ghcr:
     name: publish ${{ matrix.tag }}
@@ -127,6 +117,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./setup-pm
-      - run: pnpm run cz publish-tagged-target --release "$RELEASE_TAG"
-        env:
-          RELEASE_TAG: ${{ matrix.tag }}
+      - uses: ./release
+        with:
+          command: publish
+          tag: ${{ matrix.tag }}

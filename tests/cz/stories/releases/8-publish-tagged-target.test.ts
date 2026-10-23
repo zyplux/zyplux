@@ -24,9 +24,9 @@ describe('8.1 skipping an already-published target', () => {
 });
 
 describe('8.2 publishing to each registry kind', () => {
-  test('8.2.1 packs and publishes an npm target', async ({
+  test('8.2.1 publishes an npm target with native packing and availability waiting', async ({
     cz,
-    expectNpmPackAndPublish,
+    expectNpmPublish,
     npmTarget,
     registries,
     shell,
@@ -37,12 +37,12 @@ describe('8.2 publishing to each registry kind', () => {
 
     await cz.run('publish-tagged-target', 'util-v1.2.3');
 
-    await expectNpmPackAndPublish(shell, targets.util.dir);
+    expectNpmPublish(shell, targets.util.dir);
   });
 
-  test('8.2.6 removes the temporary archive when npm publication fails', async ({
+  test('8.2.6 propagates native npm publication failures', async ({
     cz,
-    expectNpmPackAndPublish,
+    expectNpmPublish,
     npmTarget,
     registries,
     shell,
@@ -53,7 +53,7 @@ describe('8.2 publishing to each registry kind', () => {
 
     await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('command failed with exit code 1');
 
-    await expectNpmPackAndPublish(shell, targets.util.dir);
+    expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.2.2 builds and publishes a pypi target', async ({ cz, registries, shell }) => {
@@ -129,7 +129,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
   test('8.3.1 authenticates the configured registry and lets pnpm apply publishConfig', async ({
     cz,
     env,
-    expectNpmPackAndPublish,
+    expectNpmPublish,
     network,
     npmTarget,
     shell,
@@ -148,7 +148,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
       headers: { Authorization: 'Bearer package-read-token' },
       method: 'GET',
     });
-    await expectNpmPackAndPublish(shell, targets.util.dir);
+    expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.3.2 rejects missing credentials before checking a private registry', async ({
@@ -239,7 +239,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     '8.3.7 checks the requested version in registry package metadata (%j)',
     async (
       { isPublished, registry, versions },
-      { cz, env, expectNpmPackAndPublish, logs, network, npmTarget, shell, targets },
+      { cz, env, expectNpmPublish, logs, network, npmTarget, shell, targets },
     ) => {
       await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
@@ -257,7 +257,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
         expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
         expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       } else {
-        await expectNpmPackAndPublish(shell, targets.util.dir);
+        expectNpmPublish(shell, targets.util.dir);
       }
     },
   );
@@ -288,7 +288,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     '8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD (%j)',
     async (
       { isArtifactPublished, isReleaseCreated },
-      { cz, expectGithubRelease, expectNpmPackAndPublish, npmTarget, registries, repo, shell, targets },
+      { cz, expectGithubRelease, expectNpmPublish, npmTarget, registries, repo, shell, targets },
     ) => {
       registries.setPublished({ npmPublished: isArtifactPublished });
       repo.setHeadSha('reviewed-sha');
@@ -303,7 +303,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
       await cz.run('publish-tagged-target', '--release', 'util-v1.2.3');
 
       if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
-      else await expectNpmPackAndPublish(shell, targets.util.dir);
+      else expectNpmPublish(shell, targets.util.dir);
       if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
       else {
         await expectGithubRelease(shell, 'util-v1.2.3', 'reviewed-sha');

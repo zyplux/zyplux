@@ -1,5 +1,11 @@
 # zyplux-setup-pm
 
+## 1.0.1
+
+### Patch Changes
+
+- Document native pnpm preparation for the action's reviewed versions and release notes.
+
 ## 1.0.0
 
 ### Major Changes

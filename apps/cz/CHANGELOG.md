@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.15.0
+
+### Minor Changes
+
+- Delegate release preparation and publication to the shared release app, using native pnpm instead of the Changesets CLI.
+
 ## 0.14.1
 
 ### Patch Changes

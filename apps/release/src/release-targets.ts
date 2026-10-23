@@ -79,12 +79,31 @@ const isGhcrImagePublished = (repo: string, tag: string) =>
     return true;
   });
 
-const isNpmPublished = async (directory: string, label: string, version: string) => {
+const loadNpmRegistry = async (directory: string, label: string) => {
   const { publishConfig } = parseJson(await readFile(path.join(directory, 'package.json'), 'utf8'), NpmPackageSchema);
   const registryKey = label.startsWith('@') ? `${label.split('/', 1)[0]}:registry` : 'registry';
-  const registry = RegistryUrlSchema.parse(
+  return RegistryUrlSchema.parse(
     Object.hasOwn(publishConfig, registryKey) ? publishConfig[registryKey] : publishConfig['registry'],
   );
+};
+
+export const loadRegistryArgs = async (targets: ReleaseTarget[]) => {
+  const registries = new Map<string, string>();
+  for (const target of targets) {
+    if (target.kind !== 'npm') continue;
+    const key = target.label.startsWith('@') ? `${target.label.split('/', 1)[0]}:registry` : 'registry';
+    const registry = await loadNpmRegistry(target.dir, target.label);
+    ensure(
+      !registries.has(key) || registries.get(key) === registry,
+      `native pnpm preparation requires one publication registry per scope (${key})`,
+    );
+    registries.set(key, registry);
+  }
+  return Array.from(registries, ([key, registry]) => `--config.${key}=${registry}`);
+};
+
+const isNpmPublished = async (directory: string, label: string, version: string) => {
+  const registry = await loadNpmRegistry(directory, label);
   const headers: Record<string, string> = {};
   if (registry === 'https://npm.pkg.github.com') {
     const token = process.env['NODE_AUTH_TOKEN'];

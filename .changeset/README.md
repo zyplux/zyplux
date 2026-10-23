@@ -4,7 +4,7 @@ Each releasable feature includes its prepared versions and changelog entries in 
 
 ## Write and prepare notes
 
-Run `pnpm run change`, select the affected release targets and choose patch for fixes, minor for compatible features or major for breaking changes. Write short bullets describing the effect on consumers. Include migration steps when required; give targets separate fragments when their descriptions differ.
+Run `pnpm change`, select the affected release targets and choose patch for fixes, minor for compatible features or major for breaking changes. Write a short summary describing the effect on consumers; pnpm adds its list marker. Include migration steps when required; give targets separate fragments when their descriptions differ.
 
 ```sh
 pnpm release:prepare
@@ -12,20 +12,18 @@ pnpm release:check
 ./just c
 ```
 
-Preparation consumes fragments, updates versions and changelogs, synchronizes Python versions through uv and refreshes both lockfiles. Review and commit these edits with the feature. Private dependent workspaces can receive version bumps; only targets declared in `release-targets.toml` are published.
+Preparation runs `pnpm version -r`, consumes fragments, updates versions, changelogs and `.changeset/ledger.yaml`, synchronizes Python versions through uv and refreshes both lockfiles. Review and commit these edits with the feature. Private dependent workspaces can receive version bumps; only targets declared in `release-targets.toml` are published.
 
 Zyplux's preparation script also regenerates the resolved ESLint rules snapshot with the current package version.
 
-Python targets have a private `package.json` beside `pyproject.toml` for Changesets discovery. Preparation maintains the mirrored versions; checks require them to agree. Publishing reads the native Python manifest.
+Python targets have a private `package.json` beside `pyproject.toml` for pnpm discovery. Preparation maintains the mirrored versions; checks require them to agree. Publishing reads the native Python manifest.
 
-GitHub Actions use `kind = "action"` with their GitHub `repository`, versioned `tag_prefix` and floating `major_tag_prefix` in `release-targets.toml`. Their private `package.json` provides Changesets discovery without npm publication. The release workflow creates the fixed versioned GitHub release and updates the corresponding major tag to the newest published stable version in that major. Only versioned tags have GitHub releases; retries also repair the floating tag. Include both the action entrypoint and its implementation in the release surface.
+GitHub Actions use `kind = "action"` with their GitHub `repository`, versioned `tag_prefix` and floating `major_tag_prefix` in `release-targets.toml`. Their `package.json` provides pnpm discovery; use `private: true` for actions without an npm package. The release workflow creates the fixed versioned GitHub release and updates the corresponding major tag to the newest published stable version in that major. Only versioned tags have GitHub releases; retries also repair the floating tag. Include both the action entrypoint and its implementation in the release surface.
 
-Prepare once for the complete PR. With no pending fragments, preparation fails; use `release:check` to validate an already prepared release. Additional fragments calculate another bump from the branch's current versions.
-
-When integrating a newer `main`, preserve the feature and release-note text, restore this PR's generated release edits to the new `main` baseline, then recreate its fragments and prepare again. Preserve existing release history and dependency changes.
+If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.
 
 ## Shared commands
 
-CZ provides `prepare-release`, `check-release-notes` and `list-prepared-releases`. The JSON command emits `kind`, `label`, `version`, `tag` and `notes` for each declared target, without registry access. It gives other repository publishers the same version-specific notes and validation.
+`@zyplux/release` provides `prepare`, `check`, `notes`, `plan` and publication commands through the shared [release app and action](../apps/release/README.md); CZ's existing commands delegate to it. The notes command emits `kind`, `label`, `version`, `tag` and `notes` for each declared target, without registry access.
 
 Checks reject pending fragments, mismatched Python versions and missing or empty changelog entries. Cerberus separately enforces version bumps for changed release surfaces. GitHub publication uses the exact prepared entry for each target version.

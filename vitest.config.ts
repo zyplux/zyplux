@@ -12,6 +12,7 @@ export default {
       exclude: ['apps/cz/src/index.ts'],
       include: [
         'apps/cz/src/**',
+        'apps/release/src/**',
         'packages/util-ts/src/**',
         'packages/eslint-config/src/**',
         'packages/spectra/src/**',

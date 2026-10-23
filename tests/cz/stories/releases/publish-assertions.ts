@@ -35,13 +35,10 @@ export const expectGithubRelease = async ({ calls }: ShellFake, tag: string, com
   await expect(access(path.dirname(notesFile))).rejects.toMatchObject({ code: 'ENOENT' });
 };
 
-export const expectNpmPackAndPublish = async ({ calls }: ShellFake, dir: string) => {
-  const archive = calls.find(call => call.program === 'pnpm' && call.argv[0] === 'pack')?.argv.at(-1);
-  ensure(archive !== undefined, 'npm publication must pack an archive');
-  expect(calls).toContainEqual({ argv: ['pack', '--out', archive], cwd: dir, program: 'pnpm' });
-  expect(vi.mocked(spawn)).toHaveBeenCalledWith('pnpm', ['publish', archive], {
+export const expectNpmPublish = ({ calls }: ShellFake, dir: string) => {
+  expect(calls).toContainEqual({ argv: ['publish', '--publish-wait-timeout', '600000'], cwd: dir, program: 'pnpm' });
+  expect(vi.mocked(spawn)).toHaveBeenCalledWith('pnpm', ['publish', '--publish-wait-timeout', '600000'], {
     cwd: dir,
     stdio: 'inherit',
   });
-  await expect(access(path.dirname(archive))).rejects.toMatchObject({ code: 'ENOENT' });
 };

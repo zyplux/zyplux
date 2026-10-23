@@ -5,6 +5,7 @@
   "ignoreWorkspaces": ["tests/**"],
   "workspaces": {
     "apps/cz": { "includeEntryExports": false },
+    "apps/release": { "includeEntryExports": false },
     "packages/eslint-config": { "includeEntryExports": false },
     "packages/tsconfig": { "includeEntryExports": false },
     "packages/util-ts": { "includeEntryExports": false },

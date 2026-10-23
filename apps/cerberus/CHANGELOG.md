@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.25.1
+
+### Patch Changes
+
+- Require the newest stable tool versions eligible under pnpm's 24-hour release quarantine, keeping freshness checks consistent with installation policy.
+
 ## 0.25.0
 
 ### Minor Changes

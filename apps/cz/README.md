@@ -25,7 +25,7 @@ cz clone-reference-repo <repo> [ref]    Shallow-clone a reference repo into refe
 cz release-bumped-targets               Publish any bumped release target via a GitHub release.
 cz release-bumped-targets --list [--tag TAG] Print pending artifact kinds and tags as JSON.
 cz publish-tagged-target [--release] TAG Publish one artifact; optionally create its GitHub release after publication.
-cz prepare-release                    Prepare Changesets versions, changelogs and lockfiles, synchronizing Python versions.
+cz prepare-release                    Prepare pnpm versions, changelogs and lockfiles, synchronizing Python versions.
 cz check-release-notes                Validate prepared versions and non-empty changelog entries.
 cz list-prepared-releases             Print validated kind, label, version, tag and notes records as JSON.
 cz bootstrap-npm-target <LABEL>         First-publish using local registry authentication.
@@ -41,7 +41,7 @@ Npm targets use their package's `publishConfig` registry and access settings. A 
 
 Release creation uses the current target version's `CHANGELOG.md` entry. Preparation and note checks use `.changeset` and `release-targets.toml`; see the [release workflow](../../.changeset/README.md). Python targets need a private `package.json` with their native name and version beside `pyproject.toml`. Preparation requires uv for Python targets. The JSON command checks notes and mirrored versions without accessing registries and provides the shared interface for other publishers.
 
-Action targets publish versioned GitHub releases and update a compatible major tag, such as `setup-pm-v1.0.0` and `v1`. Configure `kind = "action"`, `repository`, `tag_prefix` and `major_tag_prefix` in the manifest. A private Changesets package tracks the action version. Retrying publication repairs its major tag without downgrading past a newer published release. The major tag remains separate from GitHub releases so it can move when immutable releases are enabled.
+Action targets publish versioned GitHub releases and update a compatible major tag, such as `setup-pm-v1.0.0` and `v1`. Configure `kind = "action"`, `repository`, `tag_prefix` and `major_tag_prefix` in the manifest. A workspace package tracks the action version. Retrying publication repairs its major tag without downgrading past a newer published release. The major tag remains separate from GitHub releases so it can move when immutable releases are enabled.
 
 ## License
 

@@ -32,7 +32,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
   test('5.2.2 publishes the target with the terminal connected for npm authentication', async ({
     cz,
-    expectNpmPackAndPublish,
+    expectNpmPublish,
     logs,
     registries,
     shell,
@@ -44,7 +44,7 @@ describe('5.2 bootstrapping an npm target', () => {
 
     await cz.run('bootstrap-npm-target', '@zyplux/util');
 
-    await expectNpmPackAndPublish(shell, targets.util.dir);
+    expectNpmPublish(shell, targets.util.dir);
     expect(logs).toHaveLogged(
       'Published @zyplux/util 1.2.3. Configure registry authentication in the release workflow.',
     );

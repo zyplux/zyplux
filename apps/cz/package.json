@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
   "keywords": [
     "cli",
@@ -28,12 +28,7 @@
   },
   "imports": {
     "#deps-catalog": "./src/deps-catalog.ts",
-    "#optique": "./src/optique.ts",
-    "#python-releases": "./src/python-releases.ts",
-    "#release-notes": "./src/release-notes.ts",
-    "#release-targets": "./src/release-targets.ts",
-    "#action-releases": "./src/action-releases.ts",
-    "#github-releases": "./src/github-releases.ts"
+    "#optique": "./src/optique.ts"
   },
   "files": [
     "README.md",
@@ -43,12 +38,7 @@
     "access": "public",
     "imports": {
       "#deps-catalog": "./dist/src/deps-catalog.js",
-      "#optique": "./dist/src/optique.js",
-      "#python-releases": "./dist/src/python-releases.js",
-      "#release-notes": "./dist/src/release-notes.js",
-      "#release-targets": "./dist/src/release-targets.js",
-      "#action-releases": "./dist/src/action-releases.js",
-      "#github-releases": "./dist/src/github-releases.js"
+      "#optique": "./dist/src/optique.js"
     },
     "bin": {
       "cz": "./dist/src/index.js"
@@ -69,21 +59,18 @@
     "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
   },
   "dependencies": {
-    "@changesets/cli": "catalog:",
-    "@changesets/read": "catalog:",
     "@happy-dom/global-registrator": "catalog:",
     "@optique/core": "catalog:",
     "@optique/run": "catalog:",
+    "@zyplux/release": "workspace:*",
     "@zyplux/util": "workspace:*",
     "commonmark": "catalog:",
     "mermaid": "catalog:",
-    "semver": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/commonmark": "catalog:",
     "@types/node": "catalog:",
-    "@types/semver": "catalog:",
     "@zyplux/tsconfig": "workspace:*",
     "publint": "catalog:"
   }

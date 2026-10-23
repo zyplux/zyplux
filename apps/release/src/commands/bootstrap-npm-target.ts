@@ -1,8 +1,8 @@
+import type { InferValue } from '@optique/core';
+
+import { argument, command, constant, message, object, string } from '@optique/core';
 import { ensure } from '@zyplux/util/assert';
 
-import type { InferValue } from '#optique';
-
-import { argument, command, constant, message, object, string } from '#optique';
 import { loadReleaseTargets } from '#release-targets';
 
 import { publishNpm } from './publish-tagged-target.ts';

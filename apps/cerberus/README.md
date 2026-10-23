@@ -69,7 +69,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `jscpd`                        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |
 | `fallow`                       | content     | fallow finds no unused code, circular imports, or functions above its complexity thresholds |
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
-| `tool_pins_latest`             | content     | The npm tool versions pinned in cerberus source are the latest npm releases (skips repos not carrying the pin source) |
+| `tool_pins_latest`             | content     | Npm tool pins are the newest stable releases eligible under pnpm's one-day quarantine |
 
 ## Justfile recipes
 
@@ -125,7 +125,7 @@ scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
-`tool_pins_latest` guards the jscpd/fallow pins the same way, but runs only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos never see it (bundled `off = true`) and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.
+`tool_pins_latest` requires the newest stable jscpd/fallow versions eligible under pnpm's one-day release quarantine. It runs only in the repo carrying `tool_pins.py`; consumers receive updated pins through Cerberus releases.
 
 ## Package and source checks
 

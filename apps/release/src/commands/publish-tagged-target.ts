@@ -1,26 +1,26 @@
+import type { InferValue } from '@optique/core';
+
+import { argument, command, constant, message, multiple, object, option, string } from '@optique/core';
 import { ensure } from '@zyplux/util/assert';
 import { run, runPassthrough } from '@zyplux/util/exec';
 import { $, readTrimmed } from '@zyplux/util/shell';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
-import type { InferValue } from '#optique';
+import { access } from 'node:fs/promises';
 
 import { publishAction } from '#action-releases';
-import { createGithubRelease } from '#github-releases';
-import { argument, command, constant, message, object, option, string } from '#optique';
+import { createGithubRelease, publishReleaseAssets } from '#github-releases';
 import { validatePythonVersions } from '#python-releases';
-import { loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
+import { loadReleaseNotes, validateConsumedIntents } from '#release-notes';
 import { resolveReleaseTag } from '#release-targets';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to publish (e.g. eslint-config-v1.2.3).`,
 });
+const assetOption = option('--asset', string({ metavar: 'FILE' }));
 
 export const publishTaggedTargetCommand = command(
   'publish-tagged-target',
   object({
+    assets: multiple(assetOption),
     command: constant('publish-tagged-target' as const),
     shouldRelease: option('--release', {
       description: message`Create a GitHub release at HEAD after the artifact is published.`,
@@ -28,23 +28,14 @@ export const publishTaggedTargetCommand = command(
     tag: tagArgument,
   }),
   {
-    aliases: ['pt'],
+    aliases: ['pt', 'publish'],
     brief: message`Publish the target that owns a release tag (npm, PyPI, GHCR or GitHub Action).`,
   },
 );
 
 type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
 
-export const publishNpm = async (dir: string) => {
-  const archiveDir = await mkdtemp(path.join(tmpdir(), 'cz-npm-'));
-  try {
-    const archive = path.join(archiveDir, 'package.tgz');
-    await $`pnpm pack --out ${archive}`.cwd(dir);
-    await runPassthrough(['pnpm', 'publish', archive], dir);
-  } finally {
-    await rm(archiveDir, { force: true, recursive: true });
-  }
-};
+export const publishNpm = (dir: string) => runPassthrough(['pnpm', 'publish', '--publish-wait-timeout', '600000'], dir);
 
 const publishPypi = async (label: string) => {
   await $`uv build --package ${label}`;
@@ -73,17 +64,25 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
   }
 };
 
-export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTaggedTargetConfig) => {
+export const runPublishTaggedTarget = async ({ assets, shouldRelease, tag }: PublishTaggedTargetConfig) => {
   const { target, version } = await resolveReleaseTag(tag);
+  ensure(assets.length === 0 || shouldRelease, '--asset requires --release');
+  ensure(assets.length === 0 || target.action === undefined, 'action releases do not accept prebuilt assets');
+  await Promise.all(assets.map(asset => access(asset)));
   if (shouldRelease) {
-    await validateConsumedChangesets();
+    await validateConsumedIntents();
     await validatePythonVersions([target]);
   }
   const notes = shouldRelease ? await loadReleaseNotes(target.dir, version) : undefined;
 
   if (target.action !== undefined) return publishAction(target.action, version, notes);
 
-  if (await target.isPublished(version)) {
+  const isPublished = await target.isPublished(version);
+  ensure(
+    assets.length === 0 || target.kind !== 'ghcr' || isPublished,
+    'publish the versioned image before attaching its release assets',
+  );
+  if (isPublished) {
     console.log(`${target.label} ${version} is already published; nothing to do`);
   } else {
     console.log(`Publishing ${target.label} ${version} to ${target.kind} ...`);
@@ -103,7 +102,9 @@ export const runPublishTaggedTarget = async ({ shouldRelease, tag }: PublishTagg
     }
     console.log(`Published ${target.label} ${version}`);
   }
-  if (notes === undefined || (await $.gh.release.exists(tag))) return;
+  if (notes === undefined) return;
   const head = await readTrimmed($.git.revParse('HEAD'));
+  if (assets.length > 0) return publishReleaseAssets(tag, notes, head, [...assets]);
+  if (await $.gh.release.exists(tag)) return;
   await createGithubRelease(tag, notes, head);
 };

@@ -1,0 +1,46 @@
+name: Publish reviewed releases
+description: Prepare release matrices or publish declared targets using the repository's locked release tooling.
+inputs:
+  command:
+    description: Release operation (plan, publish-npm, publish, or check).
+    default: plan
+  tag:
+    description: Versioned release tag, required for publish and optional for plan.
+    default: ''
+  assets:
+    description: Newline-separated asset paths. Build and push container images before supplying their assets.
+    default: ''
+outputs:
+  npm:
+    description: Pending npm release tags as a JSON array.
+    value: ${{ steps.release.outputs.npm }}
+  pypi:
+    description: Pending PyPI release tags as a JSON array.
+    value: ${{ steps.release.outputs.pypi }}
+  ghcr:
+    description: Pending container release tags as a JSON array.
+    value: ${{ steps.release.outputs.ghcr }}
+  action:
+    description: Pending GitHub Action release tags as a JSON array.
+    value: ${{ steps.release.outputs.action }}
+runs:
+  using: composite
+  steps:
+    - name: Run release tooling
+      id: release
+      shell: bash
+      run: |
+        args=("$RELEASE_COMMAND")
+        if [ "$RELEASE_COMMAND" = publish ]; then
+          args+=(--release "$RELEASE_TAG")
+        elif [ -n "$RELEASE_TAG" ]; then
+          args+=(--tag "$RELEASE_TAG")
+        fi
+        while IFS= read -r asset; do
+          if [ -n "$asset" ]; then args+=(--asset "$asset"); fi
+        done <<< "$RELEASE_ASSETS"
+        pnpm exec zyplux-release "${args[@]}"
+      env:
+        RELEASE_COMMAND: ${{ inputs.command }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_ASSETS: ${{ inputs.assets }}

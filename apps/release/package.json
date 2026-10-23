@@ -1,0 +1,76 @@
+{
+  "name": "@zyplux/release",
+  "version": "1.0.0",
+  "description": "Native pnpm releases for npm, Python, containers and GitHub Actions.",
+  "license": "MIT",
+  "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",
+  "homepage": "https://github.com/zyplux/zyplux/tree/main/apps/release",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zyplux/zyplux.git",
+    "directory": "apps/release"
+  },
+  "type": "module",
+  "bin": {
+    "zyplux-release": "./src/index.ts"
+  },
+  "exports": {
+    "./cli": "./src/cli.ts",
+    "./contracts": "./src/contracts.ts",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "zyplux-release": "./dist/index.js"
+    },
+    "exports": {
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
+      },
+      "./contracts": {
+        "types": "./dist/contracts.d.ts",
+        "default": "./dist/contracts.js"
+      },
+      "./package.json": "./package.json"
+    },
+    "imports": {
+      "#python-releases": "./dist/python-releases.js",
+      "#release-notes": "./dist/release-notes.js",
+      "#release-targets": "./dist/release-targets.js",
+      "#action-releases": "./dist/action-releases.js",
+      "#github-releases": "./dist/github-releases.js"
+    }
+  },
+  "scripts": {
+    "prepack": "node --eval \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc -b --force tsconfig.json && publint --pack pnpm --strict"
+  },
+  "dependencies": {
+    "@optique/core": "catalog:",
+    "@optique/run": "catalog:",
+    "@zyplux/util": "workspace:*",
+    "commonmark": "catalog:",
+    "semver": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/commonmark": "catalog:",
+    "@types/node": "catalog:",
+    "@types/semver": "catalog:",
+    "@zyplux/tsconfig": "workspace:*",
+    "publint": "catalog:",
+    "typescript": "catalog:"
+  },
+  "imports": {
+    "#python-releases": "./src/python-releases.ts",
+    "#release-notes": "./src/release-notes.ts",
+    "#release-targets": "./src/release-targets.ts",
+    "#action-releases": "./src/action-releases.ts",
+    "#github-releases": "./src/github-releases.ts"
+  }
+}

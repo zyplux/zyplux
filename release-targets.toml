@@ -3,6 +3,22 @@
 # changes). A repo with no release-targets.toml publishes nothing and is skipped.
 
 [[target]]
+kind = "npm"
+label = "@zyplux/release"
+tag_prefix = "release-cli-v"
+version = { file = "apps/release/package.json", json = "version" }
+surface = ["apps/release", "release"]
+
+[[target]]
+kind = "action"
+label = "zyplux-release"
+repository = "zyplux/zyplux"
+tag_prefix = "release-v"
+major_tag_prefix = "release-v"
+version = { file = "apps/release/package.json", json = "version" }
+surface = ["apps/release", "release"]
+
+[[target]]
 kind = "action"
 label = "zyplux-setup-pm"
 repository = "zyplux/zyplux"

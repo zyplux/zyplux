@@ -1,5 +1,12 @@
 {
   "extends": "@zyplux/tsconfig/node-pub.json",
   "include": ["src"],
-  "references": [{ "path": "../../packages/util-ts" }]
+  "references": [
+    {
+      "path": "../../packages/util-ts"
+    },
+    {
+      "path": "../release"
+    }
+  ]
 }

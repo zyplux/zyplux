@@ -71,7 +71,7 @@ describe('17.2 validating release preparation', () => {
   test('17.2.2 rejects unconsumed fragments', async ({ cz, tempDir }) => {
     await tempDir.write('.changeset/unfinished.md', '---\n"@zyplux/util": patch\n---\n\nFix a utility.\n');
 
-    await expect(cz.run('check-release-notes')).rejects.toThrow('Unconsumed changesets: unfinished');
+    await expect(cz.run('check-release-notes')).rejects.toThrow('Unconsumed change intents: .changeset/unfinished.md');
   });
 
   test.for<[string, string]>([

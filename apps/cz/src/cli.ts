@@ -1,18 +1,11 @@
+import { releaseCommand, runReleaseCommand } from '@zyplux/release/cli';
 import { loadPackageVersion } from '@zyplux/util/manifest';
 
-import { assertTagVersionCommand, runAssertTagVersion } from './commands/assert-tag-version.ts';
-import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/bootstrap-npm-target.ts';
-import { checkReleaseNotesCommand, runCheckReleaseNotes } from './commands/check-release-notes.ts';
 import { cleanCommand, runClean } from './commands/clean.ts';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from './commands/clone-reference-repo.ts';
 import { depsCatalogCommand, runDepsCatalog } from './commands/deps-catalog.ts';
 import { lintMermaidCommand, runLintMermaid } from './commands/lint-mermaid.ts';
-import { listPreparedReleasesCommand, runListPreparedReleases } from './commands/list-prepared-releases.ts';
-import { prepareReleaseCommand, runPrepareRelease } from './commands/prepare-release.ts';
-import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.ts';
-import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
-import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from './commands/release-bumped-targets.ts';
 import { runUpgrade, upgradeCommand } from './commands/upgrade.ts';
 import { defineProgram, message, or, run } from './optique.ts';
 
@@ -25,20 +18,13 @@ const program = defineProgram({
     version: VERSION,
   },
   parser: or(
+    releaseCommand,
     pushBranchCommand,
     cloneReferenceRepoCommand,
     depsCatalogCommand,
-    releaseBumpedTargetsCommand,
-    assertTagVersionCommand,
-    bootstrapNpmTargetCommand,
-    publishTaggedTargetCommand,
-    printTagKindCommand,
     lintMermaidCommand,
     cleanCommand,
     upgradeCommand,
-    checkReleaseNotesCommand,
-    listPreparedReleasesCommand,
-    prepareReleaseCommand,
   ),
 });
 
@@ -46,10 +32,6 @@ type CzIo = {
   onExit?: (exitCode: number) => never;
   stderr?: (line: string) => void;
   stdout?: (line: string) => void;
-};
-
-const assertNever = (value: never) => {
-  throw new Error(`unhandled command: ${JSON.stringify(value)}`);
 };
 
 export const runCz = async (args: readonly string[], io: CzIo = {}) => {
@@ -64,15 +46,6 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
   });
 
   switch (result.command) {
-    case 'assert-tag-version': {
-      return runAssertTagVersion(result);
-    }
-    case 'bootstrap-npm-target': {
-      return runBootstrapNpmTarget(result);
-    }
-    case 'check-release-notes': {
-      return runCheckReleaseNotes();
-    }
     case 'clean': {
       return runClean(result);
     }
@@ -85,29 +58,14 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     case 'lint-mermaid': {
       return runLintMermaid();
     }
-    case 'list-prepared-releases': {
-      return runListPreparedReleases();
-    }
-    case 'prepare-release': {
-      return runPrepareRelease();
-    }
-    case 'print-tag-kind': {
-      return runPrintTagKind(result);
-    }
-    case 'publish-tagged-target': {
-      return runPublishTaggedTarget(result);
-    }
     case 'push-branch': {
       return runPushBranch(result);
-    }
-    case 'release-bumped-targets': {
-      return runReleaseBumpedTargets(result);
     }
     case 'upgrade': {
       return runUpgrade(result);
     }
     default: {
-      return assertNever(result);
+      return runReleaseCommand(result);
     }
   }
 };

@@ -1,8 +1,7 @@
-import { readChangesets } from '@changesets/read';
 import { ensure } from '@zyplux/util/assert';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { Parser } from 'commonmark';
-import { readFile } from 'node:fs/promises';
+import { glob, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { validatePythonVersions } from './python-releases.ts';
@@ -46,17 +45,14 @@ export const loadReleaseNotes = async (directory: string, version: string) => {
   return notes;
 };
 
-export const validateConsumedChangesets = async () => {
+export const validateConsumedIntents = async () => {
   const root = await readTrimmed($.git.showToplevel());
-  const pending = await readChangesets(root);
-  ensure(
-    pending.length === 0,
-    `Unconsumed changesets: ${pending.map(note => note.id).join(', ')}; run pnpm release:prepare`,
-  );
+  const pending = await Array.fromAsync(glob('.changeset/*.md', { cwd: root, exclude: ['.changeset/README.md'] }));
+  ensure(pending.length === 0, `Unconsumed change intents: ${pending.join(', ')}; run pnpm release:prepare`);
 };
 
 export const loadPreparedReleases = async () => {
-  await validateConsumedChangesets();
+  await validateConsumedIntents();
   const targets = await loadReleaseTargets();
   await validatePythonVersions(targets);
   return Promise.all(

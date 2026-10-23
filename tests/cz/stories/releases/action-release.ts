@@ -1,7 +1,7 @@
 import type { ShellFake } from '@zyplux/spectra/shell-fake';
 import type { TempDir } from '@zyplux/spectra/temp-directory';
 
-import { PythonReleaseSchema } from '@zyplux/cz/contracts';
+import { PythonReleaseSchema } from '@zyplux/release/contracts';
 import { parseJson } from '@zyplux/util/json';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';

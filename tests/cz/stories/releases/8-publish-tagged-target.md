@@ -6,7 +6,7 @@
 
 ## 8.2 publishing to each registry kind
 
-### 8.2.1 packs and publishes an npm target
+### 8.2.1 publishes an npm target with native packing and availability waiting
 
 ### 8.2.2 builds and publishes a pypi target
 
@@ -15,7 +15,7 @@
 
 ### 8.2.5 tags and pushes a versioned and latest ghcr image
 
-### 8.2.6 removes the temporary archive when npm publication fails
+### 8.2.6 propagates native npm publication failures
 
 ### 8.2.7 removes GHCR credentials after a successful login when publication fails
 

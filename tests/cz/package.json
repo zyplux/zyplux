@@ -17,6 +17,7 @@
     "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",
     "@zyplux/util": "workspace:*",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@zyplux/release": "workspace:*"
   }
 }

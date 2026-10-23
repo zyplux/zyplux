@@ -1,14 +1,15 @@
+import type { InferValue } from '@optique/core';
+
+import { command, constant, message, object, option, optional, string } from '@optique/core';
 import { ensure } from '@zyplux/util/assert';
 import { poll } from '@zyplux/util/poll';
 import { $, readTrimmed } from '@zyplux/util/shell';
 
-import type { InferValue } from '#optique';
 import type { ReleaseTarget } from '#release-targets';
 
 import { createGithubRelease } from '#github-releases';
-import { command, constant, message, object, option, optional, string } from '#optique';
 import { validatePythonVersions } from '#python-releases';
-import { loadReleaseNotes, validateConsumedChangesets } from '#release-notes';
+import { loadReleaseNotes, validateConsumedIntents } from '#release-notes';
 import { loadReleaseTargets } from '#release-targets';
 
 const tagOption = optional(
@@ -63,7 +64,7 @@ const buildTargets = async () => {
   );
 };
 
-const listPendingTargets = async (tag: string | undefined) => {
+export const listPendingTargets = async (tag: string | undefined) => {
   const targets = await buildTargets();
   const selectedTargets = tag === undefined ? targets : targets.filter(target => target.tag === tag);
   ensure(tag === undefined || selectedTargets.length > 0, `no configured release target matches '${tag}'`);
@@ -73,7 +74,7 @@ const listPendingTargets = async (tag: string | undefined) => {
       pendingTargets.push({ kind: target.kind, tag: target.tag });
     }
   }
-  console.log(JSON.stringify(pendingTargets));
+  return pendingTargets;
 };
 
 const publish = async ({ isPublished, label, tag, version }: Target, remoteHead: string, notes: string) => {
@@ -120,7 +121,10 @@ const publish = async ({ isPublished, label, tag, version }: Target, remoteHead:
 };
 
 export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumpedTargetsConfig) => {
-  if (shouldList) return listPendingTargets(tag);
+  if (shouldList) {
+    console.log(JSON.stringify(await listPendingTargets(tag)));
+    return;
+  }
   ensure(tag === undefined, '--tag requires --list');
   const branch = await readTrimmed($.git.revParse('HEAD', { abbrevRef: true }));
   ensure(branch === 'main', `releases are cut from main, not '${branch}'`);
@@ -149,7 +153,7 @@ export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumped
     'nothing to release; all configured versions are already published or have a GitHub release',
   );
 
-  await validateConsumedChangesets();
+  await validateConsumedIntents();
   await validatePythonVersions(await loadReleaseTargets());
   const prepared = await Promise.all(
     pending.map(async target => ({

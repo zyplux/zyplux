@@ -1,14 +1,35 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.tooling.json" },
-    { "path": "./apps/cz" },
-    { "path": "./packages/eslint-config" },
-    { "path": "./packages/util-ts" },
-    { "path": "./tests/eslint-config" },
-    { "path": "./packages/spectra" },
-    { "path": "./tests/spectra" },
-    { "path": "./tests/cz" },
-    { "path": "./tests/util-ts" }
+    {
+      "path": "./tsconfig.tooling.json"
+    },
+    {
+      "path": "./apps/cz"
+    },
+    {
+      "path": "./packages/eslint-config"
+    },
+    {
+      "path": "./packages/util-ts"
+    },
+    {
+      "path": "./tests/eslint-config"
+    },
+    {
+      "path": "./packages/spectra"
+    },
+    {
+      "path": "./tests/spectra"
+    },
+    {
+      "path": "./tests/cz"
+    },
+    {
+      "path": "./tests/util-ts"
+    },
+    {
+      "path": "./apps/release"
+    }
   ]
 }
