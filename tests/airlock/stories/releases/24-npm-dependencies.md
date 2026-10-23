@@ -4,7 +4,7 @@
 
 ### 24.1.1 plans separate jobs without packing packages or discovering dependencies
 
-### 24.1.2 confines packing failures to their publication jobs
+### 24.1.2 confines npm publication failures to their jobs
 
 ### 24.1.3 rejects invalid workspace dependencies
 
@@ -13,8 +13,6 @@
 ## 24.2 waiting for installable dependencies
 
 ### 24.2.1 waits for dependency metadata and tarball visibility before uploading
-
-### 24.2.2 blocks a missing dependency’s consumer while allowing an unrelated release
 
 ### 24.2.3 propagates registry authorization errors before uploading
 

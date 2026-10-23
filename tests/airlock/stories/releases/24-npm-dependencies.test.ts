@@ -19,35 +19,30 @@ describe('24.1 isolating npm publication jobs', () => {
     expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm list|tar -xOf/);
   });
 
-  test('24.1.2 confines packing failures to their publication jobs', async ({
-    airlock,
-    consumer,
-    planReleases,
-    registries,
-    repo,
-    shell,
-  }) => {
-    shell.on('pnpm pack', { exitCode: 1, stdout: 'packing failed' }, '');
-    const batches = await planReleases();
-    expect(shell).not.toHaveRunMatching('pnpm pack');
-    const failed = batches.find(batch => batch.tags.includes(consumer.tag));
-    const independent = batches.find(batch => batch.tags.includes('independent-v1.2.3'));
+  test.for([
+    { error: 'command failed', reply: { exitCode: 1, stdout: 'packing failed' } },
+    { error: 'npm dependencies did not become available: @zyplux/util@1.2.3', reply: '' },
+  ])(
+    '24.1.2 confines npm publication failures to their jobs (%j)',
+    async ({ error, reply }, { airlock, consumer, planReleases, repo, shell, stageNpmPublication }) => {
+      shell.on('pnpm pack', reply, '');
+      const batches = await planReleases();
+      expect(shell).not.toHaveRunMatching('pnpm pack');
+      const failed = batches.find(batch => batch.tags.includes(consumer.tag));
+      const independent = batches.find(batch => batch.tags.includes('independent-v1.2.3'));
 
-    await expect(airlock.run('publish', '--batch', JSON.stringify(failed))).rejects.toThrow('command failed');
-    expect(shell).not.toHaveRunMatching('pnpm publish');
+      await expect(airlock.run('publish', '--batch', JSON.stringify(failed))).rejects.toThrow(error);
+      expect(shell).not.toHaveRunMatching('pnpm publish');
 
-    repo.setHeadSha('reviewed-sha');
-    shell.on('pnpm publish', () => {
-      registries.setPublished({ npmPublished: true });
-      return '';
-    });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+      repo.setHeadSha('reviewed-sha');
+      stageNpmPublication();
 
-    await airlock.run('publish', '--batch', JSON.stringify(independent));
+      await airlock.run('publish', '--batch', JSON.stringify(independent));
 
-    expect(shell).toHaveRunMatching('gh release create independent-v1.2.3');
-    expect(shell).not.toHaveRunMatching(`gh release create ${consumer.tag}`);
-  });
+      expect(shell).toHaveRunMatching('gh release create independent-v1.2.3');
+      expect(shell).not.toHaveRunMatching(`gh release create ${consumer.tag}`);
+    },
+  );
 
   test.for([
     { override: { private: true }, reason: 'is private' },
@@ -103,17 +98,13 @@ describe('24.3 packed publication dependencies', () => {
     bundledConsumer,
     expectNpmPublish,
     planReleases,
-    registries,
     repo,
     shell,
+    stageNpmPublication,
   }) => {
     const [batch] = await planReleases(bundledConsumer.tag);
     repo.setHeadSha('reviewed-sha');
-    shell.on('pnpm publish', () => {
-      registries.setPublished({ npmPublished: true });
-      return '';
-    });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+    stageNpmPublication();
 
     await airlock.run('publish', '--batch', JSON.stringify(batch));
 
@@ -128,9 +119,9 @@ describe('24.2 waiting for installable dependencies', () => {
     consumer,
     network,
     planReleases,
-    registries,
     repo,
     shell,
+    stageNpmPublication,
   }) => {
     const [batch] = await planReleases(consumer.tag);
     repo.setHeadSha('reviewed-sha');
@@ -148,45 +139,14 @@ describe('24.2 waiting for installable dependencies', () => {
       tarballChecks += 1;
       return new Response(undefined, { status: tarballChecks === 1 ? HTTP_NOT_FOUND : HTTP_OK });
     });
-    shell.on('pnpm publish', () => {
+    stageNpmPublication(() => {
       expect(tarballChecks).toBe(expectedTarballChecks);
-      registries.setPublished({ npmPublished: true });
-      return '';
     });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
     await airlock.run('publish', '--batch', JSON.stringify(batch));
 
     expect(shell).toHaveRunMatching(`gh release create ${consumer.tag}`);
     expect(metadataChecks).toBe(expectedMetadataChecks);
-  });
-
-  test('24.2.2 blocks a missing dependency’s consumer while allowing an unrelated release', async ({
-    airlock,
-    consumer,
-    planReleases,
-    registries,
-    repo,
-    shell,
-  }) => {
-    const [dependent] = await planReleases(consumer.tag);
-    const [independent] = await planReleases('independent-v1.2.3');
-
-    await expect(airlock.run('publish', '--batch', JSON.stringify(dependent))).rejects.toThrow(
-      'npm dependencies did not become available: @zyplux/util@1.2.3',
-    );
-    expect(shell).not.toHaveRunMatching('pnpm publish');
-    repo.setHeadSha('reviewed-sha');
-    shell.on('pnpm publish', () => {
-      registries.setPublished({ npmPublished: true });
-      return '';
-    });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
-
-    await airlock.run('publish', '--batch', JSON.stringify(independent));
-
-    expect(shell).toHaveRunMatching('gh release create independent-v1.2.3');
-    expect(shell).not.toHaveRunMatching(`gh release create ${consumer.tag}`);
   });
 
   test('24.2.3 propagates registry authorization errors before uploading', async ({

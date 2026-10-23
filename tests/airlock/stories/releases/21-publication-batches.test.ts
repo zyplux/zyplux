@@ -46,6 +46,7 @@ describe('21.2 executing the selected publication batch', () => {
     registries,
     repo,
     shell,
+    stageNpmPublication,
     targets,
     tempDir,
   }) => {
@@ -53,11 +54,7 @@ describe('21.2 executing the selected publication batch', () => {
     registries.setPublished({});
     const [batch] = await planReleases();
     env.set('GITHUB_STEP_SUMMARY', `${tempDir.path}/summary.md`);
-    shell.on('pnpm publish', () => {
-      registries.setPublished({ npmPublished: true });
-      return '';
-    });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+    stageNpmPublication();
     await airlock.run('publish', '--batch', JSON.stringify(batch));
     await expectNpmPublish(shell, targets.util.dir);
     expect(shell).not.toHaveRunMatching(/uv|podman/);
@@ -69,9 +66,9 @@ describe('21.2 executing the selected publication batch', () => {
     airlock,
     loadArtifact,
     planReleases,
-    registries,
     repo,
     shell,
+    stageNpmPublication,
     tempDir,
   }) => {
     const manifest = await loadArtifact('airlock-targets.toml');
@@ -88,11 +85,7 @@ describe('21.2 executing the selected publication batch', () => {
     ]);
     const [batch] = await planReleases('util-v1.2.3');
     repo.setHeadSha('reviewed-sha');
-    shell.on('pnpm publish', () => {
-      registries.setPublished({ npmPublished: true });
-      return '';
-    });
-    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+    stageNpmPublication();
     await airlock.run('publish', '--batch', JSON.stringify(batch));
     expect(shell.commandsMatching('pnpm pack')).toHaveLength(1);
     expect(shell).not.toHaveRunMatching(/pnpm .*@zyplux\/extra|gh release create extra-v/);

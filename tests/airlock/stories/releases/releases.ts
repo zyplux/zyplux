@@ -64,12 +64,12 @@ const releaseTest = repositoryTest
     consumer: async ({ loadArtifact, shell, targets, tempDir }, use) => {
       await use(await createDependencyWorkspace({ loadArtifact, shell, targets, tempDir }));
     },
-    containerRelease: async ({ env, planReleases, registries, repo, shell }, use) => {
+    containerRelease: async ({ env, planReleases, registries, repo, shell, targets }, use) => {
       env.set('GH_TOKEN', 'package-token');
       env.set('GITHUB_ACTOR', 'publisher');
       repo.setHeadSha('reviewed-sha');
       registries.setPublished({});
-      const [batch] = await planReleases('ci-image-v3.4.5');
+      const [batch] = await planReleases(targets.ci.tag);
       ensure(batch !== undefined, 'container batch must be planned');
       await use({ batch, ...createContainerPublication(shell, registries) });
     },
@@ -138,6 +138,14 @@ const releaseTest = repositoryTest
       },
       { auto: true },
     ],
+  })
+  .extend('stageNpmPublication', ({ registries, shell }) => (beforePublish?: () => void) => {
+    shell.on('pnpm publish', () => {
+      beforePublish?.();
+      registries.setPublished({ npmPublished: true });
+      return '';
+    });
+    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
   })
   .extend('bundledConsumer', async ({ loadArtifact, shell, targets, tempDir }) =>
     createBundledConsumer({ loadArtifact, shell, targets, tempDir }),

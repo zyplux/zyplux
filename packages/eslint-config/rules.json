@@ -1233,7 +1233,7 @@
     "@typescript-eslint:@typescript-eslint/eslint-plugin@8.72.0",
     "perfectionist:eslint-plugin-perfectionist@5.13.0",
     "unicorn:eslint-plugin-unicorn@78.0.0",
-    "zod:eslint-plugin-zod@5.2.0",
+    "zod:eslint-plugin-zod@5.2.1",
     "@zyplux:@zyplux/eslint-config@0.12.1"
   ],
   "language": "@/js"
