@@ -43,7 +43,10 @@ describe('2.3 checking whether the ghcr image target is published', () => {
   }) => {
     release.stageAllPublished();
     registries.denyGhcrAuth();
-    shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
+    shell.on(
+      'gh api graphql',
+      '{"data":{"repository":{"release":{"id":"release-id","isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
+    );
 
     expect(await planReleases()).toEqual([expect.objectContaining({ kind: 'ghcr', tags: ['ci-image-v3.4.5'] })]);
   });
@@ -61,7 +64,7 @@ describe('2.3 checking whether the ghcr image target is published', () => {
       network.on('https://ghcr.io/token', () => Response.json({ token: 'private-token' }));
       network.on('https://ghcr.io/v2/', () => new Response(undefined, { status: 403 }));
       const fetchSpy = vi.spyOn(globalThis, 'fetch');
-      await expect(airlock.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow('403');
+      await expect(airlock.run('plan', '--tag', 'ci-image-v3.4.5')).rejects.toThrow('403');
       expect(fetchSpy).toHaveBeenCalledWith('https://ghcr.io/token?service=ghcr.io&scope=repository:zyplux/ci:pull', {
         headers: { Authorization: 'Basic Ym90OnJlYWQtdG9rZW4=' },
         method: 'GET',

@@ -4,6 +4,7 @@ import { $ } from '@zyplux/util/shell';
 import type { ReleaseBatch } from './contracts.ts';
 import type { ReleaseTarget } from './release-targets.ts';
 
+import { CONTAINER_MANIFEST } from './container-releases.ts';
 import { isReleasePublished } from './github-releases.ts';
 import { loadPreparedTargets } from './release-notes.ts';
 
@@ -25,8 +26,8 @@ export const loadPendingTargets = async (tag?: string) => {
     const isPublished = await target.isPublished();
     const hasRelease =
       isPublished &&
-      (target.artifactCommand !== undefined || target.assets.length > 0
-        ? await isReleasePublished(target.tag, target.assets)
+      (target.kind === 'ghcr'
+        ? await isReleasePublished(target.tag, [CONTAINER_MANIFEST])
         : await $.gh.release.exists(target.tag));
     if (!hasRelease) pending.push(target);
   }

@@ -34,7 +34,12 @@ const releaseTest = repositoryTest
     actionRelease: ActionRelease;
     configureTarget: (kind: string, fields: string) => Promise<void>;
     consumer: SeededTargets['util'];
-    containerRelease: { batch: ReleaseBatch; readManifest: () => string };
+    containerRelease: {
+      batch: ReleaseBatch;
+      readManifest: () => string;
+      setDigest: (digest: string) => void;
+      setImagePublished: (isPublished: boolean) => void;
+    };
     expectGithubRelease: typeof expectGithubRelease;
     expectNpmPublish: typeof expectNpmPublish;
     expectPypiPublish: typeof expectPypiPublish;
@@ -47,7 +52,6 @@ const releaseTest = repositoryTest
     prepareWorkspace: () => Promise<void>;
     registries: Registries;
     release: Release;
-    releaseAssetPath: string;
     releaseNotes: ReturnType<typeof createNotesCapture>;
     targets: SeededTargets;
   }>({
@@ -60,11 +64,7 @@ const releaseTest = repositoryTest
     consumer: async ({ loadArtifact, shell, targets, tempDir }, use) => {
       await use(await createDependencyWorkspace({ loadArtifact, shell, targets, tempDir }));
     },
-    containerRelease: async ({ configureTarget, env, planReleases, registries, repo, shell }, use) => {
-      await configureTarget(
-        'ghcr',
-        'artifact_command = ["uv", "run", "--no-sync", "python", "-m", "vps_deployment.build_release"]\nassets = ["release.json"]',
-      );
+    containerRelease: async ({ env, planReleases, registries, repo, shell }, use) => {
       env.set('GH_TOKEN', 'package-token');
       env.set('GITHUB_ACTOR', 'publisher');
       repo.setHeadSha('reviewed-sha');
@@ -109,9 +109,6 @@ const releaseTest = repositoryTest
     },
     release: async ({ registries, repo, shell }, use) => {
       await use(createRelease(repo, registries, shell));
-    },
-    releaseAssetPath: async ({ tempDir }, use) => {
-      await use(path.join(tempDir.path, 'release.json'));
     },
     releaseNotes: async ({ shell }, use) => {
       await use(createNotesCapture(shell));

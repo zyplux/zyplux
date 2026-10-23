@@ -14,12 +14,10 @@ const TargetBaseSchema = z.object({
 
 export const TargetSchema = z.discriminatedUnion('kind', [
   TargetBaseSchema.extend({ kind: z.enum(['npm', 'pypi']) }),
-  TargetBaseSchema.extend({
-    artifact_command: z
-      .tuple([z.string().min(1)])
-      .rest(z.string())
-      .optional(),
-    assets: z.array(z.string().min(1)).default([]),
+  z.strictObject({
+    ...TargetBaseSchema.shape,
+    build_context: z.string().min(1).optional(),
+    dockerfile: z.string().min(1).optional(),
     kind: z.literal('ghcr'),
   }),
   TargetBaseSchema.extend({
@@ -73,6 +71,10 @@ export const RegistryUrlSchema = z
   .default('https://registry.npmjs.org');
 export const GhcrTokenSchema = z.object({ token: z.string() });
 export const GhcrTagsSchema = z.object({ tags: z.array(z.string()).nullable() });
+export const ContainerDigestSchema = z
+  .string()
+  .trim()
+  .regex(/^sha256:[\da-f]{64}$/u);
 export const NpmLatestSchema = z.object({ 'dist-tags': z.object({ latest: z.string() }) });
 export const PypiLatestSchema = z.object({ info: z.object({ version: z.string() }) });
 export const SurfaceFindingsSchema = z

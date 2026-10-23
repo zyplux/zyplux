@@ -1,6 +1,10 @@
 # @zyplux/airlock
 
-## 1.0.1
+## 1.1.0
+
+### Minor Changes
+
+- Publish GHCR targets from declared Dockerfiles and build contexts, add OCI version and revision labels, and attach release.json manifests containing the version and digest-pinned image.
 
 ### Patch Changes
 

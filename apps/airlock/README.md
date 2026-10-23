@@ -96,20 +96,32 @@ surface = ["apps/airlock", "apps/action-airlock"]
 
 Actions also declare their GitHub `repository`. Airlock publishes as npm package `@zyplux/airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
-## Custom container artifacts
+## Container releases
 
-A GHCR target can declare an `artifact_command` and relative asset paths:
+Declare a GHCR target with a version source, release surface and image label:
 
 ```toml
-artifact_command = ["uv", "run", "--no-sync", "python", "-m", "vps_deployment.build_release"]
-assets = ["release.json"]
+[core]
+kind = "ghcr"
+label = "ghcr.io/zyplux/zyploop"
+version = { file = "apps/zyp-loop/package.json", json = "version" }
+surface = ["apps/zyp-loop", "packages/domain-model"]
+dockerfile = "apps/zyp-loop/Dockerfile"
+build_context = "."
 ```
 
-Airlock authenticates GHCR and runs the command from the repository root. The command builds and pushes the versioned image and writes the declared assets beneath `AIRLOCK_ARTIFACTS_DIR`. `AIRLOCK_IMAGE`, `AIRLOCK_VERSION`, `AIRLOCK_TAG` and `AIRLOCK_REVISION` identify the publication. Application-specific manifest fields belong in this command.
+Both build paths are relative to the repository root and must stay inside it. The build context defaults to the version file's directory. When `dockerfile` is omitted, Podman discovers `Containerfile` or `Dockerfile` in the build context.
 
-Custom builders can publish an image alone or include release assets. Airlock verifies the versioned image, validates declared assets and uploads them to a draft GitHub release before publishing the draft. Retrying an unfinished release reruns the artifact command, allowing its manifest to record the digest returned by the new push. Published releases must retain their image and declared assets; missing artifacts fail publication while preserving the finalized release.
+Airlock authenticates GHCR, builds the versioned image with `org.opencontainers.image.version` and `org.opencontainers.image.revision` labels, and pushes it with Podman's `--digestfile`. It validates the returned SHA-256 digest and verifies registry availability before generating `release.json`:
 
-`airlock publish-tagged-target --release TAG --asset FILE` also supports externally built images and assets. The versioned image must already exist.
+```json
+{
+  "version": "1.2.3",
+  "image": "ghcr.io/zyplux/zyploop@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+}
+```
+
+Airlock attaches this manifest to a draft GitHub release, then finalizes the release with its prepared changelog. Retrying an unfinished release rebuilds and records the newly pushed digest. Finalized releases retain their manifest and image; missing artifacts fail validation. `airlock publish-tagged-target --release TAG` runs the same container publication as the matrix job. Deployment consumes the manifest separately.
 
 ## Registry setup
 

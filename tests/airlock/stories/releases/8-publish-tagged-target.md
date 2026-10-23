@@ -13,7 +13,7 @@
 ### 8.2.3 requires GH_TOKEN before pushing a ghcr target
 ### 8.2.4 requires GITHUB_ACTOR before pushing a ghcr target
 
-### 8.2.5 tags and pushes a versioned and latest ghcr image
+### 8.2.5 publishes a versioned ghcr image and its release manifest
 
 ### 8.2.6 propagates native npm publication failures
 
@@ -43,4 +43,4 @@
 
 ### 8.4.2 leaves GitHub release metadata unpublished when the registry rejects publication
 
-### 8.4.3 repairs GHCR release metadata without logging in or out when the image exists
+### 8.4.3 rebuilds incomplete GHCR releases from a pushed digest

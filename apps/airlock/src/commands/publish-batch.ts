@@ -42,7 +42,7 @@ export const runPublishBatch = async ({ batch: json }: InferValue<typeof publish
   let hasPublished = false;
   try {
     if (batch.kind === 'npm') await publishNpmTargets(releases);
-    else for (const target of releases) await publishPreparedTarget(target, target.notes, []);
+    else for (const target of releases) await publishPreparedTarget(target, target.notes);
     hasPublished = true;
   } finally {
     const summary = process.env['GITHUB_STEP_SUMMARY'];

@@ -3,26 +3,34 @@ import { describe, expect, test } from './releases.ts';
 const DIGEST_HEX_LENGTH = 64;
 const RETRY_BUILD_COUNT = 2;
 
-describe('22.1 publishing application-specific container artifacts', () => {
-  test('22.1.1 runs the artifact command with the reviewed version and uploads its manifest before publication', async ({
+describe('22.1 publishing standard container releases', () => {
+  test('22.1.1 builds from the declared Dockerfile and context and uploads a digest-pinned manifest', async ({
     airlock,
+    configureTarget,
     containerRelease,
     shell,
     tempDir,
   }) => {
+    await configureTarget('ghcr', 'dockerfile = "containers/ci/Containerfile"\nbuild_context = "."');
     await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
     expect(containerRelease.readManifest()).toBe(
-      JSON.stringify({
-        coreVersion: '3.4.5',
-        image: `ghcr.io/zyplux/ci@sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`,
-        revision: 'reviewed-sha',
-        validatorVersion: '1.2.3',
-      }),
+      `${JSON.stringify({ image: `ghcr.io/zyplux/ci@sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`, version: '3.4.5' })}\n`,
     );
-    const builder = shell.calls.find(call => call.program === 'uv');
-    expect(builder?.argv).toEqual(['run', '--no-sync', 'python', '-m', 'vps_deployment.build_release']);
-    expect(builder?.cwd).toBe(tempDir.path);
-    expect(builder?.env?.['AIRLOCK_TAG']).toBe('ci-image-v3.4.5');
+    const build = shell.calls.find(call => call.program === 'podman' && call.argv[0] === 'build');
+    expect(build?.argv).toEqual([
+      'build',
+      '--file',
+      `${tempDir.path}/containers/ci/Containerfile`,
+      '--label',
+      'org.opencontainers.image.version=3.4.5',
+      '--label',
+      'org.opencontainers.image.revision=reviewed-sha',
+      '-t',
+      'ghcr.io/zyplux/ci:3.4.5',
+      tempDir.path,
+    ]);
+    const push = shell.calls.find(call => call.program === 'podman' && call.argv[0] === 'push');
+    expect(push?.argv).toEqual(['push', '--digestfile', expect.any(String), 'ghcr.io/zyplux/ci:3.4.5']);
     expect(shell.commandsMatching('gh release')).toEqual([
       expect.stringContaining('create ci-image-v3.4.5 --draft'),
       expect.stringContaining('upload ci-image-v3.4.5'),
@@ -44,17 +52,18 @@ describe('22.1 publishing application-specific container artifacts', () => {
     repo.setHeadSha('retry-sha');
     await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
     expect(containerRelease.readManifest()).toContain(`sha256:${'2'.repeat(DIGEST_HEX_LENGTH)}`);
-    expect(containerRelease.readManifest()).toContain('retry-sha');
-    expect(shell.commandsMatching('uv run')).toHaveLength(RETRY_BUILD_COUNT);
+    expect(shell.commandsMatching('podman build')).toHaveLength(RETRY_BUILD_COUNT);
+    expect(shell.commandsMatching('podman build').at(-1)).toContain('org.opencontainers.image.revision=retry-sha');
   });
 
   test.for([
-    { reason: 'command failed', reply: { exitCode: 1, stdout: 'build failed' } },
-    { reason: 'ENOENT', reply: '' },
+    { command: 'podman build', reason: 'command failed', reply: { exitCode: 1, stdout: 'build failed' } },
+    { command: 'podman push', reason: 'command failed', reply: { exitCode: 1, stdout: 'push failed' } },
+    { command: 'podman push', reason: 'ENOENT', reply: '' },
   ])(
-    '22.1.3 keeps releases unpublished and removes credentials when artifact generation fails (%j)',
-    async ({ reason, reply }, { airlock, containerRelease, shell }) => {
-      shell.on('uv run', reply);
+    '22.1.3 keeps releases unpublished and removes credentials when image publication fails (%j)',
+    async ({ command, reason, reply }, { airlock, containerRelease, shell }) => {
+      shell.on(command, reply);
       await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(reason);
       expect(shell).not.toHaveRunMatching('gh release');
       expect(shell).toHaveRun('podman logout ghcr.io');
@@ -73,7 +82,7 @@ describe('22.1 publishing application-specific container artifacts', () => {
       '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
     );
     await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
-    expect(shell).not.toHaveRunMatching(/podman|uv run|gh release/);
+    expect(shell).not.toHaveRunMatching(/podman|gh release/);
   });
 
   test('22.1.5 rejects a finalized release whose image is missing without changing its manifest', async ({
@@ -87,79 +96,72 @@ describe('22.1 publishing application-specific container artifacts', () => {
       '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
     );
     expect(await planReleases(containerRelease.batch.tags[0])).toEqual([containerRelease.batch]);
-
     await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
       'published release ci-image-v3.4.5 is missing image ghcr.io/zyplux/ci:3.4.5',
     );
-
-    expect(shell).not.toHaveRunMatching(/podman|uv run|gh release/);
+    expect(shell).not.toHaveRunMatching(/podman|gh release/);
   });
 
-  test('22.1.6 rejects a custom builder that finishes without publishing its image', async ({
+  test('22.1.6 requires the pushed image in the registry before creating its release', async ({
     airlock,
-    configureTarget,
     containerRelease,
     shell,
   }) => {
-    await configureTarget('ghcr', 'assets = []');
-    shell.on('uv run', '');
-
+    containerRelease.setImagePublished(false);
     await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
-      'artifact command did not publish image ghcr.io/zyplux/ci:3.4.5',
+      'container push did not publish image ghcr.io/zyplux/ci:3.4.5',
     );
-
     expect(shell).not.toHaveRunMatching('gh release');
     expect(shell).toHaveRun('podman logout ghcr.io');
   });
 
-  test.for([false, true])(
-    '22.1.7 publishes image-only custom releases and resumes drafts without uploading assets (%j)',
-    async (isDraft, { airlock, configureTarget, containerRelease, planReleases, registries, shell }) => {
-      await configureTarget('ghcr', 'assets = []');
-      registries.setPublished({ ghcrPublished: true });
-      shell.on(
-        'gh api graphql',
-        isDraft
-          ? '{"data":{"repository":{"release":{"isDraft":true,"releaseAssets":{"nodes":[]}}}}}'
-          : '{"data":{"repository":{"release":null}}}',
-      );
-      expect(await planReleases(containerRelease.batch.tags[0])).toEqual([containerRelease.batch]);
-
-      await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
-
-      expect(shell).not.toHaveRunMatching('gh release upload');
-      expect(shell).toHaveRunMatching('gh release edit ci-image-v3.4.5 --draft=false');
-      expect(shell.commandsMatching('gh release create')).toHaveLength(isDraft ? 0 : 1);
-    },
-  );
+  test('22.1.7 leaves the release as a draft when manifest upload fails', async ({
+    airlock,
+    containerRelease,
+    shell,
+  }) => {
+    shell.on('gh release upload', { exitCode: 1, stdout: 'upload failed' });
+    await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
+      'command failed',
+    );
+    expect(shell).toHaveRunMatching('gh release create ci-image-v3.4.5 --draft');
+    expect(shell).not.toHaveRunMatching('gh release edit');
+    expect(shell).toHaveRun('podman logout ghcr.io');
+  });
 });
 
-describe('22.2 validating custom artifact declarations', () => {
-  test('22.2.1 rejects asset paths outside the staging directory', async ({
-    airlock,
-    configureTarget,
-    containerRelease,
-  }) => {
-    await configureTarget('ghcr', 'assets = ["../release.json"]');
-    await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
-      'relative to the artifact directory',
-    );
-  });
+describe('22.2 validating container releases', () => {
+  test.for([
+    'build_context = "../outside"',
+    'build_context = "/tmp"',
+    'dockerfile = "../Dockerfile"',
+    'dockerfile = "/tmp/Dockerfile"',
+  ])(
+    '22.2.1 requires repository-relative build paths (%s)',
+    async (fields, { airlock, configureTarget, containerRelease, shell }) => {
+      await configureTarget('ghcr', fields);
+      await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
+        'container build paths must be repository-relative',
+      );
+      expect(shell).not.toHaveRunMatching('podman');
+    },
+  );
 
-  test('22.2.2 requires an artifact command for declared assets', async ({ airlock, configureTarget }) => {
-    await configureTarget('ghcr', 'assets = ["release.json"]');
-    await expect(airlock.run('publish-tagged-target', '--release', 'ci-image-v3.4.5')).rejects.toThrow(
-      'declared assets require an artifact_command',
-    );
-  });
+  test.for(['artifact_command = ["custom-builder"]', 'assets = ["custom.json"]'])(
+    '22.2.2 rejects unsupported custom builder declarations (%s)',
+    async (fields, { configureTarget, planReleases }) => {
+      await configureTarget('ghcr', fields);
+      await expect(planReleases()).rejects.toThrow('Unrecognized key');
+    },
+  );
 
-  test('22.2.3 requires release finalization for artifact commands', async ({ airlock, containerRelease }) => {
+  test('22.2.3 requires release finalization for container publication', async ({ airlock, containerRelease }) => {
     await expect(airlock.run('publish-tagged-target', containerRelease.batch.tags[0] ?? '')).rejects.toThrow(
-      'artifact commands require --release',
+      'container publication requires --release',
     );
   });
 
-  test('22.2.4 rejects published container releases with missing declared assets during planning', async ({
+  test('22.2.4 rejects published container releases with missing manifests during planning', async ({
     containerRelease,
     planReleases,
     registries,
@@ -170,4 +172,14 @@ describe('22.2 validating custom artifact declarations', () => {
     await expect(planReleases(containerRelease.batch.tags[0])).rejects.toThrow('missing required assets');
     expect(shell).not.toHaveRunMatching('podman');
   });
+
+  test.for(['', 'sha256:short', `sha512:${'1'.repeat(DIGEST_HEX_LENGTH)}`, `sha256:${'g'.repeat(DIGEST_HEX_LENGTH)}`])(
+    '22.2.5 rejects malformed pushed digests before uploading the manifest (%s)',
+    async (digest, { airlock, containerRelease, shell }) => {
+      containerRelease.setDigest(digest);
+      await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow();
+      expect(shell).not.toHaveRunMatching('gh release');
+      expect(shell).toHaveRun('podman logout ghcr.io');
+    },
+  );
 });

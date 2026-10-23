@@ -20,14 +20,6 @@ Native pnpm packs each package once and publishes the inspected archive with reg
 
 ### 20.2.2 keeps incomplete PyPI releases pending even when their GitHub release exists
 
-## 20.3 prebuilt container release assets
-
-### 20.3.1 uploads assets to a draft before publishing the release
-
-### 20.3.2 rejects incomplete release assets
-
-Failed asset uploads leave a draft unpublished; published releases must already contain the required assets.
-
 ## 20.4 recovering PyPI publication
 
 ### 20.4.1 retries a partial upload before creating its GitHub release
