@@ -8,6 +8,8 @@
 
 - Require the shared package-manager action at `zyplux/zyplux/apps/action-setup-pm`.
 
+- Read version-bump and publication targets from `airlock-targets.toml`; migrate to named target tables with a top-level `scope` before upgrading.
+
 ## 0.25.0
 
 ### Minor Changes

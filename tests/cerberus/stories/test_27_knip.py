@@ -62,19 +62,17 @@ _ENTRY_EXPORTS_WITH_ALLOWANCES = (
 )
 
 _RELEASE_TARGETS_ONE_NPM = (
-    "[[target]]\n"
+    'scope = "@demo"\n[lib]\n'
     'kind = "npm"\n'
     'label = "@demo/lib"\n'
-    'tag_prefix = "lib-v"\n'
     'version = { file = "packages/lib/package.json", json = "version" }\n'
     'surface = ["packages/lib"]\n'
 )
 _RELEASE_TARGETS_MIXED_KINDS = (
     _RELEASE_TARGETS_ONE_NPM + "\n"
-    "[[target]]\n"
+    "[tool]\n"
     'kind = "pypi"\n'
     'label = "demo-tool"\n'
-    'tag_prefix = "tool-v"\n'
     'version = { file = "tool/pyproject.toml", regex = \'^version = "([^"]+)"\' }\n'
     'surface = ["tool"]\n'
 )
@@ -128,7 +126,7 @@ def run_knip_config(run_check_with_files: RunCheckWithFiles) -> RunKnipConfig:
             **(layout or {}),
             "knip.json": knip,
             "knip.prod.json": prod,
-            "release-targets.toml": release_targets,
+            "airlock-targets.toml": release_targets,
         }
         present = {path: content for path, content in files.items() if content is not None}
         return run_check_with_files(CHECK_ID, present, config_toml)
@@ -265,7 +263,7 @@ def test_27_4_7_passes_when_every_published_npm_target_is_exempted_and_nothing_e
     assert result.findings == [ok(_OK)]
 
 
-def test_27_4_8_passes_with_no_release_targets_toml_and_no_workspace_exemptions(
+def test_27_4_8_passes_with_no_airlock_targets_toml_and_no_workspace_exemptions(
     run_knip_config: RunKnipConfig, ok: MakeFinding
 ) -> None:
     result = run_knip_config(prod=_ENTRY_EXPORTS_OK)
@@ -287,17 +285,17 @@ def test_27_4_10_errors_when_knip_prod_json_is_not_an_object(
     assert error("knip.prod.json must be a JSON object") in result.findings
 
 
-def test_27_4_11_ignores_a_malformed_release_targets_toml_as_no_published_targets(
+def test_27_4_11_ignores_a_malformed_airlock_targets_toml_as_no_published_targets(
     run_knip_config: RunKnipConfig, ok: MakeFinding
 ) -> None:
     result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets="not = [valid")
     assert result.findings == [ok(_OK)]
 
 
-def test_27_4_12_ignores_a_release_targets_toml_whose_target_key_is_not_a_list(
+def test_27_4_12_ignores_an_airlock_targets_toml_with_a_non_table_entry(
     run_knip_config: RunKnipConfig, ok: MakeFinding
 ) -> None:
-    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='target = "not-a-list"\n')
+    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='scope = "@demo"\nlib = "not-a-table"\n')
     assert result.findings == [ok(_OK)]
 
 

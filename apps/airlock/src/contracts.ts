@@ -7,9 +7,8 @@ export const VersionSourceSchema = z.union([
 
 const TargetBaseSchema = z.object({
   environment: z.string().min(1).optional(),
-  label: z.string(),
+  label: z.string().optional(),
   surface: z.array(z.string()),
-  tag_prefix: z.string(),
   version: VersionSourceSchema,
 });
 
@@ -25,7 +24,6 @@ export const TargetSchema = z.discriminatedUnion('kind', [
   }),
   TargetBaseSchema.extend({
     kind: z.literal('action'),
-    major_tag_prefix: z.string().min(1),
     repository: z.string().regex(/^[\w.-]+\/[\w.-]+$/u),
   }),
 ]);
@@ -44,7 +42,16 @@ export const ActionReleasesSchema = z.array(
   z.array(z.object({ draft: z.boolean(), prerelease: z.boolean(), tag_name: z.string() })),
 );
 
-export const ManifestSchema = z.object({ target: z.array(TargetSchema) });
+export const ManifestSchema = z
+  .object({ scope: z.string().min(1) })
+  .catchall(TargetSchema)
+  .transform(({ scope, ...targets }) => ({
+    target: Object.entries(targets).map(([name, target]) => ({
+      ...target,
+      label: target.label ?? `${scope}/${name}`,
+      tag_prefix: `${name}-v`,
+    })),
+  }));
 export const VersionFileSchema = z.record(z.string(), z.unknown());
 export const VersionFieldSchema = z.string();
 export const PythonReleaseSchema = z.object({ name: z.string(), private: z.literal(true), version: z.string() });
@@ -60,5 +67,5 @@ export const GhcrTokenSchema = z.object({ token: z.string() });
 
 export type ActionTarget = Extract<Target, { kind: 'action' }>;
 export type ReleaseBatch = z.infer<typeof ReleaseBatchSchema>;
-export type Target = z.infer<typeof TargetSchema>;
+export type Target = z.infer<typeof ManifestSchema>['target'][number];
 export type VersionSource = z.infer<typeof VersionSourceSchema>;

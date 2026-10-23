@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Protocol
+from urllib.parse import quote
 
 import pytest
 
@@ -15,26 +16,25 @@ if TYPE_CHECKING:
 
 
 MANIFEST = """
-[[target]]
+scope = "@zyplux"
+
+[widget]
 kind = "npm"
-label = "@zyplux/widget"
-tag_prefix = "widget-v"
 version = { file = "packages/widget/package.json", json = "version" }
 surface = ["packages/widget/src"]
 """
 
 REGEX_MANIFEST = """
-[[target]]
+scope = "@zyplux"
+
+[widget]
 kind = "pypi"
 label = "zyplux-widget"
-tag_prefix = "widget-v"
 version = { file = "apps/widget/pyproject.toml", regex = '^version = "([^"]+)"' }
 surface = ["apps/widget/src"]
 """
 
-ACTION_MANIFEST = (
-    MANIFEST.replace('kind = "npm"', 'kind = "action"') + '\nrepository = "zyplux/zyplux"\nmajor_tag_prefix = "v"\n'
-)
+ACTION_MANIFEST = MANIFEST.replace('kind = "npm"', 'kind = "action"') + '\nrepository = "zyplux/zyplux"\n'
 ACTION_RELEASES = "/repos/zyplux/zyplux/releases?per_page=100&page=1"
 
 MALFORMED_MANIFEST = "not = valid = toml"
@@ -77,7 +77,7 @@ def target_branch(monkeypatch: pytest.MonkeyPatch, ctx: Context, run_release_bum
         def read_base(_repo: Repo, _ref: str, path: str) -> str | None:
             if isinstance(content, Exception):
                 raise content
-            return {"release-targets.toml": manifest, VERSION_FILE: content}.get(path)
+            return {"airlock-targets.toml": manifest, VERSION_FILE: content}.get(path)
 
         monkeypatch.setattr(ctx, "file_at_ref", read_base)
 
@@ -123,7 +123,7 @@ def run_release_bumps(
     ) -> CheckResult:
         files: dict[str, str] = {}
         if manifest is not None:
-            files["release-targets.toml"] = manifest
+            files["airlock-targets.toml"] = manifest
         if version_file_content is not None:
             files[version_path] = version_file_content
 
@@ -150,23 +150,24 @@ def private_version_json(version: str) -> str:
 
 def test_14_1_1_skips_repos_that_publish_nothing(run_release_bumps: RunReleaseBumps, skip: MakeFinding) -> None:
     result = run_release_bumps(manifest=None)
-    assert result.findings == [skip("no release-targets.toml — repo publishes nothing")]
+    assert result.findings == [skip("no airlock-targets.toml — repo publishes nothing")]
 
 
 def test_14_1_2_errors_when_the_release_manifest_is_malformed(
     run_release_bumps: RunReleaseBumps, error: MakeFinding
 ) -> None:
     result = run_release_bumps(manifest=MALFORMED_MANIFEST)
-    assert result.findings == [error("release-targets.toml is malformed: Invalid value (at line 1, column 7)")]
+    assert result.findings == [error("airlock-targets.toml is malformed: Invalid value (at line 1, column 7)")]
 
 
-def test_14_1_3_errors_when_the_manifest_has_no_target_array(
-    run_release_bumps: RunReleaseBumps, error: MakeFinding
+@pytest.mark.parametrize("manifest", ["", 'scope = ""', "scope = 1"])
+def test_14_1_3_errors_when_the_manifest_has_an_invalid_scope(
+    run_release_bumps: RunReleaseBumps, error: MakeFinding, manifest: str
 ) -> None:
-    result = run_release_bumps(manifest="")
+    result = run_release_bumps(manifest=manifest)
     assert result.findings == [
         error(
-            "release-targets.toml is malformed: release-targets.toml has no [[target]] array (found None)",
+            "airlock-targets.toml is malformed: airlock-targets.toml requires a nonempty scope",
         )
     ]
 
@@ -177,10 +178,34 @@ def test_14_1_4_errors_when_a_target_has_an_unknown_kind(
     result = run_release_bumps(manifest=MANIFEST.replace('kind = "npm"', 'kind = "cargo"'))
     assert result.findings == [
         error(
-            "release-targets.toml is malformed: target '@zyplux/widget' has unknown kind 'cargo' "
+            "airlock-targets.toml is malformed: target '@zyplux/widget' has unknown kind 'cargo' "
             "(expected one of ['action', 'ghcr', 'npm', 'pypi'])",
         )
     ]
+
+
+def test_14_1_5_errors_when_a_target_is_not_a_table(run_release_bumps: RunReleaseBumps, error: MakeFinding) -> None:
+    result = run_release_bumps(manifest='scope = "@demo"\nwidget = 1')
+    assert result.findings == [error("airlock-targets.toml is malformed: target 'widget' must be a table")]
+
+
+@pytest.mark.parametrize("label", [None, "@custom/package"])
+def test_14_1_6_resolves_configured_scopes_and_explicit_labels(
+    run_release_bumps: RunReleaseBumps, fake_registry: FakeRegistry, ok: MakeFinding, label: str | None
+) -> None:
+    manifest = MANIFEST.replace('scope = "@zyplux"', 'scope = "@demo"')
+    if label is not None:
+        manifest += f'\nlabel = "{label}"\n'
+    package = label or "@demo/widget"
+    fake_registry.serve_npm(package, "0.1.0")
+    result = run_release_bumps(manifest=manifest, published="0.1.0")
+    assert result.findings == [ok(DONE)]
+    assert ("registry.npmjs.org", f"/{quote(package, safe='@')}") in fake_registry.requests
+
+
+def test_14_1_7_accepts_a_scope_with_no_targets(run_release_bumps: RunReleaseBumps, ok: MakeFinding) -> None:
+    result = run_release_bumps(manifest='scope = "@demo"')
+    assert result.findings == [ok(DONE)]
 
 
 def test_14_2_1_fails_when_the_version_file_is_missing(run_release_bumps: RunReleaseBumps, fail: MakeFinding) -> None:
@@ -602,7 +627,7 @@ def test_14_7_15_checks_the_base_version_when_its_file_moves(
 def test_14_7_16_distinguishes_targets_that_share_a_version_file(
     run_release_bumps: RunReleaseBumps, target_branch: ConfigureBase, ok: MakeFinding
 ) -> None:
-    target_branch(version_json("1.0.0"), manifest=MANIFEST.replace(LABEL, "@zyplux/other"))
+    target_branch(version_json("1.0.0"), manifest=MANIFEST.replace("[widget]", "[other]"))
 
     result = run_release_bumps()
 

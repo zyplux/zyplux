@@ -25,7 +25,7 @@ type BootstrapNpmTargetConfig = InferValue<typeof bootstrapNpmTargetCommand>;
 export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig) => {
   const targets = await loadReleaseTargets();
   const target = targets.find(candidate => candidate.label === label);
-  ensure(target !== undefined, `no release target labeled '${label}' in release-targets.toml`);
+  ensure(target !== undefined, `no release target labeled '${label}' in airlock-targets.toml`);
   ensure(target.kind === 'npm', `bootstrap is npm-only; '${label}' is a ${target.kind} target`);
 
   const { version } = target;

@@ -22,8 +22,7 @@ ID = "release_surface_version_bump"
 SUMMARY = "a published target's version is bumped by exactly one step whenever its release surface changes"
 SCOPE = Scope.GIT_HISTORY
 
-_MANIFEST = "release-targets.toml"
-_TARGET_KEY = "target"
+_MANIFEST = "airlock-targets.toml"
 _MAX_CONCURRENT_LOOKUPS = 8
 _SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 _GHCR_HOST_PREFIX = "ghcr.io/"
@@ -54,29 +53,29 @@ class _Target:
         return self.label.removeprefix(_GHCR_HOST_PREFIX) if self.kind == "ghcr" else self.label
 
 
-class _ManifestError(ValueError):
-    def __init__(self, key: str, found: object) -> None:
-        super().__init__(f"{_MANIFEST} has no [[{key}]] array (found {found!r})")
-
-
 def _parse_targets(manifest: str) -> list[_Target]:
-    raw = tomllib.loads(manifest).get(_TARGET_KEY)
-    if not isinstance(raw, list):
-        raise _ManifestError(_TARGET_KEY, raw)
+    raw = tomllib.loads(manifest)
+    scope = raw.pop("scope", None)
+    if not isinstance(scope, str) or not scope:
+        failure = f"{_MANIFEST} requires a nonempty scope"
+        raise ValueError(failure)
     targets = []
-    for entry in raw:
+    for name, entry in raw.items():
+        if not isinstance(entry, dict):
+            failure = f"target {name!r} must be a table"
+            raise TypeError(failure)
         version = entry["version"]
         kind = entry["kind"]
+        label = entry.get("label", f"{scope}/{name}")
         if kind not in _TARGET_KINDS:
-            label = entry.get("label", "?")
             failure = f"target {label!r} has unknown kind {kind!r} (expected one of {_TARGET_KINDS})"
             raise ValueError(failure)
         targets.append(
             _Target(
-                label=entry["label"],
+                label=label,
                 kind=kind,
                 repository=entry["repository"] if kind == "action" else "",
-                tag_prefix=entry["tag_prefix"],
+                tag_prefix=f"{name}-v",
                 version_file=version["file"],
                 version_json=version.get("json"),
                 version_regex=version.get("regex"),

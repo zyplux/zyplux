@@ -56,7 +56,7 @@ Node 26 refuses to type-strip files under `node_modules`, so the published packa
 40. [ ] All four — `files` must include the build output, not (only) `src`.
 41. [ ] All four — verify the `#`-subpath `imports` maps still resolve post-build.
 42. [ ] Add `prepack` (or equivalent) so packing cannot publish stale output.
-43. [ ] `release-targets.toml` — `surface` globs for the four packages must cover build inputs, not output.
+43. [ ] `airlock-targets.toml` — `surface` globs for the four packages must cover build inputs, not output.
 44. [ ] Verify `pnpm pack` tarball contents for each package before the first real publish.
 45. [ ] Version-bump all four packages; the published shape changes even where the API does not.
 46. [ ] Decide whether `@zyplux/tsconfig` needs a bump (JSON-only, but the preset set changes).

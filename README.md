@@ -24,7 +24,7 @@
 | [setup-pm](apps/action-setup-pm) | GitHub | Cached pnpm and uv setup for dual workspaces |
 | [Airlock](apps/action-airlock) | GitHub | Plan and publish reviewed workspace releases |
 
-Each package's README covers usage. The [release workflow](.github/workflows/release.yml) publishes configured versions automatically on pushes to `main`, using Airlock to select pending targets from [release-targets.toml](release-targets.toml). Complete releases are skipped; failed publications and missing GitHub releases are retried. Registry artifacts have concurrency groups per version; action publications share a group to protect their moving major tags. CI and version-bump enforcement run on pull requests. The release workflow also supports manual retries on `main` and per-tag GitHub release events.
+Each package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock-targets.toml](airlock-targets.toml).
 
 For releasable changes, run `pnpm change`, then `pnpm release:prepare` before review. Each GitHub release contains its target version's reviewed changelog entry. See the [release workflow](.changeset/README.md).
 

@@ -16,4 +16,12 @@
 
 ## 2.4 conforming the repo's own release manifest
 
-### 2.4.1 loads a version for every target declared in release-targets.toml
+### 2.4.1 loads a version for every target declared in airlock-targets.toml
+
+## 2.5 resolving named targets
+
+### 2.5.1 derives labels from the configured scope and tags from table names
+
+### 2.5.2 honors explicit labels without changing the derived tag prefix
+
+### 2.5.3 rejects missing or invalid scope and target tables

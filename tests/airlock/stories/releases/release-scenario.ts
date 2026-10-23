@@ -91,30 +91,28 @@ export const createRelease = (repo: RepositoryFake, registries: Registries, shel
     },
   }) satisfies Release;
 
-const SEEDED_MANIFEST = String.raw`[[target]]
+const SEEDED_MANIFEST = String.raw`scope = "@zyplux"
+
+[util]
 kind = "npm"
-label = "@zyplux/util"
 surface = []
-tag_prefix = "util-v"
 version = { file = "packages/util/package.json", json = "version" }
 
-[[target]]
+[cerberus]
 kind = "pypi"
 label = "zyplux-cerberus"
 surface = []
-tag_prefix = "cerberus-v"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
 
-[[target]]
+[ci-image]
 kind = "ghcr"
 label = "ghcr.io/zyplux/ci"
 surface = []
-tag_prefix = "ci-image-v"
 version = { file = "containers/ci/Containerfile", regex = '^LABEL org\.opencontainers\.image\.version="([^"]+)"' }
 `;
 
 export const seedReleaseTargets = async (tempDir: TempDir) => {
-  await tempDir.write('release-targets.toml', SEEDED_MANIFEST);
+  await tempDir.write('airlock-targets.toml', SEEDED_MANIFEST);
   await tempDir.write('packages/util/package.json', '{ "name": "@zyplux/util", "version": "1.2.3" }\n');
   await tempDir.write('apps/cerberus/pyproject.toml', '[project]\nname = "zyplux-cerberus"\nversion = "2.3.4"\n');
   await tempDir.write(
@@ -148,8 +146,8 @@ export const seedReleaseTargets = async (tempDir: TempDir) => {
       version: '3.4.5',
     },
     configureTarget: async (kind, fields) => {
-      const manifest = await readFile(path.join(tempDir.path, 'release-targets.toml'), 'utf8');
-      const sections = manifest.split('[[target]]');
+      const manifest = await readFile(path.join(tempDir.path, 'airlock-targets.toml'), 'utf8');
+      const sections = manifest.split(/(?=^\[)/mu);
       const index = sections.findIndex(section => section.includes(`kind = "${kind}"`));
       const section = sections[index];
       ensure(section !== undefined, 'target kind must exist');
@@ -161,7 +159,7 @@ export const seedReleaseTargets = async (tempDir: TempDir) => {
         else lines[position] = field;
       }
       sections[index] = `${lines.join('\n')}\n`;
-      await tempDir.write('release-targets.toml', sections.join('[[target]]'));
+      await tempDir.write('airlock-targets.toml', sections.join(''));
     },
     util: {
       dir: path.join(tempDir.path, 'packages/util'),
@@ -176,7 +174,7 @@ export const createLiveWorkspace = () =>
   ({
     root: workspaceRoot,
     targetLabels: async () => {
-      const manifestText = await readFile(path.join(workspaceRoot, 'release-targets.toml'), 'utf8');
+      const manifestText = await readFile(path.join(workspaceRoot, 'airlock-targets.toml'), 'utf8');
       return parseToml(manifestText, ManifestSchema).target.map(target => target.label);
     },
   }) satisfies LiveWorkspace;

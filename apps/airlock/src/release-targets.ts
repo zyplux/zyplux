@@ -139,7 +139,7 @@ const isPackagePublished = async (target: Target, version: string, directory: st
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const repoRoot = await readTrimmed($.git.showToplevel());
-  const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
+  const manifest = parseToml(await readFile(path.join(repoRoot, 'airlock-targets.toml'), 'utf8'), ManifestSchema);
   return Promise.all(
     manifest.target.map(async spec => {
       const dir = path.join(repoRoot, path.dirname(spec.version.file));
@@ -165,7 +165,7 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
 export const resolveReleaseTag = async (tag: string): Promise<ReleaseTarget> => {
   const targets = await loadReleaseTargets();
   const target = targets.find(candidate => tag.startsWith(candidate.tagPrefix));
-  ensure(target !== undefined, `no release target in release-targets.toml owns tag '${tag}'`);
+  ensure(target !== undefined, `no release target in airlock-targets.toml owns tag '${tag}'`);
 
   ensure(
     tag === target.tag,

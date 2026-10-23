@@ -4,11 +4,11 @@ import { vi } from 'vitest';
 import { describe, expect, test } from './releases.ts';
 
 const BROKEN_TARGET_MANIFEST = [
-  '[[target]]',
+  'scope = "@zyplux"',
+  '[broken]',
   'kind = "npm"',
   'label = "broken-target"',
   'surface = []',
-  'tag_prefix = "broken-v"',
   'version = { file = "VERSION", regex = \'^nomatch$\' }',
 ].join('\n');
 
@@ -25,7 +25,7 @@ describe('2.1 loading release targets from the manifest', () => {
 
 describe('2.2 reading a version whose regex does not match its source file', () => {
   test('2.2.1 rejects reading a version whose regex does not match the file', async ({ airlock, tempDir }) => {
-    await tempDir.write('release-targets.toml', BROKEN_TARGET_MANIFEST);
+    await tempDir.write('airlock-targets.toml', BROKEN_TARGET_MANIFEST);
     await tempDir.write('VERSION', '1.2.3\n');
 
     await expect(airlock.run('assert-tag-version', 'broken-v1.2.3')).rejects.toThrow(
@@ -71,7 +71,7 @@ describe('2.3 checking whether the ghcr image target is published', () => {
 });
 
 describe("2.4 conforming the repo's own release manifest", () => {
-  test('2.4.1 loads a version for every target declared in release-targets.toml', async ({
+  test('2.4.1 loads a version for every target declared in airlock-targets.toml', async ({
     airlock,
     liveWorkspace,
     logs,
@@ -87,4 +87,40 @@ describe("2.4 conforming the repo's own release manifest", () => {
       expect(logs.logLines).toContainEqual(expect.stringContaining(`"label":"${label}"`));
     }
   });
+});
+
+describe('2.5 resolving named targets', () => {
+  test('2.5.1 derives labels from the configured scope and tags from table names', async ({
+    airlock,
+    loadArtifact,
+    logs,
+    tempDir,
+  }) => {
+    const manifest = await loadArtifact('airlock-targets.toml');
+    await tempDir.write('airlock-targets.toml', manifest.replace('scope = "@zyplux"', 'scope = "@demo"'));
+    await airlock.run('list-prepared-releases');
+    expect(logs.logLines).toContainEqual(expect.stringContaining('"label":"@demo/util"'));
+    expect(logs.logLines).toContainEqual(expect.stringContaining('"tag":"util-v1.2.3"'));
+    expect(logs.logLines).toContainEqual(expect.stringContaining('"label":"zyplux-cerberus"'));
+  });
+
+  test('2.5.2 honors explicit labels without changing the derived tag prefix', async ({
+    airlock,
+    configureTarget,
+    logs,
+  }) => {
+    await configureTarget('npm', 'label = "@demo/renamed"');
+    await airlock.run('list-prepared-releases');
+    expect(logs.logLines).toContainEqual(expect.stringContaining('"label":"@demo/renamed"'));
+    expect(logs.logLines).toContainEqual(expect.stringContaining('"tag":"util-v1.2.3"'));
+  });
+
+  test.for(['', 'scope = ""', 'scope = 1', 'scope = "@demo"\nutil = 1'])(
+    '2.5.3 rejects missing or invalid scope and target tables (%j)',
+    async (manifest, { airlock, logs, tempDir }) => {
+      await tempDir.write('airlock-targets.toml', manifest);
+      await expect(airlock.run('list-prepared-releases')).rejects.toThrow();
+      expect(logs.logLines).toEqual([]);
+    },
+  );
 });

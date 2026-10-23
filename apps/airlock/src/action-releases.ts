@@ -21,12 +21,9 @@ const validateActionVersion = (version: string) => {
   return parsed;
 };
 
-const resolveActionAlias = async (
-  { major_tag_prefix: majorTagPrefix, repository, tag_prefix: tagPrefix }: ActionTarget,
-  version: string,
-) => {
+const resolveActionAlias = async ({ repository, tag_prefix: tagPrefix }: ActionTarget, version: string) => {
   const parsed = validateActionVersion(version);
-  const ref = `refs/tags/${majorTagPrefix}${parsed.major}`;
+  const ref = `refs/tags/${tagPrefix}${parsed.major}`;
   const previousSha = parseRemoteTag(await readTrimmed($.git.lsRemote('origin', ref)), ref);
   const endpoint = `repos/${repository}/releases?per_page=100`;
   const releases = parseJson(await readTrimmed($`gh api --paginate --slurp ${endpoint}`), ActionReleasesSchema)

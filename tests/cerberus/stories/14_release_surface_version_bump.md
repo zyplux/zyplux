@@ -6,9 +6,15 @@
 
 ### 14.1.2 errors when the release manifest is malformed
 
-### 14.1.3 errors when the manifest has no target array
+### 14.1.3 errors when the manifest has an invalid scope
 
 ### 14.1.4 errors when a target has an unknown kind
+
+### 14.1.5 errors when a target is not a table
+
+### 14.1.6 resolves configured scopes and explicit labels
+
+### 14.1.7 accepts a scope with no targets
 
 ## 14.2 reading a target's current version
 

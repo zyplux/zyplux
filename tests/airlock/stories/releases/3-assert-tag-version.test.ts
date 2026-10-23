@@ -13,7 +13,7 @@ const assertCases: AssertCase[] = [
     '2 rejects a tag no release target owns',
     'mystery-v1.0.0',
     'throws',
-    "no release target in release-targets.toml owns tag 'mystery-v1.0.0'",
+    "no release target in airlock-targets.toml owns tag 'mystery-v1.0.0'",
   ],
   [
     '3 rejects a tag whose version does not match the manifest',

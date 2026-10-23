@@ -4,4 +4,4 @@
 
 ### 14.1.1 passes Publint for every built npm archive
 
-Every npm target in `release-targets.toml` is built and packed with pnpm. Each package's `prepack` script runs Publint over the publishable archive with pnpm's manifest transformations applied. Warnings and errors prevent packing.
+Every npm target in `airlock-targets.toml` is built and packed with pnpm. Each package's `prepack` script runs Publint over the publishable archive with pnpm's manifest transformations applied. Warnings and errors prevent packing.

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
 export const test = libraryTest.extend('verifyPublishedPackages', ({ tempDir }) => () => {
-  const manifest = parseToml(readFileSync(path.join(workspaceRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
+  const manifest = parseToml(readFileSync(path.join(workspaceRoot, 'airlock-targets.toml'), 'utf8'), ManifestSchema);
   for (const target of manifest.target) {
     if (target.kind !== 'npm') continue;
     const dir = path.join(workspaceRoot, path.dirname(target.version.file));

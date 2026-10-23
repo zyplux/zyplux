@@ -46,15 +46,15 @@
 
 ### 27.4.7 passes when every published npm target is exempted and nothing else is
 
-### 27.4.8 passes with no release-targets.toml and no workspace exemptions
+### 27.4.8 passes with no airlock-targets.toml and no workspace exemptions
 
 ### 27.4.9 errors when knip.prod.json cannot be parsed
 
 ### 27.4.10 errors when knip.prod.json is not an object
 
-### 27.4.11 ignores a malformed release-targets.toml as no published targets
+### 27.4.11 ignores a malformed airlock-targets.toml as no published targets
 
-### 27.4.12 ignores a release-targets.toml whose target key is not a list
+### 27.4.12 ignores an airlock-targets.toml with a non-table entry
 
 ### 27.4.13 ignores non npm targets when computing published workspace dirs
 

@@ -8,7 +8,7 @@ import { makeReleaseTagCommand } from './release-tag-command.ts';
 
 export const assertTagVersionCommand = makeReleaseTagCommand('assert-tag-version', {
   alias: 'av',
-  brief: message`Assert a release tag matches its target's declared version (from release-targets.toml).`,
+  brief: message`Assert a release tag matches its target's declared version (from airlock-targets.toml).`,
   tagDescription: message`Release tag to verify (e.g. eslint-config-v1.2.3).`,
 });
 

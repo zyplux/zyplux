@@ -70,10 +70,10 @@ describe('21.2 executing the selected publication batch', () => {
     shell,
     tempDir,
   }) => {
-    const manifest = await loadArtifact('release-targets.toml');
+    const manifest = await loadArtifact('airlock-targets.toml');
     await tempDir.write(
-      'release-targets.toml',
-      `${manifest}\n[[target]]\nkind = "npm"\nlabel = "@zyplux/extra"\nsurface = []\ntag_prefix = "extra-v"\nversion = { file = "packages/extra/package.json", json = "version" }\n`,
+      'airlock-targets.toml',
+      `${manifest}\n[extra]\nkind = "npm"\nsurface = []\nversion = { file = "packages/extra/package.json", json = "version" }\n`,
     );
     await tempDir.write('packages/extra/package.json', '{"name":"@zyplux/extra","version":"1.2.3"}');
     await tempDir.write('packages/extra/CHANGELOG.md', '# Extra\n\n## 1.2.3\n\n- Publish extra.\n');
@@ -157,7 +157,7 @@ describe('21.3 selecting incomplete releases', () => {
   });
 
   test('21.3.5 plans no batches for a repository with no release targets', async ({ planReleases, tempDir }) => {
-    await tempDir.write('release-targets.toml', 'target = []\n');
+    await tempDir.write('airlock-targets.toml', 'scope = "@zyplux"\n');
     expect(await planReleases()).toEqual([]);
   });
 

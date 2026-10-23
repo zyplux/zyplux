@@ -18,14 +18,14 @@ type PublishedRelease = string | { draft?: boolean; prerelease?: boolean; tag: s
 export const createActionRelease = async ({ repo, shell, targets, tempDir }: ActionContext) => {
   vi.mocked(sleep).mockResolvedValue(undefined);
   await tempDir.write(
-    'release-targets.toml',
-    `[[target]]
+    'airlock-targets.toml',
+    `scope = "@zyplux"
+
+[setup-pm]
   kind = "action"
   label = "zyplux-setup-pm"
   repository = "zyplux/zyplux"
   surface = ["apps/action-setup-pm"]
-  tag_prefix = "setup-pm-v"
-  major_tag_prefix = "setup-pm-v"
   version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
   `,
   );

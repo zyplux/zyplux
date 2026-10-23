@@ -4,7 +4,7 @@ import { describe, expect, test } from './releases.ts';
 describe('5.1 validating the target before bootstrapping', () => {
   test('5.1.1 rejects a label no release target owns', async ({ airlock }) => {
     await expect(airlock.run('bootstrap-npm-target', 'does-not-exist')).rejects.toThrow(
-      "no release target labeled 'does-not-exist' in release-targets.toml",
+      "no release target labeled 'does-not-exist' in airlock-targets.toml",
     );
   });
 
