@@ -37,7 +37,7 @@ describe('24.1 isolating npm publication jobs', () => {
       'airlock-targets.toml',
       manifest.replace('[consumer]', '["team/consumer"]\nlabel = "@zyplux/consumer"'),
     );
-    shell.on('tar -xOf', '{}');
+    shell.on('tar -xOf', JSON.stringify({ name: consumer.label, version: consumer.version }));
     const [batch] = await planReleases('team/consumer-v1.2.3');
     repo.setHeadSha('reviewed-sha');
     stageNpmPublication();
@@ -136,10 +136,22 @@ describe('24.1 isolating npm publication jobs', () => {
 });
 
 describe('24.3 packed publication dependencies', () => {
+  test.for([{ name: '@zyplux/unexpected' }, { version: '9.9.9' }])(
+    '24.3.4 rejects packing hooks that change the package identity (%j)',
+    async (override, { airlock, consumer, planReleases, shell }) => {
+      shell.on('tar -xOf', JSON.stringify({ name: consumer.label, version: consumer.version, ...override }));
+      const [batch] = await planReleases(consumer.tag);
+      await expect(airlock.run('publish', '--batch', JSON.stringify(batch))).rejects.toThrow(
+        'packed package identity must match',
+      );
+      expect(shell).not.toHaveRunMatching('pnpm publish');
+    },
+  );
+
   test.for([{ utility: 'npm:@zyplux/util@1.2.3' }, { utility: 'npm:@zyplux/util' }, { '@zyplux/util': 'npm:^1.2.0' }])(
     '24.3.2 waits for the real package behind an npm alias (%j)',
     async (dependencies, { airlock, consumer, planReleases, shell }) => {
-      shell.on('tar -xOf', JSON.stringify({ dependencies }));
+      shell.on('tar -xOf', JSON.stringify({ dependencies, name: consumer.label, version: consumer.version }));
       const [batch] = await planReleases(consumer.tag);
 
       await expect(airlock.run('publish', '--batch', JSON.stringify(batch))).rejects.toThrow(
@@ -159,7 +171,15 @@ describe('24.3 packed publication dependencies', () => {
   ])(
     '24.3.3 skips workspace waits for bundled or incompatible dependencies (%j)',
     async (bundling, { airlock, consumer, planReleases, repo, shell, stageNpmPublication }) => {
-      shell.on('tar -xOf', JSON.stringify({ dependencies: { '@zyplux/util': '1.2.3' }, ...bundling }));
+      shell.on(
+        'tar -xOf',
+        JSON.stringify({
+          dependencies: { '@zyplux/util': '1.2.3' },
+          name: consumer.label,
+          version: consumer.version,
+          ...bundling,
+        }),
+      );
       const [batch] = await planReleases(consumer.tag);
       repo.setHeadSha('reviewed-sha');
       stageNpmPublication();

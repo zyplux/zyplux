@@ -7,7 +7,7 @@ import { satisfies, validRange } from 'semver';
 
 import type { ReleaseTarget } from './release-targets.ts';
 
-import { NpmPackageSchema, WorkspacePackagesSchema } from './contracts.ts';
+import { NpmArchiveSchema, WorkspacePackagesSchema } from './contracts.ts';
 import { isNpmVersionAvailable } from './release-registries.ts';
 import { loadReleaseTargets } from './release-targets.ts';
 
@@ -24,8 +24,12 @@ const parseDependency = (name: string, specifier: string) => {
     : { name: packageSpec, range: '*' };
 };
 
-export const loadNpmDependencies = async ({ label }: ReleaseTarget, archive: string) => {
-  const manifest = parseJson(await readTrimmed($`tar -xOf ${archive} package/package.json`), NpmPackageSchema);
+export const loadNpmDependencies = async ({ label, version }: ReleaseTarget, archive: string) => {
+  const manifest = parseJson(await readTrimmed($`tar -xOf ${archive} package/package.json`), NpmArchiveSchema);
+  ensure(
+    manifest.name === label && manifest.version === version,
+    `${label}: packed package identity must match ${label}@${version}`,
+  );
   const bundled = manifest.bundledDependencies ?? manifest.bundleDependencies;
   const bundledNames = new Set(
     bundled === true ? Object.keys(manifest.dependencies) : Array.isArray(bundled) ? bundled : [],

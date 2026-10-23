@@ -29,3 +29,5 @@
 ### 24.3.2 waits for the real package behind an npm alias
 
 ### 24.3.3 skips workspace waits for bundled or incompatible dependencies
+
+### 24.3.4 rejects packing hooks that change the package identity

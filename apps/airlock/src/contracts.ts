@@ -62,6 +62,7 @@ export const NpmPackageSchema = z.object({
   publishConfig: z.record(z.string(), z.unknown()).default({}),
   scripts: z.record(z.string(), z.string()).default({}),
 });
+export const NpmArchiveSchema = NpmPackageSchema.extend({ name: z.string(), version: z.string() });
 export const NpmVersionsSchema = z.object({ versions: z.record(z.string(), z.unknown()) });
 export const NpmArtifactSchema = z.object({ dist: z.object({ tarball: z.url() }) });
 export const WorkspacePackagesSchema = z.array(
