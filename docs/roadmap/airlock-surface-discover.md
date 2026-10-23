@@ -6,13 +6,13 @@ Status: deferred. Release targets continue to declare manual `surface` paths in 
 
 Discover the repository inputs that affect a release, leaving maintainers to declare entry points and additional inputs that the build tools cannot discover. Cover all supported release kinds: npm packages, PyPI distributions, GHCR images and GitHub Actions. A registry identifies where an artifact is published; its language, build and packaging tools determine its inputs.
 
-Prefer existing build metadata and native dependency queries over another import parser or build system. Airlock owns release policy and combines discovered inputs with explicit paths; the existing build tools own resolution and packaging.
+Prefer existing build metadata and native dependency queries over another import parser or build system. Cerberus owns release-policy enforcement and can reuse Airlock machinery to combine discovered inputs with explicit paths; the existing build tools own resolution and packaging.
 
 ## Existing foundations
 
 - [Airlock surface validation](../../apps/airlock/src/release-surface.ts) compares Git changes against declared paths. It does not discover dependencies.
 - Airlock's npm publisher inspects the actual packed manifest after lifecycle scripts and packing hooks. This distinguishes bundled implementation packages from dependencies that consumers install separately.
-- In `zyp-vps`, `packages/config-validator/build.ts` already obtains esbuild metadata from the validator's two entry points and checks contributing source files against its manual surface. That metadata could supply the discovered source paths instead.
+- In `zyp-vps`, `packages/config-validator/build.ts` bundles the validator's two entry points with esbuild. Its optional metadata is a candidate source of discovered paths for a future implementation.
 - The core image's `apps/zyp-loop/Dockerfile` uses `turbo prune` to select its workspace dependencies. Its final image contains the pruned workspace, so tracing only runtime imports would describe a different boundary.
 - `zyp-vps/scripts/build-dep-graph.ts` and `build-module-graph.ts` generate diagrams with simplified import parsing. They are visualization helpers, not complete release-input resolvers.
 
@@ -46,7 +46,7 @@ For Python, [uv's build documentation](https://docs.astral.sh/uv/concepts/projec
 - Generate discovery results during validation using the target's actual build configuration. Avoid committed generated inventories, stale metadata and duplicate entry-point declarations.
 - Include declared version sources, relevant package manifests and build configuration. Manifests can change resolution, exports, side effects and dependencies without changing imports.
 - Cover additions, removals and renames, including changes to the dependency graph itself. Decide how comparison against the released revision works before defining the configuration contract.
-- Preserve architecture boundaries separately from release coverage. The validator's current surface also prevents accidental bundling of runtime implementations; automatic discovery must not turn that into unconditional acceptance of new imports.
+- Review architecture boundaries separately from release surfaces. A discovered dependency is not evidence that an import belongs in a package.
 - Keep dependency selection native. Whole workspace lockfiles are conservative and can require extra releases for unrelated updates; avoiding that requires relevant dependency comparisons, not a new hand-maintained lockfile parser.
 - Surface discovery determines which targets need reviewed release changes. It does not choose semantic version increments, publish artifacts or deploy applications.
 

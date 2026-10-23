@@ -69,3 +69,11 @@
 ### 23.4.6 selects stable numeric container tags
 
 ### 23.4.7 prints readable findings without json mode
+
+## 23.5 reusing GitHub credentials for private registry reads
+
+### 23.5.1 reads private npm metadata using environment tokens or the saved GitHub login
+
+### 23.5.2 authenticates private container reads with the saved login and its actor
+
+### 23.5.3 preserves explicitly supplied credentials and reports denied access

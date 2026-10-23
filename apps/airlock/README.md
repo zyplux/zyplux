@@ -47,7 +47,9 @@ If preparation needs regeneration, preserve the code and note text, restore gene
 
 Action targets require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
-Cerberus's `release_surface_version_bump` bite runs `pnpm exec airlock check-surface --json` and reports its findings. Keep Airlock installed as a locked root development dependency. In zyplux, `workspace:*` runs the current source; consuming repositories run their installed npm version. The JSON command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
+Cerberus's `release_surface_version_bump` bite runs `pnpm exec airlock check-surface --json` and reports its findings. Cerberus owns enforcement; Airlock supplies the shared manifest, registry and version-check machinery. Keep Airlock installed as a locked root development dependency. In zyplux, `workspace:*` runs the current source; consuming repositories run their installed npm version. The JSON command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
+
+Private GitHub registry reads use `NODE_AUTH_TOKEN` for npm, or `GH_TOKEN`/`GITHUB_TOKEN`, and otherwise reuse `gh auth token --hostname github.com`. Local users can sign in with `gh auth login --scopes read:packages`. Tokens need access to the package; Actions use the job token and package access granted to the repository. Explicit credentials take precedence, and registry failures remain errors.
 
 ## Automatic publication
 

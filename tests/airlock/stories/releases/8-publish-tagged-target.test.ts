@@ -185,7 +185,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     env.set('NODE_AUTH_TOKEN', '');
 
     await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
-      'NODE_AUTH_TOKEN is required to read npm.pkg.github.com',
+      'GitHub Packages requires authentication',
     );
     expect(network.requests).toEqual([]);
   });

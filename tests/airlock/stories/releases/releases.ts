@@ -116,7 +116,9 @@ const releaseTest = repositoryTest
       await use(createNotesCapture(shell));
     },
     targets: [
-      async ({ repo, shell, tempDir }, use) => {
+      async ({ env, repo, shell, tempDir }, use) => {
+        for (const name of ['NODE_AUTH_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN', 'GITHUB_ACTOR']) env.set(name, '');
+        shell.on('gh auth token', { exitCode: 1, stdout: '' });
         repo.setRoot(tempDir.path);
         const targets = await seedReleaseTargets(tempDir);
         shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');

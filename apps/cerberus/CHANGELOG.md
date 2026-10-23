@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.25.2
+
+### Patch Changes
+
+- Reuse the existing GitHub CLI login for private npm and container registry reads when explicit credentials are absent; preserve CI token precedence and report access failures.
+
 ## 0.25.1
 
 ### Patch Changes

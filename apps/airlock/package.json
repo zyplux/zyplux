@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/airlock",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Native pnpm releases for npm, Python, containers and GitHub Actions.",
   "license": "MIT",
   "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",

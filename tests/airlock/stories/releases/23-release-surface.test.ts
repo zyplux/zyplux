@@ -294,7 +294,7 @@ describe('23.4 reading published release versions', () => {
     );
     const findings = await checkSurface();
     expect(findings).toEqual([expect.objectContaining({ status: 'error' })]);
-    expect(findings[0]?.message).toContain('NODE_AUTH_TOKEN is required');
+    expect(findings[0]?.message).toContain('GitHub Packages requires authentication');
   });
 
   test.for([{ registry: 'https://example.com' }, { registry: 42 }, 'invalid'])(
@@ -355,5 +355,77 @@ describe('23.4 reading published release versions', () => {
   test('23.4.7 prints readable findings without json mode', async ({ logs, surfaceCli }) => {
     await surfaceCli.run('check-surface');
     expect(logs.logLines).toEqual([`pass: ${DONE.message}`]);
+  });
+});
+
+describe('23.5 reusing GitHub credentials for private registry reads', () => {
+  test.for(['GH_TOKEN', 'GITHUB_TOKEN', 'gh login'])(
+    '23.5.1 reads private npm metadata using %s without manual NODE_AUTH_TOKEN exports',
+    async (source, { checkSurface, env, shell, tempDir }) => {
+      if (source === 'gh login') shell.on('gh auth token', 'saved-token');
+      else env.set(source, 'saved-token');
+      await tempDir.write(
+        'packages/util/package.json',
+        JSON.stringify({
+          publishConfig: { registry: 'https://npm.pkg.github.com' },
+          version: '1.2.3',
+        }),
+      );
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      expect(await checkSurface()).toEqual([DONE]);
+      expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil', {
+        headers: { Authorization: 'Bearer saved-token' },
+        method: 'GET',
+      });
+      if (source !== 'gh login') expect(shell).not.toHaveRunMatching('gh auth token');
+    },
+  );
+
+  test('23.5.2 authenticates private container reads with the saved login and its actor', async ({
+    checkSurface,
+    configureTarget,
+    network,
+    shell,
+  }) => {
+    await configureTarget('npm', 'kind = "ghcr"\nlabel = "ghcr.io/zyplux/ci"');
+    shell.on('gh auth token', 'saved-token');
+    network.on('https://api.github.com/user', () => Response.json({ login: 'reader' }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    expect(await checkSurface()).toEqual([DONE]);
+    expect(fetchSpy).toHaveBeenCalledWith('https://api.github.com/user', {
+      headers: { Authorization: 'Bearer saved-token', 'User-Agent': 'zyplux-airlock' },
+      method: 'GET',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith('https://ghcr.io/token?service=ghcr.io&scope=repository:zyplux/ci:pull', {
+      headers: { Authorization: `Basic ${Buffer.from('reader:saved-token').toString('base64')}` },
+      method: 'GET',
+    });
+  });
+
+  test('23.5.3 preserves explicitly supplied credentials and reports denied access', async ({
+    checkSurface,
+    env,
+    network,
+    shell,
+    tempDir,
+  }) => {
+    env.set('NODE_AUTH_TOKEN', 'explicit-token');
+    env.set('GH_TOKEN', 'other-token');
+    shell.on('gh auth token', 'saved-token');
+    await tempDir.write(
+      'packages/util/package.json',
+      JSON.stringify({
+        publishConfig: { registry: 'https://npm.pkg.github.com' },
+        version: '1.2.3',
+      }),
+    );
+    network.on('https://npm.pkg.github.com/', () => new Response(undefined, { status: 403 }));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    expect(await checkSurface()).toEqual([expect.objectContaining({ status: 'error' })]);
+    expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil', {
+      headers: { Authorization: 'Bearer explicit-token' },
+      method: 'GET',
+    });
+    expect(shell).not.toHaveRunMatching('gh auth token');
   });
 });
