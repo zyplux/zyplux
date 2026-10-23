@@ -6,11 +6,13 @@ import path from 'node:path';
 import { rcompare, valid } from 'semver';
 
 import type { Target } from './contracts.ts';
+import type { ReleaseTarget } from './release-targets.ts';
 
 import { fetchActionReleases, isActionPublished } from './action-releases.ts';
 import {
   GhcrTagsSchema,
   GhcrTokenSchema,
+  NpmArtifactSchema,
   NpmLatestSchema,
   NpmPackageSchema,
   NpmVersionsSchema,
@@ -27,6 +29,8 @@ const MANIFEST_MEDIA_TYPES = [
 ].join(', ');
 
 const HTTP_NOT_FOUND = 404;
+const HTTP_OK = 200;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 const findRegistryEntry = async <Entry>(fetchEntry: () => Promise<Entry>) => {
   try {
@@ -64,8 +68,29 @@ const loadNpmRequest = async (directory: string, label: string) => {
     ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
     headers['Authorization'] = `Bearer ${token}`;
   }
-  return http.get(`${registry}/${encodeURIComponent(label)}`, { headers });
+  return { headers, url: `${registry}/${encodeURIComponent(label)}` };
 };
+
+export const isNpmVersionAvailable = async ({
+  dir,
+  label,
+  version,
+}: Pick<ReleaseTarget, 'dir' | 'label' | 'version'>) =>
+  (await findRegistryEntry(async () => {
+    const { headers, url } = await loadNpmRequest(dir, label);
+    const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const { versions } = await http.get(url, { headers, signal }).json(NpmVersionsSchema);
+    const entry = versions[version];
+    if (entry === undefined) return false;
+    const { dist } = NpmArtifactSchema.parse(entry);
+    const response = await http
+      .head(dist.tarball, {
+        headers: new URL(dist.tarball).origin === new URL(url).origin ? headers : {},
+        signal,
+      })
+      .response();
+    return response.status === HTTP_OK;
+  })) ?? false;
 
 export const isPackagePublished = async (target: Target, version: string, directory: string) => {
   if (target.kind === 'action') return isActionPublished(target, version);
@@ -73,8 +98,8 @@ export const isPackagePublished = async (target: Target, version: string, direct
     (await findRegistryEntry(async () => {
       const { kind, label } = target;
       if (kind === 'npm') {
-        const request = await loadNpmRequest(directory, label);
-        const { versions } = await request.json(NpmVersionsSchema);
+        const { headers, url } = await loadNpmRequest(directory, label);
+        const { versions } = await http.get(url, { headers }).json(NpmVersionsSchema);
         return Object.hasOwn(versions, version);
       }
       if (kind === 'pypi') {
@@ -101,8 +126,8 @@ export const fetchLatestVersion = async (target: Target, directory: string) =>
     }
     const { kind, label } = target;
     if (kind === 'npm') {
-      const request = await loadNpmRequest(directory, label);
-      const metadata = await request.json(NpmLatestSchema);
+      const { headers, url } = await loadNpmRequest(directory, label);
+      const metadata = await http.get(url, { headers }).json(NpmLatestSchema);
       return metadata['dist-tags'].latest;
     }
     if (kind === 'pypi') {

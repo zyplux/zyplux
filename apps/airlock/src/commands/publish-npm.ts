@@ -3,12 +3,15 @@ import { ensure } from '@zyplux/util/assert';
 import { runPassthrough } from '@zyplux/util/exec';
 import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
+import { mkdtempDisposable } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import * as z from 'zod';
 
 import type { ReleaseTarget } from '#release-targets';
 
+import { WorkspacePackagesSchema } from '#contracts';
 import { createGithubRelease } from '#github-releases';
+import { loadNpmDependencies, orderNpmTargets, waitForNpmDependencies } from '#npm-dependencies';
 import { loadPreparedTargets } from '#release-notes';
 
 export const publishNpmCommand = command('publish-npm', object({ command: constant('publish-npm' as const) }), {
@@ -17,11 +20,7 @@ export const publishNpmCommand = command('publish-npm', object({ command: consta
 
 type NpmRelease = ReleaseTarget & { notes: string };
 
-const WorkspacePackagesSchema = z.array(
-  z.object({ name: z.string().optional(), path: z.string(), private: z.boolean(), version: z.string().optional() }),
-);
-
-const validateNpmWorkspaces = async (releases: NpmRelease[], root: string) => {
+const validateNpmWorkspaces = async (releases: ReleaseTarget[], root: string) => {
   const workspaces = parseJson(
     await readTrimmed($`pnpm list --recursive --depth -1 --json`.cwd(root)),
     WorkspacePackagesSchema,
@@ -35,22 +34,29 @@ const validateNpmWorkspaces = async (releases: NpmRelease[], root: string) => {
   }
 };
 
+export const publishNpm = async (targets: ReleaseTarget[]) => {
+  if (targets.length === 0) return;
+  await using directory = await mkdtempDisposable(path.join(tmpdir(), 'airlock-npm-'));
+  const getArchive = ({ tag }: ReleaseTarget) => path.join(directory.path, `${tag}.tgz`);
+  const dependencies = new Map<string, ReleaseTarget[]>();
+  for (const target of targets) {
+    const archive = getArchive(target);
+    await $`pnpm pack --out ${archive}`.cwd(target.dir);
+    dependencies.set(target.label, await loadNpmDependencies(target, archive));
+  }
+  for (const target of orderNpmTargets(targets, dependencies)) {
+    await waitForNpmDependencies(dependencies.get(target.label) ?? []);
+    await runPassthrough(['pnpm', 'publish', getArchive(target), '--publish-wait-timeout', '600000'], target.dir);
+  }
+};
+
 export const publishNpmTargets = async (releases: NpmRelease[]) => {
   if (releases.length === 0) return;
   const root = await readTrimmed($.git.showToplevel());
   await validateNpmWorkspaces(releases, root);
-  await runPassthrough(
-    [
-      'pnpm',
-      ...releases.flatMap(release => ['--filter', release.label]),
-      'publish',
-      '--recursive',
-      '--report-summary',
-      '--publish-wait-timeout',
-      '600000',
-    ],
-    root,
-  );
+  const pending = [];
+  for (const release of releases) if (!(await release.isPublished())) pending.push(release);
+  await publishNpm(pending);
   await Promise.all(
     releases.map(async release => {
       ensure(await release.isPublished(), `${release.label} ${release.version} is missing from its registry`);

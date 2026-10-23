@@ -3,6 +3,11 @@
   intents:
     - native-releases
     - shared-release-action
+'@zyplux/airlock@1.0.1':
+  dir: apps/airlock
+  intents:
+    - dependency-publications
+    - independent-publications
 '@zyplux/cz@0.15.0':
   dir: apps/cz
   intents:

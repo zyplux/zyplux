@@ -16,6 +16,7 @@ import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } fro
 
 import { createActionRelease } from './action-release.ts';
 import { createContainerPublication } from './container-publication.ts';
+import { createBundledConsumer, createDependencyWorkspace } from './npm-dependencies.ts';
 import { createNotesCapture, expectGithubRelease, expectNpmPublish, expectPypiPublish } from './publish-assertions.ts';
 import { createPreparation } from './release-preparation.ts';
 import {
@@ -32,6 +33,7 @@ const releaseTest = repositoryTest
   .extend<{
     actionRelease: ActionRelease;
     configureTarget: (kind: string, fields: string) => Promise<void>;
+    consumer: SeededTargets['util'];
     containerRelease: { batch: ReleaseBatch; readManifest: () => string };
     expectGithubRelease: typeof expectGithubRelease;
     expectNpmPublish: typeof expectNpmPublish;
@@ -54,6 +56,9 @@ const releaseTest = repositoryTest
     },
     configureTarget: async ({ targets }, use) => {
       await use(targets.configureTarget);
+    },
+    consumer: async ({ loadArtifact, shell, targets, tempDir }, use) => {
+      await use(await createDependencyWorkspace({ loadArtifact, shell, targets, tempDir }));
     },
     containerRelease: async ({ configureTarget, env, planReleases, registries, repo, shell }, use) => {
       await configureTarget(
@@ -115,6 +120,13 @@ const releaseTest = repositoryTest
       async ({ repo, shell, tempDir }, use) => {
         repo.setRoot(tempDir.path);
         const targets = await seedReleaseTargets(tempDir);
+        shell.on('pnpm pack', '');
+        shell.on('tar -xOf', () => {
+          const archive = shell.calls.at(-1)?.argv[1];
+          const packed = shell.calls.findLast(call => call.program === 'pnpm' && call.argv.includes(archive ?? ''));
+          ensure(packed?.cwd !== undefined, 'packed package directory must be supplied');
+          return readFileSync(path.join(packed.cwd, 'package.json'), 'utf8');
+        });
         shell.on('pnpm list', () => {
           const manifest = readFileSync(path.join(targets.util.dir, 'package.json'), 'utf8');
           return JSON.stringify([
@@ -129,7 +141,10 @@ const releaseTest = repositoryTest
       },
       { auto: true },
     ],
-  });
+  })
+  .extend('bundledConsumer', async ({ loadArtifact, shell, targets, tempDir }) =>
+    createBundledConsumer({ loadArtifact, shell, targets, tempDir }),
+  );
 export type ReleaseTest = typeof releaseTest;
 export const test = extendSurfaceChecks(releaseTest);
 export { describe, expect } from 'vitest';

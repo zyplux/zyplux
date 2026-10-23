@@ -37,7 +37,7 @@ describe('8.2 publishing to each registry kind', () => {
 
     await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.2.6 propagates native npm publication failures', async ({
@@ -55,7 +55,7 @@ describe('8.2 publishing to each registry kind', () => {
       'command failed with exit code 1',
     );
 
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test.for([
@@ -173,7 +173,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
       headers: { Authorization: 'Bearer package-read-token' },
       method: 'GET',
     });
-    expectNpmPublish(shell, targets.util.dir);
+    await expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.3.2 rejects missing credentials before checking a private registry', async ({
@@ -282,7 +282,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
         expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
         expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       } else {
-        expectNpmPublish(shell, targets.util.dir);
+        await expectNpmPublish(shell, targets.util.dir);
       }
     },
   );
@@ -328,7 +328,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
       await airlock.run('publish-tagged-target', '--release', 'util-v1.2.3');
 
       if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
-      else expectNpmPublish(shell, targets.util.dir);
+      else await expectNpmPublish(shell, targets.util.dir);
       if (isReleaseCreated) expect(shell).not.toHaveRunMatching('gh release create');
       else {
         await expectGithubRelease(shell, 'util-v1.2.3', 'reviewed-sha');

@@ -35,12 +35,20 @@ export const expectGithubRelease = async ({ calls }: ShellFake, tag: string, com
   await expect(access(path.dirname(notesFile))).rejects.toMatchObject({ code: 'ENOENT' });
 };
 
-export const expectNpmPublish = ({ calls }: ShellFake, dir: string) => {
-  expect(calls).toContainEqual({ argv: ['publish', '--publish-wait-timeout', '600000'], cwd: dir, program: 'pnpm' });
-  expect(vi.mocked(spawn)).toHaveBeenCalledWith('pnpm', ['publish', '--publish-wait-timeout', '600000'], {
+export const expectNpmPublish = async (shell: ShellFake, dir: string) => {
+  const packed = shell.calls.filter(call => call.program === 'pnpm' && call.argv[0] === 'pack' && call.cwd === dir);
+  expect(packed).toHaveLength(1);
+  const [packing] = packed;
+  const archive = packing?.argv[packing.argv.indexOf('--out') + 1];
+  ensure(archive !== undefined, 'npm publication must upload its inspected archive');
+  expect(shell).toHaveRun(`tar -xOf ${archive} package/package.json`);
+  const argv = ['publish', archive, '--publish-wait-timeout', '600000'];
+  expect(shell.calls).toContainEqual({ argv, cwd: dir, program: 'pnpm' });
+  expect(vi.mocked(spawn)).toHaveBeenCalledWith('pnpm', argv, {
     cwd: dir,
     stdio: 'inherit',
   });
+  await expect(access(path.dirname(archive))).rejects.toMatchObject({ code: 'ENOENT' });
 };
 
 export const expectPypiPublish = async (shell: ShellFake) => {

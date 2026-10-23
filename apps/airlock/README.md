@@ -12,7 +12,7 @@ flowchart TD
     Check --> Review["Commit and review the prepared feature PR"]
     Review --> Merge["Merge into main"]
     Merge --> Plan["Airlock plans pending publication batches"]
-    Plan --> Npm["npm batch: native pnpm in dependency order"]
+    Plan --> Npm["npm jobs: wait for dependencies, publish package"]
     Plan --> Python["Python jobs: uv build and publish"]
     Plan --> Container["Container jobs: images and release assets"]
     Plan --> Action["Action jobs: versioned tags and major aliases"]
@@ -53,9 +53,11 @@ Cerberus's `release_surface_version_bump` bite runs `pnpm exec airlock check-sur
 
 The [release workflow](../../.github/workflows/release.yml) has a planning job and a publication matrix. `airlock plan` validates prepared releases and emits `matrix` and `pending` action outputs. Each row contains the exact release tags, a stable concurrency ID, an environment and a runner. `airlock publish --batch JSON` validates that row against the checked-out configuration and publishes its selected targets.
 
-Npm targets share one batch and environment so native recursive pnpm preserves dependency order. Python packages, containers and actions each have their own job. Environments default to `npm`, `pypi`, `ghcr` and `actions`; set `environment` on a target to override it. Every npm target must share the batch's environment. The shared setup supports Linux runners.
+Every target has its own publication job, concurrency ID and GitHub release. Environments default to `npm`, `pypi`, `ghcr` and `actions`; set `environment` on a target to override it. The shared setup supports Linux runners.
 
-Each successful batch finalizes its own releases; a failing batch leaves the other jobs running. Npm publication requires each target to match a non-private workspace package at its configured version. Native pnpm waits for registry metadata and tarball accessibility and writes `pnpm-publish-summary.json`; Airlock verifies every requested version before creating GitHub releases. PyPI completion requires a wheel and source archive; uv retries incomplete uploads. Action publication creates a fixed versioned release and advances its compatible major alias to the newest published stable version. Package `prepack` hooks own npm builds and archive validation.
+Planning selects pending targets without building or packing packages. Each npm job packs its target once, inspects the archive's manifest after lifecycle scripts and `beforePacking` hooks, then publishes that same archive. Declare workspace dependencies retained in `dependencies` or `optionalDependencies` as npm release targets; private implementation packages removed during packing need no release target. Each job waits for retained dependencies' exact versions and tarballs before uploading. Development-only dependencies do not delay publication. Missing dependencies are checked every ten seconds for up to sixty retries; failed dependencies block their consumers while unrelated jobs continue. Packing failures affect only their target's job. The bulk `airlock publish-npm` command orders its archives by dependency and rejects cycles.
+
+Each successful job finalizes its target's release; a failing job leaves the other jobs running. Npm publication requires each target to match a non-private workspace package at its configured version. Native pnpm publishes the inspected archive and waits for registry metadata and tarball accessibility; Airlock verifies the requested version before creating its GitHub release. Existing npm versions can have their GitHub releases repaired without packing or uploading again. PyPI completion requires a wheel and source archive; uv retries incomplete uploads. Action publication creates a fixed versioned release and advances its compatible major alias to the newest published stable version. Package `prepack` hooks own npm builds and archive validation.
 
 To recover from a failed run, fix the cause and rerun the failed jobs in GitHub Actions, or dispatch `release.yml` on `main` with an optional `tag` to select one release.
 

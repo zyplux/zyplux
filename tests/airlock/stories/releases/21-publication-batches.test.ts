@@ -1,10 +1,10 @@
 import { describe, expect, test } from './releases.ts';
 
 describe('21.1 planning isolated publication batches', () => {
-  test('21.1.1 separates publication kinds and groups npm packages', async ({ planReleases, registries }) => {
+  test('21.1.1 plans one job per release target', async ({ planReleases, registries }) => {
     registries.setPublished({});
     expect(await planReleases()).toEqual([
-      { environment: 'npm', id: 'npm', kind: 'npm', runner: 'ubuntu-latest', tags: ['util-v1.2.3'] },
+      { environment: 'npm', id: 'npm-util', kind: 'npm', runner: 'ubuntu-latest', tags: ['util-v1.2.3'] },
       { environment: 'pypi', id: 'pypi-cerberus', kind: 'pypi', runner: 'ubuntu-latest', tags: ['cerberus-v2.3.4'] },
       { environment: 'ghcr', id: 'ghcr-ci-image', kind: 'ghcr', runner: 'ubuntu-latest', tags: ['ci-image-v3.4.5'] },
     ]);
@@ -40,26 +40,28 @@ describe('21.2 executing the selected publication batch', () => {
   test('21.2.1 publishes only the selected npm target and writes its summary', async ({
     airlock,
     env,
+    expectNpmPublish,
     loadArtifact,
     planReleases,
     registries,
     repo,
     shell,
+    targets,
     tempDir,
   }) => {
     repo.setHeadSha('reviewed-sha');
     registries.setPublished({});
     const [batch] = await planReleases();
-    registries.setPublished({ npmPublished: true });
     env.set('GITHUB_STEP_SUMMARY', `${tempDir.path}/summary.md`);
-    shell.on('pnpm --filter', '');
+    shell.on('pnpm publish', () => {
+      registries.setPublished({ npmPublished: true });
+      return '';
+    });
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
     await airlock.run('publish', '--batch', JSON.stringify(batch));
-    expect(shell).toHaveRun(
-      'pnpm --filter @zyplux/util publish --recursive --report-summary --publish-wait-timeout 600000',
-    );
+    await expectNpmPublish(shell, targets.util.dir);
     expect(shell).not.toHaveRunMatching(/uv|podman/);
-    expect(await loadArtifact('summary.md')).toContain('npm: published');
+    expect(await loadArtifact('summary.md')).toContain('npm-util: published');
     expect(await loadArtifact('summary.md')).toContain('util-v1.2.3');
   });
 
@@ -75,18 +77,24 @@ describe('21.2 executing the selected publication batch', () => {
     const manifest = await loadArtifact('airlock-targets.toml');
     await tempDir.write(
       'airlock-targets.toml',
-      `${manifest}\n[extra]\nkind = "npm"\nsurface = []\nversion = { file = "packages/extra/package.json", json = "version" }\n`,
+      `${manifest}\n[extra]\nkind = "npm"\nenvironment = "npm-extra"\nsurface = []\nversion = { file = "packages/extra/package.json", json = "version" }\n`,
     );
     await tempDir.write('packages/extra/package.json', '{"name":"@zyplux/extra","version":"1.2.3"}');
     await tempDir.write('packages/extra/CHANGELOG.md', '# Extra\n\n## 1.2.3\n\n- Publish extra.\n');
     const batches = await planReleases();
-    expect(batches[0]?.tags).toEqual(['util-v1.2.3', 'extra-v1.2.3']);
+    expect(batches.filter(batch => batch.kind === 'npm')).toEqual([
+      { environment: 'npm', id: 'npm-util', kind: 'npm', runner: 'ubuntu-latest', tags: ['util-v1.2.3'] },
+      { environment: 'npm-extra', id: 'npm-extra', kind: 'npm', runner: 'ubuntu-latest', tags: ['extra-v1.2.3'] },
+    ]);
     const [batch] = await planReleases('util-v1.2.3');
-    registries.setPublished({ npmPublished: true });
     repo.setHeadSha('reviewed-sha');
-    shell.on('pnpm --filter', '');
+    shell.on('pnpm publish', () => {
+      registries.setPublished({ npmPublished: true });
+      return '';
+    });
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
     await airlock.run('publish', '--batch', JSON.stringify(batch));
+    expect(shell.commandsMatching('pnpm pack')).toHaveLength(1);
     expect(shell).not.toHaveRunMatching(/pnpm .*@zyplux\/extra|gh release create extra-v/);
   });
 
@@ -102,9 +110,9 @@ describe('21.2 executing the selected publication batch', () => {
     registries.setPublished({});
     const [batch] = await planReleases();
     env.set('GITHUB_STEP_SUMMARY', `${tempDir.path}/summary.md`);
-    shell.on('pnpm --filter', { exitCode: 1, stdout: 'registry unavailable' });
+    shell.on('pnpm publish', { exitCode: 1, stdout: 'registry unavailable' });
     await expect(airlock.run('publish', '--batch', JSON.stringify(batch))).rejects.toThrow('command failed');
-    expect(await loadArtifact('summary.md')).toContain('npm: failed');
+    expect(await loadArtifact('summary.md')).toContain('npm-util: failed');
     expect(shell).not.toHaveRunMatching('gh release create');
   });
 

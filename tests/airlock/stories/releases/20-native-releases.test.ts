@@ -1,7 +1,7 @@
 import { describe, expect, test } from './releases.ts';
 
 describe('20.1 native npm publication', () => {
-  test('20.1.1 filters declared targets and repairs missing GitHub releases', async ({
+  test('20.1.1 repairs missing GitHub releases without republishing existing versions', async ({
     airlock,
     expectGithubRelease,
     registries,
@@ -10,16 +10,12 @@ describe('20.1 native npm publication', () => {
   }) => {
     repo.syncMain('sha-head');
     registries.setPublished({ npmPublished: true });
-    shell.on('pnpm --filter', '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
     await airlock.run('publish-npm');
 
-    expect(shell).toHaveRun(
-      'pnpm --filter @zyplux/util publish --recursive --report-summary --publish-wait-timeout 600000',
-    );
+    expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
     await expectGithubRelease(shell, 'util-v1.2.3', 'sha-head');
-    expect(shell).not.toHaveRunMatching('pnpm pack');
   });
 
   test('20.1.2 propagates publication failure and permits a successful retry', async ({
@@ -29,8 +25,11 @@ describe('20.1 native npm publication', () => {
     shell,
   }) => {
     repo.syncMain('sha-head');
-    registries.setPublished({ npmPublished: true });
-    shell.on('pnpm --filter', { exitCode: 1, stdout: 'registry visibility timed out' }, '');
+    registries.setPublished({ npmPublished: false });
+    shell.on('pnpm publish', { exitCode: 1, stdout: 'registry visibility timed out' }, () => {
+      registries.setPublished({ npmPublished: true });
+      return '';
+    });
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
     await expect(airlock.run('publish-npm')).rejects.toThrow('command failed');
@@ -51,7 +50,7 @@ describe('20.1 native npm publication', () => {
 
       await expect(airlock.run('publish-npm')).rejects.toThrow(reason);
 
-      expect(shell).not.toHaveRunMatching(/pnpm --filter|gh release/);
+      expect(shell).not.toHaveRunMatching(/pnpm publish|gh release/);
     },
   );
 
@@ -60,7 +59,7 @@ describe('20.1 native npm publication', () => {
 
     await expect(airlock.run('publish-npm')).rejects.toThrow('is not a pnpm workspace package');
 
-    expect(shell).not.toHaveRunMatching(/pnpm --filter|gh release/);
+    expect(shell).not.toHaveRunMatching(/pnpm publish|gh release/);
   });
 
   test('20.1.5 requires the requested version in the registry before creating a GitHub release', async ({
@@ -69,11 +68,11 @@ describe('20.1 native npm publication', () => {
     shell,
   }) => {
     registries.setPublished({ npmPublished: false });
-    shell.on('pnpm --filter', '');
+    shell.on('pnpm publish', '');
 
     await expect(airlock.run('publish-npm')).rejects.toThrow('@zyplux/util 1.2.3 is missing from its registry');
 
-    expect(shell).toHaveRunMatching('pnpm --filter');
+    expect(shell).toHaveRunMatching('pnpm publish');
     expect(shell).not.toHaveRunMatching('gh release');
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/airlock",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Native pnpm releases for npm, Python, containers and GitHub Actions.",
   "license": "MIT",
   "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",
@@ -46,6 +46,7 @@
       "#action-releases": "./dist/action-releases.js",
       "#github-releases": "./dist/github-releases.js",
       "#contracts": "./dist/contracts.js",
+      "#npm-dependencies": "./dist/npm-dependencies.js",
       "#release-batches": "./dist/release-batches.js",
       "#release-surface": "./dist/release-surface.js"
     }
@@ -76,6 +77,7 @@
     "#action-releases": "./src/action-releases.ts",
     "#github-releases": "./src/github-releases.ts",
     "#contracts": "./src/contracts.ts",
+    "#npm-dependencies": "./src/npm-dependencies.ts",
     "#release-batches": "./src/release-batches.ts",
     "#release-surface": "./src/release-surface.ts"
   }

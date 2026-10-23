@@ -2,9 +2,9 @@
 
 ## 20.1 native npm publication
 
-### 20.1.1 filters declared targets and repairs missing GitHub releases
+### 20.1.1 repairs missing GitHub releases without republishing existing versions
 
-Native pnpm owns packing, dependency order, publication summaries and registry availability checks. GitHub release repair also covers earlier successful uploads.
+Native pnpm packs each package once and publishes the inspected archive with registry availability checks. GitHub release repair also covers earlier successful uploads.
 
 ### 20.1.2 propagates publication failure and permits a successful retry
 

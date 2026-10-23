@@ -2,7 +2,7 @@ import type { InferValue } from '@optique/core';
 
 import { argument, command, constant, message, multiple, object, option, string } from '@optique/core';
 import { ensure } from '@zyplux/util/assert';
-import { run, runPassthrough } from '@zyplux/util/exec';
+import { run } from '@zyplux/util/exec';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { access, mkdtempDisposable } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -15,6 +15,8 @@ import { createGithubRelease, isReleasePublished, publishReleaseAssets } from '#
 import { validatePythonVersions } from '#python-releases';
 import { loadReleaseNotes, validateConsumedIntents } from '#release-notes';
 import { resolveReleaseTag } from '#release-targets';
+
+import { publishNpm } from './publish-npm.ts';
 
 const tagArgument = argument(string({ metavar: 'TAG' }), {
   description: message`Release tag to publish (e.g. eslint-config-v1.2.3).`,
@@ -38,8 +40,6 @@ export const publishTaggedTargetCommand = command(
 );
 
 type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
-
-export const publishNpm = (dir: string) => runPassthrough(['pnpm', 'publish', '--publish-wait-timeout', '600000'], dir);
 
 const publishPypi = async (label: string) => {
   await using directory = await mkdtempDisposable(path.join(tmpdir(), 'release-pypi-'));
@@ -130,7 +130,7 @@ export const publishPreparedTarget = async (
         break;
       }
       case 'npm': {
-        await publishNpm(target.dir);
+        await publishNpm([target]);
         break;
       }
       case 'pypi': {
