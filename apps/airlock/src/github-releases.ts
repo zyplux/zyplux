@@ -26,21 +26,33 @@ const ReleaseAssetsSchema = z.object({
   }),
 });
 
-export const publishReleaseAssets = async (tag: string, notes: string, commit: string, assets: string[]) => {
+const loadGithubRelease = async (tag: string) => {
   const query =
     'query($owner: String!, $name: String!, $tag: String!) { repository(owner: $owner, name: $name) { release(tagName: $tag) { isDraft releaseAssets(first: 100) { nodes { name } } } } }';
   const response = parseJson(
     await readTrimmed($`gh api graphql -F owner={owner} -F name={repo} -f ${`tag=${tag}`} -f ${`query=${query}`}`),
     ReleaseAssetsSchema,
   );
-  const release = response.data.repository.release;
+  return response.data.repository.release;
+};
+
+const hasPublishedAssets = (release: Awaited<ReturnType<typeof loadGithubRelease>>, tag: string, assets: string[]) => {
   if (release !== null && !release.isDraft) {
     ensure(
       assets.every(asset => release.releaseAssets.nodes.some(node => node.name === path.basename(asset))),
       `published release ${tag} is missing required assets`,
     );
-    return;
+    return true;
   }
+  return false;
+};
+
+export const isReleasePublished = async (tag: string, assets: string[]) =>
+  hasPublishedAssets(await loadGithubRelease(tag), tag, assets);
+
+export const publishReleaseAssets = async (tag: string, notes: string, commit: string, assets: string[]) => {
+  const release = await loadGithubRelease(tag);
+  if (hasPublishedAssets(release, tag, assets)) return;
   await using directory = await mkdtempDisposable(path.join(tmpdir(), 'release-assets-'));
   const notesFile = path.join(directory.path, 'notes.md');
   await writeFile(notesFile, `${notes}\n`);

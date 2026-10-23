@@ -9,15 +9,14 @@ import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { vi } from 'vitest';
 
-import { seedReleaseTargets } from './release-scenario.ts';
+import type { SeededTargets } from './release-scenario.ts';
 
 export type ActionRelease = Awaited<ReturnType<typeof createActionRelease>>;
-type ActionContext = { repo: RepositoryFake; shell: ShellFake; tempDir: TempDir };
+type ActionContext = { repo: RepositoryFake; shell: ShellFake; targets: SeededTargets; tempDir: TempDir };
 type PublishedRelease = string | { draft?: boolean; prerelease?: boolean; tag: string };
 
-export const createActionRelease = async ({ repo, shell, tempDir }: ActionContext) => {
+export const createActionRelease = async ({ repo, shell, targets, tempDir }: ActionContext) => {
   vi.mocked(sleep).mockResolvedValue(undefined);
-  const targets = await seedReleaseTargets(tempDir);
   await tempDir.write(
     'release-targets.toml',
     `[[target]]

@@ -5,12 +5,11 @@ import type { TempDir } from '@zyplux/spectra/temp-directory';
 
 import { ManifestSchema } from '@zyplux/airlock/contracts';
 import { notFoundResponse, okResponse } from '@zyplux/spectra/fetch-fake';
+import { ensure } from '@zyplux/util/assert';
 import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { vi } from 'vitest';
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 export type LiveWorkspace = {
   root: string;
@@ -28,31 +27,21 @@ export type Registries = {
 };
 
 export type Release = {
-  completeRunAfter: (runId: string, predecessorId: string, conclusion: string) => void;
-  queueRun: (runId: string, first: RunState, ...later: RunState[]) => void;
   stageAllPublished: () => void;
-  stagePendingCerberus: (options?: PendingCerberusOptions) => void;
-  stagePendingCerberusAndCiImage: () => void;
+  stagePendingCerberus: () => void;
 };
 
 export type SeededTargets = {
   cerberus: TargetFacts;
   ci: TargetFacts;
+  configureTarget: (kind: string, fields: string) => Promise<void>;
   util: TargetFacts;
 };
-type PendingCerberusOptions = {
-  published?: RegistryPublishedState;
-  tagRunPolls?: [string[], ...string[][]];
-};
 type RegistryPublishedState = {
-  ghcrEverVisible?: boolean;
   ghcrPublished?: boolean;
   npmPublished?: boolean;
-  pypiEverVisible?: boolean;
   pypiPublished?: boolean;
 };
-
-type RunState = { conclusion?: string; status: string };
 
 type TargetFacts = { dir: string; label: string; tag: string; version: string };
 
@@ -75,79 +64,32 @@ export const createRegistries = (network: FetchFake) =>
     denyGhcrAuth: () => {
       network.on('https://ghcr.io/token', () => notFoundResponse());
     },
-    setPublished: ({
-      ghcrEverVisible,
-      ghcrPublished = false,
-      npmPublished = false,
-      pypiEverVisible,
-      pypiPublished = false,
-    }) => {
-      let ghcrProbeCount = 0;
-      let pypiProbeCount = 0;
+    setPublished: ({ ghcrPublished = false, npmPublished = false, pypiPublished = false }) => {
       network.on('https://ghcr.io/token', () => Response.json({ token: 'gh-token' }));
-      network.on('https://ghcr.io/v2/', () => {
-        ghcrProbeCount += 1;
-        if (ghcrProbeCount === 1) return ghcrPublished ? okResponse() : notFoundResponse();
-        return ghcrEverVisible === false ? notFoundResponse() : okResponse();
-      });
-      network.on('https://pypi.org/', () => {
-        pypiProbeCount += 1;
-        const isPublished = pypiProbeCount === 1 ? pypiPublished : pypiEverVisible !== false;
-        return isPublished
+      network.on('https://ghcr.io/v2/', () => (ghcrPublished ? okResponse() : notFoundResponse()));
+      network.on('https://pypi.org/', () =>
+        pypiPublished
           ? Response.json({ urls: [{ packagetype: 'bdist_wheel' }, { packagetype: 'sdist' }] })
-          : notFoundResponse();
-      });
+          : notFoundResponse(),
+      );
       network.on('https://registry.npmjs.org/', () =>
         npmPublished ? Response.json({ versions: { '1.2.3': {} } }) : notFoundResponse(),
       );
     },
   }) satisfies Registries;
-const renderRunIds = (ids: string[]) => JSON.stringify(ids.map(id => ({ databaseId: Number(id) })));
-
-const renderRun = ({ conclusion = '', status }: RunState) => JSON.stringify({ conclusion, status });
-
-export const createRelease = (repo: RepositoryFake, registries: Registries, shell: ShellFake) => {
-  const queueRun = (runId: string, first: RunState, ...later: RunState[]) => {
-    shell.on(`gh run view ${runId}`, renderRun(first), ...later.map(run => renderRun(run)));
-  };
-
-  return {
-    completeRunAfter: (runId, predecessorId, conclusion) => {
-      let isPredecessorCompleted = false;
-      const predecessorCompletion = Promise.withResolvers<undefined>();
-      vi.mocked(sleep).mockImplementation(() => predecessorCompletion.promise);
-      shell.on(`gh run view ${predecessorId}`, () => {
-        isPredecessorCompleted = true;
-        predecessorCompletion.resolve(undefined);
-        return renderRun({ conclusion, status: 'completed' });
-      });
-      shell.on(`gh run view ${runId}`, () =>
-        renderRun({
-          conclusion,
-          status: isPredecessorCompleted ? 'completed' : 'in_progress',
-        }),
-      );
-    },
-    queueRun,
+export const createRelease = (repo: RepositoryFake, registries: Registries, shell: ShellFake) =>
+  ({
     stageAllPublished: () => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
     },
-    stagePendingCerberus: ({ published, tagRunPolls = [['100', '101', '999']] }: PendingCerberusOptions = {}) => {
+    stagePendingCerberus: () => {
       repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false, ...published });
-      shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
-      shell.on('gh run list', renderRunIds(['100', '101']), ...tagRunPolls.map(ids => renderRunIds(ids)));
+      registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
     },
-    stagePendingCerberusAndCiImage: () => {
-      repo.syncMain('sha-head');
-      registries.setPublished({ ghcrPublished: false, npmPublished: true, pypiPublished: false });
-      shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
-      shell.on(/^gh run list --branch cerberus-v/, renderRunIds(['100']), renderRunIds(['100', '111']));
-      shell.on(/^gh run list --branch ci-image-v/, renderRunIds(['100']), renderRunIds(['100', '222']));
-    },
-  } satisfies Release;
-};
+  }) satisfies Release;
 
 const SEEDED_MANIFEST = String.raw`[[target]]
 kind = "npm"
@@ -204,6 +146,22 @@ export const seedReleaseTargets = async (tempDir: TempDir) => {
       label: 'ghcr.io/zyplux/ci',
       tag: 'ci-image-v3.4.5',
       version: '3.4.5',
+    },
+    configureTarget: async (kind, fields) => {
+      const manifest = await readFile(path.join(tempDir.path, 'release-targets.toml'), 'utf8');
+      const sections = manifest.split('[[target]]');
+      const index = sections.findIndex(section => section.includes(`kind = "${kind}"`));
+      const section = sections[index];
+      ensure(section !== undefined, 'target kind must exist');
+      const lines = section.split('\n');
+      for (const field of fields.split('\n')) {
+        const key = field.split('=', 1)[0]?.trim();
+        const position = lines.findIndex(line => line.startsWith(`${key} =`));
+        if (position === -1) lines.push(field);
+        else lines[position] = field;
+      }
+      sections[index] = `${lines.join('\n')}\n`;
+      await tempDir.write('release-targets.toml', sections.join('[[target]]'));
     },
     util: {
       dir: path.join(tempDir.path, 'packages/util'),

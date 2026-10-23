@@ -14,19 +14,12 @@ const BROKEN_TARGET_MANIFEST = [
 
 describe('2.1 loading release targets from the manifest', () => {
   test('2.1.1 loads every declared target, reading versions from json and regex sources', async ({
-    airlock,
-    logs,
+    planReleases,
     release,
   }) => {
     release.stageAllPublished();
 
-    await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
-      'nothing to release; all configured versions are already published or have a GitHub release',
-    );
-
-    expect(logs).toHaveLogged('Skipping @zyplux/util 1.2.3 (already published)');
-    expect(logs).toHaveLogged('Skipping zyplux-cerberus 2.3.4 (already published)');
-    expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
+    expect(await planReleases()).toEqual([]);
   });
 });
 
@@ -43,8 +36,7 @@ describe('2.2 reading a version whose regex does not match its source file', () 
 
 describe('2.3 checking whether the ghcr image target is published', () => {
   test('2.3.1 treats a failed registry auth handshake as not published', async ({
-    airlock,
-    logs,
+    planReleases,
     registries,
     release,
     shell,
@@ -53,12 +45,7 @@ describe('2.3 checking whether the ghcr image target is published', () => {
     registries.denyGhcrAuth();
     shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
 
-    await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
-      'nothing to release; all configured versions are already published or have a GitHub release',
-    );
-
-    expect(logs).toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (release ci-image-v3.4.5 already exists)');
-    expect(logs).not.toHaveLogged('Skipping ghcr.io/zyplux/ci 3.4.5 (already published)');
+    expect(await planReleases()).toEqual([expect.objectContaining({ kind: 'ghcr', tags: ['ci-image-v3.4.5'] })]);
   });
 
   test.for([

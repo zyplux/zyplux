@@ -46,7 +46,19 @@ describe('20.2 shared action release plans', () => {
 
     await airlock.run('plan');
 
-    expect(await loadActionOutputs()).toBe('npm=[]\npypi=["cerberus-v2.3.4"]\nghcr=[]\naction=[]\n');
+    expect(await loadActionOutputs()).toBe(
+      `matrix=${JSON.stringify({
+        include: [
+          {
+            environment: 'pypi',
+            id: 'pypi-cerberus',
+            kind: 'pypi',
+            runner: 'ubuntu-latest',
+            tags: ['cerberus-v2.3.4'],
+          },
+        ],
+      })}\npending=true\n`,
+    );
   });
 
   test.for([
@@ -63,7 +75,19 @@ describe('20.2 shared action release plans', () => {
       await airlock.run('plan', '--tag', 'cerberus-v2.3.4');
 
       expect(await loadActionOutputs()).toBe(
-        `npm=[]\npypi=${JSON.stringify(shouldPublish ? ['cerberus-v2.3.4'] : [])}\nghcr=[]\naction=[]\n`,
+        `matrix=${JSON.stringify({
+          include: shouldPublish
+            ? [
+                {
+                  environment: 'pypi',
+                  id: 'pypi-cerberus',
+                  kind: 'pypi',
+                  runner: 'ubuntu-latest',
+                  tags: ['cerberus-v2.3.4'],
+                },
+              ]
+            : [],
+        })}\npending=${shouldPublish}\n`,
       );
     },
   );
@@ -82,10 +106,12 @@ describe('20.4 recovering PyPI publication', () => {
     shell.on('uv publish', { exitCode: 1, stdout: 'Upload interrupted.' }, '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
-    await expect(airlock.run('publish', '--release', 'cerberus-v2.3.4')).rejects.toThrow('command failed');
+    await expect(airlock.run('publish-tagged-target', '--release', 'cerberus-v2.3.4')).rejects.toThrow(
+      'command failed',
+    );
     expect(shell).not.toHaveRunMatching('gh release create');
 
-    await airlock.run('publish', '--release', 'cerberus-v2.3.4');
+    await airlock.run('publish-tagged-target', '--release', 'cerberus-v2.3.4');
 
     const publicationAttempts = 2;
     expect(shell.commandsMatching('uv publish')).toHaveLength(publicationAttempts);
@@ -102,7 +128,7 @@ describe('20.4 recovering PyPI publication', () => {
     async ({ metadata, status }, { airlock, network, shell }) => {
       network.on('https://pypi.org/', () => Response.json(metadata, { status }));
 
-      await expect(airlock.run('publish', '--release', 'cerberus-v2.3.4')).rejects.toThrow();
+      await expect(airlock.run('publish-tagged-target', '--release', 'cerberus-v2.3.4')).rejects.toThrow();
 
       expect(shell).not.toHaveRunMatching(/uv|gh release create/);
     },
@@ -125,7 +151,7 @@ describe('20.3 prebuilt container release assets', () => {
     shell.on('gh release upload', '');
     shell.on('gh release edit', '');
 
-    await airlock.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath);
+    await airlock.run('publish-tagged-target', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath);
 
     const [create, upload, publish] = shell.commandsMatching('gh release');
     expect(create).toContain('create ci-image-v3.4.5 --draft');
@@ -149,9 +175,9 @@ describe('20.3 prebuilt container release assets', () => {
       );
       shell.on('gh release upload', { exitCode: 1, stdout: 'upload failed' });
 
-      await expect(airlock.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath)).rejects.toThrow(
-        error,
-      );
+      await expect(
+        airlock.run('publish-tagged-target', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath),
+      ).rejects.toThrow(error);
 
       expect(shell.commandsMatching('gh release upload')).toHaveLength(uploads);
       expect(shell).not.toHaveRunMatching(/gh release create|gh release edit/);

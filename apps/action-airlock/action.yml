@@ -1,46 +1,55 @@
 name: Airlock
-description: Prepare release matrices or publish declared targets using the repository's locked Airlock CLI.
+description: Set up locked workspace dependencies, plan isolated publication jobs and publish their release batches.
 inputs:
   command:
-    description: Release operation (plan, publish-npm, publish, or check).
+    description: Release operation (plan or publish).
     default: plan
   tag:
-    description: Versioned release tag, required for publish and optional for plan.
+    description: Optional release tag to select when planning.
     default: ''
-  assets:
-    description: Newline-separated asset paths. Build and push container images before supplying their assets.
+  batch:
+    description: Publication batch JSON from the plan matrix, required for publish.
     default: ''
+  token:
+    description: GitHub token for releases and GitHub Packages.
+    default: ${{ github.token }}
 outputs:
-  npm:
-    description: Pending npm release tags as a JSON array.
-    value: ${{ steps.airlock.outputs.npm }}
-  pypi:
-    description: Pending PyPI release tags as a JSON array.
-    value: ${{ steps.airlock.outputs.pypi }}
-  ghcr:
-    description: Pending container release tags as a JSON array.
-    value: ${{ steps.airlock.outputs.ghcr }}
-  action:
-    description: Pending GitHub Action release tags as a JSON array.
-    value: ${{ steps.airlock.outputs.action }}
+  matrix:
+    description: Pending publication batches as a JSON include matrix.
+    value: ${{ steps.airlock.outputs.matrix }}
+  pending:
+    description: Whether the plan contains publication batches.
+    value: ${{ steps.airlock.outputs.pending }}
 runs:
   using: composite
   steps:
+    - name: Configure GitHub Packages authentication
+      shell: bash
+      run: printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$RUNNER_TEMP/airlock.npmrc"
+    - name: Set up workspace dependencies
+      uses: zyplux/zyplux/apps/action-setup-pm@setup-pm-v1
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.token }}
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
     - name: Run Airlock
       id: airlock
       shell: bash
       run: |
-        args=("$RELEASE_COMMAND")
-        if [ "$RELEASE_COMMAND" = publish ]; then
-          args+=(--release "$RELEASE_TAG")
-        elif [ -n "$RELEASE_TAG" ]; then
-          args+=(--tag "$RELEASE_TAG")
-        fi
-        while IFS= read -r asset; do
-          if [ -n "$asset" ]; then args+=(--asset "$asset"); fi
-        done <<< "$RELEASE_ASSETS"
+        case "$RELEASE_COMMAND" in
+          plan)
+            args=(plan)
+            if [ -n "$RELEASE_TAG" ]; then args+=(--tag "$RELEASE_TAG"); fi
+            ;;
+          publish)
+            args=(publish --batch "$RELEASE_BATCH")
+            ;;
+          *) echo 'command must be plan or publish' >&2; exit 1 ;;
+        esac
         pnpm exec airlock "${args[@]}"
       env:
+        GH_TOKEN: ${{ inputs.token }}
+        NODE_AUTH_TOKEN: ${{ inputs.token }}
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
         RELEASE_COMMAND: ${{ inputs.command }}
         RELEASE_TAG: ${{ inputs.tag }}
-        RELEASE_ASSETS: ${{ inputs.assets }}
+        RELEASE_BATCH: ${{ inputs.batch }}

@@ -38,11 +38,11 @@ describe('19.1 publishing versioned action releases', () => {
     ]);
   });
 
-  test('19.1.3 leaves a completed release unchanged', async ({ airlock, shell }) => {
+  test('19.1.3 leaves a completed release unchanged', async ({ airlock, planReleases, shell }) => {
     shell.on('git ls-remote origin refs/tags/setup-pm-v1', 'release-sha\trefs/tags/setup-pm-v1');
 
     await airlock.run('publish-tagged-target', '--release', 'setup-pm-v1.0.0');
-    await airlock.run('release-bumped-targets', '--list');
+    expect(await planReleases()).toEqual([]);
 
     expect(shell).not.toHaveRunMatching(/gh release create|git fetch|git push/);
   });
@@ -74,13 +74,11 @@ describe('19.1 publishing versioned action releases', () => {
     ]);
   });
 
-  test('19.1.5 selects incomplete action releases for workflow retries', async ({ airlock, logs, shell }) => {
-    await airlock.run('release-bumped-targets', '--list');
-    expect(logs.logLines.at(-1)).toBe('[{"kind":"action","tag":"setup-pm-v1.0.0"}]');
+  test('19.1.5 selects incomplete action releases for workflow retries', async ({ planReleases, shell }) => {
+    expect(await planReleases()).toEqual([expect.objectContaining({ kind: 'action', tags: ['setup-pm-v1.0.0'] })]);
 
     shell.on('git ls-remote origin refs/tags/setup-pm-v1', 'release-sha\trefs/tags/setup-pm-v1');
-    await airlock.run('release-bumped-targets', '--list');
-    expect(logs.logLines.at(-1)).toBe('[]');
+    expect(await planReleases()).toEqual([]);
   });
 
   test('19.1.6 promotes the commit behind an annotated versioned tag', async ({ airlock, shell }) => {

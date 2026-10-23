@@ -1,51 +1,103 @@
 # Airlock
 
-Prepare reviewed versions and changelogs with pnpm's versioning engine, publish npm packages with native pnpm, and publish Python packages, containers and GitHub Actions through `release-targets.toml`.
+Airlock prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `release-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
 
-```sh
-pnpm change
-pnpm release:prepare
-pnpm release:check
+*How does a code change become a published release?*
+
+```mermaid
+flowchart TD
+    Change["Change a release surface"] --> Intent["pnpm change: choose targets, bump and notes"]
+    Intent --> Prepare["pnpm release:prepare: versions, changelogs and lockfiles"]
+    Prepare --> Check["pnpm release:check and ./just c"]
+    Check --> Review["Commit and review the prepared feature PR"]
+    Review --> Merge["Merge into main"]
+    Merge --> Plan["Airlock plans pending publication batches"]
+    Plan --> Npm["npm batch: native pnpm in dependency order"]
+    Plan --> Python["Python jobs: uv build and publish"]
+    Plan --> Container["Container jobs: images and release assets"]
+    Plan --> Action["Action jobs: versioned tags and major aliases"]
+    Npm --> Github["Per-target GitHub release with reviewed notes"]
+    Python --> Github
+    Container --> Github
+    Action --> Github
 ```
 
-Preparation runs `pnpm version -r`; pnpm owns dependency propagation, versions, changelogs and the consumed-intent ledger. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` to review generated notes in the feature PR.
+## Prepare a feature PR
 
-Preparation supplies each npm scope's `publishConfig` registry to pnpm for version lookups. Targets in one scope must share a publication registry, and private registries need configured pnpm credentials.
+1. Check `release-targets.toml` for the targets whose `surface` includes the changed files. Cerberus requires a version bump for every affected target.
+2. Run `pnpm change`, select those targets and choose patch for fixes, minor for compatible features or major for breaking changes. Write a concise consumer-facing summary, including migration steps for breaking changes; pnpm adds the list marker. Use separate fragments when targets need different descriptions.
+3. Run the commands below. Review the versions, dependency changes, changelog entries, `.changeset/ledger.yaml` and both lockfiles, then include those edits with the feature.
+4. Submit the PR through the repository's normal review process. After merge, check the automatic release run and its per-batch summaries; each GitHub release should contain the prepared entry for that version.
 
-The `airlock` CLI provides `prepare`, `check`, `notes`, `plan`, `publish-npm` and `publish --release TAG`.
+```sh
+pnpm release:prepare
+pnpm release:check
+./just c
+```
 
-## GitHub Action
+Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps. Zyplux's preparation script regenerates the resolved ESLint rules snapshot.
 
-Add `@zyplux/airlock` as a locked development dependency. After checkout and package-manager setup, use the action in the repository's publishing job:
+Python targets have a private pnpm tracking `package.json` beside `pyproject.toml`; preparation synchronizes the native Python version through uv. Checks reject unconsumed fragments, mismatched versions and missing or empty changelog entries.
+
+If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.
+
+## Automatic publication
+
+The [release workflow](../../.github/workflows/release.yml) has a planning job and a publication matrix. `airlock plan` validates prepared releases and emits `matrix` and `pending` action outputs. Each row contains the exact release tags, a stable concurrency ID, an environment and a runner. `airlock publish --batch JSON` validates that row against the checked-out configuration and publishes its selected targets.
+
+Npm targets share one batch and environment so native recursive pnpm preserves dependency order. Python packages, containers and actions each have their own job. Environments default to `npm`, `pypi`, `ghcr` and `actions`; set `environment` on a target to override it. Every npm target must share the batch's environment. The shared setup supports Linux runners.
+
+Each successful batch finalizes its own releases; a failing batch leaves the other jobs running. Npm publication waits for registry metadata and tarball accessibility and writes `pnpm-publish-summary.json`. PyPI completion requires a wheel and source archive; uv retries incomplete uploads. Action publication creates a fixed versioned release and advances its compatible major alias to the newest published stable version. Package `prepack` hooks own npm builds and archive validation.
+
+To recover from a failed run, fix the cause and rerun the failed jobs in GitHub Actions, or dispatch `release.yml` on `main` with an optional `tag` to select one release.
+
+## Add Airlock to a repository
+
+Add `@zyplux/airlock` as a locked development dependency, configure pnpm versioning and declare `release-targets.toml`. Use the [release workflow](../../.github/workflows/release.yml) as the consumer template, replacing its local action references with:
 
 ```yaml
 - uses: zyplux/zyplux/apps/action-airlock@airlock-v1
   with:
-    command: publish-npm
+    command: plan
 ```
 
-The action uses the installed CLI. `plan` exposes `npm`, `pypi`, `ghcr` and `action` outputs as JSON tag arrays. `publish` requires a `tag`; `check` validates prepared notes. Triggers, job permissions, registry credentials, trusted-publishing environments and concurrency belong to the calling workflow. Zyplux's release workflow dogfoods `./apps/action-airlock`.
+The publishing step uses the same action with `command: publish` and `batch: ${{ toJSON(matrix) }}`. The action sets up cached pnpm and uv, installs locked dependencies, configures GitHub Packages authentication and runs the repository's installed CLI. Its `token` defaults to the job's GitHub token.
 
-Npm publication filters the declared npm targets, publishes in dependency order, saves `pnpm-publish-summary.json` and waits for registry metadata and tarball accessibility. Retrying also creates missing GitHub releases for versions uploaded by an earlier attempt. Package `prepack` hooks perform builds and archive validation.
+The calling workflow declares triggers, permissions, concurrency and environments. A single matrix uses their combined token permissions; separate job definitions can narrow permissions by publication kind. Keep OIDC publishing jobs in this top-level workflow to support PyPI trusted publishing.
 
-All kinds share preparation and reviewed changelogs. Python packages use private pnpm tracking manifests synchronized with `pyproject.toml` through uv. PyPI publication requires both a wheel and source archive; uv builds into an isolated directory and retries incomplete uploads before creating the GitHub release.
+Airlock supplies each npm scope's `publishConfig` registry to pnpm for preparation lookups. Targets in one scope must share a publication registry. Public npm and PyPI use trusted publishing; GitHub Packages and GHCR use the job token with `packages: write`.
+
+## Add a release target
+
+1. Declare its kind, label, tag prefix, version source and release surface in `release-targets.toml`.
+2. Ensure pnpm discovers its version manifest. Python packages need the private tracking manifest described above; actions use a workspace `package.json`, with `private: true` when there is no npm package.
+3. Complete the registry setup below, then prepare and merge the release through the feature PR procedure.
+
+Actions also declare their GitHub `repository` and `major_tag_prefix`. Airlock publishes as npm package `@zyplux/airlock` with `airlock-cli-vX.Y.Z` tags; its action uses fixed `airlock-vX.Y.Z` tags and the `airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
 ## Custom container artifacts
 
-Repositories with a custom image builder run it before the action. Build and push the versioned image, then supply its generated deployment manifest as a release asset:
+A GHCR target can declare an `artifact_command` and relative asset paths:
 
-```yaml
-- uses: zyplux/zyplux/apps/action-airlock@airlock-v1
-  with:
-    command: publish
-    tag: core-v0.4.2
-    assets: release.json
+```toml
+artifact_command = ["uv", "run", "--no-sync", "python", "-m", "vps_deployment.build_release"]
+assets = ["release.json"]
 ```
 
-The target's versioned image must already exist. The app validates notes and local assets, uploads assets to a draft GitHub release, and publishes it after upload succeeds. Retries resume drafts; a published release missing required assets fails validation.
+Airlock authenticates GHCR and runs the command from the repository root. The command builds and pushes the versioned image and writes the declared assets beneath `AIRLOCK_ARTIFACTS_DIR`. `AIRLOCK_IMAGE`, `AIRLOCK_VERSION`, `AIRLOCK_TAG` and `AIRLOCK_REVISION` identify the publication. Application-specific manifest fields belong in this command.
 
-## Publication
+Airlock validates the assets, uploads them to a draft GitHub release and publishes the draft after upload succeeds. Retrying an unfinished release reruns the artifact command, allowing its manifest to record the digest returned by the new push. Published releases must contain the declared assets and are preserved.
 
-The app publishes to npm as `@zyplux/airlock`; its action publishes fixed `airlock-vX.Y.Z` tags and advances the compatible `airlock-vX` alias. `airlock-cli-vX.Y.Z` identifies the npm package release.
+`airlock publish-tagged-target --release TAG --asset FILE` also supports externally built images and assets. The versioned image must already exist.
 
-The initial npm package requires the existing bootstrap workflow and trusted-publisher configuration. Subsequent versions publish automatically after merge.
+## Registry setup
+
+### npm
+
+For a new public package, run the `bootstrap-npm` workflow with its target label and the `NPM_TOKEN` secret. Then configure its trusted publisher on npmjs.com: owner and repository, workflow filename `release.yml`, direct publishing permission and an optional environment restriction matching the batch's environment. Subsequent versions use OIDC and automatic provenance.
+
+The bootstrap token is only needed for first publication. Registry account authentication is required to configure trusted publishers.
+
+### PyPI
+
+Add a pending publisher before first publication: distribution name, owner and repository, workflow filename `release.yml` and environment `pypi` or the target's configured override. Preparing and merging the release publishes it with OIDC. PyPI requires no bootstrap token.

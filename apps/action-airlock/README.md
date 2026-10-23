@@ -1,3 +1,3 @@
 # Airlock action
 
-This composite action runs the repository's locked `@zyplux/airlock` CLI. See [Airlock](../airlock/README.md) for usage and release configuration.
+Set up locked workspace dependencies and plan or publish isolated release batches; follow the [Airlock release workflow](../airlock/README.md).

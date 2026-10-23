@@ -1,8 +1,11 @@
+import type { ReleaseBatch } from '@zyplux/airlock/contracts';
+
 import { runAirlock } from '@zyplux/airlock/cli';
-import { VersionFieldSchema, VersionFileSchema } from '@zyplux/airlock/contracts';
+import { ReleasePlanSchema, VersionFieldSchema, VersionFileSchema } from '@zyplux/airlock/contracts';
 import { createCliRunner } from '@zyplux/spectra/cli-runner';
 import { makeFixture } from '@zyplux/spectra/library-test-api';
 import { repositoryTest } from '@zyplux/spectra/repository-test';
+import { ensure } from '@zyplux/util/assert';
 import { parseJson } from '@zyplux/util/json';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,6 +14,7 @@ import type { ActionRelease } from './action-release.ts';
 import type { LiveWorkspace, NpmTarget, Registries, Release, SeededTargets } from './release-scenario.ts';
 
 import { createActionRelease } from './action-release.ts';
+import { createContainerPublication } from './container-publication.ts';
 import { createNotesCapture, expectGithubRelease, expectNpmPublish, expectPypiPublish } from './publish-assertions.ts';
 import { createPreparation } from './release-preparation.ts';
 import {
@@ -24,6 +28,8 @@ export const test = repositoryTest
   .extend('airlock', () => createCliRunner(runAirlock))
   .extend<{
     actionRelease: ActionRelease;
+    configureTarget: (kind: string, fields: string) => Promise<void>;
+    containerRelease: { batch: ReleaseBatch; readManifest: () => string };
     expectGithubRelease: typeof expectGithubRelease;
     expectNpmPublish: typeof expectNpmPublish;
     expectPypiPublish: typeof expectPypiPublish;
@@ -32,6 +38,7 @@ export const test = repositoryTest
     loadArtifact: (relativePath: string) => Promise<string>;
     loadPackageVersion: (relativePath: string) => Promise<string>;
     npmTarget: NpmTarget;
+    planReleases: (tag?: string) => Promise<ReleaseBatch[]>;
     prepareWorkspace: () => Promise<void>;
     registries: Registries;
     release: Release;
@@ -39,8 +46,24 @@ export const test = repositoryTest
     releaseNotes: ReturnType<typeof createNotesCapture>;
     targets: SeededTargets;
   }>({
-    actionRelease: async ({ repo, shell, tempDir }, use) => {
-      await use(await createActionRelease({ repo, shell, tempDir }));
+    actionRelease: async ({ repo, shell, targets, tempDir }, use) => {
+      await use(await createActionRelease({ repo, shell, targets, tempDir }));
+    },
+    configureTarget: async ({ targets }, use) => {
+      await use(targets.configureTarget);
+    },
+    containerRelease: async ({ configureTarget, env, planReleases, registries, repo, shell }, use) => {
+      await configureTarget(
+        'ghcr',
+        'artifact_command = ["uv", "run", "--no-sync", "python", "-m", "vps_deployment.build_release"]\nassets = ["release.json"]',
+      );
+      env.set('GH_TOKEN', 'package-token');
+      env.set('GITHUB_ACTOR', 'publisher');
+      repo.setHeadSha('reviewed-sha');
+      registries.setPublished({});
+      const [batch] = await planReleases('ci-image-v3.4.5');
+      ensure(batch !== undefined, 'container batch must be planned');
+      await use({ batch, ...createContainerPublication(shell) });
     },
     expectGithubRelease: makeFixture(expectGithubRelease),
     expectNpmPublish: makeFixture(expectNpmPublish),
@@ -63,6 +86,12 @@ export const test = repositoryTest
     },
     npmTarget: async ({ shell, tempDir }, use) => {
       await use(createNpmTarget(shell, tempDir));
+    },
+    planReleases: async ({ airlock, logs }, use) => {
+      await use(async (tag?) => {
+        await airlock.run('plan', ...(tag === undefined ? [] : ['--tag', tag]));
+        return parseJson(logs.logLines.at(-1) ?? '', ReleasePlanSchema).include;
+      });
     },
     prepareWorkspace: async ({ liveWorkspace, shell, tempDir }, use) => {
       await use(async () => createPreparation({ root: liveWorkspace.root, shell, tempDir }));

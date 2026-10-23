@@ -12,9 +12,9 @@ import { listPreparedReleasesCommand, runListPreparedReleases } from './commands
 import { planCommand, runPlan } from './commands/plan.ts';
 import { prepareReleaseCommand, runPrepareRelease } from './commands/prepare-release.ts';
 import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.ts';
+import { publishBatchCommand, runPublishBatch } from './commands/publish-batch.ts';
 import { publishNpmCommand, runPublishNpm } from './commands/publish-npm.ts';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
-import { releaseBumpedTargetsCommand, runAirlockBumpedTargets } from './commands/release-bumped-targets.ts';
 
 const airlockCommand = or(
   assertTagVersionCommand,
@@ -24,9 +24,9 @@ const airlockCommand = or(
   prepareReleaseCommand,
   planCommand,
   printTagKindCommand,
+  publishBatchCommand,
   publishNpmCommand,
   publishTaggedTargetCommand,
-  releaseBumpedTargetsCommand,
 );
 
 const runAirlockCommand = async (config: InferValue<typeof airlockCommand>) => {
@@ -52,14 +52,14 @@ const runAirlockCommand = async (config: InferValue<typeof airlockCommand>) => {
     case 'print-tag-kind': {
       return runPrintTagKind(config);
     }
+    case 'publish-batch': {
+      return runPublishBatch(config);
+    }
     case 'publish-npm': {
       return runPublishNpm();
     }
     case 'publish-tagged-target': {
       return runPublishTaggedTarget(config);
-    }
-    case 'release-bumped-targets': {
-      return runAirlockBumpedTargets(config);
     }
   }
 };

@@ -1,6 +1,4 @@
-# Published release targets for this repo. Read by both `airlock release-bumped-targets`
-# (to publish) and cerberus's release_surface_version_bump bite (to enforce a version bump when the surface
-# changes). A repo with no release-targets.toml publishes nothing and is skipped.
+# Release targets used by Airlock and Cerberus to prepare, publish and enforce version bumps.
 
 [[target]]
 kind = "npm"

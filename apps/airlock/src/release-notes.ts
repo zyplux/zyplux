@@ -4,6 +4,8 @@ import { Parser } from 'commonmark';
 import { glob, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { ReleaseTarget } from './release-targets.ts';
+
 import { validatePythonVersions } from './python-releases.ts';
 import { loadReleaseTargets } from './release-targets.ts';
 
@@ -51,17 +53,19 @@ export const validateConsumedIntents = async () => {
   ensure(pending.length === 0, `Unconsumed change intents: ${pending.join(', ')}; run pnpm release:prepare`);
 };
 
-export const loadPreparedReleases = async () => {
+export const loadPreparedTargets = async (selected?: ReleaseTarget[]) => {
   await validateConsumedIntents();
-  const targets = await loadReleaseTargets();
+  const targets = selected ?? (await loadReleaseTargets());
   await validatePythonVersions(targets);
   return Promise.all(
-    targets.map(async ({ dir, kind, label, tag, version }) => ({
-      kind,
-      label,
-      notes: await loadReleaseNotes(dir, version),
-      tag,
-      version,
+    targets.map(async target => ({
+      ...target,
+      notes: await loadReleaseNotes(target.dir, target.version),
     })),
   );
+};
+
+export const loadPreparedReleases = async () => {
+  const targets = await loadPreparedTargets();
+  return targets.map(({ kind, label, notes, tag, version }) => ({ kind, label, notes, tag, version }));
 };

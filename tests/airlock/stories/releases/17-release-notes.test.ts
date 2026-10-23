@@ -106,7 +106,7 @@ const publicationCases = [
     tag: 'util-v1.2.3',
   },
   {
-    args: ['release-bumped-targets'],
+    args: ['publish-tagged-target', '--release', 'cerberus-v2.3.4'],
     directory: 'apps/cerberus',
     notes: '### Patch Changes\n\n- Validate repository release contracts.\n',
     tag: 'cerberus-v2.3.4',
@@ -118,7 +118,9 @@ describe('17.3 publishing reviewed notes', () => {
     '17.3.1 sends the exact target entry to GitHub (%j)',
     async ({ args, notes, tag }, { airlock, expectGithubRelease, release, releaseNotes, shell }) => {
       release.stagePendingCerberus();
-      release.queueRun('999', { conclusion: 'success', status: 'completed' });
+      shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+      shell.on('uv build', '');
+      shell.on('uv publish', '');
       releaseNotes.capture();
 
       await airlock.run(...args);

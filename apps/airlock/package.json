@@ -44,7 +44,9 @@
       "#release-notes": "./dist/release-notes.js",
       "#release-targets": "./dist/release-targets.js",
       "#action-releases": "./dist/action-releases.js",
-      "#github-releases": "./dist/github-releases.js"
+      "#github-releases": "./dist/github-releases.js",
+      "#contracts": "./dist/contracts.js",
+      "#release-batches": "./dist/release-batches.js"
     }
   },
   "scripts": {
@@ -71,6 +73,8 @@
     "#release-notes": "./src/release-notes.ts",
     "#release-targets": "./src/release-targets.ts",
     "#action-releases": "./src/action-releases.ts",
-    "#github-releases": "./src/github-releases.ts"
+    "#github-releases": "./src/github-releases.ts",
+    "#contracts": "./src/contracts.ts",
+    "#release-batches": "./src/release-batches.ts"
   }
 }

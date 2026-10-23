@@ -22,7 +22,10 @@ import {
 
 export type ReleaseTarget = {
   action: ActionTarget | undefined;
+  artifactCommand: [string, ...string[]] | undefined;
+  assets: string[];
   dir: string;
+  environment: string;
   isPublished: () => Promise<boolean>;
   kind: Target['kind'];
   label: string;
@@ -143,7 +146,10 @@ export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
       const version = await readVersion(repoRoot, spec.version);
       return {
         action: spec.kind === 'action' ? spec : undefined,
+        artifactCommand: spec.kind === 'ghcr' ? spec.artifact_command : undefined,
+        assets: spec.kind === 'ghcr' ? spec.assets : [],
         dir,
+        environment: spec.environment ?? (spec.kind === 'action' ? 'actions' : spec.kind),
         isPublished: async () => isPackagePublished(spec, version, dir),
         kind: spec.kind,
         label: spec.label,

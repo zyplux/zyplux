@@ -6,6 +6,7 @@ export const VersionSourceSchema = z.union([
 ]);
 
 const TargetBaseSchema = z.object({
+  environment: z.string().min(1).optional(),
   label: z.string(),
   surface: z.array(z.string()),
   tag_prefix: z.string(),
@@ -13,13 +14,31 @@ const TargetBaseSchema = z.object({
 });
 
 export const TargetSchema = z.discriminatedUnion('kind', [
-  TargetBaseSchema.extend({ kind: z.enum(['ghcr', 'npm', 'pypi']) }),
+  TargetBaseSchema.extend({ kind: z.enum(['npm', 'pypi']) }),
+  TargetBaseSchema.extend({
+    artifact_command: z
+      .tuple([z.string().min(1)])
+      .rest(z.string())
+      .optional(),
+    assets: z.array(z.string().min(1)).default([]),
+    kind: z.literal('ghcr'),
+  }),
   TargetBaseSchema.extend({
     kind: z.literal('action'),
     major_tag_prefix: z.string().min(1),
     repository: z.string().regex(/^[\w.-]+\/[\w.-]+$/u),
   }),
 ]);
+
+export const ReleaseBatchSchema = z.object({
+  environment: z.string().min(1),
+  id: z.string().min(1),
+  kind: z.enum(['npm', 'pypi', 'ghcr', 'action']),
+  runner: z.literal('ubuntu-latest'),
+  tags: z.array(z.string()).min(1),
+});
+
+export const ReleasePlanSchema = z.object({ include: z.array(ReleaseBatchSchema) });
 
 export const ActionReleasesSchema = z.array(
   z.array(z.object({ draft: z.boolean(), prerelease: z.boolean(), tag_name: z.string() })),
@@ -40,5 +59,6 @@ export const RegistryUrlSchema = z
 export const GhcrTokenSchema = z.object({ token: z.string() });
 
 export type ActionTarget = Extract<Target, { kind: 'action' }>;
+export type ReleaseBatch = z.infer<typeof ReleaseBatchSchema>;
 export type Target = z.infer<typeof TargetSchema>;
 export type VersionSource = z.infer<typeof VersionSourceSchema>;

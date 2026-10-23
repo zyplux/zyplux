@@ -9,9 +9,9 @@ export const publishNpmCommand = command('publish-npm', object({ command: consta
   brief: message`Publish declared npm targets in dependency order and reconcile their GitHub releases.`,
 });
 
-export const runPublishNpm = async () => {
-  const prepared = await loadPreparedReleases();
-  const releases = prepared.filter(release => release.kind === 'npm');
+type NpmRelease = { label: string; notes: string; tag: string };
+
+export const publishNpmTargets = async (releases: NpmRelease[]) => {
   if (releases.length === 0) return;
   const root = await readTrimmed($.git.showToplevel());
   await runPassthrough(
@@ -30,4 +30,9 @@ export const runPublishNpm = async () => {
   for (const release of releases) {
     if (!(await $.gh.release.exists(release.tag))) await createGithubRelease(release.tag, release.notes, head);
   }
+};
+
+export const runPublishNpm = async () => {
+  const prepared = await loadPreparedReleases();
+  return publishNpmTargets(prepared.filter(release => release.kind === 'npm'));
 };

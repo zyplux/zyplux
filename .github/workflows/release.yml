@@ -4,120 +4,50 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  release:
-    types: [published]
+    inputs:
+      tag:
+        description: Release tag to retry (empty selects all pending releases).
+        type: string
+        default: ''
 
 permissions:
   contents: read
-
-env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  packages: read
 
 jobs:
-  resolve:
-    name: select pending releases
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+  plan:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
     outputs:
-      npm: ${{ steps.targets.outputs.npm }}
-      pypi: ${{ steps.targets.outputs.pypi }}
-      ghcr: ${{ steps.targets.outputs.ghcr }}
-      action: ${{ steps.targets.outputs.action }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      pending: ${{ steps.plan.outputs.pending }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./apps/action-setup-pm
-      - id: targets
+      - id: plan
         uses: ./apps/action-airlock
         with:
           command: plan
-          tag: ${{ github.event.release.tag_name }}
+          tag: ${{ inputs.tag }}
 
-  action:
-    name: publish ${{ matrix.tag }}
-    needs: resolve
-    if: needs.resolve.outputs.action != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        tag: ${{ fromJSON(needs.resolve.outputs.action) }}
-    concurrency:
-      group: release-actions
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./apps/action-setup-pm
-      - uses: ./apps/action-airlock
-        with:
-          command: publish
-          tag: ${{ matrix.tag }}
-
-  npm:
-    name: publish npm packages
-    needs: resolve
-    if: needs.resolve.outputs.npm != '[]'
-    concurrency:
-      group: release-npm
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./apps/action-setup-pm
-      - uses: ./apps/action-airlock
-        with:
-          command: publish-npm
-
-  pypi:
-    name: publish ${{ matrix.tag }}
-    needs: resolve
-    if: needs.resolve.outputs.pypi != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        tag: ${{ fromJSON(needs.resolve.outputs.pypi) }}
-    concurrency:
-      group: release-${{ matrix.tag }}
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
-    environment: pypi
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./apps/action-setup-pm
-      - uses: ./apps/action-airlock
-        with:
-          command: publish
-          tag: ${{ matrix.tag }}
-
-  ghcr:
-    name: publish ${{ matrix.tag }}
-    needs: resolve
-    if: needs.resolve.outputs.ghcr != '[]'
-    strategy:
-      fail-fast: false
-      matrix:
-        tag: ${{ fromJSON(needs.resolve.outputs.ghcr) }}
-    concurrency:
-      group: release-${{ matrix.tag }}
-      cancel-in-progress: false
-    runs-on: ubuntu-latest
+  publish:
+    needs: plan
+    if: needs.plan.outputs.pending == 'true'
+    name: publish ${{ matrix.id }}
+    runs-on: ${{ matrix.runner }}
+    environment: ${{ matrix.environment }}
     permissions:
       contents: write
       packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: airlock-${{ matrix.id }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
-      - uses: ./apps/action-setup-pm
       - uses: ./apps/action-airlock
         with:
           command: publish
-          tag: ${{ matrix.tag }}
+          batch: ${{ toJSON(matrix) }}
