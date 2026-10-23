@@ -21,24 +21,28 @@ const validateActionVersion = (version: string) => {
   return parsed;
 };
 
+export const fetchActionReleases = async ({
+  repository,
+  tag_prefix: tagPrefix,
+}: Pick<ActionTarget, 'repository' | 'tag_prefix'>) => {
+  const endpoint = `repos/${repository}/releases?per_page=100`;
+  return parseJson(await readTrimmed($`gh api --paginate --slurp ${endpoint}`.quiet()), ActionReleasesSchema)
+    .flat()
+    .filter(release => !release.draft && !release.prerelease && release.tag_name.startsWith(tagPrefix))
+    .flatMap(release => {
+      const version = parse(release.tag_name.slice(tagPrefix.length));
+      return version !== null && version.prerelease.length === 0 ? { tag: release.tag_name, version } : [];
+    })
+    .toSorted((left, right) => rcompare(left.version, right.version));
+};
+
 const resolveActionAlias = async ({ repository, tag_prefix: tagPrefix }: ActionTarget, version: string) => {
   const parsed = validateActionVersion(version);
   const ref = `refs/tags/${tagPrefix}${parsed.major}`;
   const previousSha = parseRemoteTag(await readTrimmed($.git.lsRemote('origin', ref)), ref);
-  const endpoint = `repos/${repository}/releases?per_page=100`;
-  const releases = parseJson(await readTrimmed($`gh api --paginate --slurp ${endpoint}`), ActionReleasesSchema)
-    .flat()
-    .filter(release => !release.draft && !release.prerelease);
-  if (releases.every(release => release.tag_name !== `${tagPrefix}${version}`)) return;
-  const latest = releases
-    .filter(release => release.tag_name.startsWith(tagPrefix))
-    .flatMap(release => {
-      const version = parse(release.tag_name.slice(tagPrefix.length));
-      return version?.major === parsed.major && version.prerelease.length === 0
-        ? { tag: release.tag_name, version }
-        : [];
-    })
-    .toSorted((left, right) => rcompare(left.version, right.version))[0];
+  const releases = await fetchActionReleases({ repository, tag_prefix: tagPrefix });
+  if (releases.every(release => release.tag !== `${tagPrefix}${version}`)) return;
+  const latest = releases.find(release => release.version.major === parsed.major);
   ensure(latest !== undefined, `no published action release for ${ref}`);
   const releaseRef = `refs/tags/${latest.tag}`;
   const commit = parseRemoteTag(await readTrimmed($.git.lsRemote('origin', `${releaseRef}*`)), releaseRef);

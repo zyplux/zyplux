@@ -64,8 +64,15 @@ export const RegistryUrlSchema = z
   .pipe(z.enum(['https://registry.npmjs.org', 'https://npm.pkg.github.com']))
   .default('https://registry.npmjs.org');
 export const GhcrTokenSchema = z.object({ token: z.string() });
+export const GhcrTagsSchema = z.object({ tags: z.array(z.string()).nullable() });
+export const NpmLatestSchema = z.object({ 'dist-tags': z.object({ latest: z.string() }) });
+export const PypiLatestSchema = z.object({ info: z.object({ version: z.string() }) });
+export const SurfaceFindingsSchema = z
+  .array(z.object({ message: z.string().min(1), status: z.enum(['pass', 'skip', 'fail', 'error']) }))
+  .min(1);
 
 export type ActionTarget = Extract<Target, { kind: 'action' }>;
 export type ReleaseBatch = z.infer<typeof ReleaseBatchSchema>;
+export type SurfaceFinding = z.infer<typeof SurfaceFindingsSchema>[number];
 export type Target = z.infer<typeof ManifestSchema>['target'][number];
 export type VersionSource = z.infer<typeof VersionSourceSchema>;

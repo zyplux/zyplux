@@ -8,6 +8,7 @@ import { loadPackageVersion } from '@zyplux/util/manifest';
 import { assertTagVersionCommand, runAssertTagVersion } from './commands/assert-tag-version.ts';
 import { bootstrapNpmTargetCommand, runBootstrapNpmTarget } from './commands/bootstrap-npm-target.ts';
 import { checkReleaseNotesCommand, runCheckReleaseNotes } from './commands/check-release-notes.ts';
+import { checkSurfaceCommand, runCheckSurface } from './commands/check-surface.ts';
 import { listPreparedReleasesCommand, runListPreparedReleases } from './commands/list-prepared-releases.ts';
 import { planCommand, runPlan } from './commands/plan.ts';
 import { prepareReleaseCommand, runPrepareRelease } from './commands/prepare-release.ts';
@@ -20,6 +21,7 @@ const airlockCommand = or(
   assertTagVersionCommand,
   bootstrapNpmTargetCommand,
   checkReleaseNotesCommand,
+  checkSurfaceCommand,
   listPreparedReleasesCommand,
   prepareReleaseCommand,
   planCommand,
@@ -39,6 +41,9 @@ const runAirlockCommand = async (config: InferValue<typeof airlockCommand>) => {
     }
     case 'check-release-notes': {
       return runCheckReleaseNotes();
+    }
+    case 'check-surface': {
+      return runCheckSurface(config);
     }
     case 'list-prepared-releases': {
       return runListPreparedReleases();

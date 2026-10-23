@@ -19,7 +19,6 @@ _REQUEST_TIMEOUT_SECONDS = 10.0
 _HTTP_OK = 200
 _VERSION_TAG = re.compile(r"\d+(?:\.\d+)*")
 _STABLE_VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
-_GITHUB_PAGE_SIZE = 100
 
 
 class RegistryLookupError(RuntimeError):
@@ -114,36 +113,6 @@ def fetch_latest_npm(
 def fetch_latest_pypi(distribution: str) -> str:
     payload = _fetch_json("pypi.org", f"/pypi/{distribution}/json")
     return str(_extract(payload, "info", "version", source=distribution))
-
-
-def fetch_latest_action(repository: str, tag_prefix: str) -> str:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "zyplux-cerberus"}
-    if token := os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
-        headers["Authorization"] = f"Bearer {token}"
-    versions: list[str] = []
-    page = 1
-    while True:
-        payload = _fetch_json(
-            "api.github.com", f"/repos/{repository}/releases?per_page={_GITHUB_PAGE_SIZE}&page={page}", headers
-        )
-        if not isinstance(payload, list):
-            failure = f"{repository}: releases response is not a list"
-            raise RegistryLookupError(failure)
-        for release in payload:
-            tag = _extract(release, "tag_name", source=repository)
-            draft = _extract(release, "draft", source=repository)
-            prerelease = _extract(release, "prerelease", source=repository)
-            if isinstance(tag, str) and not draft and not prerelease and tag.startswith(tag_prefix):
-                version = tag.removeprefix(tag_prefix)
-                if _STABLE_VERSION.fullmatch(version):
-                    versions.append(version)
-        if len(payload) < _GITHUB_PAGE_SIZE:
-            break
-        page += 1
-    if not versions:
-        failure = f"{repository}: no published releases matching {tag_prefix}"
-        raise RegistryNotFoundError(failure)
-    return max(versions, key=_version_sort_key)
 
 
 def _version_sort_key(tag: str) -> tuple[int, ...]:

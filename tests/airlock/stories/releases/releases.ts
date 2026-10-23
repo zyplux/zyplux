@@ -25,7 +25,9 @@ import {
   createRelease,
   seedReleaseTargets,
 } from './release-scenario.ts';
-export const test = repositoryTest
+import { extendSurfaceChecks } from './surface-check.ts';
+
+const releaseTest = repositoryTest
   .extend('airlock', () => createCliRunner(runAirlock))
   .extend<{
     actionRelease: ActionRelease;
@@ -128,4 +130,6 @@ export const test = repositoryTest
       { auto: true },
     ],
   });
+export type ReleaseTest = typeof releaseTest;
+export const test = extendSurfaceChecks(releaseTest);
 export { describe, expect } from 'vitest';

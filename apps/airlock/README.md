@@ -41,6 +41,12 @@ Python targets have a private pnpm tracking `package.json` beside `pyproject.tom
 
 If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.
 
+## Release surface validation
+
+`pnpm exec airlock check-surface` enforces single-step version bumps against published releases and the pull request target branch. Set `GITHUB_BASE_REF` or pass `--base origin/main` to compare against a target branch; published versions also require unchanged release surfaces. Unpublished target-branch versions can be repaired without another bump.
+
+Cerberus's `release_surface_version_bump` bite runs `pnpm exec airlock check-surface --json` and reports its findings. Keep Airlock installed as a locked root development dependency. In zyplux, `workspace:*` runs the current source; consuming repositories run their installed npm version. The JSON command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
+
 ## Automatic publication
 
 The [release workflow](../../.github/workflows/release.yml) has a planning job and a publication matrix. `airlock plan` validates prepared releases and emits `matrix` and `pending` action outputs. Each row contains the exact release tags, a stable concurrency ID, an environment and a runner. `airlock publish --batch JSON` validates that row against the checked-out configuration and publishes its selected targets.

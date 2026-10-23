@@ -4,6 +4,8 @@
 
 ### Patch Changes
 
+- Delegate release-surface validation to the repository-installed Airlock CLI; publishing repositories must install `@zyplux/airlock` as a root development dependency.
+
 - Require the newest stable tool versions eligible under pnpm's 24-hour release quarantine, keeping freshness checks consistent with installation policy.
 
 - Require the shared package-manager action at `zyplux/zyplux/apps/action-setup-pm`.
