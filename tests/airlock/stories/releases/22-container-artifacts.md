@@ -10,6 +10,12 @@
 
 ### 22.1.4 preserves a finalized release and its manifest
 
+### 22.1.5 rejects a finalized release whose image is missing without changing its manifest
+
+### 22.1.6 rejects a custom builder that finishes without publishing its image
+
+### 22.1.7 publishes image-only custom releases and resumes drafts without uploading assets
+
 ## 22.2 validating custom artifact declarations
 
 ### 22.2.1 rejects asset paths outside the staging directory

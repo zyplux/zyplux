@@ -61,7 +61,13 @@ describe('22.1 publishing application-specific container artifacts', () => {
     },
   );
 
-  test('22.1.4 preserves a finalized release and its manifest', async ({ airlock, containerRelease, shell }) => {
+  test('22.1.4 preserves a finalized release and its manifest', async ({
+    airlock,
+    containerRelease,
+    registries,
+    shell,
+  }) => {
+    registries.setPublished({ ghcrPublished: true });
     shell.on(
       'gh api graphql',
       '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
@@ -69,6 +75,63 @@ describe('22.1 publishing application-specific container artifacts', () => {
     await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
     expect(shell).not.toHaveRunMatching(/podman|uv run|gh release/);
   });
+
+  test('22.1.5 rejects a finalized release whose image is missing without changing its manifest', async ({
+    airlock,
+    containerRelease,
+    planReleases,
+    shell,
+  }) => {
+    shell.on(
+      'gh api graphql',
+      '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
+    );
+    expect(await planReleases(containerRelease.batch.tags[0])).toEqual([containerRelease.batch]);
+
+    await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
+      'published release ci-image-v3.4.5 is missing image ghcr.io/zyplux/ci:3.4.5',
+    );
+
+    expect(shell).not.toHaveRunMatching(/podman|uv run|gh release/);
+  });
+
+  test('22.1.6 rejects a custom builder that finishes without publishing its image', async ({
+    airlock,
+    configureTarget,
+    containerRelease,
+    shell,
+  }) => {
+    await configureTarget('ghcr', 'assets = []');
+    shell.on('uv run', '');
+
+    await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
+      'artifact command did not publish image ghcr.io/zyplux/ci:3.4.5',
+    );
+
+    expect(shell).not.toHaveRunMatching('gh release');
+    expect(shell).toHaveRun('podman logout ghcr.io');
+  });
+
+  test.for([false, true])(
+    '22.1.7 publishes image-only custom releases and resumes drafts without uploading assets (%j)',
+    async (isDraft, { airlock, configureTarget, containerRelease, planReleases, registries, shell }) => {
+      await configureTarget('ghcr', 'assets = []');
+      registries.setPublished({ ghcrPublished: true });
+      shell.on(
+        'gh api graphql',
+        isDraft
+          ? '{"data":{"repository":{"release":{"isDraft":true,"releaseAssets":{"nodes":[]}}}}}'
+          : '{"data":{"repository":{"release":null}}}',
+      );
+      expect(await planReleases(containerRelease.batch.tags[0])).toEqual([containerRelease.batch]);
+
+      await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
+
+      expect(shell).not.toHaveRunMatching('gh release upload');
+      expect(shell).toHaveRunMatching('gh release edit ci-image-v3.4.5 --draft=false');
+      expect(shell.commandsMatching('gh release create')).toHaveLength(isDraft ? 0 : 1);
+    },
+  );
 });
 
 describe('22.2 validating custom artifact declarations', () => {

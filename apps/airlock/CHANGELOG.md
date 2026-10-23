@@ -4,9 +4,9 @@
 
 ### Major Changes
 
-- Prepare reviewed versions and changelogs with native pnpm and publish npm packages in dependency order with registry availability checks.
+- Prepare reviewed versions and changelogs with native pnpm and publish npm packages in dependency order with workspace validation and registry availability checks.
 
-- Plan isolated publication batches with separate environments through the Airlock CLI and GitHub Action, including cached workspace setup and custom container artifacts.
+- Plan isolated publication batches with separate environments through the Airlock CLI and GitHub Action, including cached workspace setup, custom container artifacts and image-only builders. Finalized container releases require their versioned image and declared assets.
 
 - Configure named targets in `airlock-targets.toml` with a shared package scope, optional label overrides and derived versioned and major tags.
 

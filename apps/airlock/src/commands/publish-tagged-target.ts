@@ -97,7 +97,10 @@ export const publishPreparedTarget = async (
   if (target.artifactCommand !== undefined) {
     ensure(notes !== undefined, 'artifact commands require --release');
     ensure(assets.length === 0, 'artifact commands use their declared assets');
-    if (await isReleasePublished(tag, target.assets)) return;
+    if (await isReleasePublished(tag, target.assets)) {
+      ensure(await target.isPublished(), `published release ${tag} is missing image ${target.label}:${version}`);
+      return;
+    }
     await using directory = await mkdtempDisposable(path.join(tmpdir(), 'airlock-artifacts-'));
     const artifacts = target.assets.map(asset => {
       const artifact = path.resolve(directory.path, asset);
@@ -106,6 +109,7 @@ export const publishPreparedTarget = async (
     });
     await publishGhcr(target, directory.path);
     await Promise.all(artifacts.map(asset => access(asset)));
+    ensure(await target.isPublished(), `artifact command did not publish image ${target.label}:${version}`);
     await publishReleaseAssets(tag, notes, await readTrimmed($.git.revParse('HEAD')), artifacts);
     return;
   }

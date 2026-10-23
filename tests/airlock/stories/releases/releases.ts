@@ -7,6 +7,7 @@ import { makeFixture } from '@zyplux/spectra/library-test-api';
 import { repositoryTest } from '@zyplux/spectra/repository-test';
 import { ensure } from '@zyplux/util/assert';
 import { parseJson } from '@zyplux/util/json';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -63,7 +64,7 @@ export const test = repositoryTest
       registries.setPublished({});
       const [batch] = await planReleases('ci-image-v3.4.5');
       ensure(batch !== undefined, 'container batch must be planned');
-      await use({ batch, ...createContainerPublication(shell) });
+      await use({ batch, ...createContainerPublication(shell, registries) });
     },
     expectGithubRelease: makeFixture(expectGithubRelease),
     expectNpmPublish: makeFixture(expectNpmPublish),
@@ -109,9 +110,20 @@ export const test = repositoryTest
       await use(createNotesCapture(shell));
     },
     targets: [
-      async ({ repo, tempDir }, use) => {
+      async ({ repo, shell, tempDir }, use) => {
         repo.setRoot(tempDir.path);
-        await use(await seedReleaseTargets(tempDir));
+        const targets = await seedReleaseTargets(tempDir);
+        shell.on('pnpm list', () => {
+          const manifest = readFileSync(path.join(targets.util.dir, 'package.json'), 'utf8');
+          return JSON.stringify([
+            {
+              private: false,
+              ...parseJson(manifest, VersionFileSchema),
+              path: targets.util.dir,
+            },
+          ]);
+        });
+        await use(targets);
       },
       { auto: true },
     ],

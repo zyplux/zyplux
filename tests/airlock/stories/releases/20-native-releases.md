@@ -8,6 +8,12 @@ Native pnpm owns packing, dependency order, publication summaries and registry a
 
 ### 20.1.2 propagates publication failure and permits a successful retry
 
+### 20.1.3 rejects mismatched or private workspace targets before publishing
+
+### 20.1.4 rejects targets excluded from the workspace before publishing
+
+### 20.1.5 requires the requested version in the registry before creating a GitHub release
+
 ## 20.2 shared action release plans
 
 ### 20.2.1 writes pending matrices to GitHub outputs

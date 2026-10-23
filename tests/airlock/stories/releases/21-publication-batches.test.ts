@@ -50,6 +50,7 @@ describe('21.2 executing the selected publication batch', () => {
     repo.setHeadSha('reviewed-sha');
     registries.setPublished({});
     const [batch] = await planReleases();
+    registries.setPublished({ npmPublished: true });
     env.set('GITHUB_STEP_SUMMARY', `${tempDir.path}/summary.md`);
     shell.on('pnpm --filter', '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
@@ -66,6 +67,7 @@ describe('21.2 executing the selected publication batch', () => {
     airlock,
     loadArtifact,
     planReleases,
+    registries,
     repo,
     shell,
     tempDir,
@@ -80,6 +82,7 @@ describe('21.2 executing the selected publication batch', () => {
     const batches = await planReleases();
     expect(batches[0]?.tags).toEqual(['util-v1.2.3', 'extra-v1.2.3']);
     const [batch] = await planReleases('util-v1.2.3');
+    registries.setPublished({ npmPublished: true });
     repo.setHeadSha('reviewed-sha');
     shell.on('pnpm --filter', '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');

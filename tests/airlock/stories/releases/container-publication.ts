@@ -4,10 +4,12 @@ import { ensure } from '@zyplux/util/assert';
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+import type { Registries } from './release-scenario.ts';
+
 const DIGEST_HEX_LENGTH = 64;
 const RELEASE_ASSET_ARGUMENT = 3;
 
-export const createContainerPublication = (shell: ShellFake) => {
+export const createContainerPublication = (shell: ShellFake, registries: Registries) => {
   let manifest = '';
   let builds = 0;
   shell.on('podman', '');
@@ -25,6 +27,7 @@ export const createContainerPublication = (shell: ShellFake) => {
         validatorVersion: '1.2.3',
       }),
     );
+    registries.setPublished({ ghcrPublished: true });
     return '';
   });
   shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');

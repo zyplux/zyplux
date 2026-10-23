@@ -4,10 +4,12 @@ describe('20.1 native npm publication', () => {
   test('20.1.1 filters declared targets and repairs missing GitHub releases', async ({
     airlock,
     expectGithubRelease,
+    registries,
     repo,
     shell,
   }) => {
     repo.syncMain('sha-head');
+    registries.setPublished({ npmPublished: true });
     shell.on('pnpm --filter', '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
@@ -20,8 +22,14 @@ describe('20.1 native npm publication', () => {
     expect(shell).not.toHaveRunMatching('pnpm pack');
   });
 
-  test('20.1.2 propagates publication failure and permits a successful retry', async ({ airlock, repo, shell }) => {
+  test('20.1.2 propagates publication failure and permits a successful retry', async ({
+    airlock,
+    registries,
+    repo,
+    shell,
+  }) => {
     repo.syncMain('sha-head');
+    registries.setPublished({ npmPublished: true });
     shell.on('pnpm --filter', { exitCode: 1, stdout: 'registry visibility timed out' }, '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
@@ -31,6 +39,42 @@ describe('20.1 native npm publication', () => {
     await airlock.run('publish-npm');
 
     expect(shell).toHaveRunMatching('gh release create util-v1.2.3');
+  });
+
+  test.for([
+    { manifest: { name: '@zyplux/renamed', version: '1.2.3' }, reason: 'workspace package name' },
+    { manifest: { name: '@zyplux/util', private: true, version: '1.2.3' }, reason: 'private workspace packages' },
+  ])(
+    '20.1.3 rejects mismatched or private workspace targets before publishing (%j)',
+    async ({ manifest, reason }, { airlock, shell, tempDir }) => {
+      await tempDir.write('packages/util/package.json', JSON.stringify(manifest));
+
+      await expect(airlock.run('publish-npm')).rejects.toThrow(reason);
+
+      expect(shell).not.toHaveRunMatching(/pnpm --filter|gh release/);
+    },
+  );
+
+  test('20.1.4 rejects targets excluded from the workspace before publishing', async ({ airlock, shell }) => {
+    shell.on('pnpm list', '[]');
+
+    await expect(airlock.run('publish-npm')).rejects.toThrow('is not a pnpm workspace package');
+
+    expect(shell).not.toHaveRunMatching(/pnpm --filter|gh release/);
+  });
+
+  test('20.1.5 requires the requested version in the registry before creating a GitHub release', async ({
+    airlock,
+    registries,
+    shell,
+  }) => {
+    registries.setPublished({ npmPublished: false });
+    shell.on('pnpm --filter', '');
+
+    await expect(airlock.run('publish-npm')).rejects.toThrow('@zyplux/util 1.2.3 is missing from its registry');
+
+    expect(shell).toHaveRunMatching('pnpm --filter');
+    expect(shell).not.toHaveRunMatching('gh release');
   });
 });
 

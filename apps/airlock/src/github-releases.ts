@@ -58,6 +58,6 @@ export const publishReleaseAssets = async (tag: string, notes: string, commit: s
   await writeFile(notesFile, `${notes}\n`);
   if (release === null)
     await $`gh release create ${tag} --draft --notes-file ${notesFile} --target ${commit} --title ${tag}`;
-  await $`gh release upload ${tag} ${assets} --clobber`;
+  if (assets.length > 0) await $`gh release upload ${tag} ${assets} --clobber`;
   await $`gh release edit ${tag} --draft=false --notes-file ${notesFile} --target ${commit}`;
 };

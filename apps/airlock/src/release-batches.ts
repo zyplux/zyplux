@@ -47,9 +47,9 @@ export const loadPendingTargets = async (tag?: string) => {
     const isPublished = await target.isPublished();
     const hasRelease =
       isPublished &&
-      (target.assets.length === 0
-        ? await $.gh.release.exists(target.tag)
-        : await isReleasePublished(target.tag, target.assets));
+      (target.artifactCommand !== undefined || target.assets.length > 0
+        ? await isReleasePublished(target.tag, target.assets)
+        : await $.gh.release.exists(target.tag));
     if (!hasRelease) pending.push(target);
   }
   return pending;
