@@ -1,5 +1,17 @@
 # zyplux-cerberus
 
+## 0.25.1
+
+### Patch Changes
+
+- Delegate release-surface validation to the repository-installed Airlock CLI; publishing repositories must install `@zyplux/airlock` as a root development dependency.
+
+- Require the newest stable tool versions eligible under pnpm's 24-hour release quarantine, keeping freshness checks consistent with installation policy.
+
+- Require the shared package-manager action at `zyplux/zyplux/apps/action-setup-pm`.
+
+- Read version-bump and publication targets from `airlock-targets.toml`; migrate to named target tables with a top-level `scope` before upgrading.
+
 ## 0.25.0
 
 ### Minor Changes

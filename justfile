@@ -93,7 +93,3 @@ dump-rules:
 # Apply totchef's own dogfood recipe to this machine.
 totchef:
     uv run totchef up --recipe apps/totchef/examples/totchef_recipe.toml
-
-# Manually publish pending versions through the release workflow.
-release:
-    pnpm run --silent cz release-bumped-targets

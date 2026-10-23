@@ -52,7 +52,9 @@ def _is_required(step: dict[str, Any]) -> bool:
 def _is_shared_setup(step: dict[str, Any]) -> bool:
     uses = step.get("uses", "")
     identity, _, ref = uses.partition("@") if isinstance(uses, str) else ("", "", "")
-    return (uses == "./setup-pm" or (identity == "zyplux/zyplux/setup-pm" and bool(ref))) and _is_required(step)
+    return (
+        uses == "./apps/action-setup-pm" or (identity == "zyplux/zyplux/apps/action-setup-pm" and bool(ref))
+    ) and _is_required(step)
 
 
 def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:
@@ -82,7 +84,10 @@ def _is_root_checkout(step: dict[str, Any]) -> bool:
 def _validate_setup(steps: list[dict[str, Any]], res: CheckResult) -> int | None:
     setup_index = next((index for index, step in enumerate(steps) if _is_shared_setup(step)), None)
     if setup_index is None:
-        res.fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        res.fail(
+            "ci.yml must use zyplux/zyplux/apps/action-setup-pm@<ref> "
+            "or ./apps/action-setup-pm unconditionally before checks"
+        )
         return None
     if not any(_is_root_checkout(step) for step in steps[:setup_index]):
         res.fail("ci job must check out the repository root with actions/checkout@<ref> before shared setup")

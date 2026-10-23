@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from cerberus.model import Repo
 
 _SUBTREE_SUFFIX = "/**"
+RELEASE_AGE_MINUTES = 1440
 TEST_HARNESS_ROOT = "tests"  # the workspace root reserved for cross-package test tooling, never a product itself
 
 

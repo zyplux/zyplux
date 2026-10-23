@@ -20,7 +20,7 @@ _PY_CI = (
     "    uses: zyplux/.github/.github/workflows/gate.yml@main\n"
     "  ci:\n    steps:\n"
     "      - uses: actions/checkout@v7\n"
-    "      - uses: ./setup-pm\n"
+    "      - uses: ./apps/action-setup-pm\n"
     "      - run: uv run --no-sync vulture\n"
     "      - run: uv run --no-sync rumdl check\n"
     "      - run: uv run --no-sync ruff check\n"
@@ -31,7 +31,7 @@ _PY_CI = (
 _TS_CI = (
     "jobs:\n  ci:\n    steps:\n"
     "      - uses: actions/checkout@v7\n"
-    "      - uses: ./setup-pm\n"
+    "      - uses: ./apps/action-setup-pm\n"
     "      - run: pnpm run knip\n"
     "      - run: pnpm run typecheck\n"
     "      - run: pnpm run lint\n"
@@ -110,7 +110,7 @@ def test_8_3_3_fails_when_the_required_python_steps_run_out_of_canonical_order(
     ci = (
         "jobs:\n  ci:\n    steps:\n"
         "      - uses: actions/checkout@v7\n"
-        "      - uses: ./setup-pm\n"
+        "      - uses: ./apps/action-setup-pm\n"
         "      - run: uv run --no-sync pyrefly check\n"
         "      - run: uv run --no-sync vulture\n"
         "      - run: uv run --no-sync rumdl check\n"
@@ -154,7 +154,7 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
     ci = (
         "jobs:\n  ci:\n    steps:\n"
         "      - uses: actions/checkout@v7\n"
-        "      - uses: ./setup-pm\n"
+        "      - uses: ./apps/action-setup-pm\n"
         "      - run: pnpm run typecheck\n"
         "      - run: pnpm run knip\n"
         "      - run: pnpm run lint\n"
@@ -247,7 +247,7 @@ def test_8_5_5_rejects_skipped_background_or_chained_commands(
 def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
 ) -> None:
-    ci = "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
+    ci = "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
     if not missing:
         ci += "      - run: uv run --no-sync rumdl check\n"
     result = run_check_with_files(
@@ -286,7 +286,7 @@ def test_8_6_3_requires_typescript_quality_steps_for_executable_tool_configurati
             "package.json": "{}",
             ".github/workflows/ci.yml": (
                 "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n"
-                "      - uses: ./setup-pm\n      - run: pnpm exec prettier --check .\n"
+                "      - uses: ./apps/action-setup-pm\n      - run: pnpm exec prettier --check .\n"
             ),
         },
     )
@@ -304,7 +304,7 @@ def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
             "eslint.config.js": "export default {};\n",
             "package.json": "{}",
             ".github/workflows/ci.yml": (
-                "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n"
+                "jobs:\n  ci:\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
             ),
         },
     )
@@ -320,12 +320,15 @@ def test_8_5_6_rejects_pyrefly_warning_threshold_overrides(
     assert result.findings == [fail("python ci is missing `pyrefly check`")]
 
 
-@pytest.mark.parametrize("action", ["./setup-pm", "zyplux/zyplux/setup-pm@main", "zyplux/zyplux/setup-pm@abc123"])
+@pytest.mark.parametrize(
+    "action",
+    ["./apps/action-setup-pm", "zyplux/zyplux/apps/action-setup-pm@main", "zyplux/zyplux/apps/action-setup-pm@abc123"],
+)
 def test_8_7_1_accepts_both_locked_installs_from_the_shared_action(
     run_ci_sequence: RunCiSequence, sequence_pass: Finding, action: str
 ) -> None:
-    ci = _TS_CI.replace("./setup-pm", action)
-    ci += _PY_CI.split("      - uses: actions/checkout@v7\n      - uses: ./setup-pm\n", 1)[1]
+    ci = _TS_CI.replace("./apps/action-setup-pm", action)
+    ci += _PY_CI.split("      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n", 1)[1]
     result = run_ci_sequence(ts=True, python=True, ci=ci)
     assert result.findings == [sequence_pass]
 
@@ -335,18 +338,23 @@ def test_8_7_1_accepts_both_locked_installs_from_the_shared_action(
     [
         "run: pnpm install --frozen-lockfile",
         "uses: pnpm/setup@v3\n        with: {require-lockfile: true}",
-        "uses: zyplux/zyplux/setup-pm@",
-        "uses: other/zyplux/setup-pm@main",
+        "uses: zyplux/zyplux/apps/action-setup-pm@",
+        "uses: other/zyplux/apps/action-setup-pm@main",
+        "uses: zyplux/zyplux/setup-pm@v1",
+        "uses: ./setup-pm",
         "uses: false",
     ],
 )
 def test_8_7_2_requires_the_shared_action_even_with_a_manual_frozen_install(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, setup: str
 ) -> None:
-    ci = _TS_CI.replace("uses: ./setup-pm", setup)
+    ci = _TS_CI.replace("uses: ./apps/action-setup-pm", setup)
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [
-        fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        fail(
+            "ci.yml must use zyplux/zyplux/apps/action-setup-pm@<ref> "
+            "or ./apps/action-setup-pm unconditionally before checks"
+        )
     ]
 
 
@@ -354,8 +362,8 @@ def test_8_7_2_requires_the_shared_action_even_with_a_manual_frozen_install(
 def test_8_7_3_requires_shared_setup_before_quality_checks(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, install: str
 ) -> None:
-    ci = _TS_CI.replace("      - uses: ./setup-pm\n", install)
-    ci += "      - uses: ./setup-pm\n"
+    ci = _TS_CI.replace("      - uses: ./apps/action-setup-pm\n", install)
+    ci += "      - uses: ./apps/action-setup-pm\n"
     assert run_ci_sequence(ts=True, ci=ci).findings == [
         fail(f"ts ci is missing `{step}`")
         for step in ("pnpm run knip", "pnpm run typecheck", "pnpm run lint", "prettier --check", "pnpm run test")
@@ -366,10 +374,13 @@ def test_8_7_3_requires_shared_setup_before_quality_checks(
 def test_8_7_4_requires_unconditional_successful_setup(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, setting: str
 ) -> None:
-    ci = _TS_CI.replace("uses: ./setup-pm", f"uses: ./setup-pm\n        {setting}")
+    ci = _TS_CI.replace("uses: ./apps/action-setup-pm", f"uses: ./apps/action-setup-pm\n        {setting}")
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [
-        fail("ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks")
+        fail(
+            "ci.yml must use zyplux/zyplux/apps/action-setup-pm@<ref> "
+            "or ./apps/action-setup-pm unconditionally before checks"
+        )
     ]
 
 
@@ -378,7 +389,10 @@ def test_8_7_4_requires_unconditional_successful_setup(
     [
         (
             _TS_CI.replace("  ci:\n", "  prepare:\n") + "  ci:\n    steps:\n      - run: pnpm run test\n",
-            "ci.yml must use zyplux/zyplux/setup-pm@<ref> or ./setup-pm unconditionally before checks",
+            (
+                "ci.yml must use zyplux/zyplux/apps/action-setup-pm@<ref> "
+                "or ./apps/action-setup-pm unconditionally before checks"
+            ),
         ),
         (
             _TS_CI.replace("  ci:\n", "  ci:\n    if: false\n"),

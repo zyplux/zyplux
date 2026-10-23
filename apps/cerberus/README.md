@@ -14,9 +14,9 @@ CI uses one unquoted canonical command with literal arguments per `run` step. Py
 
 Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.
 
-Release targets declare their source inputs in `release-targets.toml`. Npm lookups follow the version package's `publishConfig` registry, preferring a matching `@scope:registry` over `registry`; GitHub Packages requires `NODE_AUTH_TOKEN`. Pull request checks use `GITHUB_BASE_REF` to prevent version regressions against the target branch. Unpublished versions can be repaired without a bump; changes to a published version require a bump. Single-step bumps use the newer of the published and target-branch versions. Fetch complete Git history and the target branch before running the check.
+Release targets declare their source inputs in `airlock-targets.toml`. The `release_surface_version_bump` bite delegates to the repository's installed `@zyplux/airlock` through `pnpm exec airlock check-surface --json`; publishing repositories require Airlock as a locked root development dependency. Airlock owns manifest parsing, registry lookups and single-step bump rules, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. GitHub Packages requires `NODE_AUTH_TOKEN`. Fetch complete Git history and the target branch before running the check.
 
-Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching `tag_prefix`, across all pages. Include both the action entrypoint and its implementation in `surface`; floating major tags do not define the version baseline.
+Named target tables derive their tag prefix as `<name>-v` and their label as `<scope>/<name>` from the manifest's top-level `scope`; an explicit `label` overrides the default. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Include both the action entrypoint and its implementation in `surface`; floating major tags do not define the version baseline.
 
 ## Lint a repo
 
@@ -69,7 +69,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `jscpd`                        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |
 | `fallow`                       | content     | fallow finds no unused code, circular imports, or functions above its complexity thresholds |
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
-| `tool_pins_latest`             | content     | The npm tool versions pinned in cerberus source are the latest npm releases (skips repos not carrying the pin source) |
+| `tool_pins_latest`             | content     | Npm tool pins are the newest stable releases eligible under pnpm's one-day quarantine |
 
 ## Justfile recipes
 
@@ -125,7 +125,7 @@ scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
-`tool_pins_latest` guards the jscpd/fallow pins the same way, but runs only in the repo that carries `tool_pins.py` — the one place a pin can be bumped. Consumer repos never see it (bundled `off = true`) and pick new pins up with the next cerberus release, which `zyplux_deps_latest` already forces them onto.
+`tool_pins_latest` requires the newest stable jscpd/fallow versions eligible under pnpm's one-day release quarantine. It runs only in the repo carrying `tool_pins.py`; consumers receive updated pins through Cerberus releases.
 
 ## Package and source checks
 

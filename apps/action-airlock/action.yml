@@ -1,0 +1,55 @@
+name: Airlock
+description: Set up locked workspace dependencies, plan isolated publication jobs and publish their release batches.
+inputs:
+  command:
+    description: Release operation (plan or publish).
+    default: plan
+  tag:
+    description: Optional release tag to select when planning.
+    default: ''
+  batch:
+    description: Publication batch JSON from the plan matrix, required for publish.
+    default: ''
+  token:
+    description: GitHub token for releases and GitHub Packages.
+    default: ${{ github.token }}
+outputs:
+  matrix:
+    description: Pending publication batches as a JSON include matrix.
+    value: ${{ steps.airlock.outputs.matrix }}
+  pending:
+    description: Whether the plan contains publication batches.
+    value: ${{ steps.airlock.outputs.pending }}
+runs:
+  using: composite
+  steps:
+    - name: Configure GitHub Packages authentication
+      shell: bash
+      run: printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$RUNNER_TEMP/airlock.npmrc"
+    - name: Set up workspace dependencies
+      uses: zyplux/zyplux/apps/action-setup-pm@setup-pm-v1
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.token }}
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
+    - name: Run Airlock
+      id: airlock
+      shell: bash
+      run: |
+        case "$RELEASE_COMMAND" in
+          plan)
+            args=(plan)
+            if [ -n "$RELEASE_TAG" ]; then args+=(--tag "$RELEASE_TAG"); fi
+            ;;
+          publish)
+            args=(publish --batch "$RELEASE_BATCH")
+            ;;
+          *) echo 'command must be plan or publish' >&2; exit 1 ;;
+        esac
+        pnpm exec airlock "${args[@]}"
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        NODE_AUTH_TOKEN: ${{ inputs.token }}
+        NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
+        RELEASE_COMMAND: ${{ inputs.command }}
+        RELEASE_TAG: ${{ inputs.tag }}
+        RELEASE_BATCH: ${{ inputs.batch }}

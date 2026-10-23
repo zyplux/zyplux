@@ -16,12 +16,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
+      - uses: ./apps/action-setup-pm
       - name: Authenticate to npm
         run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Bootstrap publish
-        run: pnpm run cz bootstrap-npm-target "$LABEL"
+        run: pnpm run --silent airlock bootstrap-npm-target "$LABEL"
         env:
           LABEL: ${{ inputs.label }}

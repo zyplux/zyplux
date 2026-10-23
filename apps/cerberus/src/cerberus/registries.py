@@ -13,12 +13,12 @@ import json
 import os
 import re
 import urllib.parse
+from datetime import UTC, datetime, timedelta
 
 _REQUEST_TIMEOUT_SECONDS = 10.0
 _HTTP_OK = 200
 _VERSION_TAG = re.compile(r"\d+(?:\.\d+)*")
-_ACTION_VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
-_GITHUB_PAGE_SIZE = 100
+_STABLE_VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
 
 
 class RegistryLookupError(RuntimeError):
@@ -63,7 +63,33 @@ def _extract(payload: object, *keys: str, source: str) -> object:
     return payload
 
 
-def fetch_latest_npm(package: str, registry: str = "https://registry.npmjs.org") -> str:
+def _find_mature_version(payload: object, package: str, latest: str, published_before: datetime) -> str:
+    versions = _extract(payload, "versions", source=package)
+    release_times = _extract(payload, "time", source=package)
+    if not isinstance(versions, dict) or not isinstance(release_times, dict):
+        failure = f"{package}: invalid npm release metadata"
+        raise RegistryLookupError(failure)
+    try:
+        latest_key = _version_sort_key(latest)
+        eligible = [
+            version
+            for version in versions
+            if _STABLE_VERSION.fullmatch(version)
+            and _version_sort_key(version) <= latest_key
+            and datetime.fromisoformat(str(_extract(release_times, version, source=package))) <= published_before
+        ]
+    except (TypeError, ValueError) as err:
+        failure = f"{package}: invalid npm release metadata: {err}"
+        raise RegistryLookupError(failure) from err
+    if not eligible:
+        failure = f"{package}: no stable release is old enough to install"
+        raise RegistryLookupError(failure)
+    return max(eligible, key=_version_sort_key)
+
+
+def fetch_latest_npm(
+    package: str, registry: str = "https://registry.npmjs.org", *, minimum_age: timedelta | None = None
+) -> str:
     registry = registry.removesuffix("/")
     hosts = {"https://registry.npmjs.org": "registry.npmjs.org", "https://npm.pkg.github.com": "npm.pkg.github.com"}
     if registry not in hosts:
@@ -78,42 +104,15 @@ def fetch_latest_npm(package: str, registry: str = "https://registry.npmjs.org")
         headers["Authorization"] = f"Bearer {token}"
     path = "/" + urllib.parse.quote(package, safe="@")
     payload = _fetch_json(hosts[registry], path, headers)
-    return str(_extract(payload, "dist-tags", "latest", source=package))
+    latest = str(_extract(payload, "dist-tags", "latest", source=package))
+    if minimum_age is None:
+        return latest
+    return _find_mature_version(payload, package, latest, datetime.now(UTC) - minimum_age)
 
 
 def fetch_latest_pypi(distribution: str) -> str:
     payload = _fetch_json("pypi.org", f"/pypi/{distribution}/json")
     return str(_extract(payload, "info", "version", source=distribution))
-
-
-def fetch_latest_action(repository: str, tag_prefix: str) -> str:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "zyplux-cerberus"}
-    if token := os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN"):
-        headers["Authorization"] = f"Bearer {token}"
-    versions: list[str] = []
-    page = 1
-    while True:
-        payload = _fetch_json(
-            "api.github.com", f"/repos/{repository}/releases?per_page={_GITHUB_PAGE_SIZE}&page={page}", headers
-        )
-        if not isinstance(payload, list):
-            failure = f"{repository}: releases response is not a list"
-            raise RegistryLookupError(failure)
-        for release in payload:
-            tag = _extract(release, "tag_name", source=repository)
-            draft = _extract(release, "draft", source=repository)
-            prerelease = _extract(release, "prerelease", source=repository)
-            if isinstance(tag, str) and not draft and not prerelease and tag.startswith(tag_prefix):
-                version = tag.removeprefix(tag_prefix)
-                if _ACTION_VERSION.fullmatch(version):
-                    versions.append(version)
-        if len(payload) < _GITHUB_PAGE_SIZE:
-            break
-        page += 1
-    if not versions:
-        failure = f"{repository}: no published releases matching {tag_prefix}"
-        raise RegistryNotFoundError(failure)
-    return max(versions, key=_version_sort_key)
 
 
 def _version_sort_key(tag: str) -> tuple[int, ...]:

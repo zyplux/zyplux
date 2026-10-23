@@ -1,0 +1,69 @@
+# Release targets used by Airlock and Cerberus to prepare, publish and enforce version bumps.
+
+scope = "@zyplux"
+
+[airlock]
+kind = "npm"
+version = { file = "apps/airlock/package.json", json = "version" }
+surface = ["apps/airlock", "apps/action-airlock"]
+
+[action-airlock]
+kind = "action"
+label = "action-airlock"
+repository = "zyplux/zyplux"
+version = { file = "apps/airlock/package.json", json = "version" }
+surface = ["apps/airlock", "apps/action-airlock"]
+
+[setup-pm]
+kind = "action"
+label = "zyplux-setup-pm"
+repository = "zyplux/zyplux"
+version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["apps/action-setup-pm"]
+
+[eslint-config]
+kind = "npm"
+version = { file = "packages/eslint-config/package.json", json = "version" }
+surface = [
+    "packages/eslint-config/package.json",
+    "packages/eslint-config/README.md",
+    "packages/eslint-config/src",
+]
+
+[tsconfig]
+kind = "npm"
+version = { file = "packages/tsconfig/package.json", json = "version" }
+surface = ["packages/tsconfig"]
+
+[util]
+kind = "npm"
+version = { file = "packages/util-ts/package.json", json = "version" }
+surface = ["packages/util-ts/package.json", "packages/util-ts/README.md", "packages/util-ts/src"]
+
+[spectra]
+kind = "npm"
+version = { file = "packages/spectra/package.json", json = "version" }
+surface = ["packages/spectra/package.json", "packages/spectra/README.md", "packages/spectra/src"]
+
+[cz]
+kind = "npm"
+version = { file = "apps/cz/package.json", json = "version" }
+surface = ["apps/cz/package.json", "apps/cz/README.md", "apps/cz/src"]
+
+[cerberus]
+kind = "pypi"
+label = "zyplux-cerberus"
+version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["apps/cerberus/src", "apps/cerberus/pyproject.toml", "apps/cerberus/README.md"]
+
+[util-py]
+kind = "pypi"
+label = "zyplux-util"
+version = { file = "packages/util_py/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["packages/util_py/src", "packages/util_py/pyproject.toml", "packages/util_py/README.md"]
+
+[totchef]
+kind = "pypi"
+label = "totchef"
+version = { file = "apps/totchef/pyproject.toml", regex = '^version = "([^"]+)"' }
+surface = ["apps/totchef/src", "apps/totchef/pyproject.toml", "apps/totchef/README.md"]

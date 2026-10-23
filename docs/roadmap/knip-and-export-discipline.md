@@ -35,7 +35,7 @@ against the real repo, zero findings).
   recipe. Verified empirically: this catches dead exports and test-only-consumed
   exports without weakening the normal run — the base run still fully checks
   test workspaces' own unused files/deps. Per-workspace `includeEntryExports:
-  false` overrides must exactly match the repo's npm-kind `release-targets.toml`
+  false` overrides must exactly match the repo's npm-kind `airlock-targets.toml`
   entries (missing file ⇒ no overrides, nothing is exempt).
 - **Implementation wrinkle found while building this**: `knip --config` replaces
   the config wholesale rather than layering on `knip.json` (knip has no
@@ -96,7 +96,7 @@ plugin source and empirically against each repo, entry overrides stripped):
   cerberus import-boundary check** — governing the exports-map shape is
   sufficient; TS makes deep imports uncompilable as a side effect.
 - **Known restructuring needed once rolled out** (all currently private, all
-  in repos with no `release-targets.toml`, so all newly in scope):
+  in repos with no `airlock-targets.toml`, so all newly in scope):
   - `zyplux-ai/packages/ui` (`@zyplux/ui`) — 10 curated subpaths, no `.` root
     at all today. Largest restructure.
   - `zyplux-ai/packages/mdx` (`@zyplux/mdx`) — one extra subpath
@@ -120,7 +120,7 @@ plugin source and empirically against each repo, entry overrides stripped):
 
 ## Left for implementation time
 
-- Exact `ALLOWED_KNIP` data shape and where release-targets.toml parsing
+- Exact `ALLOWED_KNIP` data shape and where airlock-targets.toml parsing
   gets shared (a new small module, or inlined per check).
 - justfile recipe wording for the second knip invocation
   (`justfile_check.py`'s canonical-baseline + `# CUSTOM`-marker convention

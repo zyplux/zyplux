@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.15.0
+
+### Minor Changes
+
+- Use the standalone `@zyplux/airlock` CLI for release commands: replace `cz <release-command>` with `airlock <release-command>`.
+
 ## 0.14.1
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/spectra",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Shared Vitest fixtures, matchers, polling, and journal reporting.",
   "keywords": [
     "test",
@@ -29,7 +29,9 @@
     "./console-capture": "./src/reporters/console-capture.ts",
     "./test-matchers": "./src/test-matchers.ts",
     "./journald-reporter": "./src/reporters/journald-reporter.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./repository-fake": "./src/fakes/repository-fake.ts",
+    "./repository-test": "./src/repository-test.ts"
   },
   "files": [
     "README.md",
@@ -78,7 +80,15 @@
         "types": "./dist/reporters/journald-reporter.d.ts",
         "default": "./dist/reporters/journald-reporter.js"
       },
-      "./package.json": "./package.json"
+      "./package.json": "./package.json",
+      "./repository-fake": {
+        "types": "./dist/fakes/repository-fake.d.ts",
+        "default": "./dist/fakes/repository-fake.js"
+      },
+      "./repository-test": {
+        "types": "./dist/repository-test.d.ts",
+        "default": "./dist/repository-test.js"
+      }
     },
     "imports": {
       "#pattern-match": "./dist/helpers/pattern-match.js",

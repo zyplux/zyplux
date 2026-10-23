@@ -12,6 +12,7 @@ export default {
       exclude: ['apps/cz/src/index.ts'],
       include: [
         'apps/cz/src/**',
+        'apps/airlock/src/**',
         'packages/util-ts/src/**',
         'packages/eslint-config/src/**',
         'packages/spectra/src/**',
@@ -25,7 +26,7 @@ export default {
       },
     },
     isolate: false,
-    projects: ['tests/eslint-config', 'tests/cz', 'tests/util-ts', 'tests/spectra'],
+    projects: ['tests/eslint-config', 'tests/cz', 'tests/airlock', 'tests/util-ts', 'tests/tsconfig', 'tests/spectra'],
     reporters: [...configDefaults.reporters, journalReporter],
     restoreMocks: true,
     unstubEnvs: true,

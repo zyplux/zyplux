@@ -5,7 +5,9 @@
   },
   "include": ["stories", "*.ts"],
   "references": [
-    { "path": "../../packages/util-ts" },
+    {
+      "path": "../../packages/util-ts"
+    },
     {
       "path": "../../apps/cz"
     },

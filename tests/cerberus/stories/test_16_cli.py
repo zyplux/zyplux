@@ -319,7 +319,7 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
 ) -> None:
     def skipping(repo: Repo, _ctx: Context) -> CheckResult:
         result = check_result("codeowners_coverage", repo.name)
-        result.skip("no release-targets.toml — repo publishes nothing")
+        result.skip("no airlock-targets.toml — repo publishes nothing")
         return result
 
     register_fake_check("codeowners_coverage", skipping)
@@ -327,7 +327,7 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
     result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 0, result.output
-    assert "○ codeowners_coverage: no release-targets.toml — repo publishes nothing" in result.output
+    assert "○ codeowners_coverage: no airlock-targets.toml — repo publishes nothing" in result.output
     assert "🐾 codeowners_coverage" not in result.output
 
 
@@ -474,7 +474,7 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
             "      - run: echo ci",
             (
                 "      - uses: actions/checkout@v7\n"
-                "      - uses: zyplux/zyplux/setup-pm@main\n"
+                "      - uses: zyplux/zyplux/apps/action-setup-pm@main\n"
                 "      - run: uv run --no-sync rumdl check"
             ),
         )

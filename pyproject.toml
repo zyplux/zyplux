@@ -8,7 +8,7 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/cerberus", "apps/clipy", "apps/setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+members = ["apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
 
 [tool.pytest.ini_options]
 addopts = "-n auto --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
@@ -22,7 +22,7 @@ fail_under = 90
 paths = [
     "apps/cerberus/src",
     "apps/clipy/src",
-    "apps/setup-pm/src",
+    "apps/action-setup-pm/src",
     "apps/totchef/src",
     "apps/token_stats/src",
     "packages/util_py/src",

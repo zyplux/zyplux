@@ -56,7 +56,7 @@ Node 26 refuses to type-strip files under `node_modules`, so the published packa
 40. [ ] All four — `files` must include the build output, not (only) `src`.
 41. [ ] All four — verify the `#`-subpath `imports` maps still resolve post-build.
 42. [ ] Add `prepack` (or equivalent) so packing cannot publish stale output.
-43. [ ] `release-targets.toml` — `surface` globs for the four packages must cover build inputs, not output.
+43. [ ] `airlock-targets.toml` — `surface` globs for the four packages must cover build inputs, not output.
 44. [ ] Verify `pnpm pack` tarball contents for each package before the first real publish.
 45. [ ] Version-bump all four packages; the published shape changes even where the API does not.
 46. [ ] Decide whether `@zyplux/tsconfig` needs a bump (JSON-only, but the preset set changes).
@@ -90,9 +90,8 @@ Node 26 refuses to type-strip files under `node_modules`, so the published packa
 68. [ ] `justfile:79` — `bun run cz clean`.
 69. [ ] `justfile:87` — `bun run cz clone-reference-repo`.
 70. [ ] `justfile:91` — `bun run --cwd packages/eslint-config dump-rules`.
-71. [ ] `justfile:99` — `bun run --silent cz release-bumped-targets`.
-72. [ ] Add a `build` recipe and wire it into `check` ahead of `test`.
-73. [ ] Items 62–71 land in the `# BASELINE` region — edit `apps/cerberus/src/cerberus/baseline.just`, never the justfile.
+71. [ ] Add a `build` recipe and wire it into `check` ahead of `test`.
+72. [ ] Items 62–70 land in the `# BASELINE` region — edit `apps/cerberus/src/cerberus/baseline.just`, never the justfile.
 
 ## 6 CI and container image
 

@@ -1,5 +1,5 @@
 """Freshness guard for the npm tool versions pinned in `cerberus.tool_pins`:
-compares each pin against npm's `dist-tags.latest` so a frozen pin cannot rot
+compares each pin against npm's newest quarantine-eligible stable release so a frozen pin cannot rot
 unnoticed. The check bites only in the repo that carries the pin source —
 that is the one place the fix (bump the pin, dogfood it through the gate,
 release cerberus) can happen; consumer repos get the new pins through
@@ -10,9 +10,10 @@ no `--fix`: a tool version change under the gate deserves a human eye.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from cerberus import registries, tool_pins
+from cerberus import registries, tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from cerberus.model import Repo
 
 ID = "tool_pins_latest"
-SUMMARY = "the npm tool versions pinned in cerberus source are the latest npm releases"
+SUMMARY = "the npm tool versions pinned in cerberus source are the newest quarantine-eligible releases"
 SCOPE = Scope.CONTENT
 
 _PIN_SOURCE_SUFFIX = "src/cerberus/tool_pins.py"
@@ -34,15 +35,15 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
     for tool, pinned in sorted(tool_pins.NPM_TOOL_PINS.items()):
         try:
-            latest = registries.fetch_latest_npm(tool)
+            latest = registries.fetch_latest_npm(tool, minimum_age=timedelta(minutes=workspaces.RELEASE_AGE_MINUTES))
         except registries.RegistryLookupError as err:
             res.error(f"could not determine the latest `{tool}`: {err}")
             continue
         if pinned != latest:
             res.fail(
-                f"`{tool}` is pinned {pinned} in {pin_source}, npm latest is {latest};"
+                f"`{tool}` is pinned {pinned} in {pin_source}, newest quarantine-eligible release is {latest};"
                 " bump the pin and release cerberus"
             )
     if not res.problems:
-        res.ok("every pinned npm tool is at its latest release")
+        res.ok("every pinned npm tool is at its newest quarantine-eligible release")
     return res

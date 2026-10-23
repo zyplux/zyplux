@@ -1,6 +1,6 @@
 # 30. [Keeping cerberus's npm tool pins at the latest release](test_30_tool_pins_latest.py)
 
-Cerberus runs jscpd and fallow at exact versions pinned in its `tool_pins` module (`apps/cerberus/src/cerberus/tool_pins.py`), so every repo measures with the same tool — but a frozen pin rots silently. The `tool_pins_latest` bite compares each pin against npm's `dist-tags.latest` via the `registries` module. It bites only in the repo that carries the pin source, because that is the one place the fix — bump the pin, dogfood it through the gate, release cerberus — can happen; consumer repos pick the new pins up through `zyplux_deps_latest` forcing them onto the latest cerberus. There is no `--fix`: a tool version change under the gate deserves a human eye.
+Cerberus runs jscpd and fallow at exact versions pinned in its `tool_pins` module (`apps/cerberus/src/cerberus/tool_pins.py`). The `tool_pins_latest` bite requires the newest stable version eligible under pnpm's one-day release quarantine, within npm's `latest` release line. It runs in the repository carrying the pin source; consumers receive updated pins through Cerberus releases.
 
 ## 30.1 biting only where the pins are editable
 
@@ -21,3 +21,9 @@ The failure names the tool, the pinned and latest versions, the file the pin liv
 ### 30.2.3 errors instead of passing when the npm lookup fails
 
 Offline or rate-limited npm must never turn into a silent pass; the lookup failure surfaces as an ERROR finding naming the tool.
+
+### 30.2.4 keeps the newest mature pin while the latest release is quarantined
+
+### 30.2.5 requires the newest eligible pin
+
+### 30.2.6 errors when release times are invalid or no release is eligible

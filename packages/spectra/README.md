@@ -58,6 +58,7 @@ Each tool has a named entry point. Import the Vitest bases from `/library-test-a
 | --- | --- |
 | `/library-test-api` | Library and CLI Vitest bases |
 | `/shell-fake`, `/fetch-fake`, `/prompt-fake` | Fakes for subprocesses, HTTP, and prompts |
+| `/repository-fake`, `/repository-test` | Git/GitHub command replies and repository-aware CLI fixtures |
 | `/cli-runner`, `/temp-directory`, `/poll-until` | CLI execution, scratch directories, and test polling |
 | `/test-matchers` | Register shared Vitest matchers |
 | `/console-capture` | Capture console messages |
@@ -70,10 +71,12 @@ Internal helpers stay beside the tools that use them: pattern matching and modul
 
 - `libraryTest` — lazy fixtures: `shell` (fake `node:child_process` spawn, installed only when destructured), `tempDir` (auto-removed scratch directory with `path`, `write`, `exists`).
 - `cliTest` — extends `libraryTest`; automatically captures and silences `console` (`logs`), makes `node:timers/promises` sleeps instant, and installs `network` (fake `fetch`). It adds lazy `prompt` (fake `node:readline/promises` interface that records every question and answers with an empty string) and `env` (`set(name, value)` stubs an env var for the test).
+- `repositoryTest` — extends `cliTest` with a lazy `repo` fake and the mocked timer function as `sleep` for polling assertions.
 
 ## Fakes and helpers
 
 - `createShellFake()` — routes commands (`on(pattern, ...replies)`, later routes win, the last reply repeats; `otherwise(reply)` sets a fallback, unrouted commands throw) and records `calls` (`{ argv, cwd?, env?, program, stdin? }`), `commands` (rendered strings), `commandsMatching(pattern)`.
+- `createRepositoryFake(shell, rootPath)` — configures Git/GitHub replies for branches, commits, PRs and repository identity. Common repository writes succeed by default; override their shell replies to test failures.
 - `createConsoleCapture()` — records `logLines`/`warnLines`/`errorLines`.
 - `createFetchFake()` — routes urls (`on(prefixOrRegExp, reply)`, `otherwise(reply)`) and records `requests`; `okResponse()`/`notFoundResponse()` build replies.
 - `createPromptFake()` — records `question()` messages and immediately returns an empty string, simulating Enter without typed input. It lets tests exercise terminal prompts without waiting for keyboard input.

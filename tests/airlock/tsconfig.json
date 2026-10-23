@@ -1,0 +1,18 @@
+{
+  "extends": "@zyplux/tsconfig/node.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true
+  },
+  "include": ["stories", "*.ts"],
+  "references": [
+    {
+      "path": "../../packages/util-ts"
+    },
+    {
+      "path": "../../packages/spectra"
+    },
+    {
+      "path": "../../apps/airlock"
+    }
+  ]
+}

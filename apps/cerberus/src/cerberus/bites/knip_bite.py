@@ -14,7 +14,7 @@ tooling — so an export only they reach reads as unused. Any glob spelling
 will do: what is checked is the members it resolves to — every non-production
 workspace dropped, no production one with it. Published packages are the exception
 and opt out of `includeEntryExports` one by one — exactly the npm-kind targets
-in `release-targets.toml`, whose consumers live outside this repo.
+in `airlock-targets.toml`, whose consumers live outside this repo.
 
 Each config uses the shared allowances independently: production may omit
 exemptions for tools and dependencies used only outside its graph. It may set
@@ -47,7 +47,7 @@ SCOPE = Scope.CONTENT
 PACKAGE_JSON = "package.json"
 BASE_CONFIG = "knip.json"
 PROD_CONFIG = "knip.prod.json"
-_RELEASE_TARGETS = "release-targets.toml"
+_RELEASE_TARGETS = "airlock-targets.toml"
 _PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces", "exclude", "ignoreWorkspaces"})
 _OK_MESSAGE = (
     "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
@@ -63,11 +63,8 @@ def _npm_workspace_dirs(manifest: str) -> set[str]:
         data = tomllib.loads(manifest)
     except tomllib.TOMLDecodeError:
         return set()
-    targets = data.get("target")
-    if not isinstance(targets, list):
-        return set()
     dirs: set[str] = set()
-    for entry in targets:
+    for entry in data.values():
         if not isinstance(entry, dict) or entry.get("kind") != "npm":
             continue
         version = entry.get("version")

@@ -5,6 +5,9 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +20,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: ./setup-pm
+      - uses: ./apps/action-setup-pm
       - run: pnpm release:check
       - run: pnpm run knip
       - run: uv run --no-sync vulture
@@ -33,3 +36,5 @@ jobs:
       - run: pnpm run test
       - run: uv run --no-sync pytest
       - run: uv run --no-sync cerberus
+        env:
+          GH_TOKEN: ${{ github.token }}
