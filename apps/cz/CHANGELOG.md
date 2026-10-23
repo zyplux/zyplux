@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Delegate release preparation and publication to the shared release app, using native pnpm instead of the Changesets CLI.
+- Use the standalone `@zyplux/airlock` CLI for release commands: replace `cz <release-command>` with `airlock <release-command>`.
 
 ## 0.14.1
 

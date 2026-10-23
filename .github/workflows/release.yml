@@ -28,9 +28,9 @@ jobs:
       action: ${{ steps.targets.outputs.action }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
+      - uses: ./apps/action-setup-pm
       - id: targets
-        uses: ./release
+        uses: ./apps/action-airlock
         with:
           command: plan
           tag: ${{ github.event.release.tag_name }}
@@ -51,8 +51,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
-      - uses: ./release
+      - uses: ./apps/action-setup-pm
+      - uses: ./apps/action-airlock
         with:
           command: publish
           tag: ${{ matrix.tag }}
@@ -70,8 +70,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
-      - uses: ./release
+      - uses: ./apps/action-setup-pm
+      - uses: ./apps/action-airlock
         with:
           command: publish-npm
 
@@ -93,8 +93,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
-      - uses: ./release
+      - uses: ./apps/action-setup-pm
+      - uses: ./apps/action-airlock
         with:
           command: publish
           tag: ${{ matrix.tag }}
@@ -116,8 +116,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v7
-      - uses: ./setup-pm
-      - uses: ./release
+      - uses: ./apps/action-setup-pm
+      - uses: ./apps/action-airlock
         with:
           command: publish
           tag: ${{ matrix.tag }}

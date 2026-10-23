@@ -4,7 +4,9 @@ import { argument, command, constant, message, multiple, object, option, string 
 import { ensure } from '@zyplux/util/assert';
 import { run, runPassthrough } from '@zyplux/util/exec';
 import { $, readTrimmed } from '@zyplux/util/shell';
-import { access } from 'node:fs/promises';
+import { access, mkdtempDisposable } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 import { publishAction } from '#action-releases';
 import { createGithubRelease, publishReleaseAssets } from '#github-releases';
@@ -38,8 +40,9 @@ type PublishTaggedTargetConfig = InferValue<typeof publishTaggedTargetCommand>;
 export const publishNpm = (dir: string) => runPassthrough(['pnpm', 'publish', '--publish-wait-timeout', '600000'], dir);
 
 const publishPypi = async (label: string) => {
-  await $`uv build --package ${label}`;
-  await $`uv publish`;
+  await using directory = await mkdtempDisposable(path.join(tmpdir(), 'release-pypi-'));
+  await $`uv build --package ${label} --out-dir ${directory.path}`;
+  await $`uv publish ${path.join(directory.path, '*')}`;
 };
 
 const podmanLogin = async (actor: string, token: string) => {
@@ -65,7 +68,8 @@ const publishGhcr = async (label: string, dir: string, version: string) => {
 };
 
 export const runPublishTaggedTarget = async ({ assets, shouldRelease, tag }: PublishTaggedTargetConfig) => {
-  const { target, version } = await resolveReleaseTag(tag);
+  const target = await resolveReleaseTag(tag);
+  const { version } = target;
   ensure(assets.length === 0 || shouldRelease, '--asset requires --release');
   ensure(assets.length === 0 || target.action === undefined, 'action releases do not accept prebuilt assets');
   await Promise.all(assets.map(asset => access(asset)));
@@ -77,7 +81,7 @@ export const runPublishTaggedTarget = async ({ assets, shouldRelease, tag }: Pub
 
   if (target.action !== undefined) return publishAction(target.action, version, notes);
 
-  const isPublished = await target.isPublished(version);
+  const isPublished = await target.isPublished();
   ensure(
     assets.length === 0 || target.kind !== 'ghcr' || isPublished,
     'publish the versioned image before attaching its release assets',

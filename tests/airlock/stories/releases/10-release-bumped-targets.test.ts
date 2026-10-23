@@ -11,41 +11,41 @@ const renderRunViewCommand = (runId: string) => `gh run view ${runId} --json sta
 
 describe('10. Releasing every target whose version was bumped', () => {
   describe('10.1 validating preconditions', () => {
-    test('10.1.1 refuses to run anywhere but main', async ({ cz, repo, shell }) => {
+    test('10.1.1 refuses to run anywhere but main', async ({ airlock, repo, shell }) => {
       repo.setCurrentBranch('feat-x');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow("releases are cut from main, not 'feat-x'");
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow("releases are cut from main, not 'feat-x'");
       expect(shell).not.toHaveRunMatching('git status');
     });
 
-    test('10.1.2 refuses to run with a dirty working tree', async ({ cz, repo, shell }) => {
+    test('10.1.2 refuses to run with a dirty working tree', async ({ airlock, repo, shell }) => {
       repo.syncMain('sha-head');
       repo.setWorkingTreeStatus(' M some-file.ts');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow('working tree is dirty');
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow('working tree is dirty');
       expect(shell).not.toHaveRunMatching('git fetch');
     });
 
-    test('10.1.3 refuses to run when local main is behind or ahead of origin/main', async ({ cz, repo }) => {
+    test('10.1.3 refuses to run when local main is behind or ahead of origin/main', async ({ airlock, repo }) => {
       repo.syncMain('sha-head');
       repo.setRemoteMainSha('sha-remote-ahead');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow('local main and origin/main differ');
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow('local main and origin/main differ');
     });
   });
 
   describe('10.2 selecting which targets to release', () => {
-    test('10.2.3 stops before creating releases when the release lookup fails', async ({ cz, release, shell }) => {
+    test('10.2.3 stops before creating releases when the release lookup fails', async ({ airlock, release, shell }) => {
       release.stagePendingCerberus();
       shell.on('gh api graphql', { exitCode: 1, stdout: 'authentication failed' });
-      await expect(cz.run('release-bumped-targets')).rejects.toMatchObject({ exitCode: 1 });
+      await expect(airlock.run('release-bumped-targets')).rejects.toMatchObject({ exitCode: 1 });
       expect(shell).not.toHaveRunMatching('gh release create');
     });
 
-    test('10.2.1 skips a target whose version is already published', async ({ cz, logs, release, shell }) => {
+    test('10.2.1 skips a target whose version is already published', async ({ airlock, logs, release, shell }) => {
       release.stageAllPublished();
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         'nothing to release; all configured versions are already published or have a GitHub release',
       );
 
@@ -53,12 +53,18 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(shell).not.toHaveRunMatching('gh release create');
     });
 
-    test('10.2.2 skips a target that already has a github release', async ({ cz, logs, registries, repo, shell }) => {
+    test('10.2.2 skips a target that already has a github release', async ({
+      airlock,
+      logs,
+      registries,
+      repo,
+      shell,
+    }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: false, npmPublished: false, pypiPublished: false });
       shell.on('gh api graphql', JSON.stringify({ data: { repository: { release: { id: 'release-id' } } } }));
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         'nothing to release; all configured versions are already published or have a GitHub release',
       );
 
@@ -69,7 +75,7 @@ describe('10. Releasing every target whose version was bumped', () => {
 
   describe('10.3 publishing a pending target', () => {
     test('10.3.1 cuts a release, watches its workflow to success, and confirms registry visibility', async ({
-      cz,
+      airlock,
       expectGithubRelease,
       logs,
       release,
@@ -78,7 +84,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus();
       release.queueRun('999', { conclusion: 'success', status: 'completed' });
 
-      await cz.run('release-bumped-targets');
+      await airlock.run('release-bumped-targets');
 
       await expectGithubRelease(shell, 'cerberus-v2.3.4', 'sha-head');
       expect(shell).toHaveRun(renderRunViewCommand('999'));
@@ -86,7 +92,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.2 rejects when the publish workflow finishes unsuccessfully, keeping the release and tag', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -94,7 +100,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus();
       release.queueRun('999', { conclusion: 'failure', status: 'completed' });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets encountered release errors: zyplux-cerberus',
       );
       expect(logs).toHaveErrored(/publish workflow run 999 completed with conclusion 'failure'/);
@@ -103,7 +109,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.3 rejects when no new publish workflow run is found within the watch window, keeping the release and tag', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -111,7 +117,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     }) => {
       release.stagePendingCerberus({ tagRunPolls: [['100', '101']] });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets encountered release errors: zyplux-cerberus',
       );
       expect(logs).toHaveErrored(/publish workflow run was not found within the watch window; check the Actions tab/);
@@ -122,7 +128,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.4 rejects when the publish workflow does not report completion within the watch window, keeping the release and tag', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -131,7 +137,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus();
       release.queueRun('999', { status: 'in_progress' });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets encountered release errors: zyplux-cerberus',
       );
       expect(logs).toHaveErrored(
@@ -143,7 +149,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.5 warns instead of failing when registry checks do not confirm the new version within the watch window', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -152,7 +158,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus({ published: { pypiEverVisible: false } });
       release.queueRun('999', { conclusion: 'success', status: 'completed' });
 
-      await cz.run('release-bumped-targets');
+      await airlock.run('release-bumped-targets');
 
       expect(logs).toHaveWarned(
         'zyplux-cerberus 2.3.4: publish workflow succeeded, but registry availability was not confirmed within the watch window; check the registry and Actions tab',
@@ -164,7 +170,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.6 keeps polling while the run list is still empty instead of watching a phantom run', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -172,14 +178,14 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus({ tagRunPolls: [[], ['100', '101', '999']] });
       release.queueRun('999', { conclusion: 'success', status: 'completed' });
 
-      await cz.run('release-bumped-targets');
+      await airlock.run('release-bumped-targets');
 
       expect(shell).toHaveRun(renderRunViewCommand('999'));
       expect(logs).toHaveLogged('Published zyplux-cerberus 2.3.4');
     });
 
     test('10.3.7 rejects when the workflow completes without reporting a conclusion, keeping the release and tag', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -188,7 +194,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus();
       release.queueRun('999', { conclusion: '', status: 'completed' });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets encountered release errors: zyplux-cerberus',
       );
       expect(logs).toHaveErrored(/publish workflow run 999 completed with conclusion 'not reported'/);
@@ -197,7 +203,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.8 reports a workflow read error once while keeping the release and tag', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -207,7 +213,7 @@ describe('10. Releasing every target whose version was bumped', () => {
         throw new Error('gh: connection reset');
       });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 1 targets encountered release errors: zyplux-cerberus',
       );
       expect(logs.errorLines).toEqual(['zyplux-cerberus 2.3.4: gh: connection reset']);
@@ -215,7 +221,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.3.9 waits for completed status and checks the conclusion from the same response', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -231,7 +237,7 @@ describe('10. Releasing every target whose version was bumped', () => {
         { conclusion: 'success', status: 'completed' },
       );
 
-      await cz.run('release-bumped-targets');
+      await airlock.run('release-bumped-targets');
 
       expect(shell.commandsMatching('gh run view')).toEqual([runCommand, runCommand, runCommand]);
       expect(sleep).toHaveBeenCalledTimes(pendingPolls);
@@ -242,7 +248,7 @@ describe('10. Releasing every target whose version was bumped', () => {
 
   describe('10.4 publishing multiple pending targets', () => {
     test('10.4.1 publishes all pending targets concurrently, each watching its own tagged workflow run', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -250,7 +256,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberusAndCiImage();
       release.completeRunAfter('111', '222', 'success');
 
-      await cz.run('release-bumped-targets');
+      await airlock.run('release-bumped-targets');
 
       const releaseCreateCommands = shell.commandsMatching('gh release create');
       expect(releaseCreateCommands).toContainEqual(expect.stringContaining('cerberus-v2.3.4'));
@@ -262,7 +268,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.4.2 keeps publishing the remaining targets when one fails and reports the failure at the end', async ({
-      cz,
+      airlock,
       logs,
       release,
     }) => {
@@ -270,7 +276,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.queueRun('111', { conclusion: 'failure', status: 'completed' });
       release.queueRun('222', { conclusion: 'success', status: 'completed' });
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '1 of 2 targets encountered release errors: zyplux-cerberus',
       );
 
@@ -278,11 +284,14 @@ describe('10. Releasing every target whose version was bumped', () => {
       expect(logs).toHaveErrored("zyplux-cerberus 2.3.4: publish workflow run 111 completed with conclusion 'failure'");
     });
 
-    test('10.4.3 reports failures in manifest order even when a later target fails first', async ({ cz, release }) => {
+    test('10.4.3 reports failures in manifest order even when a later target fails first', async ({
+      airlock,
+      release,
+    }) => {
       release.stagePendingCerberusAndCiImage();
       release.completeRunAfter('111', '222', 'failure');
 
-      await expect(cz.run('release-bumped-targets')).rejects.toThrow(
+      await expect(airlock.run('release-bumped-targets')).rejects.toThrow(
         '2 of 2 targets encountered release errors: zyplux-cerberus, ghcr.io/zyplux/ci',
       );
     });
@@ -290,7 +299,7 @@ describe('10. Releasing every target whose version was bumped', () => {
 
   describe('10.5 selecting pending releases for automation', () => {
     test('10.5.1 lists unpublished configured versions without local main preconditions', async ({
-      cz,
+      airlock,
       logs,
       registries,
       repo,
@@ -299,7 +308,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       repo.setCurrentBranch('HEAD');
       registries.setPublished({});
 
-      await cz.run('release-bumped-targets', '--list');
+      await airlock.run('release-bumped-targets', '--list');
 
       expect(logs.logLines).toEqual([
         JSON.stringify([
@@ -312,7 +321,7 @@ describe('10. Releasing every target whose version was bumped', () => {
     });
 
     test('10.5.2 prints an empty selection when every configured release is complete', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -320,14 +329,14 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stageAllPublished();
       shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
 
-      await cz.run('release-bumped-targets', '--list');
+      await airlock.run('release-bumped-targets', '--list');
 
       expect(logs.logLines).toEqual(['[]']);
       expect(shell).not.toHaveRunMatching('gh release create');
     });
 
     test('10.5.3 retries an unpublished artifact whose GitHub release already exists', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -335,49 +344,60 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stagePendingCerberus();
       shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
 
-      await cz.run('release-bumped-targets', '--list');
+      await airlock.run('release-bumped-targets', '--list');
 
       expect(logs.logLines).toEqual(['[{"kind":"pypi","tag":"cerberus-v2.3.4"}]']);
     });
 
-    test('10.5.4 selects published artifacts with missing GitHub releases', async ({ cz, logs, release, shell }) => {
+    test('10.5.4 selects published artifacts with missing GitHub releases', async ({
+      airlock,
+      logs,
+      release,
+      shell,
+    }) => {
       release.stageAllPublished();
       shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"release-id"}}}}');
       shell.on(/tag=util-v1\.2\.3 /u, '{"data":{"repository":{"release":null}}}');
 
-      await cz.run('release-bumped-targets', '--list');
+      await airlock.run('release-bumped-targets', '--list');
 
       expect(logs.logLines).toEqual(['[{"kind":"npm","tag":"util-v1.2.3"}]']);
     });
 
-    test('10.5.5 limits a release event to its declared tag', async ({ cz, logs, registries }) => {
+    test('10.5.5 limits a release event to its declared tag', async ({ airlock, logs, registries }) => {
       registries.setPublished({});
 
-      await cz.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.3');
+      await airlock.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.3');
 
       expect(logs.logLines).toEqual(['[{"kind":"npm","tag":"util-v1.2.3"}]']);
     });
 
-    test('10.5.6 rejects a tag that does not match a configured version', async ({ cz }) => {
-      await expect(cz.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.2')).rejects.toThrow(
+    test('10.5.6 rejects a tag that does not match a configured version', async ({ airlock }) => {
+      await expect(airlock.run('release-bumped-targets', '--list', '--tag', 'util-v1.2.2')).rejects.toThrow(
         "no configured release target matches 'util-v1.2.2'",
       );
     });
 
-    test('10.5.7 requires list mode when selecting a tag', async ({ cz }) => {
-      await expect(cz.run('release-bumped-targets', '--tag', 'util-v1.2.3')).rejects.toThrow('--tag requires --list');
+    test('10.5.7 requires list mode when selecting a tag', async ({ airlock }) => {
+      await expect(airlock.run('release-bumped-targets', '--tag', 'util-v1.2.3')).rejects.toThrow(
+        '--tag requires --list',
+      );
     });
 
-    test('10.5.8 prints an empty selection for a repository with no release targets', async ({ cz, logs, tempDir }) => {
+    test('10.5.8 prints an empty selection for a repository with no release targets', async ({
+      airlock,
+      logs,
+      tempDir,
+    }) => {
       await tempDir.write('release-targets.toml', 'target = []\n');
 
-      await cz.run('release-bumped-targets', '--list');
+      await airlock.run('release-bumped-targets', '--list');
 
       expect(logs.logLines).toEqual(['[]']);
     });
 
     test('10.5.9 propagates release lookup failures without emitting a publish selection', async ({
-      cz,
+      airlock,
       logs,
       release,
       shell,
@@ -385,7 +405,7 @@ describe('10. Releasing every target whose version was bumped', () => {
       release.stageAllPublished();
       shell.on('gh api graphql', { exitCode: 1, stdout: 'authentication failed' });
 
-      await expect(cz.run('release-bumped-targets', '--list')).rejects.toMatchObject({ exitCode: 1 });
+      await expect(airlock.run('release-bumped-targets', '--list')).rejects.toMatchObject({ exitCode: 1 });
 
       expect(logs.logLines).toEqual([]);
       expect(shell).not.toHaveRunMatching('gh release create');

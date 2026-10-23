@@ -2,8 +2,8 @@ import { describe, expect, test } from './releases.ts';
 
 describe('20.1 native npm publication', () => {
   test('20.1.1 filters declared targets and repairs missing GitHub releases', async ({
+    airlock,
     expectGithubRelease,
-    nativeRelease,
     repo,
     shell,
   }) => {
@@ -11,7 +11,7 @@ describe('20.1 native npm publication', () => {
     shell.on('pnpm --filter', '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
-    await nativeRelease.run('publish-npm');
+    await airlock.run('publish-npm');
 
     expect(shell).toHaveRun(
       'pnpm --filter @zyplux/util publish --recursive --report-summary --publish-wait-timeout 600000',
@@ -20,19 +20,15 @@ describe('20.1 native npm publication', () => {
     expect(shell).not.toHaveRunMatching('pnpm pack');
   });
 
-  test('20.1.2 propagates publication failure and permits a successful retry', async ({
-    nativeRelease,
-    repo,
-    shell,
-  }) => {
+  test('20.1.2 propagates publication failure and permits a successful retry', async ({ airlock, repo, shell }) => {
     repo.syncMain('sha-head');
     shell.on('pnpm --filter', { exitCode: 1, stdout: 'registry visibility timed out' }, '');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
-    await expect(nativeRelease.run('publish-npm')).rejects.toThrow('command failed');
+    await expect(airlock.run('publish-npm')).rejects.toThrow('command failed');
     expect(shell).not.toHaveRunMatching('gh release create');
 
-    await nativeRelease.run('publish-npm');
+    await airlock.run('publish-npm');
 
     expect(shell).toHaveRunMatching('gh release create util-v1.2.3');
   });
@@ -40,23 +36,82 @@ describe('20.1 native npm publication', () => {
 
 describe('20.2 shared action release plans', () => {
   test('20.2.1 writes pending matrices to GitHub outputs', async ({
+    airlock,
     loadActionOutputs,
-    nativeRelease,
     registries,
     shell,
   }) => {
     registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: false });
     shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"published"}}}}');
 
-    await nativeRelease.run('plan');
+    await airlock.run('plan');
 
     expect(await loadActionOutputs()).toBe('npm=[]\npypi=["cerberus-v2.3.4"]\nghcr=[]\naction=[]\n');
   });
+
+  test.for([
+    { files: [], shouldPublish: true },
+    { files: ['bdist_wheel'], shouldPublish: true },
+    { files: ['sdist'], shouldPublish: true },
+    { files: ['bdist_wheel', 'sdist'], shouldPublish: false },
+  ])(
+    '20.2.2 keeps incomplete PyPI releases pending even when their GitHub release exists (%j)',
+    async ({ files, shouldPublish }, { airlock, loadActionOutputs, network, shell }) => {
+      network.on('https://pypi.org/', () => Response.json({ urls: files.map(packagetype => ({ packagetype })) }));
+      shell.on('gh api graphql', '{"data":{"repository":{"release":{"id":"published"}}}}');
+
+      await airlock.run('plan', '--tag', 'cerberus-v2.3.4');
+
+      expect(await loadActionOutputs()).toBe(
+        `npm=[]\npypi=${JSON.stringify(shouldPublish ? ['cerberus-v2.3.4'] : [])}\nghcr=[]\naction=[]\n`,
+      );
+    },
+  );
+});
+
+describe('20.4 recovering PyPI publication', () => {
+  test('20.4.1 retries a partial upload before creating its GitHub release', async ({
+    airlock,
+    network,
+    repo,
+    shell,
+  }) => {
+    repo.syncMain('reviewed-sha');
+    network.on('https://pypi.org/', () => Response.json({ urls: [{ packagetype: 'bdist_wheel' }] }));
+    shell.on('uv build', '');
+    shell.on('uv publish', { exitCode: 1, stdout: 'Upload interrupted.' }, '');
+    shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+
+    await expect(airlock.run('publish', '--release', 'cerberus-v2.3.4')).rejects.toThrow('command failed');
+    expect(shell).not.toHaveRunMatching('gh release create');
+
+    await airlock.run('publish', '--release', 'cerberus-v2.3.4');
+
+    const publicationAttempts = 2;
+    expect(shell.commandsMatching('uv publish')).toHaveLength(publicationAttempts);
+    expect(shell).toHaveRunMatching('gh release create cerberus-v2.3.4');
+  });
+
+  test.for([
+    { metadata: {}, status: 200 },
+    { metadata: { urls: [{}] }, status: 200 },
+    { metadata: {}, status: 403 },
+    { metadata: {}, status: 502 },
+  ])(
+    '20.4.2 stops before building or creating a release when PyPI metadata is invalid (%j)',
+    async ({ metadata, status }, { airlock, network, shell }) => {
+      network.on('https://pypi.org/', () => Response.json(metadata, { status }));
+
+      await expect(airlock.run('publish', '--release', 'cerberus-v2.3.4')).rejects.toThrow();
+
+      expect(shell).not.toHaveRunMatching(/uv|gh release create/);
+    },
+  );
 });
 
 describe('20.3 prebuilt container release assets', () => {
   test('20.3.1 uploads assets to a draft before publishing the release', async ({
-    nativeRelease,
+    airlock,
     registries,
     releaseAssetPath,
     repo,
@@ -70,7 +125,7 @@ describe('20.3 prebuilt container release assets', () => {
     shell.on('gh release upload', '');
     shell.on('gh release edit', '');
 
-    await nativeRelease.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath);
+    await airlock.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath);
 
     const [create, upload, publish] = shell.commandsMatching('gh release');
     expect(create).toContain('create ci-image-v3.4.5 --draft');
@@ -84,7 +139,7 @@ describe('20.3 prebuilt container release assets', () => {
     { error: 'missing required assets', isDraft: false, uploads: 0 },
   ])(
     '20.3.2 rejects incomplete release assets (%j)',
-    async ({ error, isDraft, uploads }, { nativeRelease, registries, releaseAssetPath, repo, shell, tempDir }) => {
+    async ({ error, isDraft, uploads }, { airlock, registries, releaseAssetPath, repo, shell, tempDir }) => {
       repo.syncMain('sha-head');
       registries.setPublished({ ghcrPublished: true });
       await tempDir.write('release.json', '{}');
@@ -94,9 +149,9 @@ describe('20.3 prebuilt container release assets', () => {
       );
       shell.on('gh release upload', { exitCode: 1, stdout: 'upload failed' });
 
-      await expect(
-        nativeRelease.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath),
-      ).rejects.toThrow(error);
+      await expect(airlock.run('publish', '--release', 'ci-image-v3.4.5', '--asset', releaseAssetPath)).rejects.toThrow(
+        error,
+      );
 
       expect(shell.commandsMatching('gh release upload')).toHaveLength(uploads);
       expect(shell).not.toHaveRunMatching(/gh release create|gh release edit/);

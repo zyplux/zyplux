@@ -19,8 +19,7 @@ export const validatePythonVersions = async (targets: ReleaseTarget[]) => {
   for (const target of targets) {
     if (path.basename(target.versionFile) !== 'pyproject.toml') continue;
     const trackingVersion = await loadPythonVersion(target);
-    const nativeVersion = await target.readVersion();
-    ensure(trackingVersion === nativeVersion, `${target.label}: package.json and pyproject.toml versions must match`);
+    ensure(trackingVersion === target.version, `${target.label}: package.json and pyproject.toml versions must match`);
   }
 };
 

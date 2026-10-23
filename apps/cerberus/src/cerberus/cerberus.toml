@@ -57,8 +57,8 @@ python = [
 
 [workflow_toolchain_only]
 allowed_setup_actions = [
-    "zyplux/zyplux/setup-pm",
-    "./setup-pm",
+    "zyplux/zyplux/apps/action-setup-pm",
+    "./apps/action-setup-pm",
 ]
 
 [source]

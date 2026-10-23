@@ -4,9 +4,6 @@
   "references": [
     {
       "path": "../../packages/util-ts"
-    },
-    {
-      "path": "../release"
     }
   ]
 }

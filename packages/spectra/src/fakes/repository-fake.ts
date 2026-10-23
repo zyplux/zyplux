@@ -1,7 +1,6 @@
-import type { ShellFake } from '@zyplux/spectra/shell-fake';
-import type { TempDir } from '@zyplux/spectra/temp-directory';
+import type { ShellFake } from './shell-fake.ts';
 
-export type Repo = {
+export type RepositoryFake = {
   queuePrFields: (
     fields: Record<string, [boolean | number | string, ...(boolean | number | string)[]] | boolean | number | string>,
   ) => void;
@@ -29,11 +28,11 @@ const BENIGN_WRITE_COMMANDS = [
   'git push',
 ];
 
-export const createRepo = (shell: ShellFake, { path: tempPath }: TempDir) => {
+export const createRepositoryFake = (shell: ShellFake, rootPath: string) => {
   const setRoot = (dir: string) => {
     shell.on('git rev-parse --show-toplevel', dir);
   };
-  setRoot(tempPath);
+  setRoot(rootPath);
   for (const command of BENIGN_WRITE_COMMANDS) shell.on(command, '');
 
   const setCurrentBranch = (branch: string) => {
@@ -88,5 +87,5 @@ export const createRepo = (shell: ShellFake, { path: tempPath }: TempDir) => {
       setRemoteMainSha(sha);
       setWorkingTreeStatus('');
     },
-  } satisfies Repo;
+  } satisfies RepositoryFake;
 };

@@ -15,6 +15,6 @@ export const printTagKindCommand = makeReleaseTagCommand('print-tag-kind', {
 type PrintTagKindConfig = InferValue<typeof printTagKindCommand>;
 
 export const runPrintTagKind = async ({ tag }: PrintTagKindConfig) => {
-  const { target } = await resolveReleaseTag(tag);
-  console.log(target.kind);
+  const { kind } = await resolveReleaseTag(tag);
+  console.log(kind);
 };

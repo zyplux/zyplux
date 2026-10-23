@@ -651,7 +651,7 @@ def test_14_8_1_accepts_an_action_before_its_first_versioned_release(
     assert result.findings == [ok(f"{LABEL}: not yet released"), ok(DONE)]
 
 
-@pytest.mark.parametrize("changed", ["setup-pm/action.yml", "apps/setup-pm/src/setup_pm/prepare.py"])
+@pytest.mark.parametrize("changed", ["apps/action-setup-pm/action.yml", "apps/action-setup-pm/src/setup_pm/prepare.py"])
 def test_14_8_2_requires_an_action_version_bump_for_changed_release_files(
     run_release_bumps: RunReleaseBumps, changed: str, fail: MakeFinding
 ) -> None:

@@ -29,7 +29,13 @@
       "path": "./tests/util-ts"
     },
     {
-      "path": "./apps/release"
+      "path": "./apps/airlock"
+    },
+    {
+      "path": "./tests/airlock"
+    },
+    {
+      "path": "./tests/tsconfig"
     }
   ]
 }

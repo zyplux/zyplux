@@ -474,7 +474,7 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
             "      - run: echo ci",
             (
                 "      - uses: actions/checkout@v7\n"
-                "      - uses: zyplux/zyplux/setup-pm@main\n"
+                "      - uses: zyplux/zyplux/apps/action-setup-pm@main\n"
                 "      - run: uv run --no-sync rumdl check"
             ),
         )

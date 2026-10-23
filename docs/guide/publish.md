@@ -1,6 +1,6 @@
 # Publishing
 
-The [release workflow](../../.changeset/README.md) prepares package versions and concise changelog entries in each releasable feature PR. On pushes to `main`, `release.yml` selects pending targets from `release-targets.toml` through the shared `release` action, publishes npm targets together with native pnpm, and publishes other targets individually. GitHub releases contain the corresponding reviewed changelog entry. Completed artifacts and releases are preserved; retries complete missing publication steps.
+The [release workflow](../../.changeset/README.md) prepares package versions and concise changelog entries in each releasable feature PR. On pushes to `main`, `release.yml` selects pending targets from `release-targets.toml` through the shared [Airlock action](../../apps/action-airlock/README.md), publishes npm targets together with native pnpm, and publishes other targets individually. GitHub releases contain the corresponding reviewed changelog entry. Completed artifacts and releases are preserved; retries complete missing publication steps.
 
 `./just release` manually creates releases for pending versions from a clean, synchronized `main` checkout and watches their publication. The release workflow also supports manual retries on `main` and per-tag GitHub release events.
 
@@ -22,7 +22,7 @@ Established npm and PyPI packages use OIDC trusted publishing. New packages need
 
 Declare `kind = "action"`, `repository`, `tag_prefix` and `major_tag_prefix` in `release-targets.toml`, and add a workspace `package.json` for the action version. Include its entrypoint and implementation in `surface`. Preparation synchronizes a native Python version when the version source is `pyproject.toml`.
 
-Merging the prepared release creates a fixed GitHub release such as `setup-pm-v1.0.0` with the reviewed changelog entry, then updates `v1` to the newest published stable release in that major. The floating tag has no GitHub release. Workflow retries also repair a missing or stale floating tag. GitHub Actions require `contents: write` for publication.
+Merging the prepared release creates a fixed GitHub release such as `setup-pm-v1.0.0` with the reviewed changelog entry, then updates `setup-pm-v1` to the newest published stable release in that major. The floating tag has no GitHub release. Workflow retries also repair a missing or stale floating tag. GitHub Actions require `contents: write` for publication.
 
 ## Registry setup
 

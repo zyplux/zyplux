@@ -1,23 +1,21 @@
+import { ManifestSchema } from '@zyplux/airlock/contracts';
 import { libraryTest } from '@zyplux/spectra/library-test-api';
+import { parseToml } from '@zyplux/util/toml';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import type { TsconfigPresets } from './package-consumer.ts';
+const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 
-import { loadTsconfigPresets, verifyPublishedPackages, verifyUtilPackage } from './package-consumer.ts';
-export const test = libraryTest.extend<{
-  tsconfigPresets: TsconfigPresets;
-  verifyPublishedPackages: () => void;
-  verifyUtilPackage: () => Promise<void>;
-}>({
-  tsconfigPresets: async ({}, use) => {
-    await use(loadTsconfigPresets());
-  },
-  verifyPublishedPackages: async ({ tempDir }, use) => {
-    await use(() => {
-      verifyPublishedPackages(tempDir);
-    });
-  },
-  verifyUtilPackage: async ({ tempDir }, use) => {
-    await use(() => verifyUtilPackage(tempDir));
-  },
+export const test = libraryTest.extend('verifyPublishedPackages', ({ tempDir }) => () => {
+  const manifest = parseToml(readFileSync(path.join(workspaceRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
+  for (const target of manifest.target) {
+    if (target.kind !== 'npm') continue;
+    const dir = path.join(workspaceRoot, path.dirname(target.version.file));
+    const archive = path.join(tempDir.path, `${path.basename(dir)}.tgz`);
+    execFileSync('pnpm', ['pack', '--out', archive], { cwd: dir, stdio: 'inherit' });
+  }
 });
-export { describe, expect } from 'vitest';
+
+export { describe } from 'vitest';

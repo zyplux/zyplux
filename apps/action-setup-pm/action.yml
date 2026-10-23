@@ -17,7 +17,7 @@ runs:
     - name: Read workspace toolchain
       id: config
       shell: bash
-      run: python3 "$GITHUB_ACTION_PATH/../apps/setup-pm/src/setup_pm/prepare.py"
+      run: python3 "$GITHUB_ACTION_PATH/src/setup_pm/prepare.py"
       env:
         UV_VERSION: ${{ inputs.uv-version }}
     - name: Restore Node.js

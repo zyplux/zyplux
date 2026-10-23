@@ -6,6 +6,8 @@
 
 - Document native pnpm preparation for the action's reviewed versions and release notes.
 
+- Publish the action from `zyplux/zyplux/apps/action-setup-pm@setup-pm-v1` with its metadata and implementation in one directory.
+
 ## 1.0.0
 
 ### Major Changes

@@ -96,4 +96,4 @@ totchef:
 
 # Manually publish pending versions through the release workflow.
 release:
-    pnpm run --silent cz release-bumped-targets
+    pnpm run --silent airlock release-bumped-targets

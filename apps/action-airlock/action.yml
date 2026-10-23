@@ -1,5 +1,5 @@
-name: Publish reviewed releases
-description: Prepare release matrices or publish declared targets using the repository's locked release tooling.
+name: Airlock
+description: Prepare release matrices or publish declared targets using the repository's locked Airlock CLI.
 inputs:
   command:
     description: Release operation (plan, publish-npm, publish, or check).
@@ -13,21 +13,21 @@ inputs:
 outputs:
   npm:
     description: Pending npm release tags as a JSON array.
-    value: ${{ steps.release.outputs.npm }}
+    value: ${{ steps.airlock.outputs.npm }}
   pypi:
     description: Pending PyPI release tags as a JSON array.
-    value: ${{ steps.release.outputs.pypi }}
+    value: ${{ steps.airlock.outputs.pypi }}
   ghcr:
     description: Pending container release tags as a JSON array.
-    value: ${{ steps.release.outputs.ghcr }}
+    value: ${{ steps.airlock.outputs.ghcr }}
   action:
     description: Pending GitHub Action release tags as a JSON array.
-    value: ${{ steps.release.outputs.action }}
+    value: ${{ steps.airlock.outputs.action }}
 runs:
   using: composite
   steps:
-    - name: Run release tooling
-      id: release
+    - name: Run Airlock
+      id: airlock
       shell: bash
       run: |
         args=("$RELEASE_COMMAND")
@@ -39,7 +39,7 @@ runs:
         while IFS= read -r asset; do
           if [ -n "$asset" ]; then args+=(--asset "$asset"); fi
         done <<< "$RELEASE_ASSETS"
-        pnpm exec zyplux-release "${args[@]}"
+        pnpm exec airlock "${args[@]}"
       env:
         RELEASE_COMMAND: ${{ inputs.command }}
         RELEASE_TAG: ${{ inputs.tag }}

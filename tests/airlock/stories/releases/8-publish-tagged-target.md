@@ -8,7 +8,7 @@
 
 ### 8.2.1 publishes an npm target with native packing and availability waiting
 
-### 8.2.2 builds and publishes a pypi target
+### 8.2.2 builds and publishes incomplete PyPI releases using isolated artifacts
 
 ### 8.2.3 requires GH_TOKEN before pushing a ghcr target
 ### 8.2.4 requires GITHUB_ACTOR before pushing a ghcr target

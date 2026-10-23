@@ -1,17 +1,21 @@
+'@zyplux/airlock@1.0.0':
+  dir: apps/airlock
+  intents:
+    - native-releases
+    - shared-release-action
 '@zyplux/cz@0.15.0':
   dir: apps/cz
   intents:
     - shared-release-commands
-'@zyplux/release@1.0.0':
-  dir: apps/release
+'@zyplux/spectra@0.4.0':
+  dir: packages/spectra
   intents:
-    - native-releases
-    - shared-release-action
+    - repository-fixtures
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
     - quarantine-eligible-tools
 zyplux-setup-pm@1.0.1:
-  dir: apps/setup-pm
+  dir: apps/action-setup-pm
   intents:
     - native-action-notes

@@ -56,15 +56,12 @@ export const loadPreparedReleases = async () => {
   const targets = await loadReleaseTargets();
   await validatePythonVersions(targets);
   return Promise.all(
-    targets.map(async target => {
-      const version = await target.readVersion();
-      return {
-        kind: target.kind,
-        label: target.label,
-        notes: await loadReleaseNotes(target.dir, version),
-        tag: `${target.tagPrefix}${version}`,
-        version,
-      };
-    }),
+    targets.map(async ({ dir, kind, label, tag, version }) => ({
+      kind,
+      label,
+      notes: await loadReleaseNotes(dir, version),
+      tag,
+      version,
+    })),
   );
 };

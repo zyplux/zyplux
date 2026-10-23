@@ -1,8 +1,9 @@
 import type { FetchFake } from '@zyplux/spectra/fetch-fake';
+import type { RepositoryFake } from '@zyplux/spectra/repository-fake';
 import type { ShellFake } from '@zyplux/spectra/shell-fake';
 import type { TempDir } from '@zyplux/spectra/temp-directory';
 
-import { ManifestSchema } from '@zyplux/release/contracts';
+import { ManifestSchema } from '@zyplux/airlock/contracts';
 import { notFoundResponse, okResponse } from '@zyplux/spectra/fetch-fake';
 import { parseToml } from '@zyplux/util/toml';
 import { readFile } from 'node:fs/promises';
@@ -10,8 +11,6 @@ import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { vi } from 'vitest';
-
-import type { Repo } from '#repository-fake';
 const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 export type LiveWorkspace = {
   root: string;
@@ -93,8 +92,10 @@ export const createRegistries = (network: FetchFake) =>
       });
       network.on('https://pypi.org/', () => {
         pypiProbeCount += 1;
-        if (pypiProbeCount === 1) return pypiPublished ? okResponse() : notFoundResponse();
-        return pypiEverVisible === false ? notFoundResponse() : okResponse();
+        const isPublished = pypiProbeCount === 1 ? pypiPublished : pypiEverVisible !== false;
+        return isPublished
+          ? Response.json({ urls: [{ packagetype: 'bdist_wheel' }, { packagetype: 'sdist' }] })
+          : notFoundResponse();
       });
       network.on('https://registry.npmjs.org/', () =>
         npmPublished ? Response.json({ versions: { '1.2.3': {} } }) : notFoundResponse(),
@@ -105,7 +106,7 @@ const renderRunIds = (ids: string[]) => JSON.stringify(ids.map(id => ({ database
 
 const renderRun = ({ conclusion = '', status }: RunState) => JSON.stringify({ conclusion, status });
 
-export const createRelease = (repo: Repo, registries: Registries, shell: ShellFake) => {
+export const createRelease = (repo: RepositoryFake, registries: Registries, shell: ShellFake) => {
   const queueRun = (runId: string, first: RunState, ...later: RunState[]) => {
     shell.on(`gh run view ${runId}`, renderRun(first), ...later.map(run => renderRun(run)));
   };

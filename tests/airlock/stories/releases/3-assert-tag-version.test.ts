@@ -24,13 +24,13 @@ const assertCases: AssertCase[] = [
 ];
 
 describe('3.1 asserting a tag against the release manifest', () => {
-  test.for(assertCases)('3.1.%s', async ([, tag, expectedOutcome, expectedMessage], { cz, logs }) => {
+  test.for(assertCases)('3.1.%s', async ([, tag, expectedOutcome, expectedMessage], { airlock, logs }) => {
     if (expectedOutcome === 'logs') {
-      await cz.run('assert-tag-version', tag);
+      await airlock.run('assert-tag-version', tag);
 
       expect(logs).toHaveLogged(expectedMessage);
     } else {
-      await expect(cz.run('assert-tag-version', tag)).rejects.toThrow(expectedMessage);
+      await expect(airlock.run('assert-tag-version', tag)).rejects.toThrow(expectedMessage);
     }
   });
 });

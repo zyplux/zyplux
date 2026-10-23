@@ -1,4 +1,3 @@
-import { releaseCommand, runReleaseCommand } from '@zyplux/release/cli';
 import { loadPackageVersion } from '@zyplux/util/manifest';
 
 import { cleanCommand, runClean } from './commands/clean.ts';
@@ -18,7 +17,6 @@ const program = defineProgram({
     version: VERSION,
   },
   parser: or(
-    releaseCommand,
     pushBranchCommand,
     cloneReferenceRepoCommand,
     depsCatalogCommand,
@@ -63,9 +61,6 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'upgrade': {
       return runUpgrade(result);
-    }
-    default: {
-      return runReleaseCommand(result);
     }
   }
 };

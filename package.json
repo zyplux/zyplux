@@ -20,9 +20,9 @@
     "test": "vitest run",
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
-    "release:prepare": "pnpm run --silent release prepare && pnpm run --filter @zyplux/eslint-config dump-rules",
-    "release:check": "pnpm run --silent release check",
-    "release": "zyplux-release"
+    "release:prepare": "pnpm run --silent airlock prepare && pnpm run --filter @zyplux/eslint-config dump-rules",
+    "release:check": "pnpm run --silent airlock check",
+    "airlock": "airlock"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -35,6 +35,6 @@
     "prettier": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "@zyplux/release": "workspace:*"
+    "@zyplux/airlock": "workspace:*"
   }
 }

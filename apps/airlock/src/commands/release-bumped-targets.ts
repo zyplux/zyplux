@@ -35,37 +35,11 @@ export const releaseBumpedTargetsCommand = command(
 
 type ReleaseBumpedTargetsConfig = InferValue<typeof releaseBumpedTargetsCommand>;
 
-type Target = {
-  dir: string;
-  isPublished: () => Promise<boolean>;
-  kind: ReleaseTarget['kind'];
-  label: string;
-  tag: string;
-  version: string;
-};
-
 const listReleaseWorkflowRuns = async (tag: string) =>
   $.gh.run.list({ branch: tag, event: 'release', json: ['databaseId'], workflow: 'release.yml' });
 
-const buildTargets = async () => {
-  const targets = await loadReleaseTargets();
-  return Promise.all(
-    targets.map(async target => {
-      const version = await target.readVersion();
-      return {
-        dir: target.dir,
-        isPublished: async () => target.isPublished(version),
-        kind: target.kind,
-        label: target.label,
-        tag: `${target.tagPrefix}${version}`,
-        version,
-      };
-    }),
-  );
-};
-
 export const listPendingTargets = async (tag: string | undefined) => {
-  const targets = await buildTargets();
+  const targets = await loadReleaseTargets();
   const selectedTargets = tag === undefined ? targets : targets.filter(target => target.tag === tag);
   ensure(tag === undefined || selectedTargets.length > 0, `no configured release target matches '${tag}'`);
   const pendingTargets = [];
@@ -77,7 +51,7 @@ export const listPendingTargets = async (tag: string | undefined) => {
   return pendingTargets;
 };
 
-const publish = async ({ isPublished, label, tag, version }: Target, remoteHead: string, notes: string) => {
+const publish = async ({ isPublished, label, tag, version }: ReleaseTarget, remoteHead: string, notes: string) => {
   console.log(`Creating GitHub release ${tag} ...`);
   const releaseRuns = await listReleaseWorkflowRuns(tag);
   const knownReleaseRuns = new Set(releaseRuns.map(({ databaseId }) => databaseId));
@@ -120,7 +94,7 @@ const publish = async ({ isPublished, label, tag, version }: Target, remoteHead:
   }
 };
 
-export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumpedTargetsConfig) => {
+export const runAirlockBumpedTargets = async ({ shouldList, tag }: ReleaseBumpedTargetsConfig) => {
   if (shouldList) {
     console.log(JSON.stringify(await listPendingTargets(tag)));
     return;
@@ -137,8 +111,8 @@ export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumped
   const remoteHead = await readTrimmed($.git.revParse('origin/main'));
   ensure(head === remoteHead, 'local main and origin/main differ; synchronize them before releasing');
 
-  const pending: Target[] = [];
-  const targets = await buildTargets();
+  const pending: ReleaseTarget[] = [];
+  const targets = await loadReleaseTargets();
   for (const target of targets) {
     if (await target.isPublished()) {
       console.log(`Skipping ${target.label} ${target.version} (already published)`);
@@ -154,7 +128,7 @@ export const runReleaseBumpedTargets = async ({ shouldList, tag }: ReleaseBumped
   );
 
   await validateConsumedIntents();
-  await validatePythonVersions(await loadReleaseTargets());
+  await validatePythonVersions(targets);
   const prepared = await Promise.all(
     pending.map(async target => ({
       notes: await loadReleaseNotes(target.dir, target.version),

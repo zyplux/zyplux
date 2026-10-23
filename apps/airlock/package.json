@@ -1,18 +1,18 @@
 {
-  "name": "@zyplux/release",
+  "name": "@zyplux/airlock",
   "version": "1.0.0",
   "description": "Native pnpm releases for npm, Python, containers and GitHub Actions.",
   "license": "MIT",
   "author": "Sergiy Yeskov <sergiy.yeskov@gmail.com>",
-  "homepage": "https://github.com/zyplux/zyplux/tree/main/apps/release",
+  "homepage": "https://github.com/zyplux/zyplux/tree/main/apps/airlock",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zyplux/zyplux.git",
-    "directory": "apps/release"
+    "directory": "apps/airlock"
   },
   "type": "module",
   "bin": {
-    "zyplux-release": "./src/index.ts"
+    "airlock": "./src/index.ts"
   },
   "exports": {
     "./cli": "./src/cli.ts",
@@ -26,7 +26,7 @@
   "publishConfig": {
     "access": "public",
     "bin": {
-      "zyplux-release": "./dist/index.js"
+      "airlock": "./dist/index.js"
     },
     "exports": {
       "./cli": {

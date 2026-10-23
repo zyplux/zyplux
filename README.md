@@ -13,22 +13,24 @@
 | Package                                          | Registry | What it is                                                                       |
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
 | [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Org-invariant linter: CI workflows, justfiles, CODEOWNERS, coverage, releases |
-| [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: releases, PR flow, cleanup                  |
+| [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: PR flow, workspace maintenance, cleanup                  |
+| [@zyplux/airlock](apps/airlock) | npm | Release preparation and publication with native pnpm |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |
 | [@zyplux/eslint-config](packages/eslint-config)  | npm      | Shared ESLint flat config and custom rules                                       |
 | [@zyplux/tsconfig](packages/tsconfig)            | npm      | Shared TypeScript presets                                                        |
 | [@zyplux/util](packages/util-ts)                 | npm      | Node utilities: assertions, polling, zod-validated parsing, git/gh shell harness |
 | [zyplux-util](packages/util_py)                  | PyPI     | Python counterpart of the shared utilities                                       |
 | [@zyplux/spectra](packages/spectra)         | npm      | Vitest fixtures, matchers, polling, and journal reporting                            |
-| [setup-pm](apps/setup-pm) | GitHub | Cached pnpm and uv setup for dual workspaces |
+| [setup-pm](apps/action-setup-pm) | GitHub | Cached pnpm and uv setup for dual workspaces |
+| [Airlock](apps/action-airlock) | GitHub | Plan and publish reviewed workspace releases |
 
-Each package's README covers usage. The [release workflow](.github/workflows/release.yml) publishes configured versions automatically on pushes to `main`, using CZ to select pending targets from [release-targets.toml](release-targets.toml). Complete releases are skipped; failed publications and missing GitHub releases are retried. Registry artifacts have concurrency groups per version; action publications share a group to protect their moving major tags. CI and version-bump enforcement run on pull requests. The release workflow also supports manual retries on `main` and per-tag GitHub release events.
+Each package's README covers usage. The [release workflow](.github/workflows/release.yml) publishes configured versions automatically on pushes to `main`, using Airlock to select pending targets from [release-targets.toml](release-targets.toml). Complete releases are skipped; failed publications and missing GitHub releases are retried. Registry artifacts have concurrency groups per version; action publications share a group to protect their moving major tags. CI and version-bump enforcement run on pull requests. The release workflow also supports manual retries on `main` and per-tag GitHub release events.
 
 For releasable changes, run `pnpm change`, then `pnpm release:prepare` before review. Each GitHub release contains its target version's reviewed changelog entry. See the [release workflow](.changeset/README.md).
 
 ## Develop
 
-The [setup-pm action](apps/setup-pm/README.md) provides cached pnpm and uv toolchains with locked installs for consuming repositories. Reference it as `zyplux/zyplux/setup-pm@v1`.
+The [setup-pm action](apps/action-setup-pm/README.md) provides cached pnpm and uv toolchains with locked installs for consuming repositories. Reference it as `zyplux/zyplux/apps/action-setup-pm@setup-pm-v1`.
 
 Dual workspace: pnpm (TS) + uv (Python), orchestrated by [just](https://github.com/casey/just).
 

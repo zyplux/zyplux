@@ -9,14 +9,14 @@ const MISSING_GHCR_CREDENTIALS: [shape: string, missingName: string, ghToken: st
 
 describe('8.1 skipping an already-published target', () => {
   test("8.1.1 logs and does nothing when the tag's version is already published", async ({
-    cz,
+    airlock,
     logs,
     registries,
     shell,
   }) => {
     registries.setPublished({ ghcrPublished: true, npmPublished: true, pypiPublished: true });
 
-    await cz.run('publish-tagged-target', 'util-v1.2.3');
+    await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
     expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
     expect(shell).not.toHaveRunMatching(/pnpm pack|podman|uv build/);
@@ -25,7 +25,7 @@ describe('8.1 skipping an already-published target', () => {
 
 describe('8.2 publishing to each registry kind', () => {
   test('8.2.1 publishes an npm target with native packing and availability waiting', async ({
-    cz,
+    airlock,
     expectNpmPublish,
     npmTarget,
     registries,
@@ -35,13 +35,13 @@ describe('8.2 publishing to each registry kind', () => {
     registries.setPublished({ npmPublished: false });
     npmTarget.stagePublish();
 
-    await cz.run('publish-tagged-target', 'util-v1.2.3');
+    await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
     expectNpmPublish(shell, targets.util.dir);
   });
 
   test('8.2.6 propagates native npm publication failures', async ({
-    cz,
+    airlock,
     expectNpmPublish,
     npmTarget,
     registries,
@@ -51,43 +51,68 @@ describe('8.2 publishing to each registry kind', () => {
     registries.setPublished({ npmPublished: false });
     npmTarget.stagePublish(1);
 
-    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow('command failed with exit code 1');
+    await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
+      'command failed with exit code 1',
+    );
 
     expectNpmPublish(shell, targets.util.dir);
   });
 
-  test('8.2.2 builds and publishes a pypi target', async ({ cz, registries, shell }) => {
-    registries.setPublished({ pypiPublished: false });
-    shell.on('uv build', '');
-    shell.on('uv publish', '');
+  test.for([
+    { files: undefined, shouldPublish: true },
+    { files: [], shouldPublish: true },
+    { files: ['bdist_wheel'], shouldPublish: true },
+    { files: ['sdist'], shouldPublish: true },
+    { files: ['bdist_wheel', 'bdist_wheel'], shouldPublish: true },
+    { files: ['bdist_wheel', 'sdist'], shouldPublish: false },
+  ])(
+    '8.2.2 builds and publishes incomplete PyPI releases using isolated artifacts (%j)',
+    async ({ files, shouldPublish }, { airlock, expectPypiPublish, network, shell }) => {
+      network.on('https://pypi.org/', () =>
+        files === undefined
+          ? new Response(undefined, { status: 404 })
+          : Response.json({ urls: files.map(packagetype => ({ packagetype })) }),
+      );
+      shell.on('uv build', '');
+      shell.on('uv publish', '');
 
-    await cz.run('publish-tagged-target', 'cerberus-v2.3.4');
+      await airlock.run('publish-tagged-target', 'cerberus-v2.3.4');
 
-    expect(shell.commandsMatching('uv build')).toEqual(['uv build --package zyplux-cerberus']);
-    expect(shell.commandsMatching('uv publish')).toEqual(['uv publish']);
-  });
+      if (!shouldPublish) {
+        expect(shell).not.toHaveRunMatching('uv');
+        return;
+      }
+      await expectPypiPublish(shell);
+    },
+  );
 
   test.for(MISSING_GHCR_CREDENTIALS)(
     '8.2.%s',
-    async ([, missingName, ghToken, githubActor], { cz, env, registries, shell }) => {
+    async ([, missingName, ghToken, githubActor], { airlock, env, registries, shell }) => {
       registries.setPublished({ ghcrPublished: false });
       env.set('GH_TOKEN', ghToken);
       env.set('GITHUB_ACTOR', githubActor);
 
-      await expect(cz.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
+      await expect(airlock.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
         `${missingName} is required to push to GHCR`,
       );
       expect(shell).not.toHaveRunMatching('podman');
     },
   );
 
-  test('8.2.5 tags and pushes a versioned and latest ghcr image', async ({ cz, env, registries, shell, targets }) => {
+  test('8.2.5 tags and pushes a versioned and latest ghcr image', async ({
+    airlock,
+    env,
+    registries,
+    shell,
+    targets,
+  }) => {
     registries.setPublished({ ghcrPublished: false });
     env.set('GH_TOKEN', 'gh-token');
     env.set('GITHUB_ACTOR', 'zyplux-bot');
     shell.on('podman', '');
 
-    await cz.run('publish-tagged-target', 'ci-image-v3.4.5');
+    await airlock.run('publish-tagged-target', 'ci-image-v3.4.5');
 
     expect(shell.calls).toContainEqual({
       argv: ['login', 'ghcr.io', '-u', 'zyplux-bot', '--password-stdin'],
@@ -109,14 +134,14 @@ describe('8.2 publishing to each registry kind', () => {
     { command: 'podman push', shouldLogout: true },
   ])(
     '8.2.7 removes GHCR credentials after a successful login when publication fails (%j)',
-    async ({ command, shouldLogout }, { cz, env, registries, shell }) => {
+    async ({ command, shouldLogout }, { airlock, env, registries, shell }) => {
       registries.setPublished({ ghcrPublished: false });
       env.set('GH_TOKEN', 'gh-token');
       env.set('GITHUB_ACTOR', 'zyplux-bot');
       shell.on('podman', '');
       shell.on(command, { exitCode: 1, stdout: '' });
 
-      await expect(cz.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
+      await expect(airlock.run('publish-tagged-target', 'ci-image-v3.4.5')).rejects.toThrow(
         'command failed with exit code 1',
       );
 
@@ -127,7 +152,7 @@ describe('8.2 publishing to each registry kind', () => {
 
 describe('8.3 publishing a private GitHub npm package', () => {
   test('8.3.1 authenticates the configured registry and lets pnpm apply publishConfig', async ({
-    cz,
+    airlock,
     env,
     expectNpmPublish,
     network,
@@ -141,7 +166,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     npmTarget.stagePublish();
 
-    await cz.run('publish-tagged-target', 'util-v1.2.3');
+    await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
     expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil']);
     expect(fetchSpy).toHaveBeenCalledWith('https://npm.pkg.github.com/%40zyplux%2Futil', {
@@ -152,7 +177,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
   });
 
   test('8.3.2 rejects missing credentials before checking a private registry', async ({
-    cz,
+    airlock,
     env,
     network,
     npmTarget,
@@ -160,7 +185,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     await npmTarget.setPublishConfig({ registry: 'https://npm.pkg.github.com' });
     env.set('NODE_AUTH_TOKEN', '');
 
-    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
+    await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(
       'NODE_AUTH_TOKEN is required to read npm.pkg.github.com',
     );
     expect(network.requests).toEqual([]);
@@ -173,24 +198,24 @@ describe('8.3 publishing a private GitHub npm package', () => {
     { registry: 'https://npm.pkg.github.com', status: 502 },
   ])(
     '8.3.3 rejects registry failures without attempting publication (%j)',
-    async ({ registry, status }, { cz, env, network, npmTarget, shell }) => {
+    async ({ registry, status }, { airlock, env, network, npmTarget, shell }) => {
       await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
       network.on(registry, () => new Response(undefined, { status }));
 
-      await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(`failed: ${status}`);
+      await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow(`failed: ${status}`);
       expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
     },
   );
 
   test('8.3.4 rejects unsupported registry destinations before making a request', async ({
-    cz,
+    airlock,
     network,
     npmTarget,
   }) => {
     await npmTarget.setPublishConfig({ registry: 'https://example.com' });
 
-    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
+    await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
     expect(network.requests).toEqual([]);
   });
 
@@ -199,12 +224,12 @@ describe('8.3 publishing a private GitHub npm package', () => {
     { packageUrl: 'https://npm.pkg.github.com/%40zyplux%2Futil', registry: 'https://npm.pkg.github.com/' },
   ])(
     '8.3.5 accepts supported registry URLs with a trailing slash (%j)',
-    async ({ packageUrl, registry }, { cz, env, logs, network, npmTarget, shell }) => {
+    async ({ packageUrl, registry }, { airlock, env, logs, network, npmTarget, shell }) => {
       await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
       network.on(registry, () => Response.json({ versions: { '1.2.3': {} } }));
 
-      await cz.run('publish-tagged-target', 'util-v1.2.3');
+      await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
       expect(network.requests).toEqual([packageUrl]);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
@@ -217,12 +242,12 @@ describe('8.3 publishing a private GitHub npm package', () => {
     { '@zyplux:registry': 'https://npm.pkg.github.com/', registry: 'https://registry.npmjs.org' },
   ])(
     '8.3.6 prefers the package scope’s registry setting (%j)',
-    async (publishConfig, { cz, env, logs, network, npmTarget, shell }) => {
+    async (publishConfig, { airlock, env, logs, network, npmTarget, shell }) => {
       await npmTarget.setPublishConfig(publishConfig);
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
       network.on('https://npm.pkg.github.com/', () => Response.json({ versions: { '1.2.3': {} } }));
 
-      await cz.run('publish-tagged-target', 'util-v1.2.3');
+      await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
       expect(network.requests).toEqual(['https://npm.pkg.github.com/%40zyplux%2Futil']);
       expect(logs).toHaveLogged('@zyplux/util 1.2.3 is already published; nothing to do');
@@ -239,7 +264,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     '8.3.7 checks the requested version in registry package metadata (%j)',
     async (
       { isPublished, registry, versions },
-      { cz, env, expectNpmPublish, logs, network, npmTarget, shell, targets },
+      { airlock, env, expectNpmPublish, logs, network, npmTarget, shell, targets },
     ) => {
       await npmTarget.setPublishConfig({ registry });
       env.set('NODE_AUTH_TOKEN', 'package-read-token');
@@ -249,7 +274,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
       );
       npmTarget.stagePublish();
 
-      await cz.run('publish-tagged-target', 'util-v1.2.3');
+      await airlock.run('publish-tagged-target', 'util-v1.2.3');
 
       expect(network.requests).toEqual([`${registry}/%40zyplux%2Futil`]);
 
@@ -263,7 +288,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
   );
 
   test('8.3.8 rejects malformed package metadata without attempting publication', async ({
-    cz,
+    airlock,
     env,
     network,
     npmTarget,
@@ -273,7 +298,7 @@ describe('8.3 publishing a private GitHub npm package', () => {
     env.set('NODE_AUTH_TOKEN', 'package-read-token');
     network.on('https://npm.pkg.github.com/', () => Response.json({}));
 
-    await expect(cz.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
+    await expect(airlock.run('publish-tagged-target', 'util-v1.2.3')).rejects.toThrow();
     expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
   });
 });
@@ -288,7 +313,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     '8.4.1 publishes only missing artifacts and creates only missing GitHub releases at HEAD (%j)',
     async (
       { isArtifactPublished, isReleaseCreated },
-      { cz, expectGithubRelease, expectNpmPublish, npmTarget, registries, repo, shell, targets },
+      { airlock, expectGithubRelease, expectNpmPublish, npmTarget, registries, repo, shell, targets },
     ) => {
       registries.setPublished({ npmPublished: isArtifactPublished });
       repo.setHeadSha('reviewed-sha');
@@ -300,7 +325,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
       );
       npmTarget.stagePublish();
 
-      await cz.run('publish-tagged-target', '--release', 'util-v1.2.3');
+      await airlock.run('publish-tagged-target', '--release', 'util-v1.2.3');
 
       if (isArtifactPublished) expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
       else expectNpmPublish(shell, targets.util.dir);
@@ -312,7 +337,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
   );
 
   test('8.4.2 leaves GitHub release metadata unpublished when the registry rejects publication', async ({
-    cz,
+    airlock,
     npmTarget,
     registries,
     shell,
@@ -320,7 +345,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     registries.setPublished({ npmPublished: false });
     npmTarget.stagePublish(1);
 
-    await expect(cz.run('publish-tagged-target', '--release', 'util-v1.2.3')).rejects.toThrow(
+    await expect(airlock.run('publish-tagged-target', '--release', 'util-v1.2.3')).rejects.toThrow(
       'command failed with exit code 1',
     );
 
@@ -328,7 +353,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
   });
 
   test('8.4.3 repairs GHCR release metadata without logging in or out when the image exists', async ({
-    cz,
+    airlock,
     expectGithubRelease,
     registries,
     repo,
@@ -338,7 +363,7 @@ describe('8.4 completing GitHub release metadata after publication', () => {
     repo.setHeadSha('reviewed-sha');
     shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
 
-    await cz.run('publish-tagged-target', '--release', 'ci-image-v3.4.5');
+    await airlock.run('publish-tagged-target', '--release', 'ci-image-v3.4.5');
 
     expect(shell).not.toHaveRunMatching('podman');
     await expectGithubRelease(shell, 'ci-image-v3.4.5', 'reviewed-sha');

@@ -28,8 +28,8 @@ export const runBootstrapNpmTarget = async ({ label }: BootstrapNpmTargetConfig)
   ensure(target !== undefined, `no release target labeled '${label}' in release-targets.toml`);
   ensure(target.kind === 'npm', `bootstrap is npm-only; '${label}' is a ${target.kind} target`);
 
-  const version = await target.readVersion();
-  if (await target.isPublished(version)) {
+  const { version } = target;
+  if (await target.isPublished()) {
     console.log(`${label} ${version} is already published; no bootstrap needed`);
     return;
   }

@@ -15,6 +15,6 @@ export const assertTagVersionCommand = makeReleaseTagCommand('assert-tag-version
 type AssertTagVersionConfig = InferValue<typeof assertTagVersionCommand>;
 
 export const runAssertTagVersion = async ({ tag }: AssertTagVersionConfig) => {
-  const { target, version } = await resolveReleaseTag(tag);
-  console.log(`${target.label} ${version} matches ${tag}`);
+  const { label, version } = await resolveReleaseTag(tag);
+  console.log(`${label} ${version} matches ${tag}`);
 };

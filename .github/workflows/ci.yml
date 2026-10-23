@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: ./setup-pm
+      - uses: ./apps/action-setup-pm
       - run: pnpm release:check
       - run: pnpm run knip
       - run: uv run --no-sync vulture

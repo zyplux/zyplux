@@ -4,6 +4,6 @@
 !apps/totchef
 !apps/cerberus/pyproject.toml
 !apps/clipy/pyproject.toml
-!apps/setup-pm/pyproject.toml
+!apps/action-setup-pm/pyproject.toml
 !apps/token_stats/pyproject.toml
 !packages/util_py/pyproject.toml

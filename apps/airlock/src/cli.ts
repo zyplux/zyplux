@@ -14,9 +14,9 @@ import { prepareReleaseCommand, runPrepareRelease } from './commands/prepare-rel
 import { printTagKindCommand, runPrintTagKind } from './commands/print-tag-kind.ts';
 import { publishNpmCommand, runPublishNpm } from './commands/publish-npm.ts';
 import { publishTaggedTargetCommand, runPublishTaggedTarget } from './commands/publish-tagged-target.ts';
-import { releaseBumpedTargetsCommand, runReleaseBumpedTargets } from './commands/release-bumped-targets.ts';
+import { releaseBumpedTargetsCommand, runAirlockBumpedTargets } from './commands/release-bumped-targets.ts';
 
-export const releaseCommand = or(
+const airlockCommand = or(
   assertTagVersionCommand,
   bootstrapNpmTargetCommand,
   checkReleaseNotesCommand,
@@ -29,7 +29,7 @@ export const releaseCommand = or(
   releaseBumpedTargetsCommand,
 );
 
-export const runReleaseCommand = async (config: InferValue<typeof releaseCommand>) => {
+const runAirlockCommand = async (config: InferValue<typeof airlockCommand>) => {
   switch (config.command) {
     case 'assert-tag-version': {
       return runAssertTagVersion(config);
@@ -59,7 +59,7 @@ export const runReleaseCommand = async (config: InferValue<typeof releaseCommand
       return runPublishTaggedTarget(config);
     }
     case 'release-bumped-targets': {
-      return runReleaseBumpedTargets(config);
+      return runAirlockBumpedTargets(config);
     }
   }
 };
@@ -68,20 +68,20 @@ const VERSION = loadPackageVersion(import.meta.url);
 const program = defineProgram({
   metadata: {
     brief: message`Prepare and publish reviewed workspace releases.`,
-    name: 'zyplux-release',
+    name: 'airlock',
     version: VERSION,
   },
-  parser: releaseCommand,
+  parser: airlockCommand,
 });
 
-type ReleaseIo = {
+type AirlockIo = {
   onExit?: (exitCode: number) => never;
   stderr?: (line: string) => void;
   stdout?: (line: string) => void;
 };
 
-export const runRelease = async (args: readonly string[], io: ReleaseIo = {}) =>
-  runReleaseCommand(
+export const runAirlock = async (args: readonly string[], io: AirlockIo = {}) =>
+  runAirlockCommand(
     run(program, {
       aboveError: 'usage',
       args,

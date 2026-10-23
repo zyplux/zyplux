@@ -1,18 +1,14 @@
 import { $, readTrimmed } from '@zyplux/util/shell';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtempDisposable, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import * as z from 'zod';
 
 export const createGithubRelease = async (tag: string, notes: string, commit: string) => {
-  const directory = await mkdtemp(path.join(tmpdir(), 'cz-release-'));
-  try {
-    const notesFile = path.join(directory, 'release-notes.md');
-    await writeFile(notesFile, `${notes}\n`);
-    await $.gh.release.create(tag, { notesFile, target: commit, title: tag });
-  } finally {
-    await rm(directory, { force: true, recursive: true });
-  }
+  await using directory = await mkdtempDisposable(path.join(tmpdir(), 'release-notes-'));
+  const notesFile = path.join(directory.path, 'release-notes.md');
+  await writeFile(notesFile, `${notes}\n`);
+  await $.gh.release.create(tag, { notesFile, target: commit, title: tag });
 };
 import { ensure } from '@zyplux/util/assert';
 import { parseJson } from '@zyplux/util/json';
@@ -45,15 +41,11 @@ export const publishReleaseAssets = async (tag: string, notes: string, commit: s
     );
     return;
   }
-  const directory = await mkdtemp(path.join(tmpdir(), 'release-assets-'));
-  try {
-    const notesFile = path.join(directory, 'notes.md');
-    await writeFile(notesFile, `${notes}\n`);
-    if (release === null)
-      await $`gh release create ${tag} --draft --notes-file ${notesFile} --target ${commit} --title ${tag}`;
-    await $`gh release upload ${tag} ${assets} --clobber`;
-    await $`gh release edit ${tag} --draft=false --notes-file ${notesFile} --target ${commit}`;
-  } finally {
-    await rm(directory, { force: true, recursive: true });
-  }
+  await using directory = await mkdtempDisposable(path.join(tmpdir(), 'release-assets-'));
+  const notesFile = path.join(directory.path, 'notes.md');
+  await writeFile(notesFile, `${notes}\n`);
+  if (release === null)
+    await $`gh release create ${tag} --draft --notes-file ${notesFile} --target ${commit} --title ${tag}`;
+  await $`gh release upload ${tag} ${assets} --clobber`;
+  await $`gh release edit ${tag} --draft=false --notes-file ${notesFile} --target ${commit}`;
 };

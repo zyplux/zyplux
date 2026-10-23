@@ -42,3 +42,12 @@ export const expectNpmPublish = ({ calls }: ShellFake, dir: string) => {
     stdio: 'inherit',
   });
 };
+
+export const expectPypiPublish = async (shell: ShellFake) => {
+  const build = shell.calls.find(call => call.program === 'uv' && call.argv[0] === 'build');
+  const directory = build?.argv.at(-1);
+  ensure(directory !== undefined, 'PyPI builds require an isolated output directory');
+  expect(build?.argv).toEqual(['build', '--package', 'zyplux-cerberus', '--out-dir', directory]);
+  expect(shell).toHaveRun(`uv publish ${path.join(directory, '*')}`);
+  await expect(access(directory)).rejects.toMatchObject({ code: 'ENOENT' });
+};

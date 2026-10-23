@@ -15,7 +15,7 @@ ID = "workflow_toolchain_only"
 SUMMARY = "workflows use shared package-manager setup and install no extra tools"
 SCOPE = Scope.CONTENT
 
-_SETUP_ACTION = re.compile(r"^(setup(?:-|$)|action-setup$|.*-toolchain$)", re.IGNORECASE)
+_SETUP_ACTION = re.compile(r"^(setup(?:-|$)|action-setup(?:-|$)|.*-toolchain$)", re.IGNORECASE)
 
 _INSTALL_COMMANDS = (
     re.compile(r"\bapt(?:-get)?(?:\s+-{1,2}[\w=-]+)*\s+(?:install|add)\b", re.IGNORECASE),

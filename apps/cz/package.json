@@ -1,10 +1,9 @@
 {
   "name": "@zyplux/cz",
   "version": "0.15.0",
-  "description": "Repo automation CLI: cut releases, push branches and PRs, and clone reference repos.",
+  "description": "Repo automation CLI: push branches and PRs, maintain workspaces, and clone reference repos.",
   "keywords": [
     "cli",
-    "release",
     "monorepo",
     "automation",
     "github"
@@ -62,7 +61,6 @@
     "@happy-dom/global-registrator": "catalog:",
     "@optique/core": "catalog:",
     "@optique/run": "catalog:",
-    "@zyplux/release": "workspace:*",
     "@zyplux/util": "workspace:*",
     "commonmark": "catalog:",
     "mermaid": "catalog:",

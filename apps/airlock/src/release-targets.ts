@@ -1,5 +1,5 @@
 import { ensure } from '@zyplux/util/assert';
-import { FetchError, http, isHttpOk } from '@zyplux/util/http';
+import { FetchError, http } from '@zyplux/util/http';
 import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { parseToml } from '@zyplux/util/toml';
@@ -14,6 +14,7 @@ import {
   ManifestSchema,
   NpmPackageSchema,
   NpmVersionsSchema,
+  PypiFilesSchema,
   RegistryUrlSchema,
   VersionFieldSchema,
   VersionFileSchema,
@@ -22,11 +23,12 @@ import {
 export type ReleaseTarget = {
   action: ActionTarget | undefined;
   dir: string;
-  isPublished: (version: string) => Promise<boolean>;
+  isPublished: () => Promise<boolean>;
   kind: Target['kind'];
   label: string;
-  readVersion: () => Promise<string>;
+  tag: string;
   tagPrefix: string;
+  version: string;
   versionFile: string;
 };
 
@@ -123,35 +125,45 @@ const isPackagePublished = async (target: Target, version: string, directory: st
   if (kind === 'npm') {
     return isNpmPublished(directory, label, version);
   }
-  return kind === 'pypi'
-    ? isHttpOk(`https://pypi.org/pypi/${label}/${version}/json`)
-    : isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
+  if (kind === 'pypi') {
+    return isRegistryPublished(async () => {
+      const { urls } = await http.get(`https://pypi.org/pypi/${label}/${version}/json`).json(PypiFilesSchema);
+      return ['bdist_wheel', 'sdist'].every(kind => urls.some(file => file.packagetype === kind));
+    });
+  }
+  return isGhcrImagePublished(label.replace(/^ghcr\.io\//, ''), version);
 };
 
 export const loadReleaseTargets = async (): Promise<ReleaseTarget[]> => {
   const repoRoot = await readTrimmed($.git.showToplevel());
   const manifest = parseToml(await readFile(path.join(repoRoot, 'release-targets.toml'), 'utf8'), ManifestSchema);
-  return manifest.target.map(spec => ({
-    action: spec.kind === 'action' ? spec : undefined,
-    dir: path.join(repoRoot, path.dirname(spec.version.file)),
-    isPublished: async (version: string) =>
-      isPackagePublished(spec, version, path.join(repoRoot, path.dirname(spec.version.file))),
-    kind: spec.kind,
-    label: spec.label,
-    readVersion: async () => readVersion(repoRoot, spec.version),
-    tagPrefix: spec.tag_prefix,
-    versionFile: spec.version.file,
-  }));
+  return Promise.all(
+    manifest.target.map(async spec => {
+      const dir = path.join(repoRoot, path.dirname(spec.version.file));
+      const version = await readVersion(repoRoot, spec.version);
+      return {
+        action: spec.kind === 'action' ? spec : undefined,
+        dir,
+        isPublished: async () => isPackagePublished(spec, version, dir),
+        kind: spec.kind,
+        label: spec.label,
+        tag: `${spec.tag_prefix}${version}`,
+        tagPrefix: spec.tag_prefix,
+        version,
+        versionFile: spec.version.file,
+      };
+    }),
+  );
 };
 
-export const resolveReleaseTag = async (tag: string): Promise<{ target: ReleaseTarget; version: string }> => {
+export const resolveReleaseTag = async (tag: string): Promise<ReleaseTarget> => {
   const targets = await loadReleaseTargets();
   const target = targets.find(candidate => tag.startsWith(candidate.tagPrefix));
   ensure(target !== undefined, `no release target in release-targets.toml owns tag '${tag}'`);
 
-  const version = await target.readVersion();
-  const expected = `${target.tagPrefix}${version}`;
-  ensure(tag === expected, `tag '${tag}' does not match ${target.label} version '${version}' (expected '${expected}')`);
-
-  return { target, version };
+  ensure(
+    tag === target.tag,
+    `tag '${tag}' does not match ${target.label} version '${target.version}' (expected '${target.tag}')`,
+  );
+  return target;
 };

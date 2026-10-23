@@ -31,6 +31,7 @@ export const VersionFieldSchema = z.string();
 export const PythonReleaseSchema = z.object({ name: z.string(), private: z.literal(true), version: z.string() });
 export const NpmPackageSchema = z.object({ publishConfig: z.record(z.string(), z.unknown()).default({}) });
 export const NpmVersionsSchema = z.object({ versions: z.record(z.string(), z.unknown()) });
+export const PypiFilesSchema = z.object({ urls: z.array(z.object({ packagetype: z.string() })) });
 export const RegistryUrlSchema = z
   .url()
   .transform(registry => registry.replace(/\/$/u, ''))

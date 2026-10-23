@@ -277,12 +277,12 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 5.0.5(vitest@5.0.5)
+      '@zyplux/airlock':
+        specifier: workspace:*
+        version: link:apps/airlock
       '@zyplux/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config
-      '@zyplux/release':
-        specifier: workspace:*
-        version: link:apps/release
       '@zyplux/spectra':
         specifier: workspace:*
         version: link:packages/spectra
@@ -308,49 +308,9 @@ importers:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-istanbul@5.0.5)(happy-dom@21.0.4)(vite@8.1.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
 
-  apps/cerberus: {}
+  apps/action-setup-pm: {}
 
-  apps/cz:
-    dependencies:
-      '@happy-dom/global-registrator':
-        specifier: 'catalog:'
-        version: 21.0.4
-      '@optique/core':
-        specifier: 'catalog:'
-        version: 1.3.6
-      '@optique/run':
-        specifier: 'catalog:'
-        version: 1.3.6
-      '@zyplux/release':
-        specifier: workspace:*
-        version: link:../release
-      '@zyplux/util':
-        specifier: workspace:*
-        version: link:../../packages/util-ts
-      commonmark:
-        specifier: 'catalog:'
-        version: 0.31.2
-      mermaid:
-        specifier: 'catalog:'
-        version: 12.2.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.7
-    devDependencies:
-      '@types/commonmark':
-        specifier: 'catalog:'
-        version: 0.27.10
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.5
-      '@zyplux/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      publint:
-        specifier: 'catalog:'
-        version: 0.3.25
-
-  apps/release:
+  apps/airlock:
     dependencies:
       '@optique/core':
         specifier: 'catalog:'
@@ -390,7 +350,44 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
-  apps/setup-pm: {}
+  apps/cerberus: {}
+
+  apps/cz:
+    dependencies:
+      '@happy-dom/global-registrator':
+        specifier: 'catalog:'
+        version: 21.0.4
+      '@optique/core':
+        specifier: 'catalog:'
+        version: 1.3.6
+      '@optique/run':
+        specifier: 'catalog:'
+        version: 1.3.6
+      '@zyplux/util':
+        specifier: workspace:*
+        version: link:../../packages/util-ts
+      commonmark:
+        specifier: 'catalog:'
+        version: 0.31.2
+      mermaid:
+        specifier: 'catalog:'
+        version: 12.2.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      '@types/commonmark':
+        specifier: 'catalog:'
+        version: 0.27.10
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@zyplux/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      publint:
+        specifier: 'catalog:'
+        version: 0.3.25
 
   apps/totchef: {}
 
@@ -500,6 +497,27 @@ importers:
 
   packages/util_py: {}
 
+  tests/airlock:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@zyplux/airlock':
+        specifier: workspace:*
+        version: link:../../apps/airlock
+      '@zyplux/spectra':
+        specifier: workspace:*
+        version: link:../../packages/spectra
+      '@zyplux/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@zyplux/util':
+        specifier: workspace:*
+        version: link:../../packages/util-ts
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-istanbul@5.0.5)(happy-dom@21.0.4)(vite@8.1.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
+
   tests/cz:
     devDependencies:
       '@types/node':
@@ -508,9 +526,6 @@ importers:
       '@zyplux/cz':
         specifier: workspace:*
         version: link:../../apps/cz
-      '@zyplux/release':
-        specifier: workspace:*
-        version: link:../../apps/release
       '@zyplux/spectra':
         specifier: workspace:*
         version: link:../../packages/spectra
@@ -568,6 +583,27 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-istanbul@5.0.5)(happy-dom@21.0.4)(vite@8.1.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
+
+  tests/tsconfig:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.5
+      '@zyplux/spectra':
+        specifier: workspace:*
+        version: link:../../packages/spectra
+      '@zyplux/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@zyplux/util':
+        specifier: workspace:*
+        version: link:../../packages/util-ts
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-istanbul@5.0.5)(happy-dom@21.0.4)(vite@8.1.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
 
   tests/util-ts:
     devDependencies:
