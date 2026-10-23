@@ -70,7 +70,9 @@ describe('20.1 native npm publication', () => {
     registries.setPublished({ npmPublished: false });
     shell.on('pnpm publish', '');
 
-    await expect(airlock.run('publish-npm')).rejects.toThrow('@zyplux/util 1.2.3 is missing from its registry');
+    await expect(airlock.run('publish-npm')).rejects.toThrow(
+      'npm dependencies did not become available: @zyplux/util@1.2.3',
+    );
 
     expect(shell).toHaveRunMatching('pnpm publish');
     expect(shell).not.toHaveRunMatching('gh release');

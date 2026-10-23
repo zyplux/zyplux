@@ -35,7 +35,7 @@ describe('2.2 reading a version whose regex does not match its source file', () 
 });
 
 describe('2.3 checking whether the ghcr image target is published', () => {
-  test('2.3.1 treats a failed registry auth handshake as not published', async ({
+  test('2.3.1 rejects finalized releases when their image cannot be accessed', async ({
     planReleases,
     registries,
     release,
@@ -48,7 +48,7 @@ describe('2.3 checking whether the ghcr image target is published', () => {
       '{"data":{"repository":{"release":{"id":"release-id","isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
     );
 
-    expect(await planReleases()).toEqual([expect.objectContaining({ kind: 'ghcr', tags: ['ci-image-v3.4.5'] })]);
+    await expect(planReleases()).rejects.toThrow('is missing image');
   });
 
   test.for([
@@ -56,8 +56,8 @@ describe('2.3 checking whether the ghcr image target is published', () => {
     { ghToken: '', nodeToken: 'read-token' },
   ])(
     '2.3.2 authenticates private image probes and propagates registry failures (%j)',
-    async ({ ghToken, nodeToken }, { airlock, env, network, registries }) => {
-      registries.setPublished({ ghcrPublished: true });
+    async ({ ghToken, nodeToken }, { airlock, env, network, release }) => {
+      release.stageAllPublished();
       env.set('GH_TOKEN', ghToken);
       env.set('NODE_AUTH_TOKEN', nodeToken);
       env.set('GITHUB_ACTOR', 'bot');

@@ -82,24 +82,31 @@ describe('22.1 publishing standard container releases', () => {
       '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
     );
     await airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch));
-    expect(shell).not.toHaveRunMatching(/podman|gh release/);
+    expect(shell).not.toHaveRunMatching(/podman|gh release (?:create|upload|edit)/);
   });
 
   test('22.1.5 rejects a finalized release whose image is missing without changing its manifest', async ({
     airlock,
     containerRelease,
+    network,
     planReleases,
+    registries,
     shell,
   }) => {
+    registries.setPublished({ ghcrPublished: true });
+    network.on(
+      `https://ghcr.io/v2/zyplux/ci/manifests/sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`,
+      () => new Response(undefined, { status: 404 }),
+    );
     shell.on(
       'gh api graphql',
       '{"data":{"repository":{"release":{"isDraft":false,"releaseAssets":{"nodes":[{"name":"release.json"}]}}}}}',
     );
-    expect(await planReleases(containerRelease.batch.tags[0])).toEqual([containerRelease.batch]);
+    await expect(planReleases(containerRelease.batch.tags[0])).rejects.toThrow('is missing image');
     await expect(airlock.run('publish', '--batch', JSON.stringify(containerRelease.batch))).rejects.toThrow(
-      'published release ci-image-v3.4.5 is missing image ghcr.io/zyplux/ci:3.4.5',
+      `published release ci-image-v3.4.5 is missing image ghcr.io/zyplux/ci@sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`,
     );
-    expect(shell).not.toHaveRunMatching(/podman|gh release/);
+    expect(shell).not.toHaveRunMatching(/podman|gh release (?:create|upload|edit)/);
   });
 
   test('22.1.6 requires the pushed image in the registry before creating its release', async ({

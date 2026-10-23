@@ -73,7 +73,9 @@ export const createRegistries = (network: FetchFake) =>
           : notFoundResponse(),
       );
       network.on('https://registry.npmjs.org/', () =>
-        npmPublished ? Response.json({ versions: { '1.2.3': {} } }) : notFoundResponse(),
+        npmPublished
+          ? Response.json({ versions: { '1.2.3': { dist: { tarball: 'https://registry.npmjs.org/util.tgz' } } } })
+          : notFoundResponse(),
       );
     },
   }) satisfies Registries;

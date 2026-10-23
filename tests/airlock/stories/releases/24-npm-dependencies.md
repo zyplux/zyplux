@@ -10,11 +10,17 @@
 
 ### 24.1.4 rejects cycles when publishing several npm targets in one command
 
+### 24.1.5 rejects publish-only lifecycle hooks before packing
+
+### 24.1.6 encodes target names in archive filenames
+
 ## 24.2 waiting for installable dependencies
 
 ### 24.2.1 waits for dependency metadata and tarball visibility before uploading
 
 ### 24.2.3 propagates registry authorization errors before uploading
+
+### 24.2.4 waits for existing version tarballs before repairing GitHub releases
 
 ## 24.3 packed publication dependencies
 

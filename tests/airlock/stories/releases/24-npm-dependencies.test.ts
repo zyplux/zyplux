@@ -7,6 +7,46 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_UNAVAILABLE = 503;
 
 describe('24.1 isolating npm publication jobs', () => {
+  test.for(['prepublishOnly', 'publish', 'postpublish'])(
+    '24.1.5 rejects publish-only lifecycle hooks before packing (%s)',
+    async (hook, { airlock, consumer, planReleases, shell, tempDir }) => {
+      await tempDir.write(
+        'packages/consumer/package.json',
+        JSON.stringify({ name: consumer.label, scripts: { [hook]: 'build-package' }, version: consumer.version }),
+      );
+      const [batch] = await planReleases(consumer.tag);
+      await expect(airlock.run('publish', '--batch', JSON.stringify(batch))).rejects.toThrow(
+        'publish-only hooks are unsupported',
+      );
+      expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish/);
+    },
+  );
+
+  test('24.1.6 encodes target names in archive filenames', async ({
+    airlock,
+    consumer,
+    loadArtifact,
+    planReleases,
+    repo,
+    shell,
+    stageNpmPublication,
+    tempDir,
+  }) => {
+    const manifest = await loadArtifact('airlock-targets.toml');
+    await tempDir.write(
+      'airlock-targets.toml',
+      manifest.replace('[consumer]', '["team/consumer"]\nlabel = "@zyplux/consumer"'),
+    );
+    shell.on('tar -xOf', '{}');
+    const [batch] = await planReleases('team/consumer-v1.2.3');
+    repo.setHeadSha('reviewed-sha');
+    stageNpmPublication();
+    await airlock.run('publish', '--batch', JSON.stringify(batch));
+    expect(shell.commandsMatching('pnpm pack')[0]).toContain('/team%2Fconsumer-v1.2.3.tgz');
+    expect(shell).toHaveRunMatching('gh release create team/consumer-v1.2.3');
+    expect(consumer.label).toBe('@zyplux/consumer');
+  });
+
   test('24.1.1 plans separate jobs without packing packages or discovering dependencies', async ({
     consumer,
     planReleases,
@@ -151,6 +191,23 @@ describe('24.3 packed publication dependencies', () => {
 });
 
 describe('24.2 waiting for installable dependencies', () => {
+  test('24.2.4 waits for existing version tarballs before repairing GitHub releases', async ({
+    airlock,
+    consumer,
+    network,
+    planReleases,
+    registries,
+    shell,
+  }) => {
+    const [batch] = await planReleases(consumer.tag);
+    registries.setPublished({ npmPublished: true });
+    network.on('https://registry.npmjs.org/util.tgz', () => new Response(undefined, { status: HTTP_NOT_FOUND }));
+    await expect(airlock.run('publish', '--batch', JSON.stringify(batch))).rejects.toThrow(
+      'npm dependencies did not become available',
+    );
+    expect(shell).not.toHaveRunMatching(/pnpm pack|pnpm publish|gh release create/);
+  });
+
   test.for([undefined, HTTP_REQUEST_TIMEOUT, HTTP_TOO_MANY_REQUESTS, HTTP_UNAVAILABLE, 'timeout'] as const)(
     '24.2.1 waits for dependency metadata and tarball visibility before uploading (%j)',
     async (failure, { airlock, consumer, network, planReleases, repo, shell, stageNpmPublication }) => {

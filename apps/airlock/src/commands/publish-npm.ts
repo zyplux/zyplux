@@ -3,13 +3,13 @@ import { ensure } from '@zyplux/util/assert';
 import { runPassthrough } from '@zyplux/util/exec';
 import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
-import { mkdtempDisposable } from 'node:fs/promises';
+import { mkdtempDisposable, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import type { ReleaseTarget } from '#release-targets';
 
-import { WorkspacePackagesSchema } from '#contracts';
+import { NpmPackageSchema, WorkspacePackagesSchema } from '#contracts';
 import { createGithubRelease } from '#github-releases';
 import { loadNpmDependencies, orderNpmTargets, waitForNpmDependencies } from '#npm-dependencies';
 import { loadPreparedTargets } from '#release-notes';
@@ -37,9 +37,14 @@ const validateNpmWorkspaces = async (releases: ReleaseTarget[], root: string) =>
 export const publishNpm = async (targets: ReleaseTarget[]) => {
   if (targets.length === 0) return;
   await using directory = await mkdtempDisposable(path.join(tmpdir(), 'airlock-npm-'));
-  const getArchive = ({ tag }: ReleaseTarget) => path.join(directory.path, `${tag}.tgz`);
+  const getArchive = ({ tag }: ReleaseTarget) => path.join(directory.path, `${encodeURIComponent(tag)}.tgz`);
   const dependencies = new Map<string, ReleaseTarget[]>();
   for (const target of targets) {
+    const { scripts } = parseJson(await readFile(path.join(target.dir, 'package.json'), 'utf8'), NpmPackageSchema);
+    ensure(
+      ['prepublishOnly', 'publish', 'postpublish'].every(hook => !Object.hasOwn(scripts, hook)),
+      `${target.label}: archive publication requires prepack/prepare/postpack hooks; publish-only hooks are unsupported`,
+    );
     const archive = getArchive(target);
     await $`pnpm pack --out ${archive}`.cwd(target.dir);
     dependencies.set(target.label, await loadNpmDependencies(target, archive));
@@ -57,11 +62,7 @@ export const publishNpmTargets = async (releases: NpmRelease[]) => {
   const pending = [];
   for (const release of releases) if (!(await release.isPublished())) pending.push(release);
   await publishNpm(pending);
-  await Promise.all(
-    releases.map(async release => {
-      ensure(await release.isPublished(), `${release.label} ${release.version} is missing from its registry`);
-    }),
-  );
+  await waitForNpmDependencies(releases);
   const head = await readTrimmed($.git.revParse('HEAD'));
   for (const release of releases) {
     if (!(await $.gh.release.exists(release.tag))) await createGithubRelease(release.tag, release.notes, head);

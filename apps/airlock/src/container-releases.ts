@@ -1,5 +1,6 @@
 import { ensure } from '@zyplux/util/assert';
 import { run } from '@zyplux/util/exec';
+import { parseJson } from '@zyplux/util/json';
 import { $, readTrimmed } from '@zyplux/util/shell';
 import { mkdtempDisposable, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,18 +8,31 @@ import path from 'node:path';
 
 import type { ReleaseTarget } from './release-targets.ts';
 
-import { ContainerDigestSchema } from './contracts.ts';
+import { ContainerDigestSchema, ContainerManifestSchema } from './contracts.ts';
 import { isReleasePublished, publishReleaseAssets } from './github-releases.ts';
+import { isContainerImageAvailable } from './release-registries.ts';
 
-export const CONTAINER_MANIFEST = 'release.json';
+const CONTAINER_MANIFEST = 'release.json';
+
+export const isContainerReleasePublished = async ({ label, tag, version }: ReleaseTarget) => {
+  if (!(await isReleasePublished(tag, [CONTAINER_MANIFEST]))) return false;
+  const manifest = parseJson(
+    await readTrimmed($`gh release download ${tag} --pattern ${CONTAINER_MANIFEST} --output -`),
+    ContainerManifestSchema,
+  );
+  ensure(
+    manifest.version === version && manifest.image.startsWith(`${label}@`),
+    `published release ${tag} has an invalid container manifest`,
+  );
+  const digest = ContainerDigestSchema.parse(manifest.image.slice(`${label}@`.length));
+  ensure(await isContainerImageAvailable(label, digest), `published release ${tag} is missing image ${manifest.image}`);
+  return true;
+};
 
 export const publishContainer = async (target: ReleaseTarget, notes: string) => {
   const { container, label, tag, version } = target;
   ensure(container !== undefined, 'container publication requires a GHCR target');
-  if (await isReleasePublished(tag, [CONTAINER_MANIFEST])) {
-    ensure(await target.isPublished(), `published release ${tag} is missing image ${label}:${version}`);
-    return;
-  }
+  if (await isContainerReleasePublished(target)) return;
   const token = process.env['GH_TOKEN'];
   const actor = process.env['GITHUB_ACTOR'];
   ensure(token !== undefined && token.length > 0, 'GH_TOKEN is required to push to GHCR');
@@ -34,7 +48,7 @@ export const publishContainer = async (target: ReleaseTarget, notes: string) => 
     await $`podman build ${dockerfile} --label ${`org.opencontainers.image.version=${version}`} --label ${`org.opencontainers.image.revision=${revision}`} -t ${versioned} ${container.buildContext}`;
     await $`podman push --digestfile ${digestFile} ${versioned}`;
     const digest = ContainerDigestSchema.parse(await readFile(digestFile, 'utf8'));
-    ensure(await target.isPublished(), `container push did not publish image ${versioned}`);
+    ensure(await isContainerImageAvailable(label, digest), `container push did not publish image ${versioned}`);
     await writeFile(manifest, `${JSON.stringify({ image: `${label}@${digest}`, version })}\n`);
   } finally {
     await $`podman logout ghcr.io`;

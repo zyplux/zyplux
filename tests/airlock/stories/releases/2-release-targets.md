@@ -10,7 +10,7 @@
 
 ## 2.3 checking whether the ghcr image target is published
 
-### 2.3.1 treats a failed registry auth handshake as not published
+### 2.3.1 rejects finalized releases when their image cannot be accessed
 
 ### 2.3.2 authenticates private image probes and propagates registry failures
 

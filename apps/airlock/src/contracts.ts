@@ -60,6 +60,7 @@ export const NpmPackageSchema = z.object({
   dependencies: z.record(z.string(), z.string()).default({}),
   optionalDependencies: z.record(z.string(), z.string()).default({}),
   publishConfig: z.record(z.string(), z.unknown()).default({}),
+  scripts: z.record(z.string(), z.string()).default({}),
 });
 export const NpmVersionsSchema = z.object({ versions: z.record(z.string(), z.unknown()) });
 export const NpmArtifactSchema = z.object({ dist: z.object({ tarball: z.url() }) });
@@ -78,6 +79,7 @@ export const ContainerDigestSchema = z
   .string()
   .trim()
   .regex(/^sha256:[\da-f]{64}$/u);
+export const ContainerManifestSchema = z.object({ image: z.string(), version: z.string() });
 export const NpmLatestSchema = z.object({ 'dist-tags': z.object({ latest: z.string() }) });
 export const PypiLatestSchema = z.object({ info: z.object({ version: z.string() }) });
 export const SurfaceFindingsSchema = z

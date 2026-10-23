@@ -109,6 +109,18 @@ export const isNpmVersionAvailable = async ({
   }
 };
 
+export const isContainerImageAvailable = async (label: string, reference: string) =>
+  (await findRegistryEntry(async () => {
+    const image = label.replace(/^ghcr\.io\//u, '');
+    const { token } = await fetchGhcrToken(image);
+    await http
+      .head(`https://ghcr.io/v2/${image}/manifests/${reference}`, {
+        headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${token}` },
+      })
+      .response();
+    return true;
+  })) ?? false;
+
 export const isPackagePublished = async (target: Target, version: string, directory: string) => {
   if (target.kind === 'action') return isActionPublished(target, version);
   return (
@@ -123,14 +135,7 @@ export const isPackagePublished = async (target: Target, version: string, direct
         const { urls } = await http.get(`https://pypi.org/pypi/${label}/${version}/json`).json(PypiFilesSchema);
         return ['bdist_wheel', 'sdist'].every(kind => urls.some(file => file.packagetype === kind));
       }
-      const image = label.replace(/^ghcr\.io\//u, '');
-      const { token } = await fetchGhcrToken(image);
-      await http
-        .head(`https://ghcr.io/v2/${image}/manifests/${version}`, {
-          headers: { Accept: MANIFEST_MEDIA_TYPES, Authorization: `Bearer ${token}` },
-        })
-        .response();
-      return true;
+      return isContainerImageAvailable(label, version);
     })) ?? false
   );
 };

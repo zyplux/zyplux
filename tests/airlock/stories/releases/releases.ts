@@ -28,6 +28,8 @@ import {
 } from './release-scenario.ts';
 import { extendSurfaceChecks } from './surface-check.ts';
 
+const DIGEST_HEX_LENGTH = 64;
+
 const releaseTest = repositoryTest
   .extend('airlock', () => createCliRunner(runAirlock))
   .extend<{
@@ -117,6 +119,14 @@ const releaseTest = repositoryTest
       async ({ repo, shell, tempDir }, use) => {
         repo.setRoot(tempDir.path);
         const targets = await seedReleaseTargets(tempDir);
+        shell.on('gh api graphql', '{"data":{"repository":{"release":null}}}');
+        shell.on(
+          'gh release download',
+          JSON.stringify({
+            image: `${targets.ci.label}@sha256:${'1'.repeat(DIGEST_HEX_LENGTH)}`,
+            version: targets.ci.version,
+          }),
+        );
         shell.on('pnpm pack', '');
         shell.on('tar -xOf', () => {
           const archive = shell.calls.at(-1)?.argv[1];
