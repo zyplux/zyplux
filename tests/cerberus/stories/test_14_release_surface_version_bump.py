@@ -121,35 +121,24 @@ def test_14_3_5_preserves_command_errors_written_to_stdout(
 
 
 @pytest.mark.parametrize(
-    "payload",
+    "stdout",
     [
-        None,
-        {},
-        [],
-        [None],
-        [{}],
-        [{"status": "unknown", "message": "finding"}],
-        [{"status": 1, "message": "finding"}],
-        [{"status": "pass", "message": None}],
-        [{"status": "pass", "message": " "}],
+        "null",
+        "{}",
+        "[]",
+        "[null]",
+        "[{}]",
+        '[{"status":"unknown","message":"finding"}]',
+        '[{"status":1,"message":"finding"}]',
+        '[{"status":"pass","message":null}]',
+        '[{"status":"pass","message":" "}]',
+        "not json",
     ],
 )
 def test_14_4_1_rejects_malformed_structured_findings(
-    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, payload: object, error: MakeFinding
+    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, stdout: str, error: MakeFinding
 ) -> None:
-    fake_proc.serve("pnpm exec", stdout=json.dumps(payload))
-
-    result = run_check_with_files(CHECK_ID, MANIFEST)
-
-    assert len(result.problems) == 1
-    assert result.problems[0].status == error("").status
-    assert result.problems[0].message.startswith("Airlock returned invalid findings:")
-
-
-def test_14_4_2_rejects_output_that_is_not_json(
-    run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, error: MakeFinding
-) -> None:
-    fake_proc.serve("pnpm exec", stdout="not json")
+    fake_proc.serve("pnpm exec", stdout=stdout)
 
     result = run_check_with_files(CHECK_ID, MANIFEST)
 

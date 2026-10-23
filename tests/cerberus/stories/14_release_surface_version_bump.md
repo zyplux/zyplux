@@ -27,5 +27,3 @@
 ## 14.4 validating structured findings
 
 ### 14.4.1 rejects malformed structured findings
-
-### 14.4.2 rejects output that is not json

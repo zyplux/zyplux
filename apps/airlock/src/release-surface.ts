@@ -52,29 +52,7 @@ const validateBump = (target: Target, version: string, baseline: Baseline) => {
   ];
 };
 
-const validateTarget = async (root: string, target: Target, base?: BaseTargets) => {
-  let version: string;
-  try {
-    const content = await readFile(path.join(root, target.version.file), 'utf8');
-    version = validateVersion(parseTargetVersion(content, target.version));
-  } catch (error) {
-    return [buildFinding('fail', `${target.label}: cannot read ${target.version.file}: ${formatError(error)}`)];
-  }
-  let baseline: Baseline | undefined;
-  if (base !== undefined) {
-    try {
-      const baseVersion = await loadBaseVersion(root, base, target);
-      if (baseVersion !== undefined) {
-        if (compare(version, baseVersion) < 0)
-          return [buildFinding('fail', `${target.label}: version must not decrease from ${base.ref} (${baseVersion})`)];
-        baseline = { label: `${base.ref} (${baseVersion})`, version: baseVersion };
-      }
-    } catch (error) {
-      return [
-        buildFinding('error', `${target.label}: cannot compare the target branch ${base.ref}: ${formatError(error)}`),
-      ];
-    }
-  }
+const validatePublishedVersion = async (root: string, target: Target, version: string, baseline?: Baseline) => {
   let published: string | undefined;
   try {
     const latest = await fetchLatestVersion(target, path.join(root, path.dirname(target.version.file)));
@@ -105,6 +83,32 @@ const validateTarget = async (root: string, target: Target, base?: BaseTargets) 
   } catch (error) {
     return [buildFinding('error', `${target.label}: cannot diff against ${tag}: ${formatError(error)}`)];
   }
+};
+
+const validateTarget = async (root: string, target: Target, base?: BaseTargets) => {
+  let version: string;
+  try {
+    const content = await readFile(path.join(root, target.version.file), 'utf8');
+    version = validateVersion(parseTargetVersion(content, target.version));
+  } catch (error) {
+    return [buildFinding('fail', `${target.label}: cannot read ${target.version.file}: ${formatError(error)}`)];
+  }
+  let baseline: Baseline | undefined;
+  if (base !== undefined) {
+    try {
+      const baseVersion = await loadBaseVersion(root, base, target);
+      if (baseVersion !== undefined) {
+        if (compare(version, baseVersion) < 0)
+          return [buildFinding('fail', `${target.label}: version must not decrease from ${base.ref} (${baseVersion})`)];
+        baseline = { label: `${base.ref} (${baseVersion})`, version: baseVersion };
+      }
+    } catch (error) {
+      return [
+        buildFinding('error', `${target.label}: cannot compare the target branch ${base.ref}: ${formatError(error)}`),
+      ];
+    }
+  }
+  return validatePublishedVersion(root, target, version, baseline);
 };
 
 export const checkReleaseSurface = async (base?: string): Promise<SurfaceFinding[]> => {
