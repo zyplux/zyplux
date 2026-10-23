@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from cerberus.model import Status
-    from seam_fixtures import FakeRegistry, RunCheckOnDisk
+    from seam_fixtures import FakeProc, FakeRegistry, RunCheckOnDisk
 
 
 CHECK_ID = "zyplux_deps_latest"
@@ -295,3 +295,51 @@ def test_22_5_2_reads_private_ghcr_images_with_the_workflow_credential(
         {"Authorization": "Basic Ym90OnJlYWQtdG9rZW4="},
         {"Authorization": "Bearer anonymous"},
     ]
+
+
+@pytest.mark.parametrize("source", ["GH_TOKEN", "GITHUB_TOKEN", "gh login"])
+def test_22_6_1_reads_private_npm_metadata_with_existing_github_credentials(
+    run_check_on_disk: RunCheckOnDisk,
+    fake_registry: FakeRegistry,
+    fake_proc: FakeProc,
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
+) -> None:
+    if source == "gh login":
+        fake_proc.serve("gh auth", stdout="saved-token\n")
+    else:
+        monkeypatch.setenv(source, "saved-token")
+    fake_registry.serve_npm("@zyplux/util", "0.2.0", host="npm.pkg.github.com")
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": NPM_UTIL_LOCK.replace("@0.2.0", "@gh:0.2.0")})
+    assert result.problems == []
+    assert fake_registry.request_headers == [{"Authorization": "Bearer saved-token"}]
+    if source != "gh login":
+        assert fake_proc.calls == []
+
+
+def test_22_6_2_reads_private_containers_with_the_saved_login_and_actor(
+    run_check_on_disk: RunCheckOnDisk,
+    fake_registry: FakeRegistry,
+    fake_proc: FakeProc,
+    status: type[Status],
+) -> None:
+    fake_proc.serve("gh auth", stdout="saved-token\n")
+    fake_registry.payloads["api.github.com", "/user"] = {"login": "reader"}
+    fake_registry.serve_ghcr("zyplux/ci", ["0.1.0"])
+    result = run_check_on_disk(CHECK_ID, {".github/workflows/ci.yml": CI_IMAGE_WORKFLOW})
+    assert (result.status, result.problems) == (status.PASS, [])
+    assert fake_registry.request_headers[:2] == [
+        {"Authorization": "Bearer saved-token", "User-Agent": "zyplux-cerberus"},
+        {"Authorization": "Basic cmVhZGVyOnNhdmVkLXRva2Vu"},
+    ]
+
+
+def test_22_6_3_reports_missing_private_registry_credentials(
+    run_check_on_disk: RunCheckOnDisk,
+    fake_registry: FakeRegistry,
+    status: type[Status],
+) -> None:
+    result = run_check_on_disk(CHECK_ID, {"pnpm-lock.yaml": NPM_UTIL_LOCK.replace("@0.2.0", "@gh:0.2.0")})
+    assert result.status == status.ERROR
+    assert "gh auth login --scopes read:packages" in result.problems[0].message
+    assert fake_registry.requests == []

@@ -1,5 +1,11 @@
 # @zyplux/airlock
 
+## 1.1.1
+
+### Patch Changes
+
+- Reuse the existing GitHub CLI login for private npm and container registry reads when explicit credentials are absent; preserve CI token precedence and report access failures.
+
 ## 1.1.0
 
 ### Minor Changes

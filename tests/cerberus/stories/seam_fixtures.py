@@ -383,7 +383,10 @@ class FakeRegistry:
 
 
 @pytest.fixture
-def fake_registry(monkeypatch: pytest.MonkeyPatch) -> FakeRegistry:
+def fake_registry(monkeypatch: pytest.MonkeyPatch, fake_proc: FakeProc) -> FakeRegistry:
+    for name in ("NODE_AUTH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "GITHUB_ACTOR"):
+        monkeypatch.delenv(name, raising=False)
+    fake_proc.serve("gh auth", returncode=1)
     fake = FakeRegistry()
     monkeypatch.setattr(registries, "_fetch_json", fake.fetch_json)
     return fake

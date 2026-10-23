@@ -9,6 +9,10 @@
     - container-releases
     - dependency-publications
     - independent-publications
+'@zyplux/airlock@1.1.1':
+  dir: apps/airlock
+  intents:
+    - mighty-rocks-dream
 '@zyplux/cz@0.15.0':
   dir: apps/cz
   intents:
@@ -21,6 +25,10 @@ zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
     - quarantine-eligible-tools
+zyplux-cerberus@0.25.2:
+  dir: apps/cerberus
+  intents:
+    - mighty-rocks-dream
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

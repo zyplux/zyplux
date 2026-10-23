@@ -107,3 +107,11 @@ stays visible.
 ### 22.5.2 reads private ghcr images with the workflow credential
 
 Registry authentication uses the workflow credential and actor; the returned bearer token authorizes image metadata reads.
+
+## 22.6 reusing GitHub credentials locally
+
+### 22.6.1 reads private npm metadata with existing github credentials
+
+### 22.6.2 reads private containers with the saved login and actor
+
+### 22.6.3 reports missing private registry credentials

@@ -74,6 +74,7 @@ export const RegistryUrlSchema = z
   .transform(registry => registry.replace(/\/$/u, ''))
   .pipe(z.enum(['https://registry.npmjs.org', 'https://npm.pkg.github.com']))
   .default('https://registry.npmjs.org');
+export const GithubUserSchema = z.object({ login: z.string().min(1) });
 export const GhcrTokenSchema = z.object({ token: z.string() });
 export const GhcrTagsSchema = z.object({ tags: z.array(z.string()).nullable() });
 export const ContainerDigestSchema = z

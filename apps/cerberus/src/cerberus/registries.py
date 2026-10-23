@@ -15,6 +15,8 @@ import re
 import urllib.parse
 from datetime import UTC, datetime, timedelta
 
+from cerberus import proc
+
 _REQUEST_TIMEOUT_SECONDS = 10.0
 _HTTP_OK = 200
 _VERSION_TAG = re.compile(r"\d+(?:\.\d+)*")
@@ -87,6 +89,17 @@ def _find_mature_version(payload: object, package: str, latest: str, published_b
     return max(eligible, key=_version_sort_key)
 
 
+def _find_github_token(preferred: str | None = None) -> str | None:
+    token = preferred or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    try:
+        login = proc.run(["gh", "auth", "token", "--hostname", "github.com"])
+    except proc.ToolNotFoundError:
+        return None
+    return login.stdout.strip() if login.returncode == 0 else None
+
+
 def fetch_latest_npm(
     package: str, registry: str = "https://registry.npmjs.org", *, minimum_age: timedelta | None = None
 ) -> str:
@@ -97,9 +110,12 @@ def fetch_latest_npm(
         raise RegistryLookupError(failure)
     headers: dict[str, str] = {}
     if registry == "https://npm.pkg.github.com":
-        token = os.environ.get("NODE_AUTH_TOKEN")
+        token = _find_github_token(os.environ.get("NODE_AUTH_TOKEN"))
         if not token:
-            failure = "NODE_AUTH_TOKEN is required to read npm.pkg.github.com"
+            failure = (
+                "GitHub Packages requires authentication: "
+                "run gh auth login --scopes read:packages or supply NODE_AUTH_TOKEN"
+            )
             raise RegistryLookupError(failure)
         headers["Authorization"] = f"Bearer {token}"
     path = "/" + urllib.parse.quote(package, safe="@")
@@ -121,9 +137,19 @@ def _version_sort_key(tag: str) -> tuple[int, ...]:
 
 def fetch_latest_ghcr(image: str) -> str:
     headers: dict[str, str] = {}
-    credential = os.environ.get("GH_TOKEN") or os.environ.get("NODE_AUTH_TOKEN")
-    actor = os.environ.get("GITHUB_ACTOR")
-    if credential and actor:
+    credential = _find_github_token(os.environ.get("GH_TOKEN") or os.environ.get("NODE_AUTH_TOKEN"))
+    if credential:
+        actor = os.environ.get("GITHUB_ACTOR") or str(
+            _extract(
+                _fetch_json(
+                    "api.github.com",
+                    "/user",
+                    {"Authorization": f"Bearer {credential}", "User-Agent": "zyplux-cerberus"},
+                ),
+                "login",
+                source="GitHub user",
+            )
+        )
         encoded = base64.b64encode(f"{actor}:{credential}".encode()).decode()
         headers["Authorization"] = f"Basic {encoded}"
     token_payload = _fetch_json("ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull", headers)

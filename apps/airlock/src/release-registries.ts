@@ -1,6 +1,8 @@
 import { ensure } from '@zyplux/util/assert';
 import { FetchError, http } from '@zyplux/util/http';
 import { parseJson } from '@zyplux/util/json';
+import { attemptAsync } from '@zyplux/util/result';
+import { $, readTrimmed } from '@zyplux/util/shell';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { rcompare, valid } from 'semver';
@@ -12,6 +14,7 @@ import { fetchActionReleases, isActionPublished } from './action-releases.ts';
 import {
   GhcrTagsSchema,
   GhcrTokenSchema,
+  GithubUserSchema,
   NpmArtifactSchema,
   NpmLatestSchema,
   NpmPackageSchema,
@@ -44,12 +47,33 @@ const findRegistryEntry = async <Entry>(fetchEntry: () => Promise<Entry>) => {
   }
 };
 
-const fetchGhcrToken = async (image: string) => {
-  const ghToken = process.env['GH_TOKEN'];
-  const token = ghToken !== undefined && ghToken.length > 0 ? ghToken : process.env['NODE_AUTH_TOKEN'];
+const loadGithubToken = async (...tokens: (string | undefined)[]) => {
+  const token = [...tokens, process.env['GH_TOKEN'], process.env['GITHUB_TOKEN']].find(
+    candidate => candidate !== undefined && candidate.length > 0,
+  );
+  if (token !== undefined) return token;
+  const login = await attemptAsync(() => readTrimmed($`gh auth token --hostname github.com`.quiet()));
+  return login.ok ? login.data : undefined;
+};
+
+const fetchGithubActor = async (token: string) => {
   const actor = process.env['GITHUB_ACTOR'];
+  if (actor !== undefined && actor.length > 0) return actor;
+  const user = await http
+    .get('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'zyplux-airlock' },
+    })
+    .json(GithubUserSchema);
+  return user.login;
+};
+
+const fetchGhcrToken = async (image: string) => {
+  const token = await loadGithubToken(process.env['GH_TOKEN'], process.env['NODE_AUTH_TOKEN']);
   const headers: Record<string, string> = {};
-  if (token && actor) headers['Authorization'] = `Basic ${Buffer.from(`${actor}:${token}`).toString('base64')}`;
+  if (token) {
+    const actor = await fetchGithubActor(token);
+    headers['Authorization'] = `Basic ${Buffer.from(`${actor}:${token}`).toString('base64')}`;
+  }
   return http
     .get(`https://ghcr.io/token?service=ghcr.io&scope=repository:${image}:pull`, { headers })
     .json(GhcrTokenSchema);
@@ -67,8 +91,11 @@ const loadNpmRequest = async (directory: string, label: string) => {
   const registry = await loadNpmRegistry(directory, label);
   const headers: Record<string, string> = {};
   if (registry === 'https://npm.pkg.github.com') {
-    const token = process.env['NODE_AUTH_TOKEN'];
-    ensure(token !== undefined && token.length > 0, 'NODE_AUTH_TOKEN is required to read npm.pkg.github.com');
+    const token = await loadGithubToken(process.env['NODE_AUTH_TOKEN']);
+    ensure(
+      token !== undefined && token.length > 0,
+      'GitHub Packages requires authentication: run gh auth login --scopes read:packages or supply NODE_AUTH_TOKEN',
+    );
     headers['Authorization'] = `Bearer ${token}`;
   }
   return { headers, url: `${registry}/${encodeURIComponent(label)}` };
