@@ -1,4 +1,10 @@
-# @zyplux/airlock
+# zyplux-airlock
+
+## 2.0.0
+
+### Major Changes
+
+- Publish Airlock as the `zyplux-airlock` Python distribution. Cerberus uses the Python library directly, and the Airlock action runs its own locked implementation. Remove the `@zyplux/airlock` npm dependency from consumers and use `uv run airlock` for local release commands; select `action-airlock-v2` for the Python action.
 
 ## 1.1.1
 

@@ -1,8 +1,8 @@
-# 2. [Discovering and resolving release targets](2-release-targets.test.ts)
+# 2. [Discovering and resolving release targets](test_2_release_targets.py)
 
 ## 2.1 loading release targets from the manifest
 
-### 2.1.1 loads every declared target, reading versions from json and regex sources
+### 2.1.1 loads every declared target reading versions from json and regex sources
 
 ## 2.2 reading a version whose regex does not match its source file
 
@@ -16,7 +16,7 @@
 
 ## 2.4 conforming the repo's own release manifest
 
-### 2.4.1 loads a version for every target declared in airlock-targets.toml
+### 2.4.1 loads a version for every target declared in airlock targets toml
 
 ## 2.5 resolving named targets
 
@@ -24,4 +24,4 @@
 
 ### 2.5.2 honors explicit labels without changing the derived tag prefix
 
-### 2.5.3 rejects missing or invalid scope and target tables
+### 2.5.3 rejects malformed release declarations

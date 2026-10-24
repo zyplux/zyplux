@@ -2,6 +2,7 @@
 !pyproject.toml
 !uv.lock
 !apps/totchef
+!apps/airlock/pyproject.toml
 !apps/cerberus/pyproject.toml
 !apps/clipy/pyproject.toml
 !apps/action-setup-pm/pyproject.toml

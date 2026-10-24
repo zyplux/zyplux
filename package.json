@@ -20,14 +20,12 @@
     "test": "vitest run",
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
-    "release:prepare": "pnpm run --silent airlock prepare && pnpm run --filter @zyplux/eslint-config dump-rules",
-    "release:check": "pnpm run --silent airlock check",
-    "airlock": "airlock"
+    "release:prepare": "uv run airlock prepare && pnpm run --filter @zyplux/eslint-config dump-rules",
+    "release:check": "uv run airlock check"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-istanbul": "catalog:",
-    "@zyplux/airlock": "workspace:*",
     "@zyplux/eslint-config": "workspace:*",
     "@zyplux/spectra": "workspace:*",
     "@zyplux/tsconfig": "workspace:*",

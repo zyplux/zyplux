@@ -3,15 +3,16 @@
 scope = "@zyplux"
 
 [airlock]
-kind = "npm"
-version = { file = "apps/airlock/package.json", json = "version" }
+kind = "pypi"
+label = "zyplux-airlock"
+version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 surface = ["apps/airlock", "apps/action-airlock"]
 
 [action-airlock]
 kind = "action"
-label = "action-airlock"
+label = "zyplux-airlock"
 repository = "zyplux/zyplux"
-version = { file = "apps/airlock/package.json", json = "version" }
+version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 surface = ["apps/airlock", "apps/action-airlock"]
 
 [setup-pm]
