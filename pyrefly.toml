@@ -15,6 +15,7 @@ disable-project-excludes-heuristics = true
 project-excludes = ["**/node_modules"]
 use-ignore-files = false
 search-path = [
+    "tests/airlock",
     "apps/action-setup-pm/src",
     "apps/cerberus/src",
     "apps/clipy/src",

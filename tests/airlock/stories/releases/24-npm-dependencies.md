@@ -1,4 +1,4 @@
-# 24. [Npm publication dependencies](24-npm-dependencies.test.ts)
+# 24. [Npm publication dependencies](test_24_npm_dependencies.py)
 
 ## 24.1 isolating npm publication jobs
 
@@ -10,7 +10,7 @@
 
 ### 24.1.4 rejects cycles when publishing several npm targets in one command
 
-### 24.1.5 rejects publish-only lifecycle hooks before packing
+### 24.1.5 rejects publish only lifecycle hooks before packing
 
 ### 24.1.6 encodes target names in archive filenames
 
@@ -20,7 +20,7 @@
 
 ### 24.2.3 propagates registry authorization errors before uploading
 
-### 24.2.4 waits for existing version tarballs before repairing GitHub releases
+### 24.2.4 waits for existing version tarballs before repairing github releases
 
 ## 24.3 packed publication dependencies
 

@@ -51,7 +51,9 @@ export const publishNpm = async (targets: ReleaseTarget[]) => {
   }
   for (const target of orderNpmTargets(targets, dependencies)) {
     await waitForNpmDependencies(dependencies.get(target.label) ?? []);
-    await runPassthrough(['pnpm', 'publish', getArchive(target), '--publish-wait-timeout', '600000'], target.dir);
+    // pnpm's tarball HEAD probe is unsupported by GitHub Packages.
+    await runPassthrough(['pnpm', 'publish', getArchive(target), '--publish-wait-timeout', '0'], target.dir);
+    await waitForNpmDependencies([target]);
   }
 };
 
@@ -60,9 +62,11 @@ export const publishNpmTargets = async (releases: NpmRelease[]) => {
   const root = await readTrimmed($.git.showToplevel());
   await validateNpmWorkspaces(releases, root);
   const pending = [];
-  for (const release of releases) if (!(await release.isPublished())) pending.push(release);
+  for (const release of releases) {
+    if (await release.isPublished()) await waitForNpmDependencies([release]);
+    else pending.push(release);
+  }
   await publishNpm(pending);
-  await waitForNpmDependencies(releases);
   const head = await readTrimmed($.git.revParse('HEAD'));
   for (const release of releases) {
     if (!(await $.gh.release.exists(release.tag))) await createGithubRelease(release.tag, release.notes, head);

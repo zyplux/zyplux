@@ -1,4 +1,4 @@
-# 23. [Release surface validation](23-release-surface.test.ts)
+# 23. [Release surface validation](test_23_release_surface.py)
 
 ## 23.1 validating release targets and versions
 
@@ -10,7 +10,7 @@
 
 ### 23.1.4 reports missing version files
 
-### 23.1.5 reads native Python versions with the configured regex
+### 23.1.5 reads native python versions with the configured regex
 
 ### 23.1.6 validates every target when one version is invalid
 
@@ -52,7 +52,7 @@
 
 ### 23.3.10 distinguishes targets sharing a version file
 
-### 23.3.11 uses the GitHub target branch by default
+### 23.3.11 uses the github target branch by default
 
 ## 23.4 reading published release versions
 
@@ -72,7 +72,7 @@
 
 ## 23.5 reusing GitHub credentials for private registry reads
 
-### 23.5.1 reads private npm metadata using environment tokens or the saved GitHub login
+### 23.5.1 reads private npm metadata without manual node auth token exports
 
 ### 23.5.2 authenticates private container reads with the saved login and its actor
 

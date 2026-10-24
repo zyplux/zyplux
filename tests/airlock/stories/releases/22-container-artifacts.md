@@ -1,8 +1,8 @@
-# 22. [Container releases](22-container-artifacts.test.ts)
+# 22. [Container releases](test_22_container_artifacts.py)
 
 ## 22.1 publishing standard container releases
 
-### 22.1.1 builds from the declared Dockerfile and context and uploads a digest-pinned manifest
+### 22.1.1 builds from the declared dockerfile and context and uploads a digest pinned manifest
 
 ### 22.1.2 rebuilds unfinished releases despite an existing image tag
 
@@ -18,7 +18,7 @@
 
 ## 22.2 validating container releases
 
-### 22.2.1 requires repository-relative build paths
+### 22.2.1 requires repository relative build paths
 
 ### 22.2.2 rejects unsupported custom builder declarations
 

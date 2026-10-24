@@ -12,7 +12,7 @@ members = ["apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef"
 
 [tool.pytest.ini_options]
 addopts = "-n auto --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
-testpaths = ["tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
+testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
 markers = ["no_xdist: run this test outside the xdist worker pool (see tests/conftest.py)"]
 
 [tool.coverage.report]
@@ -26,6 +26,7 @@ paths = [
     "apps/totchef/src",
     "apps/token_stats/src",
     "packages/util_py/src",
+    "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
     "tests/setup_pm",

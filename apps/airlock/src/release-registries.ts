@@ -114,14 +114,16 @@ export const isNpmVersionAvailable = async ({
     if (entry === undefined) return false;
     const { dist } = NpmArtifactSchema.parse(entry);
     const response = await http
-      .head(dist.tarball, {
+      .get(dist.tarball, {
         headers: new URL(dist.tarball).origin === new URL(url).origin ? headers : {},
         signal,
       })
       .response();
+    await response.body?.cancel();
     return response.status === HTTP_OK;
   } catch (error) {
     if (error instanceof FetchError) {
+      await error.response.body?.cancel();
       const { status } = error.response;
       if (
         status === HTTP_NOT_FOUND ||
