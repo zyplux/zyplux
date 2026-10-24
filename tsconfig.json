@@ -29,9 +29,6 @@
       "path": "./tests/util-ts"
     },
     {
-      "path": "./apps/airlock"
-    },
-    {
       "path": "./tests/tsconfig"
     }
   ]

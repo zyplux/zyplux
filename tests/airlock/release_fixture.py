@@ -333,3 +333,14 @@ def list_workspace_packages(root: Path) -> list[dict[str, Any]]:
         {"private": False, **json.loads(file.read_text(encoding="utf-8")), "path": str(file.parent)}
         for file in (root / "packages").glob("*/package.json")
     ]
+
+
+def capture_release_notes(fixture: ReleaseFixture) -> list[str]:
+    notes: list[str] = []
+
+    def capture(call: Command) -> str:
+        notes.append(Path(call.argv[call.argv.index("--notes-file") + 1]).read_text(encoding="utf-8"))
+        return ""
+
+    fixture.on("gh release create", capture)
+    return notes

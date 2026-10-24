@@ -7,13 +7,15 @@ import subprocess
 import sys
 import threading
 from dataclasses import dataclass, field
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http import HTTPStatus
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+from wsgiref.simple_server import WSGIServer, make_server
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from wsgiref.types import StartResponse, WSGIEnvironment
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -109,10 +111,8 @@ class CliFixture:
     ) -> subprocess.CompletedProcess[str]:
         execution = subprocess.run(
             [
-                "node",
-                "--import",
-                str(Path(__file__).with_name("preload.ts")),
-                str(REPO_ROOT / "apps/airlock/src/index.ts"),
+                sys.executable,
+                str(Path(__file__).with_name("cli_runner.py")),
                 *args,
             ],
             cwd=self.root,
@@ -145,48 +145,33 @@ class CliFixture:
         )
         return Reply(execution.stdout, execution.stderr, execution.returncode)
 
-    def start(self) -> tuple[ThreadingHTTPServer, threading.Thread]:
-        fixture = self
+    def start(self) -> tuple[WSGIServer, threading.Thread]:
+        def respond(environ: WSGIEnvironment) -> Response:
+            if environ["PATH_INFO"] == "/command":
+                payload = json.loads(environ["wsgi.input"].read(int(environ["CONTENT_LENGTH"])))
+                reply = self.execute(Command(**payload))
+                return Response({"stdout": reply.stdout, "stderr": reply.stderr, "exit_code": reply.exit_code})
+            headers = {
+                name.removeprefix("HTTP_").lower().replace("_", "-"): value
+                for name, value in environ.items()
+                if name.startswith("HTTP_") and not name.startswith("HTTP_X_AIRLOCK_")
+            }
+            return self.respond(Request(environ["HTTP_X_AIRLOCK_URL"], environ["HTTP_X_AIRLOCK_METHOD"], headers))
 
-        class Handler(BaseHTTPRequestHandler):
-            @override
-            def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
-                pass
+        def app(environ: WSGIEnvironment, start_response: StartResponse) -> list[bytes]:
+            try:
+                response = respond(environ)
+            except (AssertionError, LookupError, OSError, TypeError, ValueError) as exc:
+                self.failures.append(f"Fixture failed: {exc}")
+                response = Response(str(exc), 500)
+            encoded = b"" if response.body is None else json.dumps(response.body).encode()
+            headers = [("Content-Length", str(len(encoded)))]
+            if response.error:
+                headers.append(("x-airlock-error", response.error))
+            start_response(f"{response.status} {HTTPStatus(response.status).phrase}", headers)
+            return [encoded]
 
-            def build_response(self) -> Response:
-                if self.path == "/command":
-                    payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-                    reply = fixture.execute(Command(**payload))
-                    return Response({
-                        "stdout": reply.stdout,
-                        "stderr": reply.stderr,
-                        "exit_code": reply.exit_code,
-                    })
-                headers = {
-                    key.lower(): value
-                    for key, value in self.headers.items()
-                    if not key.lower().startswith("x-airlock-")
-                }
-                return fixture.respond(
-                    Request(self.headers["x-airlock-url"], self.headers["x-airlock-method"], headers)
-                )
-
-            def do_POST(self) -> None:
-                try:
-                    response = self.build_response()
-                except (AssertionError, LookupError, OSError, TypeError, ValueError) as exc:
-                    fixture.failures.append(f"Fixture failed: {exc}")
-                    response = Response(str(exc), 500)
-                encoded = b"" if response.body is None else json.dumps(response.body).encode()
-                self.send_response(response.status)
-                if response.error:
-                    self.send_header("x-airlock-error", response.error)
-                self.send_header("Content-Length", str(len(encoded)))
-                self.end_headers()
-                self.wfile.write(encoded)
-
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        server.daemon_threads = True
+        server = make_server("127.0.0.1", 0, app)
         thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         thread.start()
         self.endpoint = f"http://127.0.0.1:{server.server_port}"

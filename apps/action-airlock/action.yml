@@ -31,6 +31,11 @@ runs:
       env:
         NODE_AUTH_TOKEN: ${{ inputs.token }}
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
+    - name: Install Airlock
+      shell: bash
+      run: uv sync --project "$GITHUB_ACTION_PATH/../.." --locked --package zyplux-airlock --no-dev
+      env:
+        UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/airlock-venv
     - name: Run Airlock
       id: airlock
       shell: bash
@@ -45,7 +50,7 @@ runs:
             ;;
           *) echo 'command must be plan or publish' >&2; exit 1 ;;
         esac
-        pnpm exec airlock "${args[@]}"
+        "$RUNNER_TEMP/airlock-venv/bin/airlock" "${args[@]}"
       env:
         GH_TOKEN: ${{ inputs.token }}
         NODE_AUTH_TOKEN: ${{ inputs.token }}

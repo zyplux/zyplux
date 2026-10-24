@@ -38,7 +38,8 @@ def test_18_1_2_rejects_python_version_drift_before_changing_any_release_files(r
 def test_18_1_3_stops_before_python_synchronization_when_native_versioning_fails(release: ReleaseFixture) -> None:
     release.prepare_workspace()
     release.on("pnpm version", Reply(stdout="Registry lookup failed.", exit_code=1))
-    release.run("prepare-release", error="command failed")
+    execution = release.run("prepare-release", error="command failed")
+    assert "Registry lookup failed." in execution.stderr
     assert 'version = "2.3.4"' in release.read("apps/cerberus/pyproject.toml")
     assert not release.matching("pnpm install|uv")
 

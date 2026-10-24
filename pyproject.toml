@@ -8,18 +8,26 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+members = ["apps/airlock", "apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+
+[tool.uv.sources]
+zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
-addopts = "-n auto --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
+addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
 testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
 markers = ["no_xdist: run this test outside the xdist worker pool (see tests/conftest.py)"]
+
+[tool.coverage.run]
+data_file = "coverage/.coverage"
+patch = ["subprocess"]
 
 [tool.coverage.report]
 fail_under = 90
 
 [tool.vulture]
 paths = [
+    "apps/airlock/src",
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/action-setup-pm/src",

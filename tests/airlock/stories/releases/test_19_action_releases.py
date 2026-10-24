@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from cli_fixture import Reply
-from release_fixture import MISSING_RELEASE, build_release
+from release_fixture import MISSING_RELEASE, build_release, capture_release_notes
 
 if TYPE_CHECKING:
-    from cli_fixture import Command
     from release_fixture import ReleaseFixture
 
 
@@ -21,13 +19,7 @@ def release(release: ReleaseFixture) -> ReleaseFixture:
 
 def test_19_1_1_creates_reviewed_release_notes_before_advancing_the_major_alias(release: ReleaseFixture) -> None:
     release.on("gh api graphql", MISSING_RELEASE)
-    captured: list[str] = []
-
-    def capture(call: Command) -> str:
-        captured.append(Path(call.argv[call.argv.index("--notes-file") + 1]).read_text(encoding="utf-8"))
-        return ""
-
-    release.on("gh release create", capture)
+    captured = capture_release_notes(release)
     release.run("publish-tagged-target", "--release", "setup-pm-v1.0.0")
     assert captured == ["- Cache package managers.\n"]
     assert [call.text for call in release.matching("git push")] == [

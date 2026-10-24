@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from release_fixture import MISSING_RELEASE
+from release_fixture import MISSING_RELEASE, capture_release_notes
 
 if TYPE_CHECKING:
-    from cli_fixture import Command
     from release_fixture import ReleaseFixture
 
 
@@ -102,13 +100,7 @@ def test_17_3_1_sends_the_exact_target_entry_to_github(release: ReleaseFixture, 
     release.on("gh api graphql", MISSING_RELEASE)
     release.on("uv build")
     release.on("uv publish")
-    captured: list[str] = []
-
-    def capture(call: Command) -> str:
-        captured.append(Path(call.argv[call.argv.index("--notes-file") + 1]).read_text(encoding="utf-8"))
-        return ""
-
-    release.on("gh release create", capture)
+    captured = capture_release_notes(release)
     release.run("publish-tagged-target", "--release", tag)
     assert captured == [f"### Patch Changes\n\n- {notes}\n"]
     release.expect_release(tag)

@@ -6,4 +6,4 @@ Run the release and package scenarios with pytest:
 uv run pytest tests/airlock -o addopts=''
 ```
 
-The tests invoke the TypeScript CLI as a subprocess. Python fixtures provide temporary workspaces, command doubles and registry responses through a local server. `preload.ts` connects Node's HTTP and timer boundaries to those fixtures. Version preparation, dependency propagation and package archives also exercise native pnpm and uv commands in isolated workspaces.
+The tests invoke the Python CLI as a subprocess. Python fixtures provide temporary workspaces, command doubles and registry responses through a local server. `cli_runner.py` connects HTTPX and sleep to those fixtures. Version preparation, dependency propagation and package archives also exercise native pnpm and uv commands in isolated workspaces.

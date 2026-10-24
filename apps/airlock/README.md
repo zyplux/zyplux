@@ -1,6 +1,6 @@
 # Airlock
 
-Airlock prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
+Airlock is a Python 3.14+ CLI and library. It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
 
 *How does a code change become a published release?*
 
@@ -43,11 +43,11 @@ If preparation needs regeneration, preserve the code and note text, restore gene
 
 ## Release surface validation
 
-`pnpm exec airlock check-surface` enforces single-step version bumps against published releases and the pull request target branch. Set `GITHUB_BASE_REF` or pass `--base origin/main` to compare against a target branch; published versions also require unchanged release surfaces. Unpublished target-branch versions can be repaired without another bump.
+`uv run airlock check-surface` enforces single-step version bumps against published releases and the pull request target branch. Set `GITHUB_BASE_REF` or pass `--base origin/main` to compare against a target branch; published versions also require unchanged release surfaces. Unpublished target-branch versions can be repaired without another bump.
 
 Action targets require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
-Cerberus's `release_surface_version_bump` bite runs `pnpm exec airlock check-surface --json` and reports its findings. Cerberus owns enforcement; Airlock supplies the shared manifest, registry and version-check machinery. Keep Airlock installed as a locked root development dependency. In zyplux, `workspace:*` runs the current source; consuming repositories run their installed npm version. The JSON command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
+Cerberus's `release_surface_version_bump` bite calls its `zyplux-airlock` Python dependency and reports the returned findings. Cerberus owns enforcement; Airlock supplies the shared manifest, registry and version-check machinery. Repositories need no npm dependency on Airlock. The standalone `airlock check-surface --json` command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
 
 Private GitHub registry reads use `NODE_AUTH_TOKEN` for npm, or `GH_TOKEN`/`GITHUB_TOKEN`, and otherwise reuse `gh auth token --hostname github.com`. Local users can sign in with `gh auth login --scopes read:packages`. Tokens need access to the package; Actions use the job token and package access granted to the repository. Explicit credentials take precedence, and registry failures remain errors.
 
@@ -65,15 +65,15 @@ To recover from a failed run, fix the cause and rerun the failed jobs in GitHub 
 
 ## Add Airlock to a repository
 
-Add `@zyplux/airlock` as a locked development dependency, configure pnpm versioning and declare `airlock-targets.toml`. Use the [release workflow](../../.github/workflows/release.yml) as the consumer template, replacing its local action references with:
+Configure pnpm versioning and declare `airlock-targets.toml`. Cerberus includes Airlock in its Python dependencies, so repositories using Cerberus can run `uv run airlock`. For a standalone CLI, use `uv tool install zyplux-airlock`. Use the [release workflow](../../.github/workflows/release.yml) as the consumer template, replacing its local action references with:
 
 ```yaml
-- uses: zyplux/zyplux/apps/action-airlock@action-airlock-v1
+- uses: zyplux/zyplux/apps/action-airlock@action-airlock-v2
   with:
     command: plan
 ```
 
-The publishing step uses the same action with `command: publish` and `batch: ${{ toJSON(matrix) }}`. The action sets up cached pnpm and uv, installs locked dependencies, configures GitHub Packages authentication and runs the repository's installed CLI. Its `token` defaults to the job's GitHub token.
+The publishing step uses the same action with `command: publish` and `batch: ${{ toJSON(matrix) }}`. The action sets up cached pnpm and uv, installs the repository's locked build dependencies and configures GitHub Packages authentication. It installs Airlock from the action's versioned source and `uv.lock` in a separate environment; the action reference selects the publisher version. Its `token` defaults to the job's GitHub token.
 
 The calling workflow declares triggers, permissions, concurrency and environments. A single matrix uses their combined token permissions; separate job definitions can narrow permissions by publication kind. Keep OIDC publishing jobs in this top-level workflow to support PyPI trusted publishing.
 
@@ -91,12 +91,13 @@ Set the top-level `scope` before the target tables:
 scope = "@zyplux"
 
 [airlock]
-kind = "npm"
-version = { file = "apps/airlock/package.json", json = "version" }
+kind = "pypi"
+label = "zyplux-airlock"
+version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 surface = ["apps/airlock", "apps/action-airlock"]
 ```
 
-Actions also declare their GitHub `repository`. Airlock publishes as npm package `@zyplux/airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
+Actions also declare their GitHub `repository`. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
 ## Container releases
 

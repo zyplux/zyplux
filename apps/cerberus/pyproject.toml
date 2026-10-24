@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-cerberus"
-version = "0.25.2"
+version = "0.26.0"
 description = "Cross-repo invariant verifier for the zyplux organization"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -13,6 +13,7 @@ dependencies = [
     "tree-sitter-python>=0.25.0",
     "tree-sitter-typescript>=0.23.2",
     "typer>=0.27.3",
+    "zyplux-airlock>=2.0.0",
 ]
 
 [project.scripts]

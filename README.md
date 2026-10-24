@@ -14,7 +14,7 @@
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
 | [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Org-invariant linter: CI workflows, justfiles, CODEOWNERS, coverage, releases |
 | [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: PR flow, workspace maintenance, cleanup                  |
-| [@zyplux/airlock](apps/airlock) | npm | Release preparation and publication with native pnpm |
+| [zyplux-airlock](apps/airlock) | PyPI | Release preparation and publication with native pnpm |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |
 | [@zyplux/eslint-config](packages/eslint-config)  | npm      | Shared ESLint flat config and custom rules                                       |
 | [@zyplux/tsconfig](packages/tsconfig)            | npm      | Shared TypeScript presets                                                        |

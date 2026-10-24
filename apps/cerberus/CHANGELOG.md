@@ -1,5 +1,15 @@
 # zyplux-cerberus
 
+## 0.26.0
+
+### Minor Changes
+
+- Use the `zyplux-airlock` Python library for release-surface validation. Publishing repositories no longer need an Airlock npm dependency or Node subprocess for this check.
+
+### Patch Changes
+
+- Run Fallow 3.35.0 for source and coverage analysis.
+
 ## 0.25.2
 
 ### Patch Changes

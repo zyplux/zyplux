@@ -10,7 +10,7 @@ Prefer existing build metadata and native dependency queries over another import
 
 ## Existing foundations
 
-- [Airlock surface validation](../../apps/airlock/src/release-surface.ts) compares Git changes against declared paths. It does not discover dependencies.
+- [Airlock surface validation](../../apps/airlock/src/airlock/surface.py) compares Git changes against declared paths. It does not discover dependencies.
 - Airlock's npm publisher inspects the actual packed manifest after lifecycle scripts and packing hooks. This distinguishes bundled implementation packages from dependencies that consumers install separately.
 - In `zyp-vps`, `packages/config-validator/build.ts` bundles the validator's two entry points with esbuild. Its optional metadata is a candidate source of discovered paths for a future implementation.
 - The core image's `apps/zyp-loop/Dockerfile` uses `turbo prune` to select its workspace dependencies. Its final image contains the pruned workspace, so tracing only runtime imports would describe a different boundary.
