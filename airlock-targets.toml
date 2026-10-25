@@ -16,7 +16,7 @@ repository = "zyplux/zyplux"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-content_hash = "sha256:7a13c7ef7a4681533d2cea13faf8ff26b95ec860e929c20b2b96d424e12c1e1d"
+content_hash = "sha256:e84026330b5d13b76c61cbfb95cd6dd7c8ec603511d4474648de3ac0d73cef87"
 
 [setup-pm]
 kind = "action"
