@@ -17,3 +17,13 @@
 ### 26.2.2 rejects invalid wheel metadata before upload
 
 ### 26.2.3 rejects self dependencies before upload
+
+## 26.3 validating publication cycles
+
+### 26.3.1 rejects cycles before waiting and keeps unrelated jobs independent
+
+### 26.3.2 allows an existing publication to break a dependency cycle
+
+### 26.3.3 includes optional dependencies in cycle detection
+
+### 26.3.4 requires dynamic workspace dependencies to publish first

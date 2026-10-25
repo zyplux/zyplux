@@ -60,6 +60,8 @@ def publish_prepared(target: ReleaseTarget, notes: str) -> None:
     if target.spec.kind == "npm":
         publish_npm(target)
     elif is_published(target):
+        if github.load_release(target.tag) is None:
+            validate_content_hash(target)
         typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
     else:
         typer.echo(f"Publishing {target.spec.label} {target.version} to {target.spec.kind} ...")
@@ -67,7 +69,7 @@ def publish_prepared(target: ReleaseTarget, notes: str) -> None:
             archives = build_archives(target, Path(directory))
             validate_content_hash(target, archives)
             wait_for_dependencies(pypi.load_dependencies(target, archives))
-            proc.run("uv", "publish", str(Path(directory) / "*"))
+            proc.run("uv", "publish", "--check-url", "https://pypi.org/simple/", str(Path(directory) / "*"))
         typer.echo(f"Published {target.spec.label} {target.version}")
     if github.load_release(target.tag) is None:
         github.create_release(target.tag, notes, proc.run("git", "rev-parse", "HEAD"))

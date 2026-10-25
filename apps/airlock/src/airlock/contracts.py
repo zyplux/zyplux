@@ -89,6 +89,12 @@ class PythonTracking(BaseModel):
     private: Literal[True]
 
 
+class PythonProject(BaseModel):
+    dependencies: list[str] = Field(default_factory=list)
+    optional_dependencies: dict[str, list[str]] = Field(default_factory=dict, alias="optional-dependencies")
+    dynamic: list[str] = Field(default_factory=list)
+
+
 class NpmPackage(BaseModel):
     dependencies: dict[str, str] = Field(default_factory=dict)
     optional_dependencies: dict[str, str] = Field(default_factory=dict, alias="optionalDependencies")

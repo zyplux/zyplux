@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from cli_fixture import Reply, Response
-from release_fixture import MISSING_RELEASE
+from release_fixture import MISSING_RELEASE, prepare_publication
 
 pytestmark = pytest.mark.usefixtures("prepared_release")
 
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def test_8_1_1_logs_and_does_nothing_when_the_tags_version_is_already_published(release: ReleaseFixture) -> None:
-    release.published(npm=True, ghcr=True, pypi=True)
+    release.all_published()
     assert "already published; nothing to do" in release.publish("util-v1.2.3").stdout
     assert not release.matching("pnpm pack|podman|uv build")
 
@@ -41,14 +41,19 @@ def test_8_2_2_builds_and_publishes_incomplete_pypi_releases_using_isolated_arti
     )
     release.on("uv publish")
     release.publish("cerberus-v2.3.4")
+    build = release.matching("uv build")[0]
+    assert build.argv[:3] == ["build", "--package", "zyplux-cerberus"]
+    assert build.argv[3] == "--out-dir"
+    assert not Path(build.argv[-1]).exists()
     if files == ["bdist_wheel", "sdist"]:
-        assert not release.matching("uv")
+        assert not release.matching("uv publish")
     else:
-        build = release.matching("uv build")[0]
-        assert build.argv[:3] == ["build", "--package", "zyplux-cerberus"]
-        assert build.argv[3] == "--out-dir"
-        assert release.matching("uv publish")[0].argv == ["publish", str(Path(build.argv[-1]) / "*")]
-        assert not Path(build.argv[-1]).exists()
+        assert release.matching("uv publish")[0].argv == [
+            "publish",
+            "--check-url",
+            "https://pypi.org/simple/",
+            str(Path(build.argv[-1]) / "*"),
+        ]
 
 
 def test_8_2_3_requires_gh_token_before_pushing_a_ghcr_target(release: ReleaseFixture) -> None:
@@ -156,6 +161,7 @@ def test_8_3_5_accepts_supported_registry_urls_with_a_trailing_slash(release: Re
         "packages/util/package.json",
         {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": registry}},
     )
+    prepare_publication(release)
     release.env["NODE_AUTH_TOKEN"] = release.credential
     release.serve(
         registry, Response({"versions": {"1.2.3": {"dist": {"tarball": "https://registry.npmjs.org/util.tgz"}}}})
@@ -165,7 +171,8 @@ def test_8_3_5_accepts_supported_registry_urls_with_a_trailing_slash(release: Re
         f"{registry}%40zyplux%2Futil",
         "https://registry.npmjs.org/util.tgz",
     }
-    assert not release.matching("pnpm pack|pnpm publish")
+    assert not release.matching("pnpm publish")
+    assert len(release.matching("pnpm pack")) == 1
 
 
 @pytest.mark.parametrize("registry", [None, "https://registry.npmjs.org"])
@@ -176,6 +183,7 @@ def test_8_3_6_prefers_the_package_scopes_registry_setting(release: ReleaseFixtu
     release.write_json(
         "packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": config}
     )
+    prepare_publication(release)
     release.env["NODE_AUTH_TOKEN"] = release.credential
     release.serve(
         "https://npm.pkg.github.com/",
@@ -186,7 +194,8 @@ def test_8_3_6_prefers_the_package_scopes_registry_setting(release: ReleaseFixtu
         "https://npm.pkg.github.com/%40zyplux%2Futil",
         "https://registry.npmjs.org/util.tgz",
     }
-    assert not release.matching("pnpm pack|pnpm publish")
+    assert not release.matching("pnpm publish")
+    assert len(release.matching("pnpm pack")) == 1
 
 
 @pytest.mark.parametrize(
@@ -212,7 +221,8 @@ def test_8_3_7_checks_the_requested_version_in_registry_package_metadata(
     assert f"{registry}/%40zyplux%2Futil" in [request.url for request in release.requests]
     if is_published:
         assert "already published; nothing to do" in execution.stdout
-        assert not release.matching("pnpm pack|pnpm publish")
+        assert not release.matching("pnpm publish")
+        assert len(release.matching("pnpm pack")) == 1
     else:
         release.expect_npm()
 
@@ -241,7 +251,9 @@ def test_8_4_1_publishes_only_missing_artifacts_and_creates_only_missing_github_
     release.stage_npm()
     release.publish("util-v1.2.3")
     if artifact:
-        assert not release.matching("pnpm pack|pnpm publish")
+        assert not release.matching("pnpm publish")
+        expected_packs = 0 if github_release else 1
+        assert len(release.matching("pnpm pack")) == expected_packs
     else:
         release.expect_npm()
     if github_release:

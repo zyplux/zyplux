@@ -6,7 +6,7 @@ scope = "@zyplux"
 kind = "pypi"
 label = "zyplux-airlock"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:c408361e6a08a2427b30136a7f3c9cc9cb8418a7328cf30a21272527b8c589f3"
+content_hash = "sha256:21d31360d9dfe1aeba60fe646624c072d4de38e310a944311fe8ea363c7a8e01"
 
 [action-airlock]
 kind = "action"
@@ -15,7 +15,7 @@ repository = "zyplux/zyplux"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-content_hash = "sha256:6f76eed94a0cacd818b2c6e00a952f9f503270aa4da6ceed38565e80eef6b50f"
+content_hash = "sha256:c381ca8ce467976e94b8fc5bbc11e9363bda85834102ba7ef3971547f093aa4f"
 
 [setup-pm]
 kind = "action"

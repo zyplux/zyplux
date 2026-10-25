@@ -147,6 +147,42 @@ def test_25_2_7_rejects_missing_fingerprints_before_publication(release: Release
     assert not release.matching("pnpm publish|uv publish|podman build|gh release create|git push")
 
 
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+@pytest.mark.parametrize("problem", ["missing", "stale"])
+def test_25_2_8_validates_package_fingerprints_before_repairing_github_releases(
+    release: ReleaseFixture, kind: str, problem: str
+) -> None:
+    release.run("prepare")
+    release.calls.clear()
+    release.published(npm=True, pypi=True)
+    target = release.target("util" if kind == "npm" else "cerberus")
+    if problem == "missing":
+        release.write(
+            "airlock-targets.toml",
+            "\n".join(
+                line
+                for line in release.read("airlock-targets.toml").splitlines()
+                if not line.startswith("content_hash")
+            ),
+        )
+        error = "missing content_hash"
+    else:
+        (target.dir / "changed.py").write_text("changed release contents")
+        error = "release contents differ from content_hash"
+    release.publish(target.tag, error=error)
+    assert not release.matching("pnpm publish|uv publish|gh release create")
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+def test_25_2_9_builds_each_package_once_when_repairing_a_github_release(release: ReleaseFixture, kind: str) -> None:
+    release.run("prepare")
+    release.calls.clear()
+    release.published(npm=True, pypi=True)
+    release.publish(release.target("util" if kind == "npm" else "cerberus").tag)
+    assert len(release.matching("pnpm pack|uv build")) == 1
+    assert not release.matching("pnpm publish|uv publish")
+
+
 def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(release: ReleaseFixture) -> None:
     release.use_package()
     release.write_json(

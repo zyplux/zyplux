@@ -24,6 +24,10 @@
 
 ### 25.2.7 rejects missing fingerprints before publication
 
+### 25.2.8 validates package fingerprints before repairing github releases
+
+### 25.2.9 builds each package once when repairing a github release
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files

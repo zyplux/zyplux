@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import typer
 from semantic_version import NpmSpec, Version
 
-from airlock import proc
+from airlock import github, proc
 from airlock.content_hash import build_archives, validate_content_hash
 from airlock.contracts import WORKSPACE_PACKAGES, NpmArchive, NpmPackage
 from airlock.registries import is_published, wait_for_dependencies
@@ -106,6 +106,8 @@ def publish_npm(target: ReleaseTarget) -> None:
     validate_workspace(target)
     if is_published(target):
         wait_for_dependencies([target])
+        if github.load_release(target.tag) is None:
+            validate_content_hash(target)
         typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
         return
     manifest = NpmPackage.model_validate_json((target.directory / "package.json").read_text(encoding="utf-8"))

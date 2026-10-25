@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 def test_20_1_1_repairs_missing_github_releases_without_republishing_existing_versions(release: ReleaseFixture) -> None:
     release.published(npm=True)
     release.publish("util-v1.2.3")
-    assert not release.matching("pnpm pack|pnpm publish")
+    assert not release.matching("pnpm publish")
+    assert len(release.matching("pnpm pack")) == 1
     release.expect_release("util-v1.2.3")
 
 
