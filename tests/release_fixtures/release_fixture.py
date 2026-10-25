@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from archive_fixture import stage_packagers
 from cli_fixture import REPO_ROOT, CliFixture, Command, Reply, Response
 
 if TYPE_CHECKING:
@@ -17,24 +18,20 @@ if TYPE_CHECKING:
 MANIFEST = """scope = "@zyplux"
 [util]
 kind = "npm"
-surface = []
 version = { file = "packages/util/package.json", json = "version" }
 [cerberus]
 kind = "pypi"
 label = "zyplux-cerberus"
-surface = []
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
 [ci-image]
 kind = "ghcr"
 label = "ghcr.io/zyplux/ci"
-surface = []
 version = { file = "containers/ci/Containerfile", regex = '^LABEL org\\.opencontainers\\.image\\.version="([^"]+)"' }
 """
 
-SURFACE_MANIFEST = """scope = "@zyplux"
+PACKAGE_MANIFEST = """scope = "@zyplux"
 [util]
 kind = "npm"
-surface = ["packages/util/src"]
 version = { file = "packages/util/package.json", json = "version" }
 """
 MISSING_RELEASE = json.dumps({"data": {"repository": {"release": None}}})
@@ -99,6 +96,12 @@ class ReleaseFixture(CliFixture):
             "gh release download", json.dumps({"image": f"ghcr.io/zyplux/ci@sha256:{'1' * 64}", "version": "3.4.5"})
         )
         self.on("pnpm pack")
+        self.on("pnpm version")
+        self.on("pnpm install")
+        self.on("uv version")
+        self.on("uv lock")
+        self.on("git ls-files", lambda call: list_sources(self, call))
+        self.action_releases([])
         self.on("tar -xOf", lambda call: inspect_archive(self, call))
         self.on("pnpm list", lambda _: json.dumps(list_workspace_packages(self.root)))
         self.published()
@@ -216,6 +219,7 @@ class ReleaseFixture(CliFixture):
         (self.root / "node_modules").symlink_to(REPO_ROOT / "node_modules", target_is_directory=True)
         self.on("pnpm", self.run_real)
         self.on("uv", self.run_real)
+        stage_packagers(self)
 
     def action(self) -> None:
         self.write(
@@ -225,7 +229,6 @@ class ReleaseFixture(CliFixture):
 kind = "action"
 label = "zyplux-setup-pm"
 repository = "zyplux/zyplux"
-surface = ["apps/action-setup-pm"]
 version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
 """,
         )
@@ -255,10 +258,9 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.on("gh release edit")
         return batch
 
-    def surface(self) -> None:
-        self.write("airlock-targets.toml", SURFACE_MANIFEST)
+    def use_package(self) -> None:
+        self.write("airlock-targets.toml", PACKAGE_MANIFEST)
         self.on(f"git -C {self.root} ls-tree")
-        self.on(f"git -C {self.root} diff --name-only")
         self.published_version("1.2.3")
 
     def published_version(self, version: str | None = None) -> None:
@@ -305,8 +307,7 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         extra = ""
         for name in ("consumer", "independent"):
             extra += (
-                f'[{name}]\nkind = "npm"\nsurface = []\n'
-                f'version = {{ file = "packages/{name}/package.json", json = "version" }}\n'
+                f'[{name}]\nkind = "npm"\nversion = {{ file = "packages/{name}/package.json", json = "version" }}\n'
             )
             manifest: dict[str, Any] = {"name": f"@zyplux/{name}", "version": "1.2.3"}
             if name == "consumer":
@@ -340,6 +341,16 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.on("pnpm pack", self.run_real)
         self.on("tar -xOf", self.run_real)
         return consumer
+
+
+def list_sources(fixture: ReleaseFixture, call: Command) -> str:
+    directories = call.argv[call.argv.index("--") + 1 :]
+    return "\0".join(
+        path.relative_to(fixture.root).as_posix()
+        for directory in directories
+        for path in Path(directory).rglob("*")
+        if path.is_file()
+    )
 
 
 def inspect_archive(fixture: CliFixture, _call: Command) -> str:

@@ -117,7 +117,7 @@ def test_22_2_1_requires_repository_relative_build_paths(
     release: ReleaseFixture, container: ContainerPublication, fields: str
 ) -> None:
     release.configure("ghcr", fields)
-    release.publish_batch(container.batch, error="container build paths must be repository-relative")
+    release.publish_batch(container.batch, error="release paths must be repository-relative")
     assert not release.matching("podman")
 
 

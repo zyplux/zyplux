@@ -33,5 +33,5 @@ def run(*argv: str, cwd: Path | None = None, stdin: str | None = None, interacti
     return (execution.stdout or "").strip()
 
 
-def find_root() -> Path:
-    return Path(run("git", "rev-parse", "--show-toplevel"))
+def find_root(directory: Path | None = None) -> Path:
+    return Path(run("git", "rev-parse", "--show-toplevel", cwd=directory))

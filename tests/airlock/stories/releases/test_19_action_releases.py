@@ -166,7 +166,6 @@ def test_19_3_1_synchronizes_the_private_manifest_native_helper_and_lockfiles_wi
         ".changeset/action.md", '---\n"zyplux-setup-pm": patch\n---\n\nCache compatible package-manager releases.\n'
     )
     release.run("prepare")
-    release.run("check")
     assert json.loads(release.read("apps/action-setup-pm/package.json"))["version"] == "1.0.1"
     assert 'version = "1.0.1"' in release.read("apps/action-setup-pm/pyproject.toml")
     assert "Cache compatible package-manager releases." in release.read("apps/action-setup-pm/CHANGELOG.md")

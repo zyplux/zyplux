@@ -23,7 +23,6 @@ def test_2_2_1_rejects_reading_a_version_whose_regex_does_not_match_the_file(rel
 [broken]
 kind = "npm"
 label = "broken-target"
-surface = []
 version = { file = "VERSION", regex = '^nomatch$' }
 """,
     )
@@ -53,8 +52,10 @@ def test_2_3_2_authenticates_private_image_probes_and_propagates_registry_failur
 
 def test_2_4_1_loads_a_version_for_every_target_declared_in_airlock_targets_toml(release: ReleaseFixture) -> None:
     release.on("git rev-parse --show-toplevel", str(REPO_ROOT))
-    release.run("check")
-    assert not release.requests
+    release.on("git ls-remote")
+    release.action_releases([])
+    assert release.plan()
+    assert not release.matching("pnpm pack|uv build")
 
 
 def test_2_5_1_derives_labels_from_the_configured_scope_and_tags_from_table_names(release: ReleaseFixture) -> None:
@@ -76,4 +77,4 @@ def test_2_5_2_honors_explicit_labels_without_changing_the_derived_tag_prefix(re
 @pytest.mark.parametrize("manifest", ["", 'scope = ""', "scope = 1", 'scope = "@demo"\nutil = 1'])
 def test_2_5_3_rejects_malformed_release_declarations(release: ReleaseFixture, manifest: str) -> None:
     release.write("airlock-targets.toml", manifest)
-    release.run("check", error="")
+    release.run("plan", error="")

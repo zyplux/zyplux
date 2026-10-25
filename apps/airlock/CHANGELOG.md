@@ -6,7 +6,9 @@
 
 - Publish Airlock as the `zyplux-airlock` Python distribution. Cerberus reuses its manifest and registry helpers, and the Airlock action runs its own locked implementation. Remove the `@zyplux/airlock` npm dependency from consumers and use `uv run airlock` for local release commands; select `action-airlock-v2` for the Python action.
 
-- Use `prepare`, `check`, `plan` and `publish` as the four release commands. Publication runs one target per batch, and planning installs only the Python publisher runtime. Cerberus owns release-surface enforcement.
+- Use `prepare`, `plan` and `publish` for releases. Cerberus reports release readiness through its `release_readiness` bite. Preparation records release-content fingerprints for every target. Publication runs one target per batch, and planning installs only the Python publisher runtime. Cerberus owns version-bump enforcement.
+
+- Record release fingerprints in `airlock-targets.toml`: normalized npm/Python archives, Action source directories and container build inputs filtered by build ignore rules. Verify fingerprints during checks and publication.
 
 - Share npm, PyPI and GHCR metadata lookups with Cerberus, including credential discovery and minimum-age npm version selection.
 

@@ -20,8 +20,7 @@
     "test": "vitest run",
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
-    "release:prepare": "uv run airlock prepare",
-    "release:check": "uv run airlock check"
+    "release:prepare": "uv run airlock prepare"
   },
   "devDependencies": {
     "@types/node": "catalog:",

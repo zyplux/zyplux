@@ -4,12 +4,12 @@ import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
-from urllib.parse import quote
 
 import typer
 from semantic_version import NpmSpec, Version
 
 from airlock import proc
+from airlock.content_hash import build_archives, validate_content_hash
 from airlock.contracts import WORKSPACE_PACKAGES, NpmArchive, NpmPackage
 from airlock.registries import is_npm_available, is_published
 from airlock.targets import load_targets
@@ -138,8 +138,8 @@ def publish_npm(target: ReleaseTarget) -> None:
         )
         raise ValueError(msg)
     with TemporaryDirectory(prefix="airlock-npm-") as directory:
-        archive = Path(directory) / f"{quote(target.tag, safe='')}.tgz"
-        proc.run("pnpm", "pack", "--out", str(archive), cwd=target.directory)
+        [archive] = build_archives(target, Path(directory))
+        validate_content_hash(target, [archive])
         wait_for_dependencies(load_dependencies(target, archive))
         proc.run("pnpm", "publish", str(archive), "--publish-wait-timeout", "0", cwd=target.directory, interactive=True)
         wait_for_dependencies([target])

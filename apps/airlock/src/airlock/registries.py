@@ -11,7 +11,7 @@ import httpx
 from semantic_version import Version
 
 from airlock import proc
-from airlock.actions import fetch_action_releases, is_action_published, parse_stable_version
+from airlock.actions import is_action_published
 from airlock.contracts import (
     GhcrTags,
     GhcrToken,
@@ -24,13 +24,14 @@ from airlock.contracts import (
     PypiFiles,
     PypiLatest,
 )
+from airlock.targets import parse_stable_version
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from pydantic import BaseModel
 
-    from airlock.contracts import ReleaseTarget, TargetSpec
+    from airlock.contracts import ReleaseTarget
 
 REQUEST_TIMEOUT = 10
 MANIFEST_MEDIA_TYPES = (
@@ -222,24 +223,4 @@ def is_published(target: ReleaseTarget) -> bool:
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == HTTPStatus.NOT_FOUND:
             return False
-        raise
-
-
-def fetch_latest_version(spec: TargetSpec, directory: Path) -> str | None:
-    if spec.kind == "action":
-        releases = fetch_action_releases(spec)
-        return str(releases[0][1]) if releases else None
-    if spec.kind == "npm":
-        return fetch_latest_npm(spec.label, load_npm_registry(directory, spec.label))
-    if spec.kind == "pypi":
-        return fetch_latest_pypi(spec.label)
-    return fetch_latest_ghcr(spec.label)
-
-
-def fetch_latest(spec: TargetSpec, directory: Path) -> str | None:
-    try:
-        return fetch_latest_version(spec, directory)
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == HTTPStatus.NOT_FOUND:
-            return None
         raise

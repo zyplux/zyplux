@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import operator
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from semantic_version import Version
-
 from airlock import github, proc
-from airlock.contracts import ACTION_RELEASES, ActionSpec
+from airlock.contracts import ActionSpec
+from airlock.targets import parse_stable_version
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
@@ -23,33 +21,6 @@ def parse_remote_tag(listing: str, ref: str) -> str:
             if line.endswith(f"\t{candidate}"):
                 return line.split("\t", 1)[0]
     return ""
-
-
-def parse_stable_version(version: str) -> Version:
-    try:
-        parsed = Version(version)
-    except ValueError as exc:
-        msg = f"version '{version}' is not stable semver"
-        raise ValueError(msg) from exc
-    if parsed.prerelease:
-        msg = f"version '{version}' is not stable semver"
-        raise ValueError(msg)
-    return parsed
-
-
-def fetch_action_releases(spec: ActionSpec) -> list[tuple[str, Version]]:
-    response = proc.run("gh", "api", "--paginate", "--slurp", f"repos/{spec.repository}/releases?per_page=100")
-    releases = []
-    for page in ACTION_RELEASES.validate_json(response):
-        for release in page:
-            if release.draft or release.prerelease or not release.tag_name.startswith(spec.tag_prefix):
-                continue
-            try:
-                version = parse_stable_version(release.tag_name.removeprefix(spec.tag_prefix))
-            except ValueError:
-                continue
-            releases.append((release.tag_name, version))
-    return sorted(releases, key=operator.itemgetter(1), reverse=True)
 
 
 @dataclass(frozen=True)
@@ -72,7 +43,7 @@ def resolve_action_alias(target: ReleaseTarget) -> ActionAlias | None:
         raise ValueError(msg) from exc
     ref = f"refs/tags/{spec.tag_prefix}{version.major}"
     previous_sha = parse_remote_tag(proc.run("git", "ls-remote", "origin", ref), ref)
-    releases = fetch_action_releases(spec)
+    releases = github.fetch_releases(spec.tag_prefix, spec.repository)
     if all(tag != target.tag for tag, _ in releases):
         return None
     latest = next(tag for tag, candidate in releases if candidate.major == version.major)

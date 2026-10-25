@@ -6,8 +6,6 @@
 
 ## 17.2 validating release preparation
 
-### 17.2.1 validates prepared releases without writes or network requests
-
 ### 17.2.2 rejects unconsumed fragments
 
 ### 17.2.3 rejects a changelog without release entries

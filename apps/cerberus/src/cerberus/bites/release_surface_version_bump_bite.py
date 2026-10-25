@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from cerberus.model import Repo
 
 ID = "release_surface_version_bump"
-SUMMARY = "a published target's version is bumped by exactly one step whenever its release surface changes"
+SUMMARY = "a published target's version is bumped by exactly one step whenever its release contents change"
 SCOPE = Scope.GIT_HISTORY
 
 

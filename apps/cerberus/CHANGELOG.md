@@ -4,9 +4,15 @@
 
 ### Minor Changes
 
+- Validate prepared release metadata and content fingerprints through `release_readiness`, reusing Airlock's publishing validators. Local gates and CI run this through Cerberus.
+
+- Detect changes to package archives and Action/container inputs against fingerprints in finalized release tags, without downloading published artifacts. Release targets declare fingerprints rather than manual file lists.
+
 - Implement release-surface validation in Cerberus using its own findings and reusing Airlock's manifest and registry helpers. Publishing repositories no longer need an Airlock npm dependency or Node subprocess for this check.
 
 ### Patch Changes
+
+- Fetch finalized GitHub release history once for all release targets.
 
 - Reuse Cerberus's cached repository access for release manifests, version files and Git history so targets sharing a baseline file read it once per run.
 

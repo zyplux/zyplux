@@ -5,12 +5,14 @@ import tomllib
 from pathlib import Path
 
 from pydantic import ValidationError
+from semantic_version import Version
 
 from airlock import proc
 from airlock.contracts import (
     STRING,
     TARGET_SPEC,
     VERSION_OBJECT,
+    ActionSpec,
     ContainerSpec,
     JsonVersion,
     RegexVersion,
@@ -19,7 +21,19 @@ from airlock.contracts import (
 )
 
 
-def parse_manifest(text: str) -> list[TargetSpec]:
+def parse_stable_version(version: str) -> Version:
+    try:
+        parsed = Version(version)
+    except ValueError as exc:
+        msg = f"version '{version}' is not stable semver"
+        raise ValueError(msg) from exc
+    if parsed.prerelease:
+        msg = f"version '{version}' is not stable semver"
+        raise ValueError(msg)
+    return parsed
+
+
+def parse_manifest(text: str, *, is_historical: bool = False) -> list[TargetSpec]:
     contents = tomllib.loads(text)
     scope = STRING.validate_python(contents.pop("scope", ""))
     if not scope:
@@ -28,7 +42,7 @@ def parse_manifest(text: str) -> list[TargetSpec]:
     targets = []
     for name, declaration in contents.items():
         try:
-            spec = TARGET_SPEC.validate_python(declaration)
+            spec = TARGET_SPEC.validate_python(declaration, extra="ignore" if is_historical else "forbid")
         except ValidationError as exc:
             if any(error["type"] == "extra_forbidden" for error in exc.errors()):
                 msg = f"Unrecognized key in {name}: {exc}"
@@ -62,23 +76,32 @@ def parse_version(text: str, source: JsonVersion | RegexVersion) -> str:
     return match[1]
 
 
-def resolve_build_path(root: Path, relative: str) -> Path:
+def resolve_repo_path(root: Path, relative: str) -> Path:
     resolved = (root / relative).resolve()
     if Path(relative).is_absolute() or not resolved.is_relative_to(root.resolve()):
-        msg = f"container build paths must be repository-relative: {relative}"
+        msg = f"release paths must be repository-relative: {relative}"
         raise ValueError(msg)
     return resolved
 
 
+def build_release_target(root: Path, spec: TargetSpec, version: str) -> ReleaseTarget:
+    directory = root / Path(spec.version.file).parent
+    build_context = None
+    dockerfile = None
+    action_directory = None
+    if isinstance(spec, ContainerSpec):
+        build_context = resolve_repo_path(root, spec.build_context or str(Path(spec.version.file).parent))
+        dockerfile = None if spec.dockerfile is None else resolve_repo_path(root, spec.dockerfile)
+    if isinstance(spec, ActionSpec):
+        action_directory = directory if spec.path is None else resolve_repo_path(root, spec.path)
+    return ReleaseTarget(spec, version, directory, build_context, dockerfile, action_directory)
+
+
 def load_targets(root: Path | None = None) -> list[ReleaseTarget]:
     root = root or proc.find_root()
-    targets = []
-    for spec in load_specs(root):
-        version = parse_version((root / spec.version.file).read_text(encoding="utf-8"), spec.version)
-        build_context = None
-        dockerfile = None
-        if isinstance(spec, ContainerSpec):
-            build_context = resolve_build_path(root, spec.build_context or str(Path(spec.version.file).parent))
-            dockerfile = None if spec.dockerfile is None else resolve_build_path(root, spec.dockerfile)
-        targets.append(ReleaseTarget(spec, version, root / Path(spec.version.file).parent, build_context, dockerfile))
-    return targets
+    return [
+        build_release_target(
+            root, spec, parse_version((root / spec.version.file).read_text(encoding="utf-8"), spec.version)
+        )
+        for spec in load_specs(root)
+    ]

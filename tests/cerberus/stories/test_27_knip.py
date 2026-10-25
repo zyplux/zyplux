@@ -66,7 +66,6 @@ _RELEASE_TARGETS_ONE_NPM = (
     'kind = "npm"\n'
     'label = "@demo/lib"\n'
     'version = { file = "packages/lib/package.json", json = "version" }\n'
-    'surface = ["packages/lib"]\n'
 )
 _RELEASE_TARGETS_MIXED_KINDS = (
     _RELEASE_TARGETS_ONE_NPM + "\n"
@@ -74,7 +73,6 @@ _RELEASE_TARGETS_MIXED_KINDS = (
     'kind = "pypi"\n'
     'label = "demo-tool"\n'
     'version = { file = "tool/pyproject.toml", regex = \'^version = "([^"]+)"\' }\n'
-    'surface = ["tool"]\n'
 )
 
 _OK = "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"

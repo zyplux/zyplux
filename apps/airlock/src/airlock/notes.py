@@ -7,6 +7,7 @@ from markdown_it import MarkdownIt
 from markdown_it.tree import SyntaxTreeNode
 
 from airlock import proc
+from airlock.content_hash import update_content_hashes
 from airlock.contracts import PythonTracking
 from airlock.registries import load_npm_registry
 from airlock.targets import load_targets
@@ -56,8 +57,7 @@ def validate_python_versions(targets: list[ReleaseTarget]) -> None:
             raise ValueError(msg)
 
 
-def validate_consumed_intents() -> None:
-    root = proc.find_root()
+def validate_consumed_intents(root: Path) -> None:
     pending = sorted(
         str(file.relative_to(root)) for file in (root / ".changeset").glob("*.md") if file.name != "README.md"
     )
@@ -66,9 +66,12 @@ def validate_consumed_intents() -> None:
         raise ValueError(msg)
 
 
-def load_prepared_targets(selected: list[ReleaseTarget] | None = None) -> list[tuple[ReleaseTarget, str]]:
-    validate_consumed_intents()
-    targets = load_targets() if selected is None else selected
+def load_prepared_targets(
+    selected: list[ReleaseTarget] | None = None, *, root: Path | None = None
+) -> list[tuple[ReleaseTarget, str]]:
+    root = root or proc.find_root()
+    validate_consumed_intents(root)
+    targets = load_targets(root) if selected is None else selected
     validate_python_versions(targets)
     return [(target, load_release_notes(target.directory, target.version)) for target in targets]
 
@@ -101,4 +104,5 @@ def prepare_release() -> None:
     proc.run("pnpm", "install", "--lockfile-only", cwd=root)
     if python_targets:
         proc.run("uv", "lock", cwd=root)
-    load_prepared_targets()
+    prepared = load_prepared_targets()
+    update_content_hashes([target for target, _ in prepared])

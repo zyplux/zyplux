@@ -14,7 +14,6 @@ def test_18_1_1_runs_pnpm_versioning_and_uv_to_produce_synchronized_versions_cha
 ) -> None:
     release.prepare_workspace()
     release.run("prepare")
-    release.run("check")
     assert json.loads(release.read("packages/util/package.json"))["version"] == "1.3.0"
     assert json.loads(release.read("apps/cerberus/package.json"))["version"] == "2.3.5"
     assert "Expose reviewed target release notes." in release.read("packages/util/CHANGELOG.md")
@@ -26,7 +25,6 @@ def test_18_1_1_runs_pnpm_versioning_and_uv_to_produce_synchronized_versions_cha
     changelog = release.read("packages/util/CHANGELOG.md")
     release.run("prepare")
     assert release.read("packages/util/CHANGELOG.md") == changelog
-    release.run("check")
 
 
 def test_18_1_2_rejects_python_version_drift_before_changing_any_release_files(release: ReleaseFixture) -> None:

@@ -64,7 +64,7 @@ def test_21_2_1_publishes_only_the_selected_npm_target_and_writes_its_summary(re
 def test_21_2_2_honors_a_single_tag_plan_when_several_npm_targets_exist(release: ReleaseFixture) -> None:
     release.write(
         "airlock-targets.toml",
-        release.read("airlock-targets.toml") + '\n[extra]\nkind = "npm"\nenvironment = "npm-extra"\nsurface = []\n'
+        release.read("airlock-targets.toml") + '\n[extra]\nkind = "npm"\nenvironment = "npm-extra"\n'
         'version = { file = "packages/extra/package.json", json = "version" }\n',
     )
     release.write_json("packages/extra/package.json", {"name": "@zyplux/extra", "version": "1.2.3"})

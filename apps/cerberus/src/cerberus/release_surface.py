@@ -1,22 +1,29 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from airlock.actions import parse_stable_version
+from airlock import github
+from airlock.content_hash import calc_target_hash
 from airlock.errors import RELEASE_ERRORS
-from airlock.registries import fetch_latest
-from airlock.targets import parse_manifest, parse_version
+from airlock.targets import build_release_target, parse_manifest, parse_stable_version, parse_version
 
 from cerberus.model import Finding, Status
 from cerberus.source import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
-    from airlock.contracts import TargetSpec
+    from airlock.contracts import ReleaseTarget, TargetSpec
     from semantic_version import Version
 
     from cerberus.context import Context
     from cerberus.model import Repo
+
+
+@dataclass(frozen=True)
+class PublishedTarget:
+    target: TargetSpec
+    version: Version | None
 
 
 def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Version]) -> list[Finding]:
@@ -37,14 +44,29 @@ def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Ver
     ]
 
 
+def has_content_changes(repo: Repo, ctx: Context, target: ReleaseTarget, tag: str) -> bool:
+    content = ctx.file_at_ref(repo, tag, "airlock-targets.toml")
+    previous = next(
+        (
+            spec
+            for spec in (parse_manifest(content, is_historical=True) if content is not None else [])
+            if spec.tag_prefix == target.spec.tag_prefix
+        ),
+        None,
+    )
+    return (
+        previous is not None and previous.content_hash is not None and calc_target_hash(target) != previous.content_hash
+    )
+
+
 def validate_published(
-    repo: Repo, ctx: Context, target: TargetSpec, version: Version, baseline: tuple[str, Version] | None
+    repo: Repo,
+    ctx: Context,
+    lookup: PublishedTarget,
+    version: Version,
+    baseline: tuple[str, Version] | None,
 ) -> list[Finding]:
-    try:
-        latest = fetch_latest(target, (ctx.source.root / target.version.file).parent)
-        published = None if latest is None else parse_stable_version(latest)
-    except RELEASE_ERRORS as exc:
-        return [Finding(Status.ERROR, f"{target.label}: cannot determine the latest published version: {exc}")]
+    target, published = lookup.target, lookup.version
     if published is None:
         return (
             [Finding(Status.PASS, f"{target.label}: not yet released")]
@@ -57,14 +79,15 @@ def validate_published(
         return validate_bump(target, version, baseline)
     tag = f"{target.tag_prefix}{published}"
     try:
-        changed = ctx.changed_paths(repo, tag, target.surface)
-    except GitHistoryUnavailableError as exc:
-        return [Finding(Status.ERROR, f"{target.label}: cannot diff against {tag}: {exc}")]
+        release = build_release_target(ctx.source.root, target, str(version))
+        changed = has_content_changes(repo, ctx, release, tag)
+    except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
+        return [Finding(Status.ERROR, f"{target.label}: cannot compare contents against {tag}: {exc}")]
     return (
         [
             Finding(
                 Status.FAIL,
-                f"{target.label}: surface changed since {tag} but version is still {version} — "
+                f"{target.label}: contents changed since {tag} but version is still {version} — "
                 f"bump it (e.g. {version.next_patch()})",
             )
         ]
@@ -82,8 +105,13 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
 
 
 def validate_target(
-    repo: Repo, ctx: Context, target: TargetSpec, base: str | None, base_specs: list[TargetSpec]
+    repo: Repo,
+    ctx: Context,
+    lookup: PublishedTarget,
+    base: str | None,
+    base_specs: list[TargetSpec],
 ) -> list[Finding]:
+    target = lookup.target
     content = ctx.file(repo, target.version.file)
     if content is None:
         return [Finding(Status.FAIL, f"{target.label}: version file {target.version.file} is missing")]
@@ -101,7 +129,7 @@ def validate_target(
         if version < base_version:
             return [Finding(Status.FAIL, f"{target.label}: version must not decrease from {base} ({base_version})")]
         baseline = f"{base} ({base_version})", base_version
-    return validate_published(repo, ctx, target, version, baseline)
+    return validate_published(repo, ctx, lookup, version, baseline)
 
 
 def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> list[Finding]:
@@ -110,10 +138,15 @@ def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> 
     try:
         specs = parse_manifest(ctx.file(repo, "airlock-targets.toml") or "")
         manifest = ctx.file_at_ref(repo, base, "airlock-targets.toml") if base and specs else None
-        base_specs = parse_manifest(manifest) if manifest is not None else []
-        findings = [finding for spec in specs for finding in validate_target(repo, ctx, spec, base, base_specs)]
+        base_specs = parse_manifest(manifest, is_historical=True) if manifest is not None else []
+        history = github.fetch_release_history(directory=ctx.source.root) if specs else []
     except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
-        return [Finding(Status.ERROR, f"cannot check release surfaces: {exc}")]
+        return [Finding(Status.ERROR, f"cannot check release contents: {exc}")]
+    findings = []
+    for spec in specs:
+        releases = github.select_releases(history, spec.tag_prefix)
+        lookup = PublishedTarget(spec, releases[0][1] if releases else None)
+        findings.extend(validate_target(repo, ctx, lookup, base, base_specs))
     if all(finding.status == Status.PASS for finding in findings):
-        findings.append(Finding(Status.PASS, "every published target's version tracks its surface"))
+        findings.append(Finding(Status.PASS, "every published target's version tracks its contents"))
     return findings

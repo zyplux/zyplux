@@ -14,11 +14,11 @@ CI uses one unquoted canonical command with literal arguments per `run` step. Py
 
 Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.
 
-Release targets declare their source inputs in `airlock-targets.toml`. The `release_surface_version_bump` bite implements the version-bump policy, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. It reuses manifest parsing, registry access and version parsing from the `zyplux-airlock` Python dependency. Private registry reads reuse `gh auth login --scopes read:packages` locally, or explicit workflow credentials. Fetch complete Git history and the target branch before running the check.
+Release targets record their content fingerprints in `airlock-targets.toml`. The `release_surface_version_bump` bite implements the version-bump policy, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. The `release_readiness` bite validates consumed change intents, synchronized Python versions, current release notes and content fingerprints. Both checks reuse release helpers from the `zyplux-airlock` Python dependency. Release-history reads use `gh auth login` locally or `GH_TOKEN` in CI. Fetch complete Git history and the target branch before running the check.
 
-Dependency freshness, tool-pin freshness and release-surface checks share Airlock's registry client for npm, PyPI and GHCR. Tool-pin lookups select stable npm versions within the `latest` release line that satisfy the configured minimum release age. Lookup failures produce error findings.
+Dependency freshness and tool-pin freshness share Airlock's registry client for npm, PyPI and GHCR. Tool-pin lookups select stable npm versions within the `latest` release line that satisfy the configured minimum release age. Lookup failures produce error findings.
 
-Named target tables derive their tag prefix as `<name>-v` and their label as `<scope>/<name>` from the manifest's top-level `scope`; an explicit `label` overrides the default. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Include both the action entrypoint and its implementation in `surface`; floating major tags do not define the version baseline.
+Named target tables derive their tag prefix as `<name>-v` and their label as `<scope>/<name>` from the manifest's top-level `scope`; an explicit `label` overrides the default. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Action fingerprints cover the action directory and its version-file directory; set `path` when those differ. Floating major tags do not define the version baseline.
 
 ## Lint a repo
 
@@ -65,7 +65,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
 | `lib_py_test_seam`             | content     | Libraries' story tests import only their root module                                |
-| `release_surface_version_bump` | git-history | A published target's version is bumped by exactly one step whenever its release surface changes |
+| `release_readiness` | content | Change intents are consumed, Python versions match, release notes exist and fingerprints match current contents |
+| `release_surface_version_bump` | git-history | A published target's version is bumped by exactly one step whenever its release contents change |
 | `codeowners_coverage`          | content     | `CODEOWNERS` present and covers `/.github/`                                          |
 | `pytest`                       | content     | `pyproject.toml` `[tool.coverage.report] fail_under` meets the floor (90%)           |
 | `jscpd`                        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |

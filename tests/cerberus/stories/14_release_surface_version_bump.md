@@ -1,4 +1,4 @@
-# 14. [Requiring a published target's version to be bumped whenever its release surface changes](test_14_release_surface_version_bump.py)
+# 14. [Requiring a published target's version to be bumped whenever its release contents change](test_14_release_surface_version_bump.py)
 
 ## 14.1 validating release targets and versions
 
@@ -24,7 +24,7 @@
 
 ### 14.2.4 permits an initial release
 
-### 14.2.5 accepts published versions with unchanged surfaces
+### 14.2.5 accepts published versions with unchanged contents
 
 ### 14.2.6 rejects changes to an already published version
 
@@ -32,9 +32,7 @@
 
 ## 14.3 comparing pull request baselines
 
-### 14.3.1 permits repairs to unpublished target branch versions
-
-### 14.3.2 uses the newer published or target branch baseline
+### 14.3.1 compares current versions against the latest baseline
 
 ### 14.3.3 rejects regressions against an unpublished target branch version
 
@@ -58,25 +56,13 @@
 
 ## 14.4 reading published release versions
 
-### 14.4.1 follows scoped publication registries
-
-### 14.4.2 rejects missing private registry credentials
-
-### 14.4.3 rejects unsupported publication configuration
-
-### 14.4.4 reports registry failures as errors
+### 14.4.4 reports release history failures as errors
 
 ### 14.4.5 compares stable action releases across all pages
 
-### 14.4.6 selects stable numeric container tags
+### 14.4.6 uses successful container releases
 
-## 14.5 reusing GitHub credentials for private registry reads
-
-### 14.5.1 reads private npm metadata without manual node auth token exports
-
-### 14.5.2 authenticates private container reads with the saved login and its actor
-
-### 14.5.3 preserves explicitly supplied credentials and reports denied access
+### 14.4.7 reads release history once for all targets
 
 ## 14.6 reporting through Cerberus
 
@@ -87,3 +73,17 @@
 ### 14.6.3 reports manifest errors
 
 ### 14.6.4 preserves findings from multiple targets
+
+## 14.7 comparing packaged contents with release fingerprints
+
+### 14.7.1 accepts package contents matching the successful release tag
+
+### 14.7.2 detects changes even after the pr fingerprint is refreshed
+
+### 14.7.3 uses finalized stable releases instead of registry versions
+
+### 14.7.4 accepts the first fingerprint before a release baseline exists
+
+### 14.7.5 reports package build failures
+
+### 14.7.6 requires bumps for changed action and container inputs

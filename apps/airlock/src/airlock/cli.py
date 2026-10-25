@@ -10,7 +10,7 @@ import typer
 
 from airlock.contracts import ReleaseBatch
 from airlock.errors import RELEASE_ERRORS
-from airlock.notes import load_prepared_targets, prepare_release
+from airlock.notes import prepare_release
 from airlock.releases import build_batch, load_pending, publish_batch
 
 app = typer.Typer(
@@ -34,12 +34,7 @@ def configure_cli(
     pass
 
 
-@app.command(help="Validate consumed change intents, synchronized versions and release notes.")
-def check() -> None:
-    load_prepared_targets()
-
-
-@app.command(help="Prepare versions, changelogs and lockfiles for review.")
+@app.command(help="Prepare versions, changelogs, lockfiles and content fingerprints for review.")
 def prepare() -> None:
     prepare_release()
 

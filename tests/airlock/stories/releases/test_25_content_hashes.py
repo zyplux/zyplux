@@ -1,0 +1,237 @@
+from __future__ import annotations
+
+import tomllib
+import zipfile
+from typing import TYPE_CHECKING
+
+import pytest
+from archive_fixture import hash_archives, stage_git, stage_packagers, write_tar, write_wheel
+from cli_fixture import Reply
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from release_fixture import ReleaseFixture
+
+
+@pytest.mark.parametrize("kind", ["npm", "python"])
+def test_25_1_1_ignores_archive_timestamps_ordering_and_compression(
+    release: ReleaseFixture, tmp_path: Path, kind: str
+) -> None:
+    files = {"first.py": b"first", "second.py": b"second"}
+    first, second = tmp_path / "first.whl", tmp_path / "second.whl"
+    if kind == "python":
+        write_wheel(first, files)
+        write_wheel(
+            second, dict(reversed(files.items())), timestamp=(2026, 1, 1, 0, 0, 0), compression=zipfile.ZIP_DEFLATED
+        )
+    else:
+        first, second = tmp_path / "first.tgz", tmp_path / "second.tgz"
+        write_tar(first, {f"first/{name}": contents for name, contents in files.items()})
+        write_tar(
+            second,
+            {f"second/{name}": contents for name, contents in reversed(files.items())},
+            mtime=100,
+            compresslevel=1,
+        )
+    assert first.read_bytes() != second.read_bytes()
+    assert hash_archives(release, [first]) == hash_archives(release, [second])
+
+
+@pytest.mark.parametrize("change", ["contents", "added", "removed", "renamed", "executable", "metadata"])
+def test_25_1_2_detects_packaged_files_permissions_and_metadata_changes(
+    release: ReleaseFixture, tmp_path: Path, change: str
+) -> None:
+    files = {"package/index.js": b"source", "package/package.json": b'{"dependencies":{"other":"1"}}'}
+    first, second = tmp_path / "first.tgz", tmp_path / "second.tgz"
+    write_tar(first, files)
+    match change:
+        case "contents":
+            files["package/index.js"] = b"changed"
+        case "added":
+            files["package/new.js"] = b"new"
+        case "removed":
+            del files["package/index.js"]
+        case "renamed":
+            files["package/renamed.js"] = files.pop("package/index.js")
+        case "metadata":
+            files["package/package.json"] = b'{"dependencies":{"other":"2"}}'
+    write_tar(second, files, mode=0o755 if change == "executable" else 0o644)
+    assert hash_archives(release, [first]) != hash_archives(release, [second])
+
+
+def test_25_1_3_covers_both_python_distributions_and_ignores_their_listing_order(
+    release: ReleaseFixture, tmp_path: Path
+) -> None:
+    wheel, source = tmp_path / "package.whl", tmp_path / "package.tar.gz"
+    write_wheel(wheel, {"package/__init__.py": b"code"})
+    write_tar(source, {"package/pyproject.toml": b"metadata"})
+    fingerprint = hash_archives(release, [wheel, source])
+    assert fingerprint == hash_archives(release, [source, wheel])
+    write_tar(source, {"package/pyproject.toml": b"changed metadata"})
+    assert fingerprint != hash_archives(release, [wheel, source])
+
+
+def test_25_2_1_initializes_all_target_hashes_and_preserves_manifest_comments(release: ReleaseFixture) -> None:
+    stage_packagers(release)
+    release.write("airlock-targets.toml", "# Release configuration\n" + release.read("airlock-targets.toml"))
+    release.run("prepare")
+    manifest = tomllib.loads(release.read("airlock-targets.toml"))
+    for name in ("util", "cerberus", "ci-image"):
+        assert manifest[name]["content_hash"].startswith("sha256:")
+    assert release.read("airlock-targets.toml").startswith("# Release configuration\n")
+    assert not release.matching("publish|gh")
+    prepared = release.read("airlock-targets.toml")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == prepared
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+def test_25_2_2_rejects_stale_hashes_before_publishing(release: ReleaseFixture, kind: str) -> None:
+    stage_packagers(release)
+    release.run("prepare")
+    target = release.target("util" if kind == "npm" else "cerberus")
+    (target.dir / "changed.py").write_text("changed")
+    release.publish(target.tag, error="release contents differ from content_hash")
+    assert not release.matching("pnpm publish|uv publish|gh release create")
+
+
+def test_25_2_3_leaves_the_manifest_unchanged_when_packaging_fails(release: ReleaseFixture) -> None:
+    stage_packagers(release)
+    manifest = release.read("airlock-targets.toml")
+    release.on("uv build", Reply(stderr="Build failed", exit_code=1))
+    release.run("prepare", error="Build failed")
+    assert release.read("airlock-targets.toml") == manifest
+
+
+def test_25_2_4_rejects_invalid_hash_formats(release: ReleaseFixture) -> None:
+    release.configure("npm", 'content_hash = "sha256:invalid"')
+    release.run("plan", error="String should match pattern")
+
+
+def test_25_2_5_rejects_empty_package_builds(release: ReleaseFixture) -> None:
+    release.use_package()
+    release.configure("npm", 'kind = "pypi"')
+    release.on("uv build")
+    release.run("prepare", error="produced no archives")
+
+
+def test_25_2_6_refreshes_hashes_after_versioning_and_keeps_repeated_preparation_stable(
+    release: ReleaseFixture,
+) -> None:
+    stage_packagers(release)
+    release.run("prepare")
+    previous = tomllib.loads(release.read("airlock-targets.toml"))
+    release.prepare_workspace()
+    stage_packagers(release)
+    release.run("prepare")
+    prepared = tomllib.loads(release.read("airlock-targets.toml"))
+    assert all(prepared[name]["content_hash"] != previous[name]["content_hash"] for name in ("util", "cerberus"))
+    release.run("prepare")
+    assert tomllib.loads(release.read("airlock-targets.toml")) == prepared
+
+
+def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(release: ReleaseFixture) -> None:
+    release.use_package()
+    release.write_json(
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "files": ["dist"], "scripts": {"prepack": "node build.cjs"}},
+    )
+    release.write(
+        "packages/util/build.cjs",
+        "const fs = require('node:fs');\n"
+        "fs.mkdirSync('dist', {recursive: true});\n"
+        "fs.copyFileSync('../../shared/schema.js', 'dist/index.js');\n",
+    )
+    release.write("shared/schema.js", "export const required = true;\n")
+    release.on("pnpm pack", release.run_real)
+    release.run("prepare")
+    baseline = tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"]
+    release.write("packages/util/tests/example.js", "development-only file")
+    release.run("prepare")
+    assert tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"] == baseline
+    release.write("shared/schema.js", "export const required = false;\n")
+    release.run("prepare")
+    assert tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"] != baseline
+
+
+def test_25_4_1_covers_the_action_directory_and_versioned_implementation(release: ReleaseFixture) -> None:
+    release.action()
+    release.configure("action", 'path = "actions/setup"')
+    release.write("actions/setup/action.yml", "name: Setup\n")
+    release.write("apps/action-setup-pm/src/setup.py", "print('setup')\n")
+    release.write(".gitignore", "**/__pycache__/\n")
+    stage_git(release)
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    release.write("apps/action-setup-pm/__pycache__/setup.pyc", "generated")
+    release.write("docs/unrelated.md", "unrelated")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == baseline
+    release.write("actions/setup/action.yml", "name: Changed setup\n")
+    release.run("prepare")
+    metadata = release.read("airlock-targets.toml")
+    assert metadata != baseline
+    release.write("apps/action-setup-pm/src/setup.py", "print('changed setup')\n")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != metadata
+
+
+@pytest.mark.parametrize("ignorefile", [".dockerignore", ".containerignore"])
+def test_25_4_2_covers_container_inputs_using_build_ignore_rules(release: ReleaseFixture, ignorefile: str) -> None:
+    stage_packagers(release)
+    stage_git(release)
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(".dockerignore", "src\n")
+    release.write(ignorefile, "docs\n!docs/include.txt\n*.tmp\n")
+    release.write(".gitignore", "scratch/\n")
+    release.write("src/app.js", "source")
+    release.write("docs/include.txt", "included")
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    release.write("docs/ignored.md", "documentation")
+    release.write("scratch/local.txt", "local cache")
+    release.write("unused.tmp", "temporary file")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == baseline
+    release.write("docs/include.txt", "changed included content")
+    release.run("prepare")
+    included = release.read("airlock-targets.toml")
+    assert included != baseline
+    release.write("src/app.js", "changed source")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != included
+    source = release.read("airlock-targets.toml")
+    release.write("containers/ci/Containerfile", release.read("containers/ci/Containerfile") + "# Changed recipe\n")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != source
+
+
+@pytest.mark.parametrize("kind", ["action", "ghcr"])
+def test_25_4_3_rejects_stale_action_and_container_fingerprints_before_publication(
+    release: ReleaseFixture, kind: str
+) -> None:
+    stage_packagers(release)
+    if kind == "action":
+        release.action()
+        path, tag = "apps/action-setup-pm/action.yml", "setup-pm-v1.0.0"
+    else:
+        path, tag = "containers/ci/Containerfile", "ci-image-v3.4.5"
+    release.run("prepare")
+    previous = (release.root / path).read_text() if (release.root / path).is_file() else ""
+    release.write(path, previous + "\n# Changed source\n")
+    release.publish(tag, error="release contents differ from content_hash")
+    assert not release.matching("podman build|gh release create|git push")
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi", "ghcr"])
+def test_25_4_4_rejects_manual_surface_declarations(release: ReleaseFixture, kind: str) -> None:
+    release.configure(kind, 'surface = ["src"]')
+    release.run("plan", error="Unrecognized key")
+
+
+@pytest.mark.parametrize("path", ["../outside", "/outside"])
+def test_25_4_5_requires_repository_relative_action_paths(release: ReleaseFixture, path: str) -> None:
+    release.action()
+    release.configure("action", f'path = "{path}"')
+    release.run("prepare", error="release paths must be repository-relative")

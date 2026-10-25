@@ -52,12 +52,8 @@ test:
 cerberus:
     uv run cerberus --fix
 
-# Validate prepared versions and reviewed changelog entries.
-release-check:
-    pnpm release:check
-
-# Full gate across both workspaces: install, knip, typecheck, lint, release notes, test, cerberus — autofix throughout.
-check: install knip typecheck lint release-check test cerberus
+# Full gate across both workspaces: install, knip, typecheck, lint, test, cerberus — autofix throughout.
+check: install knip typecheck lint test cerberus
 
 # Upgrade the pinned toolchain plus JavaScript and Python workspace dependencies through cz.
 upgrade *args='':

@@ -1,10 +1,51 @@
 from __future__ import annotations
 
+import operator
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
 
 from airlock import proc
-from airlock.contracts import GithubLookup, GithubRelease
+from airlock.contracts import PUBLISHED_RELEASES, GithubLookup, GithubRelease
+from airlock.targets import parse_stable_version
+
+if TYPE_CHECKING:
+    from semantic_version import Version
+
+    from airlock.contracts import PublishedRelease
+
+
+def fetch_release_history(
+    repository: str = "{owner}/{repo}", *, directory: Path | None = None
+) -> list[PublishedRelease]:
+    response = proc.run(
+        "gh", "api", "--paginate", "--slurp", f"repos/{repository}/releases?per_page=100", cwd=directory
+    )
+    return [
+        release
+        for page in PUBLISHED_RELEASES.validate_json(response)
+        for release in page
+        if not release.draft and not release.prerelease
+    ]
+
+
+def select_releases(history: list[PublishedRelease], tag_prefix: str) -> list[tuple[str, Version]]:
+    releases = []
+    for release in history:
+        if not release.tag_name.startswith(tag_prefix):
+            continue
+        try:
+            version = parse_stable_version(release.tag_name.removeprefix(tag_prefix))
+        except ValueError:
+            continue
+        releases.append((release.tag_name, version))
+    return sorted(releases, key=operator.itemgetter(1), reverse=True)
+
+
+def fetch_releases(
+    tag_prefix: str, repository: str = "{owner}/{repo}", *, directory: Path | None = None
+) -> list[tuple[str, Version]]:
+    return select_releases(fetch_release_history(repository, directory=directory), tag_prefix)
 
 
 def load_release(tag: str, *, assets: bool = False) -> GithubRelease | None:

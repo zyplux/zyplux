@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 type ReleaseKind = Literal["npm", "pypi", "ghcr", "action"]
 type Nonempty = Annotated[str, Field(min_length=1)]
 type Digest = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
+type ContentHash = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
 
 
 class JsonVersion(BaseModel):
@@ -24,10 +25,11 @@ class RegexVersion(BaseModel):
 
 
 class TargetBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     label: str = ""
     tag_prefix: str = ""
     environment: Nonempty | None = None
-    surface: list[str]
+    content_hash: ContentHash | None = None
     version: JsonVersion | RegexVersion
 
 
@@ -36,7 +38,6 @@ class PackageSpec(TargetBase):
 
 
 class ContainerSpec(TargetBase):
-    model_config = ConfigDict(extra="forbid")
     kind: Literal["ghcr"]
     dockerfile: Nonempty | None = None
     build_context: Nonempty | None = None
@@ -45,6 +46,7 @@ class ContainerSpec(TargetBase):
 class ActionSpec(TargetBase):
     kind: Literal["action"]
     repository: Annotated[str, Field(pattern=r"^[\w.-]+/[\w.-]+$")]
+    path: Nonempty | None = None
 
 
 type TargetSpec = Annotated[PackageSpec | ContainerSpec | ActionSpec, Field(discriminator="kind")]
@@ -61,6 +63,7 @@ class ReleaseTarget:
     directory: Path
     build_context: Path | None = None
     dockerfile: Path | None = None
+    action_directory: Path | None = None
 
     @property
     def tag(self) -> str:
@@ -167,13 +170,13 @@ class ContainerManifest(BaseModel):
     version: str
 
 
-class ActionRelease(BaseModel):
+class PublishedRelease(BaseModel):
     draft: bool
     prerelease: bool
     tag_name: str
 
 
-ACTION_RELEASES = TypeAdapter(list[list[ActionRelease]])
+PUBLISHED_RELEASES = TypeAdapter(list[list[PublishedRelease]])
 
 
 class ReleaseAsset(BaseModel):

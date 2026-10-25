@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import httpx
-from cerberus import config
+from cerberus import bites, config
 from cerberus.context import local_context
-from cerberus.model import Repo
+from cerberus.model import CheckResult, Repo
 from cerberus.release_surface import check_release_surface
 from cli_fixture import Request
 
@@ -36,3 +36,8 @@ def check_surface(fixture: ReleaseFixture, base: str | None = None) -> list[dict
             {"message": finding.message, "status": finding.status.name.lower()}
             for finding in check_release_surface(Repo("demo"), local_context(config.load(), fixture.root), base=base)
         ]
+
+
+def check_readiness(fixture: ReleaseFixture) -> CheckResult:
+    with patch.dict(os.environ, {**fixture.env, "AIRLOCK_TEST_ENDPOINT": fixture.endpoint}, clear=True):
+        return bites.BY_ID["release_readiness"].run(Repo("demo"), local_context(config.load(), fixture.root))

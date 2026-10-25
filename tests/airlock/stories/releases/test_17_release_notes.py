@@ -21,15 +21,9 @@ def test_17_1_2_preserves_markdown_examples_and_excludes_neighboring_release_ver
     assert captured == ["- Preserve examples.\n\n```md\n## 9.9.9\n- Example heading.\n```\n"]
 
 
-def test_17_2_1_validates_prepared_releases_without_writes_or_network_requests(release: ReleaseFixture) -> None:
-    assert not release.run("check").stdout
-    assert not release.requests
-    assert not release.matching("gh|pnpm|uv")
-
-
 def test_17_2_2_rejects_unconsumed_fragments(release: ReleaseFixture) -> None:
     release.write(".changeset/unfinished.md", '---\n"@zyplux/util": patch\n---\n\nFix a utility.\n')
-    release.run("check", error="Unconsumed change intents: .changeset/unfinished.md")
+    release.run("plan", error="Unconsumed change intents: .changeset/unfinished.md")
 
 
 @pytest.mark.parametrize(
@@ -43,7 +37,7 @@ def test_17_2_2_rejects_unconsumed_fragments(release: ReleaseFixture) -> None:
 )
 def test_17_2_3_rejects_a_changelog_without_release_entries(release: ReleaseFixture, markdown: str) -> None:
     release.write("packages/util/CHANGELOG.md", markdown)
-    execution = release.run("check", error="")
+    execution = release.run("plan", error="")
     assert "no release notes" in execution.stderr or "no changelog entries" in execution.stderr
 
 
@@ -54,7 +48,7 @@ def test_17_2_4_rejects_inconsistent_python_tracking_manifests(
     release.write_json(
         "apps/cerberus/package.json", {"name": "zyplux-cerberus", "private": True, "version": "2.3.4", **override}
     )
-    release.run("check", error="")
+    release.run("plan", error="")
 
 
 @pytest.mark.parametrize(
