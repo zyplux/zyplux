@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from release_fixture import ContainerPublication, ReleaseFixture, release
+from release_fixture import ContainerPublication, ReleaseFixture, prepared_release, release
 
 if TYPE_CHECKING:
     from cli_fixture import Command
 
-__all__ = ["release"]
+__all__ = ["prepared_release", "release"]
 
 
 @pytest.fixture

@@ -78,3 +78,25 @@ def test_2_5_2_honors_explicit_labels_without_changing_the_derived_tag_prefix(re
 def test_2_5_3_rejects_malformed_release_declarations(release: ReleaseFixture, manifest: str) -> None:
     release.write("airlock-targets.toml", manifest)
     release.run("plan", error="")
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+@pytest.mark.parametrize("location", ["absolute", "parent", "symlink"])
+def test_2_5_4_rejects_version_sources_outside_the_repository(
+    release: ReleaseFixture, kind: str, location: str
+) -> None:
+    outside = release.root.with_name(f"{release.root.name}-outside")
+    outside.mkdir()
+    version_file = outside / "package.json"
+    version_file.write_text('{"version":"1.2.3"}', encoding="utf-8")
+    match location:
+        case "absolute":
+            path = str(version_file)
+        case "parent":
+            path = f"../{outside.name}/package.json"
+        case _:
+            (release.root / "linked").symlink_to(outside, target_is_directory=True)
+            path = "linked/package.json"
+    release.configure(kind, f'version = {{ file = "{path}", json = "version" }}')
+    release.run("plan", error="release paths must be repository-relative")
+    assert not release.matching("pnpm pack|uv build|publish")

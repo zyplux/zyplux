@@ -44,7 +44,7 @@ If preparation needs regeneration, preserve the code and note text, restore gene
 
 Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Unpublished target-branch versions can be repaired without another bump.
 
-`airlock prepare` records each target's `content_hash` in `airlock-targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
+`airlock prepare` records each target's `content_hash` in `airlock-targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
 | Target | Fingerprinted contents |
 | --- | --- |
@@ -55,9 +55,11 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 
 Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
 
+Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
+
 Cerberus compares current contents with the fingerprint in the latest finalized stable GitHub release's tagged manifest. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. The first release with a fingerprint establishes the baseline; content comparisons begin after that release.
 
-Cerberus's `release_readiness` bite recalculates configured fingerprints. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
+Cerberus's `release_readiness` bite requires and recalculates every target's fingerprint. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
 
 Release checks require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
@@ -99,7 +101,7 @@ Airlock supplies each npm scope's `publishConfig` registry to pnpm for preparati
 2. Ensure pnpm discovers its version manifest. Python packages need the private tracking manifest described above; actions use a workspace `package.json`, with `private: true` when there is no npm package.
 3. Complete the registry setup below, then prepare and merge the release through the feature PR procedure.
 
-Set the top-level `scope` before the target tables:
+Version files and declared paths must be repository-relative and resolve inside the repository. Set the top-level `scope` before the target tables:
 
 ```toml
 scope = "@zyplux"

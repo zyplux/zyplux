@@ -4,6 +4,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+from archive_fixture import stage_packagers
 from cli_fixture import Reply, Response
 from release_fixture import list_workspace_packages
 
@@ -25,21 +26,22 @@ def test_24_1_1_plans_separate_jobs_without_packing_packages_or_discovering_depe
 
 
 @pytest.mark.parametrize(
-    ("reply", "error"),
-    [(Reply(exit_code=1), "command failed"), ("", "npm dependencies did not become available: @zyplux/util@1.2.3")],
+    ("has_packing_error", "error"),
+    [(True, "command failed"), (False, "npm dependencies did not become available: @zyplux/util@1.2.3")],
 )
 def test_24_1_2_confines_npm_publication_failures_to_their_jobs(
-    release: ReleaseFixture, reply: Reply | str, error: str
+    release: ReleaseFixture, *, has_packing_error: bool, error: str
 ) -> None:
     consumer = release.consumer()
-    release.on("pnpm pack", reply)
+    if has_packing_error:
+        release.on("pnpm pack", Reply(exit_code=1))
     batches = release.plan()
     assert not release.matching("pnpm pack")
     failed = next(batch for batch in batches if consumer.tag in batch["tags"])
     independent = next(batch for batch in batches if "independent-v1.2.3" in batch["tags"])
     release.publish_batch(failed, error=error)
     assert not release.matching("pnpm publish")
-    release.on("pnpm pack")
+    stage_packagers(release)
     release.stage_npm()
     release.publish_batch(independent)
     assert release.matching("gh release create independent-v1.2.3")

@@ -7,6 +7,8 @@ import pytest
 from cli_fixture import Reply
 from release_fixture import MISSING_RELEASE
 
+pytestmark = pytest.mark.usefixtures("prepared_release")
+
 if TYPE_CHECKING:
     from release_fixture import ReleaseFixture
 
@@ -106,7 +108,6 @@ def test_21_2_4_rejects_batches_that_disagree_with_the_checkout(
 
 def test_21_2_5_publishes_a_python_batch_through_uv(release: ReleaseFixture) -> None:
     batch = next(batch for batch in release.plan() if batch["kind"] == "pypi")
-    release.on("uv build")
     release.on("uv publish")
     release.publish_batch(batch)
     assert release.matching("uv publish")

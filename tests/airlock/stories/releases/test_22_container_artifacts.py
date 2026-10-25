@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from cli_fixture import Reply, Response
-from release_fixture import PUBLISHED_RELEASE
+from release_fixture import PUBLISHED_RELEASE, prepare_publication
 
 if TYPE_CHECKING:
     from release_fixture import ContainerPublication, ReleaseFixture
@@ -15,6 +15,7 @@ def test_22_1_1_builds_from_the_declared_dockerfile_and_context_and_uploads_a_di
     release: ReleaseFixture, container: ContainerPublication
 ) -> None:
     release.configure("ghcr", 'dockerfile = "containers/ci/Containerfile"\nbuild_context = "."')
+    prepare_publication(release)
     release.publish_batch(container.batch)
     assert json.loads(container.manifest) == {"image": f"ghcr.io/zyplux/ci@sha256:{'1' * 64}", "version": "3.4.5"}
     assert release.matching("podman build")[0].argv == [

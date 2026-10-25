@@ -75,3 +75,10 @@ def test_36_3_2_reports_build_failures(release: ReleaseFixture) -> None:
     result = check_readiness(release)
     assert result.status.name == "ERROR"
     assert "Packaging failed" in result.problems[0].message
+
+
+def test_36_3_3_rejects_missing_fingerprints(release: ReleaseFixture) -> None:
+    result = check_readiness(release)
+    assert result.status.name == "FAIL"
+    assert "missing content_hash; run airlock prepare" in result.problems[0].message
+    assert not release.matching("pnpm pack|uv build|publish")

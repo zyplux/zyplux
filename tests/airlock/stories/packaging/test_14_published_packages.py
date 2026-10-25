@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import tomllib
+import zipfile
 from pathlib import Path
 
 from cli_fixture import REPO_ROOT
@@ -23,9 +24,14 @@ def test_14_1_2_installs_airlock_from_its_python_wheel(tmp_path: Path) -> None:
         ["uv", "build", "--package", "zyplux-airlock", "--out-dir", str(tmp_path)], cwd=REPO_ROOT, check=True
     )
     wheel = next(tmp_path.glob("*.whl"))
+    project = tomllib.loads((REPO_ROOT / "apps/airlock/pyproject.toml").read_text(encoding="utf-8"))
+    [backend] = project["build-system"]["requires"]
+    assert backend.startswith("uv_build==")
+    with zipfile.ZipFile(wheel) as archive:
+        metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/WHEEL"))
+        assert f"Generator: uv {backend.removeprefix('uv_build==')}\n" in archive.read(metadata).decode()
     command = ["uv", "run", "--isolated", "--no-project", "--with", str(wheel), "airlock"]
     execution = subprocess.run([*command, "--version"], cwd=tmp_path, text=True, capture_output=True, check=True)
-    project = tomllib.loads((REPO_ROOT / "apps/airlock/pyproject.toml").read_text(encoding="utf-8"))["project"]
-    assert execution.stdout.strip() == project["version"]
+    assert execution.stdout.strip() == project["project"]["version"]
     help_page = subprocess.run([*command, "--help"], cwd=tmp_path, text=True, capture_output=True, check=True)
     assert all(command in help_page.stdout for command in ("prepare", "plan", "publish"))

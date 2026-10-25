@@ -21,3 +21,5 @@
 ### 36.3.1 rejects stale fingerprints
 
 ### 36.3.2 reports build failures
+
+### 36.3.3 rejects missing fingerprints

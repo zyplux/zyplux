@@ -8,6 +8,8 @@ import pytest
 from cli_fixture import Reply, Response
 from release_fixture import MISSING_RELEASE
 
+pytestmark = pytest.mark.usefixtures("prepared_release")
+
 if TYPE_CHECKING:
     from release_fixture import ContainerPublication, ReleaseFixture
 
@@ -37,7 +39,6 @@ def test_8_2_2_builds_and_publishes_incomplete_pypi_releases_using_isolated_arti
             404 if files is None else 200,
         ),
     )
-    release.on("uv build")
     release.on("uv publish")
     release.publish("cerberus-v2.3.4")
     if files == ["bdist_wheel", "sdist"]:

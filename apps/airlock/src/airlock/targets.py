@@ -85,7 +85,7 @@ def resolve_repo_path(root: Path, relative: str) -> Path:
 
 
 def build_release_target(root: Path, spec: TargetSpec, version: str) -> ReleaseTarget:
-    directory = root / Path(spec.version.file).parent
+    directory = resolve_repo_path(root, spec.version.file).parent
     build_context = None
     dockerfile = None
     action_directory = None
@@ -101,7 +101,9 @@ def load_targets(root: Path | None = None) -> list[ReleaseTarget]:
     root = root or proc.find_root()
     return [
         build_release_target(
-            root, spec, parse_version((root / spec.version.file).read_text(encoding="utf-8"), spec.version)
+            root,
+            spec,
+            parse_version(resolve_repo_path(root, spec.version.file).read_text(encoding="utf-8"), spec.version),
         )
         for spec in load_specs(root)
     ]

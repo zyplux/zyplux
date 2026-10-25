@@ -7,6 +7,8 @@ import pytest
 from cli_fixture import Reply, Response
 from release_fixture import PUBLISHED_RELEASE
 
+pytestmark = pytest.mark.usefixtures("prepared_release")
+
 if TYPE_CHECKING:
     from release_fixture import ReleaseFixture
 
@@ -89,7 +91,6 @@ def test_20_2_2_keeps_incomplete_pypi_releases_pending_even_when_their_github_re
 
 def test_20_4_1_retries_a_partial_upload_before_creating_its_github_release(release: ReleaseFixture) -> None:
     release.serve("https://pypi.org/", Response({"urls": [{"packagetype": "bdist_wheel"}]}))
-    release.on("uv build")
     release.on("uv publish", Reply(stdout="Upload interrupted.", exit_code=1))
     release.publish("cerberus-v2.3.4", error="command failed")
     assert not release.matching("gh release create")

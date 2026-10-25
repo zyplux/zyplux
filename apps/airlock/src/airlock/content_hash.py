@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import stat
 import tarfile
 import zipfile
@@ -122,16 +123,21 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             files.add(ignorefile)
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
     files.discard(root / "airlock-targets.toml")
-    return calc_entries_hash([
-        (
-            "files",
+    entries = []
+    for path in files:
+        if path.is_symlink():
+            kind, contents = "symlinks", os.fsencode(path.readlink())
+        elif path.is_file():
+            kind, contents = "files", path.read_bytes()
+        else:
+            continue
+        entries.append((
+            kind,
             path.relative_to(root).as_posix(),
-            bool(path.stat().st_mode & stat.S_IXUSR),
-            hashlib.sha256(path.read_bytes()).hexdigest(),
-        )
-        for path in files
-        if path.is_file()
-    ])
+            bool(path.lstat().st_mode & stat.S_IXUSR),
+            hashlib.sha256(contents).hexdigest(),
+        ))
+    return calc_entries_hash(entries)
 
 
 def calc_target_hash(target: ReleaseTarget) -> str:
@@ -143,7 +149,8 @@ def calc_target_hash(target: ReleaseTarget) -> str:
 
 def validate_content_hash(target: ReleaseTarget, archives: list[Path] | None = None) -> None:
     if target.spec.content_hash is None:
-        return
+        msg = f"{target.spec.label}: missing content_hash; run airlock prepare"
+        raise ValueError(msg)
     fingerprint = calc_target_hash(target) if archives is None else calc_content_hash(archives)
     if fingerprint != target.spec.content_hash:
         msg = f"{target.spec.label}: release contents differ from content_hash; run airlock prepare"

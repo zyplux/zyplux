@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from release_fixture import MISSING_RELEASE, capture_release_notes
+from release_fixture import MISSING_RELEASE, capture_release_notes, prepare_publication
 
 if TYPE_CHECKING:
     from release_fixture import ReleaseFixture
@@ -59,9 +59,9 @@ def test_17_2_4_rejects_inconsistent_python_tracking_manifests(
     ],
 )
 def test_17_3_1_sends_the_exact_target_entry_to_github(release: ReleaseFixture, tag: str, notes: str) -> None:
+    prepare_publication(release)
     release.all_published(pypi=False)
     release.on("gh api graphql", MISSING_RELEASE)
-    release.on("uv build")
     release.on("uv publish")
     captured = capture_release_notes(release)
     release.publish(tag)

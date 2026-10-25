@@ -95,7 +95,6 @@ class ReleaseFixture(CliFixture):
         self.on(
             "gh release download", json.dumps({"image": f"ghcr.io/zyplux/ci@sha256:{'1' * 64}", "version": "3.4.5"})
         )
-        self.on("pnpm pack")
         self.on("pnpm version")
         self.on("pnpm install")
         self.on("uv version")
@@ -106,6 +105,7 @@ class ReleaseFixture(CliFixture):
         self.on("pnpm list", lambda _: json.dumps(list_workspace_packages(self.root)))
         self.published()
         self.serve("https://registry.npmjs.org/util.tgz", Response())
+        stage_packagers(self)
 
     def target(self, name: str = "util") -> Target:
         fields = {
@@ -142,6 +142,8 @@ class ReleaseFixture(CliFixture):
         self.on("gh api graphql", PUBLISHED_RELEASE)
 
     def stage_npm(self, *, exit_code: int = 0) -> None:
+        prepare_publication(self)
+
         def publish(_: Command) -> str | Reply:
             if exit_code:
                 return Reply(exit_code=exit_code)
@@ -244,11 +246,13 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.on("git rev-parse FETCH_HEAD^{commit}", "release-sha")
         self.on("git push")
         self.action_releases([build_release("setup-pm-v1.0.0")])
+        prepare_publication(self)
 
     def action_releases(self, *pages: list[dict[str, Any]]) -> None:
         self.on("gh api --paginate --slurp", json.dumps(pages))
 
     def container(self) -> dict[str, Any]:
+        prepare_publication(self)
         self.env.update(GH_TOKEN=self.credential, GITHUB_ACTOR="publisher")
         self.on("git rev-parse HEAD", "reviewed-sha")
         self.published()
@@ -315,6 +319,7 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
             self.write_json(f"packages/{name}/package.json", manifest)
             self.write(f"packages/{name}/CHANGELOG.md", f"# {name}\n\n## 1.2.3\n\n- Publish {name}.\n")
         self.write("airlock-targets.toml", self.read("airlock-targets.toml").replace("[util]", extra + "[util]"))
+        prepare_publication(self)
         return Target(self.root / "packages/consumer", "@zyplux/consumer", "consumer-v1.2.3", "1.2.3")
 
     def bundled_consumer(self) -> Target:
@@ -336,11 +341,17 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.write(
             ".pnpmfile.mjs",
             "export const hooks = { beforePacking(manifest) { "
-            "delete manifest.dependencies['@zyplux/implementation']; return manifest; } };",
+            "delete manifest.dependencies?.['@zyplux/implementation']; return manifest; } };",
         )
         self.on("pnpm pack", self.run_real)
         self.on("tar -xOf", self.run_real)
+        prepare_publication(self)
         return consumer
+
+
+def prepare_publication(fixture: CliFixture) -> None:
+    fixture.run("prepare")
+    fixture.calls.clear()
 
 
 def list_sources(fixture: ReleaseFixture, call: Command) -> str:
@@ -349,7 +360,7 @@ def list_sources(fixture: ReleaseFixture, call: Command) -> str:
         path.relative_to(fixture.root).as_posix()
         for directory in directories
         for path in Path(directory).rglob("*")
-        if path.is_file()
+        if path.is_file() or path.is_symlink()
     )
 
 
@@ -388,3 +399,8 @@ def release(tmp_path: Path) -> Iterator[ReleaseFixture]:
         server.shutdown()
         thread.join()
         server.server_close()
+
+
+@pytest.fixture
+def prepared_release(release: ReleaseFixture) -> None:
+    prepare_publication(release)

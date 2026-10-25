@@ -22,6 +22,8 @@
 
 ### 25.2.6 refreshes hashes after versioning and keeps repeated preparation stable
 
+### 25.2.7 rejects missing fingerprints before publication
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files
@@ -37,3 +39,5 @@
 ### 25.4.4 rejects manual surface declarations
 
 ### 25.4.5 requires repository relative action paths
+
+### 25.4.6 hashes symlink identity including directory and broken links

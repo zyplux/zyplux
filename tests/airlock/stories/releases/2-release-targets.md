@@ -25,3 +25,5 @@
 ### 2.5.2 honors explicit labels without changing the derived tag prefix
 
 ### 2.5.3 rejects malformed release declarations
+
+### 2.5.4 rejects version sources outside the repository

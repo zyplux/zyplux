@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from cli_fixture import Reply
-from release_fixture import MISSING_RELEASE, build_release, capture_release_notes
+from release_fixture import MISSING_RELEASE, build_release, capture_release_notes, prepare_publication
 
 if TYPE_CHECKING:
     from release_fixture import ReleaseFixture
@@ -143,6 +143,7 @@ def test_19_2_5_rejects_invalid_action_versions_before_creating_a_release(releas
         "apps/action-setup-pm/package.json", {"name": "zyplux-setup-pm", "private": True, "version": "1.0.0-beta.1"}
     )
     release.write("apps/action-setup-pm/CHANGELOG.md", "## 1.0.0-beta.1\n\n- Publish an action.\n")
+    prepare_publication(release)
     release.publish("setup-pm-v1.0.0-beta.1", error="must be stable semver")
     assert not release.matching("gh release create|git push")
 

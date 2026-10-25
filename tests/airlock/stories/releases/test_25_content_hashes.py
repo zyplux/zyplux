@@ -131,6 +131,22 @@ def test_25_2_6_refreshes_hashes_after_versioning_and_keeps_repeated_preparation
     assert tomllib.loads(release.read("airlock-targets.toml")) == prepared
 
 
+@pytest.mark.parametrize("kind", ["npm", "pypi", "action", "ghcr"])
+def test_25_2_7_rejects_missing_fingerprints_before_publication(release: ReleaseFixture, kind: str) -> None:
+    if kind == "action":
+        release.action()
+        manifest = release.read("airlock-targets.toml")
+        release.write(
+            "airlock-targets.toml",
+            "\n".join(line for line in manifest.splitlines() if not line.startswith("content_hash")),
+        )
+        tag = "setup-pm-v1.0.0"
+    else:
+        tag = release.target({"npm": "util", "pypi": "cerberus", "ghcr": "ci"}[kind]).tag
+    release.publish(tag, error="missing content_hash; run airlock prepare")
+    assert not release.matching("pnpm publish|uv publish|podman build|gh release create|git push")
+
+
 def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(release: ReleaseFixture) -> None:
     release.use_package()
     release.write_json(
@@ -235,3 +251,28 @@ def test_25_4_5_requires_repository_relative_action_paths(release: ReleaseFixtur
     release.action()
     release.configure("action", f'path = "{path}"')
     release.run("prepare", error="release paths must be repository-relative")
+
+
+@pytest.mark.parametrize("kind", ["action", "ghcr"])
+@pytest.mark.parametrize("link_kind", ["file", "directory", "broken"])
+def test_25_4_6_hashes_symlink_identity_including_directory_and_broken_links(
+    release: ReleaseFixture, kind: str, link_kind: str
+) -> None:
+    if kind == "action":
+        release.action()
+        directory = release.root / "apps/action-setup-pm"
+    else:
+        directory = release.target("ci").dir
+    for name in ("first", "second"):
+        if link_kind != "broken":
+            path = f"shared/{name}/item.txt" if link_kind == "directory" else f"shared/{name}"
+            release.write(path, "identical contents")
+    link = directory / "linked-input"
+    link.symlink_to("../../shared/first", target_is_directory=link_kind == "directory")
+    stage_git(release)
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    link.unlink()
+    link.symlink_to("../../shared/second", target_is_directory=link_kind == "directory")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != baseline
