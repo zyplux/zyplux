@@ -15,7 +15,7 @@ zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
-addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
+addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
 testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
 markers = ["no_xdist: run this test outside the xdist worker pool (see tests/conftest.py)"]
 

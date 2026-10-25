@@ -35,3 +35,7 @@ def test_14_1_2_installs_airlock_from_its_python_wheel(tmp_path: Path) -> None:
     assert execution.stdout.strip() == project["project"]["version"]
     help_page = subprocess.run([*command, "--help"], cwd=tmp_path, text=True, capture_output=True, check=True)
     assert all(command in help_page.stdout for command in ("prepare", "plan", "publish"))
+    execution = subprocess.run([*command, "plan"], cwd=tmp_path, text=True, capture_output=True, check=False)
+    assert execution.returncode == 1
+    assert "error: command failed" in execution.stderr
+    assert "Traceback" not in execution.stderr

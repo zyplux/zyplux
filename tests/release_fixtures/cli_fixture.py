@@ -9,9 +9,12 @@ import threading
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from pathlib import Path
+from subprocess import run as run_native
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 from wsgiref.simple_server import WSGIServer, make_server
+
+from cli_runner import run_cli
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -61,6 +64,7 @@ type NetworkReply = Response | Callable[[Request], Response]
 class CliFixture:
     root: Path
     env: dict[str, str] = field(default_factory=lambda: dict(os.environ))
+    native_env: dict[str, str] = field(default_factory=lambda: dict(os.environ))
     calls: list[Command] = field(default_factory=list)
     requests: list[Request] = field(default_factory=list)
     commands: list[tuple[str | re.Pattern[str], CommandReply]] = field(default_factory=list)
@@ -107,20 +111,7 @@ class CliFixture:
         return Response(status=500)
 
     def run(self, *args: str, error: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-        execution = subprocess.run(
-            [
-                sys.executable,
-                str(Path(__file__).with_name("cli_runner.py")),
-                *args,
-            ],
-            cwd=self.root,
-            env={**self.env, "AIRLOCK_TEST_ENDPOINT": self.endpoint},
-            input="",
-            text=True,
-            capture_output=True,
-            timeout=60,
-            check=False,
-        )
+        execution = run_cli(self.root, {**self.env, "AIRLOCK_TEST_ENDPOINT": self.endpoint}, args)
         assert not self.failures, "\n".join(self.failures)
         if not check:
             return execution
@@ -131,12 +122,11 @@ class CliFixture:
             assert error in execution.stdout + execution.stderr
         return execution
 
-    @staticmethod
-    def run_real(call: Command) -> Reply:
-        execution = subprocess.run(
+    def run_real(self, call: Command) -> Reply:
+        execution = run_native(
             [call.program, *call.argv],
             cwd=call.cwd,
-            env=os.environ,
+            env=self.native_env,
             capture_output=True,
             text=True,
             check=False,
