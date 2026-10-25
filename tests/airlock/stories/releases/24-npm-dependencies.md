@@ -8,8 +8,6 @@
 
 ### 24.1.3 rejects invalid workspace dependencies
 
-### 24.1.4 rejects cycles when publishing several npm targets in one command
-
 ### 24.1.5 rejects publish only lifecycle hooks before packing
 
 ### 24.1.6 encodes target names in archive filenames

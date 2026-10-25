@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from airlock import check_release_surface
-
-from cerberus.model import CheckResult, Finding, Scope, Status
+from cerberus.model import CheckResult, Scope
+from cerberus.release_surface import check_release_surface
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -20,8 +19,5 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if ctx.file(repo, "airlock-targets.toml") is None:
         res.skip("no airlock-targets.toml — repo publishes nothing")
         return res
-    res.findings.extend(
-        Finding(Status[finding.status.upper()], finding.message)
-        for finding in check_release_surface(root=ctx.source.root)
-    )
+    res.findings.extend(check_release_surface(root=ctx.source.root))
     return res

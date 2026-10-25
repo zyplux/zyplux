@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+import pytest
 from cli_fixture import REPO_ROOT, CliFixture, Command, Reply, Response
+
+if TYPE_CHECKING:
+    import subprocess
+    from collections.abc import Iterator
 
 MANIFEST = """scope = "@zyplux"
 [util]
@@ -96,6 +102,7 @@ class ReleaseFixture(CliFixture):
         self.on("tar -xOf", lambda call: inspect_archive(self, call))
         self.on("pnpm list", lambda _: json.dumps(list_workspace_packages(self.root)))
         self.published()
+        self.serve("https://registry.npmjs.org/util.tgz", Response())
 
     def target(self, name: str = "util") -> Target:
         fields = {
@@ -274,13 +281,21 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.on("git ls-tree --name-only origin/main -- packages/util/package.json", "packages/util/package.json")
         self.on("git show origin/main:packages/util/package.json", json.dumps({"version": version}))
 
-    def check_surface(self, base: str | None = None) -> list[dict[str, str]]:
-        execution = self.run("check-surface", "--json", *(["--base", base] if base else []), check=False)
-        findings = json.loads(execution.stdout.splitlines()[-1])
-        assert (execution.returncode == 0) == all(finding["status"] in {"pass", "skip"} for finding in findings)
-        if execution.returncode:
-            assert "release surface validation failed" in execution.stderr
-        return findings
+    def publish(self, tag: str, *, error: str | None = None) -> subprocess.CompletedProcess[str]:
+        name = tag.rsplit("-v", 1)[0]
+        spec = tomllib.loads(self.read("airlock-targets.toml"))[name]
+        return self.run(
+            "publish",
+            "--batch",
+            json.dumps({
+                "environment": spec.get("environment", "actions" if spec["kind"] == "action" else spec["kind"]),
+                "id": f"{spec['kind']}-{name}",
+                "kind": spec["kind"],
+                "runner": "ubuntu-latest",
+                "tags": [tag],
+            }),
+            error=error,
+        )
 
     def consumer(self) -> Target:
         extra = ""
@@ -344,3 +359,17 @@ def capture_release_notes(fixture: ReleaseFixture) -> list[str]:
 
     fixture.on("gh release create", capture)
     return notes
+
+
+@pytest.fixture
+def release(tmp_path: Path) -> Iterator[ReleaseFixture]:
+    fixture = ReleaseFixture(tmp_path)
+    server, thread = fixture.start()
+    fixture.seed()
+    try:
+        yield fixture
+        assert not fixture.failures, "\n".join(fixture.failures)
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()

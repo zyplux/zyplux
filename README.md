@@ -28,6 +28,8 @@ Each package's README covers usage. Follow the [Airlock release workflow](apps/a
 
 For releasable changes, run `pnpm change`, then `pnpm release:prepare` before review. Each GitHub release contains its target version's reviewed changelog entry. See the [release workflow](.changeset/README.md).
 
+For a package's first npm publication and trusted-publisher setup, follow the [publishing guide](docs/guide/publish.md#first-npm-publication).
+
 ## Develop
 
 The [setup-pm action](apps/action-setup-pm/README.md) provides cached pnpm and uv toolchains with locked installs for consuming repositories. Reference it as `zyplux/zyplux/apps/action-setup-pm@setup-pm-v1`.

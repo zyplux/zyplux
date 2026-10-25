@@ -106,9 +106,7 @@ class CliFixture:
         self.failures.append(f"Unexpected request: {request.method} {request.url}")
         return Response(status=500)
 
-    def run(
-        self, *args: str, error: str | None = None, stdin: str = "", check: bool = True
-    ) -> subprocess.CompletedProcess[str]:
+    def run(self, *args: str, error: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
         execution = subprocess.run(
             [
                 sys.executable,
@@ -117,7 +115,7 @@ class CliFixture:
             ],
             cwd=self.root,
             env={**self.env, "AIRLOCK_TEST_ENDPOINT": self.endpoint},
-            input=stdin,
+            input="",
             text=True,
             capture_output=True,
             timeout=60,

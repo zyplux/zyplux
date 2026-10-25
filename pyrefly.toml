@@ -17,7 +17,7 @@ project-excludes = ["**/node_modules"]
 use-ignore-files = false
 search-path = [
     "apps/airlock/src",
-    "tests/airlock",
+    "tests/release_fixtures",
     "apps/action-setup-pm/src",
     "apps/cerberus/src",
     "apps/clipy/src",

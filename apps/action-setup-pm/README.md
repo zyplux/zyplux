@@ -15,4 +15,4 @@ Executable cache keys include the version, operating system and architecture. No
 
 Every call runs `pnpm install --frozen-lockfile --no-runtime` and `uv sync --locked --all-packages --all-groups`. Cerberus requires checkout and the shared action before checks in the unconditional CI job, and rejects standalone toolchain setup actions in workflows.
 
-Zyplux's main-branch release selector runs both toolchains to populate caches that subsequent PRs can restore. PR caches are isolated to their merge ref.
+Publication jobs populate the main-branch caches that subsequent PRs can restore. PR caches are isolated to their merge ref.

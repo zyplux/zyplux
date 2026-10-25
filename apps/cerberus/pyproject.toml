@@ -8,6 +8,7 @@ dependencies = [
     "networkx>=3.7",
     "pyyaml>=6.0.3",
     "rust-just>=1.59.0",
+    "semantic-version>=2.10.0",
     "tree-sitter>=0.26.0",
     "tree-sitter-bash>=0.25.1",
     "tree-sitter-python>=0.25.0",

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-import tomllib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -30,7 +28,7 @@ version = { file = "VERSION", regex = '^nomatch$' }
 """,
     )
     release.write("VERSION", "1.2.3\n")
-    release.run("assert-tag-version", "broken-v1.2.3", error="could not read version from VERSION")
+    release.run("plan", error="could not read version from VERSION")
 
 
 def test_2_3_1_rejects_finalized_releases_when_their_image_cannot_be_accessed(release: ReleaseFixture) -> None:
@@ -55,26 +53,27 @@ def test_2_3_2_authenticates_private_image_probes_and_propagates_registry_failur
 
 def test_2_4_1_loads_a_version_for_every_target_declared_in_airlock_targets_toml(release: ReleaseFixture) -> None:
     release.on("git rev-parse --show-toplevel", str(REPO_ROOT))
-    declarations = tomllib.loads((REPO_ROOT / "airlock-targets.toml").read_text(encoding="utf-8"))
-    declarations.pop("scope")
-    prepared = json.loads(release.run("list-prepared-releases").stdout)
-    assert len(prepared) == len(declarations)
-    assert all(target["version"] and target["notes"] for target in prepared)
+    release.run("check")
+    assert not release.requests
 
 
 def test_2_5_1_derives_labels_from_the_configured_scope_and_tags_from_table_names(release: ReleaseFixture) -> None:
     release.write(
         "airlock-targets.toml", release.read("airlock-targets.toml").replace('scope = "@zyplux"', 'scope = "@demo"')
     )
-    assert "@demo/util 1.2.3 matches util-v1.2.3" in release.run("assert-tag-version", "util-v1.2.3").stdout
+    release.published(npm=True)
+    assert release.plan("util-v1.2.3")[0]["tags"] == ["util-v1.2.3"]
+    assert any(request.url == "https://registry.npmjs.org/%40demo%2Futil" for request in release.requests)
 
 
 def test_2_5_2_honors_explicit_labels_without_changing_the_derived_tag_prefix(release: ReleaseFixture) -> None:
     release.configure("npm", 'label = "@demo/custom"')
-    assert "@demo/custom 1.2.3 matches util-v1.2.3" in release.run("assert-tag-version", "util-v1.2.3").stdout
+    release.published(npm=True)
+    assert release.plan("util-v1.2.3")[0]["tags"] == ["util-v1.2.3"]
+    assert any(request.url == "https://registry.npmjs.org/%40demo%2Fcustom" for request in release.requests)
 
 
 @pytest.mark.parametrize("manifest", ["", 'scope = ""', "scope = 1", 'scope = "@demo"\nutil = 1'])
 def test_2_5_3_rejects_malformed_release_declarations(release: ReleaseFixture, manifest: str) -> None:
     release.write("airlock-targets.toml", manifest)
-    release.run("list-prepared-releases", error="")
+    release.run("check", error="")

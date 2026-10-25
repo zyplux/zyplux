@@ -1,8 +1,6 @@
 # 17. [Reviewed release notes](test_17_release_notes.py)
 
-## 17.1 listing prepared releases
-
-### 17.1.1 emits version specific notes and target metadata without registry access
+## 17.1 preserving release notes
 
 ### 17.1.2 preserves markdown examples and excludes neighboring release versions
 

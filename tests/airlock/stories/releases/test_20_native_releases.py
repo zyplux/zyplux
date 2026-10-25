@@ -13,17 +13,17 @@ if TYPE_CHECKING:
 
 def test_20_1_1_repairs_missing_github_releases_without_republishing_existing_versions(release: ReleaseFixture) -> None:
     release.published(npm=True)
-    release.run("publish-npm")
+    release.publish("util-v1.2.3")
     assert not release.matching("pnpm pack|pnpm publish")
     release.expect_release("util-v1.2.3")
 
 
 def test_20_1_2_propagates_publication_failure_and_permits_a_successful_retry(release: ReleaseFixture) -> None:
     release.on("pnpm publish", Reply(exit_code=1))
-    release.run("publish-npm", error="command failed")
+    release.publish("util-v1.2.3", error="command failed")
     assert not release.matching("gh release create")
     release.stage_npm()
-    release.run("publish-npm")
+    release.publish("util-v1.2.3")
     assert release.matching("gh release create util-v1.2.3")
 
 
@@ -35,13 +35,13 @@ def test_20_1_3_rejects_mismatched_or_private_workspace_targets_before_publishin
     release: ReleaseFixture, override: dict[str, object], reason: str
 ) -> None:
     release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.3", **override})
-    release.run("publish-npm", error=reason)
+    release.publish("util-v1.2.3", error=reason)
     assert not release.matching("pnpm publish|gh release")
 
 
 def test_20_1_4_rejects_targets_excluded_from_the_workspace_before_publishing(release: ReleaseFixture) -> None:
     release.on("pnpm list", "[]")
-    release.run("publish-npm", error="is not a pnpm workspace package")
+    release.publish("util-v1.2.3", error="is not a pnpm workspace package")
     assert not release.matching("pnpm publish|gh release")
 
 
@@ -49,7 +49,7 @@ def test_20_1_5_requires_the_requested_version_in_the_registry_before_creating_a
     release: ReleaseFixture,
 ) -> None:
     release.on("pnpm publish")
-    release.run("publish-npm", error="npm dependencies did not become available: @zyplux/util@1.2.3")
+    release.publish("util-v1.2.3", error="npm dependencies did not become available: @zyplux/util@1.2.3")
     assert release.matching("pnpm publish")
     assert not release.matching("gh release")
 
@@ -91,10 +91,10 @@ def test_20_4_1_retries_a_partial_upload_before_creating_its_github_release(rele
     release.serve("https://pypi.org/", Response({"urls": [{"packagetype": "bdist_wheel"}]}))
     release.on("uv build")
     release.on("uv publish", Reply(stdout="Upload interrupted.", exit_code=1))
-    release.run("publish-tagged-target", "--release", "cerberus-v2.3.4", error="command failed")
+    release.publish("cerberus-v2.3.4", error="command failed")
     assert not release.matching("gh release create")
     release.on("uv publish")
-    release.run("publish-tagged-target", "--release", "cerberus-v2.3.4")
+    release.publish("cerberus-v2.3.4")
     publication_attempts = 2
     assert len(release.matching("uv publish")) == publication_attempts
     assert release.matching("gh release create cerberus-v2.3.4")
@@ -105,5 +105,5 @@ def test_20_4_2_stops_before_building_or_creating_a_release_when_pypi_metadata_i
     release: ReleaseFixture, metadata: dict[str, object], status: int
 ) -> None:
     release.serve("https://pypi.org/", Response(metadata, status))
-    release.run("publish-tagged-target", "--release", "cerberus-v2.3.4", error="")
+    release.publish("cerberus-v2.3.4", error="")
     assert not release.matching("uv|gh release create")

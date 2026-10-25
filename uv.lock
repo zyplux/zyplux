@@ -1272,6 +1272,7 @@ dependencies = [
     { name = "networkx" },
     { name = "pyyaml" },
     { name = "rust-just" },
+    { name = "semantic-version" },
     { name = "tree-sitter" },
     { name = "tree-sitter-bash" },
     { name = "tree-sitter-python" },
@@ -1285,6 +1286,7 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.7" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rust-just", specifier = ">=1.59.0" },
+    { name = "semantic-version", specifier = ">=2.10.0" },
     { name = "tree-sitter", specifier = ">=0.26.0" },
     { name = "tree-sitter-bash", specifier = ">=0.25.1" },
     { name = "tree-sitter-python", specifier = ">=0.25.0" },
@@ -1295,7 +1297,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-setup-pm"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "apps/action-setup-pm" }
 
 [[package]]

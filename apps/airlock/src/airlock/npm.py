@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from graphlib import CycleError, TopologicalSorter
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -10,7 +9,7 @@ from urllib.parse import quote
 import typer
 from semantic_version import NpmSpec, Version
 
-from airlock import github, proc
+from airlock import proc
 from airlock.contracts import WORKSPACE_PACKAGES, NpmArchive, NpmPackage
 from airlock.registries import is_npm_available, is_published
 from airlock.targets import load_targets
@@ -104,82 +103,43 @@ def wait_for_dependencies(dependencies: list[ReleaseTarget]) -> None:
     )
 
 
-def publish_npm(targets: list[ReleaseTarget]) -> None:
-    if not targets:
-        return
-    with TemporaryDirectory(prefix="airlock-npm-") as directory:
-        archives = {target.spec.label: Path(directory) / f"{quote(target.tag, safe='')}.tgz" for target in targets}
-        dependencies = {}
-        for target in targets:
-            manifest = NpmPackage.model_validate_json((target.directory / "package.json").read_text(encoding="utf-8"))
-            if {"prepublishOnly", "publish", "postpublish"}.intersection(manifest.scripts):
-                msg = (
-                    f"{target.spec.label}: archive publication requires prepack/prepare/postpack hooks; "
-                    "publish-only hooks are unsupported"
-                )
-                raise ValueError(msg)
-            archive = archives[target.spec.label]
-            proc.run("pnpm", "pack", "--out", str(archive), cwd=target.directory)
-            dependencies[target.spec.label] = load_dependencies(target, archive)
-        selected = {target.spec.label: target for target in targets}
-        graph = {
-            target.spec.label: [dep.spec.label for dep in dependencies[target.spec.label] if dep.spec.label in selected]
-            for target in targets
-        }
-        try:
-            ordered = list(TopologicalSorter(graph).static_order())
-        except CycleError as exc:
-            msg = "cyclic production workspace dependency"
-            raise ValueError(msg) from exc
-        for label in ordered:
-            target = selected[label]
-            wait_for_dependencies(dependencies[label])
-            proc.run(
-                "pnpm",
-                "publish",
-                str(archives[label]),
-                "--publish-wait-timeout",
-                "0",
-                cwd=target.directory,
-                interactive=True,
-            )
-            wait_for_dependencies([target])
-
-
-def validate_workspaces(targets: list[ReleaseTarget]) -> None:
+def validate_workspace(target: ReleaseTarget) -> None:
     workspaces = WORKSPACE_PACKAGES.validate_json(
         proc.run("pnpm", "list", "--recursive", "--depth", "-1", "--json", cwd=proc.find_root())
     )
-    for target in targets:
-        workspace = next(
-            (workspace for workspace in workspaces if Path(workspace.path).resolve() == target.directory), None
-        )
-        if workspace is None:
-            msg = f"{target.spec.label}: {target.directory} is not a pnpm workspace package"
-            raise ValueError(msg)
-        if workspace.name != target.spec.label:
-            msg = f"{target.spec.label}: workspace package name is {workspace.name}"
-            raise ValueError(msg)
-        if workspace.private:
-            msg = f"{target.spec.label}: private workspace packages cannot be published"
-            raise ValueError(msg)
-        if workspace.version != target.version:
-            msg = f"{target.spec.label}: workspace version must be {target.version}"
-            raise ValueError(msg)
+    workspace = next(
+        (workspace for workspace in workspaces if Path(workspace.path).resolve() == target.directory), None
+    )
+    if workspace is None:
+        msg = f"{target.spec.label}: {target.directory} is not a pnpm workspace package"
+        raise ValueError(msg)
+    if workspace.name != target.spec.label:
+        msg = f"{target.spec.label}: workspace package name is {workspace.name}"
+        raise ValueError(msg)
+    if workspace.private:
+        msg = f"{target.spec.label}: private workspace packages cannot be published"
+        raise ValueError(msg)
+    if workspace.version != target.version:
+        msg = f"{target.spec.label}: workspace version must be {target.version}"
+        raise ValueError(msg)
 
 
-def publish_npm_targets(releases: list[tuple[ReleaseTarget, str]]) -> None:
-    if not releases:
+def publish_npm(target: ReleaseTarget) -> None:
+    validate_workspace(target)
+    if is_published(target):
+        wait_for_dependencies([target])
+        typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
         return
-    validate_workspaces([target for target, _ in releases])
-    pending = []
-    for target, _ in releases:
-        if is_published(target):
-            wait_for_dependencies([target])
-        else:
-            pending.append(target)
-    publish_npm(pending)
-    head = proc.run("git", "rev-parse", "HEAD")
-    for target, notes in releases:
-        if github.load_release(target.tag) is None:
-            github.create_release(target.tag, notes, head)
+    manifest = NpmPackage.model_validate_json((target.directory / "package.json").read_text(encoding="utf-8"))
+    if {"prepublishOnly", "publish", "postpublish"}.intersection(manifest.scripts):
+        msg = (
+            f"{target.spec.label}: archive publication requires prepack/prepare/postpack hooks; "
+            "publish-only hooks are unsupported"
+        )
+        raise ValueError(msg)
+    with TemporaryDirectory(prefix="airlock-npm-") as directory:
+        archive = Path(directory) / f"{quote(target.tag, safe='')}.tgz"
+        proc.run("pnpm", "pack", "--out", str(archive), cwd=target.directory)
+        wait_for_dependencies(load_dependencies(target, archive))
+        proc.run("pnpm", "publish", str(archive), "--publish-wait-timeout", "0", cwd=target.directory, interactive=True)
+        wait_for_dependencies([target])

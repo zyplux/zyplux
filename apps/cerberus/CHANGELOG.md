@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Use the `zyplux-airlock` Python library for release-surface validation. Publishing repositories no longer need an Airlock npm dependency or Node subprocess for this check.
+- Implement release-surface validation in Cerberus using its own findings and reusing Airlock's manifest and registry helpers. Publishing repositories no longer need an Airlock npm dependency or Node subprocess for this check.
 
 ### Patch Changes
 

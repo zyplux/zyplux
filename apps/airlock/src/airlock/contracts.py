@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 type ReleaseKind = Literal["npm", "pypi", "ghcr", "action"]
-type FindingStatus = Literal["pass", "skip", "fail", "error"]
 type Nonempty = Annotated[str, Field(min_length=1)]
 type Digest = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
 
@@ -72,18 +71,12 @@ class ReleaseTarget:
         return self.spec.environment or ("actions" if self.spec.kind == "action" else self.spec.kind)
 
 
-@dataclass(frozen=True)
-class Finding:
-    status: FindingStatus
-    message: str
-
-
 class ReleaseBatch(BaseModel):
     environment: Nonempty
     id: Nonempty
     kind: ReleaseKind
     runner: Literal["ubuntu-latest"]
-    tags: Annotated[list[str], Field(min_length=1)]
+    tags: Annotated[list[str], Field(min_length=1, max_length=1)]
 
 
 class PythonTracking(BaseModel):

@@ -1,6 +1,6 @@
 # Airlock
 
-Airlock is a Python 3.14+ CLI and library. It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
+Airlock is a Python 3.14+ CLI. It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
 
 *How does a code change become a published release?*
 
@@ -43,11 +43,11 @@ If preparation needs regeneration, preserve the code and note text, restore gene
 
 ## Release surface validation
 
-`uv run airlock check-surface` enforces single-step version bumps against published releases and the pull request target branch. Set `GITHUB_BASE_REF` or pass `--base origin/main` to compare against a target branch; published versions also require unchanged release surfaces. Unpublished target-branch versions can be repaired without another bump.
+Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against published releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release surfaces. Unpublished target-branch versions can be repaired without another bump.
 
 Action targets require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
-Cerberus's `release_surface_version_bump` bite calls its `zyplux-airlock` Python dependency and reports the returned findings. Cerberus owns enforcement; Airlock supplies the shared manifest, registry and version-check machinery. Repositories need no npm dependency on Airlock. The standalone `airlock check-surface --json` command returns an array of `status` and `message` findings and exits unsuccessfully for failures or errors.
+Cerberus implements the release-surface policy and reports its findings. It reuses Airlock's manifest parsing, registry access and version parsing through its `zyplux-airlock` Python dependency.
 
 Private GitHub registry reads use `NODE_AUTH_TOKEN` for npm, or `GH_TOKEN`/`GITHUB_TOKEN`, and otherwise reuse `gh auth token --hostname github.com`. Local users can sign in with `gh auth login --scopes read:packages`. Tokens need access to the package; Actions use the job token and package access granted to the repository. Explicit credentials take precedence, and registry failures remain errors.
 
@@ -57,7 +57,7 @@ The [release workflow](../../.github/workflows/release.yml) has a planning job a
 
 Every target has its own publication job, concurrency ID and GitHub release. Environments default to `npm`, `pypi`, `ghcr` and `actions`; set `environment` on a target to override it. The shared setup supports Linux runners.
 
-Planning selects pending targets without building or packing packages. Each npm job packs its target once, inspects the archive's manifest after lifecycle scripts and `beforePacking` hooks, then publishes that same archive. Declare workspace dependencies retained in `dependencies` or `optionalDependencies` as npm release targets; private implementation packages removed during packing need no release target. A matching retained dependency on a declared workspace package is treated as a release edge, regardless of local linking settings. Each job waits for those workspace versions and tarballs before uploading. Development-only dependencies do not delay publication. Missing dependencies are checked every ten seconds for up to sixty retries; failed dependencies block their consumers while unrelated jobs continue. Packing failures affect only their target's job. The bulk `airlock publish-npm` command orders its archives by dependency and rejects cycles.
+Planning selects pending targets without building or packing packages. Each npm job packs its target once, inspects the archive's manifest after lifecycle scripts and `beforePacking` hooks, then publishes that same archive. Declare workspace dependencies retained in `dependencies` or `optionalDependencies` as npm release targets; private implementation packages removed during packing need no release target. A matching retained dependency on a declared workspace package is treated as a release edge, regardless of local linking settings. Each job waits for those workspace versions and tarballs before uploading. Development-only dependencies do not delay publication. Missing dependencies are checked every ten seconds for up to sixty retries; failed dependencies block their consumers while unrelated jobs continue. Packing failures affect only their target's job.
 
 Each successful job finalizes its target's release; a failing job leaves the other jobs running. Npm publication requires each target to match a non-private workspace package at its configured version. Native pnpm publishes the inspected archive. Airlock verifies the exact version in registry metadata and uses GET to check tarball accessibility before creating its GitHub release. Airlock owns availability waiting; pnpm's HEAD-based wait is disabled because GitHub Packages rejects that method. Existing npm versions can have their GitHub releases repaired without packing or uploading again. PyPI completion requires a wheel and source archive; uv retries incomplete uploads. Action publication creates a fixed versioned release and advances its compatible major alias to the newest published stable version. Package `prepack` hooks own npm builds and archive validation; publish-only lifecycle hooks are rejected before packing.
 
@@ -73,7 +73,7 @@ Configure pnpm versioning and declare `airlock-targets.toml`. Cerberus includes 
     command: plan
 ```
 
-The publishing step uses the same action with `command: publish` and `batch: ${{ toJSON(matrix) }}`. The action sets up cached pnpm and uv, installs the repository's locked build dependencies and configures GitHub Packages authentication. It installs Airlock from the action's versioned source and `uv.lock` in a separate environment; the action reference selects the publisher version. Its `token` defaults to the job's GitHub token.
+The publishing step uses the same action with `command: publish` and `batch: ${{ toJSON(matrix) }}`. Planning sets up uv and the publisher runtime. Publication also sets up pnpm, installs the repository's locked build dependencies and configures GitHub Packages authentication. It installs Airlock from the action's versioned source and `uv.lock` in a separate environment; the action reference selects the publisher version. Its `token` defaults to the job's GitHub token.
 
 The calling workflow declares triggers, permissions, concurrency and environments. A single matrix uses their combined token permissions; separate job definitions can narrow permissions by publication kind. Keep OIDC publishing jobs in this top-level workflow to support PyPI trusted publishing.
 
@@ -124,15 +124,13 @@ Airlock authenticates GHCR, builds the versioned image with `org.opencontainers.
 }
 ```
 
-Airlock attaches this manifest to a draft GitHub release, then finalizes the release with its prepared changelog. Retrying an unfinished release rebuilds and records the newly pushed digest. Finalized releases retain their manifest and image; missing artifacts fail validation. `airlock publish-tagged-target --release TAG` runs the same container publication as the matrix job. Deployment consumes the manifest separately.
+Airlock attaches this manifest to a draft GitHub release, then finalizes the release with its prepared changelog. Retrying an unfinished release rebuilds and records the newly pushed digest. Finalized releases retain their manifest and image; missing artifacts fail validation. Dispatch `release.yml` with the target tag to retry a container release. Deployment consumes the manifest separately.
 
 ## Registry setup
 
 ### npm
 
-For a new public package, run the `bootstrap-npm` workflow with its target label and the `NPM_TOKEN` secret. Then configure its trusted publisher on npmjs.com: owner and repository, workflow filename `release.yml`, direct publishing permission and an optional environment restriction matching the batch's environment. Subsequent versions use OIDC and automatic provenance.
-
-The bootstrap token is only needed for first publication. Registry account authentication is required to configure trusted publishers.
+Follow the [manual first-publication guide](../../docs/guide/publish.md#first-npm-publication) to publish a new public npm package and configure trusted publishing for subsequent releases.
 
 ### PyPI
 

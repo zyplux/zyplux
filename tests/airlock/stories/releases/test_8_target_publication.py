@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 
 def test_8_1_1_logs_and_does_nothing_when_the_tags_version_is_already_published(release: ReleaseFixture) -> None:
     release.published(npm=True, ghcr=True, pypi=True)
-    assert "already published; nothing to do" in release.run("publish-tagged-target", "util-v1.2.3").stdout
+    assert "already published; nothing to do" in release.publish("util-v1.2.3").stdout
     assert not release.matching("pnpm pack|podman|uv build")
 
 
 def test_8_2_1_publishes_an_npm_target_with_native_packing_and_availability_waiting(release: ReleaseFixture) -> None:
     release.stage_npm()
-    release.run("publish-tagged-target", "util-v1.2.3")
+    release.publish("util-v1.2.3")
     release.expect_npm()
 
 
@@ -39,7 +39,7 @@ def test_8_2_2_builds_and_publishes_incomplete_pypi_releases_using_isolated_arti
     )
     release.on("uv build")
     release.on("uv publish")
-    release.run("publish-tagged-target", "cerberus-v2.3.4")
+    release.publish("cerberus-v2.3.4")
     if files == ["bdist_wheel", "sdist"]:
         assert not release.matching("uv")
     else:
@@ -53,16 +53,14 @@ def test_8_2_2_builds_and_publishes_incomplete_pypi_releases_using_isolated_arti
 def test_8_2_3_requires_gh_token_before_pushing_a_ghcr_target(release: ReleaseFixture) -> None:
     release.container()
     release.env["GH_TOKEN"] = ""
-    release.run("publish-tagged-target", "--release", "ci-image-v3.4.5", error="GH_TOKEN is required to push to GHCR")
+    release.publish("ci-image-v3.4.5", error="GH_TOKEN is required to push to GHCR")
     assert not release.matching("podman")
 
 
 def test_8_2_4_requires_github_actor_before_pushing_a_ghcr_target(release: ReleaseFixture) -> None:
     release.container()
     release.env["GITHUB_ACTOR"] = ""
-    release.run(
-        "publish-tagged-target", "--release", "ci-image-v3.4.5", error="GITHUB_ACTOR is required to push to GHCR"
-    )
+    release.publish("ci-image-v3.4.5", error="GITHUB_ACTOR is required to push to GHCR")
     assert not release.matching("podman")
 
 
@@ -70,7 +68,7 @@ def test_8_2_5_publishes_a_versioned_ghcr_image_and_its_release_manifest(
     release: ReleaseFixture, container: ContainerPublication
 ) -> None:
     release.env.update(GH_TOKEN=release.credential, GITHUB_ACTOR="zyplux-bot")
-    release.run("publish-tagged-target", "--release", container.batch["tags"][0])
+    release.publish(container.batch["tags"][0])
     login = release.matching("podman login")[0]
     assert login.argv == ["login", "ghcr.io", "-u", "zyplux-bot", "--password-stdin"]
     assert login.stdin == release.credential
@@ -80,7 +78,7 @@ def test_8_2_5_publishes_a_versioned_ghcr_image_and_its_release_manifest(
 
 def test_8_2_6_propagates_native_npm_publication_failures(release: ReleaseFixture) -> None:
     release.stage_npm(exit_code=1)
-    release.run("publish-tagged-target", "util-v1.2.3", error="command failed with exit code 1")
+    release.publish("util-v1.2.3", error="command failed with exit code 1")
     release.expect_npm()
 
 
@@ -92,7 +90,7 @@ def test_8_2_7_removes_ghcr_credentials_after_a_successful_login_when_publicatio
 ) -> None:
     release.container()
     release.on(command, Reply(exit_code=1))
-    release.run("publish-tagged-target", "--release", "ci-image-v3.4.5", error="command failed with exit code 1")
+    release.publish("ci-image-v3.4.5", error="command failed with exit code 1")
     assert bool(release.matching("podman logout")) == should_logout
 
 
@@ -107,7 +105,7 @@ def test_8_3_1_authenticates_the_configured_registry_and_lets_pnpm_apply_publish
     )
     release.env["NODE_AUTH_TOKEN"] = release.credential
     release.stage_npm()
-    release.run("publish-tagged-target", "util-v1.2.3")
+    release.publish("util-v1.2.3")
     request = next(
         request for request in release.requests if request.url == "https://npm.pkg.github.com/%40zyplux%2Futil"
     )
@@ -118,9 +116,10 @@ def test_8_3_1_authenticates_the_configured_registry_and_lets_pnpm_apply_publish
 
 def test_8_3_2_rejects_missing_credentials_before_checking_a_private_registry(release: ReleaseFixture) -> None:
     release.write_json(
-        "packages/util/package.json", {"version": "1.2.3", "publishConfig": {"registry": "https://npm.pkg.github.com"}}
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": "https://npm.pkg.github.com"}},
     )
-    release.run("publish-tagged-target", "util-v1.2.3", error="GitHub Packages requires authentication")
+    release.publish("util-v1.2.3", error="GitHub Packages requires authentication")
     assert not release.requests
 
 
@@ -131,28 +130,40 @@ def test_8_3_2_rejects_missing_credentials_before_checking_a_private_registry(re
 def test_8_3_3_rejects_registry_failures_without_attempting_publication(
     release: ReleaseFixture, registry: str, status: int
 ) -> None:
-    release.write_json("packages/util/package.json", {"version": "1.2.3", "publishConfig": {"registry": registry}})
+    release.write_json(
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": registry}},
+    )
     release.env["NODE_AUTH_TOKEN"] = release.credential
     release.serve(registry, Response(status=status))
-    release.run("publish-tagged-target", "util-v1.2.3", error=f"failed: {status}")
+    release.publish("util-v1.2.3", error=f"failed: {status}")
     assert not release.matching("pnpm pack|pnpm publish")
 
 
 def test_8_3_4_rejects_unsupported_registry_destinations_before_making_a_request(release: ReleaseFixture) -> None:
     release.write_json(
-        "packages/util/package.json", {"version": "1.2.3", "publishConfig": {"registry": "https://example.com"}}
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": "https://example.com"}},
     )
-    release.run("publish-tagged-target", "util-v1.2.3", error="")
+    release.publish("util-v1.2.3", error="")
     assert not release.requests
 
 
 @pytest.mark.parametrize("registry", ["https://registry.npmjs.org/", "https://npm.pkg.github.com/"])
 def test_8_3_5_accepts_supported_registry_urls_with_a_trailing_slash(release: ReleaseFixture, registry: str) -> None:
-    release.write_json("packages/util/package.json", {"version": "1.2.3", "publishConfig": {"registry": registry}})
+    release.write_json(
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": registry}},
+    )
     release.env["NODE_AUTH_TOKEN"] = release.credential
-    release.serve(registry, Response({"versions": {"1.2.3": {}}}))
-    assert "already published; nothing to do" in release.run("publish-tagged-target", "util-v1.2.3").stdout
-    assert [request.url for request in release.requests] == [f"{registry}%40zyplux%2Futil"]
+    release.serve(
+        registry, Response({"versions": {"1.2.3": {"dist": {"tarball": "https://registry.npmjs.org/util.tgz"}}}})
+    )
+    assert "already published; nothing to do" in release.publish("util-v1.2.3").stdout
+    assert {request.url for request in release.requests} == {
+        f"{registry}%40zyplux%2Futil",
+        "https://registry.npmjs.org/util.tgz",
+    }
     assert not release.matching("pnpm pack|pnpm publish")
 
 
@@ -161,11 +172,19 @@ def test_8_3_6_prefers_the_package_scopes_registry_setting(release: ReleaseFixtu
     config = {"@zyplux:registry": "https://npm.pkg.github.com/"}
     if registry:
         config["registry"] = registry
-    release.write_json("packages/util/package.json", {"version": "1.2.3", "publishConfig": config})
+    release.write_json(
+        "packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": config}
+    )
     release.env["NODE_AUTH_TOKEN"] = release.credential
-    release.serve("https://npm.pkg.github.com/", Response({"versions": {"1.2.3": {}}}))
-    assert "already published; nothing to do" in release.run("publish-tagged-target", "util-v1.2.3").stdout
-    assert [request.url for request in release.requests] == ["https://npm.pkg.github.com/%40zyplux%2Futil"]
+    release.serve(
+        "https://npm.pkg.github.com/",
+        Response({"versions": {"1.2.3": {"dist": {"tarball": "https://registry.npmjs.org/util.tgz"}}}}),
+    )
+    assert "already published; nothing to do" in release.publish("util-v1.2.3").stdout
+    assert {request.url for request in release.requests} == {
+        "https://npm.pkg.github.com/%40zyplux%2Futil",
+        "https://registry.npmjs.org/util.tgz",
+    }
     assert not release.matching("pnpm pack|pnpm publish")
 
 
@@ -183,11 +202,12 @@ def test_8_3_7_checks_the_requested_version_in_registry_package_metadata(
     release.env["NODE_AUTH_TOKEN"] = release.credential
     versions: dict[str, dict[str, object]] = {"1.2.2": {}}
     if is_published:
-        versions["1.2.3"] = dict[str, object]()
+        versions["1.2.3"] = {"dist": {"tarball": "https://registry.npmjs.org/util.tgz"}}
     release.serve(registry, Response(status=502))
     release.serve(f"{registry}/%40zyplux%2Futil", Response({"versions": versions}))
+    release.serve("https://registry.npmjs.org/util.tgz", Response())
     release.stage_npm()
-    execution = release.run("publish-tagged-target", "util-v1.2.3")
+    execution = release.publish("util-v1.2.3")
     assert f"{registry}/%40zyplux%2Futil" in [request.url for request in release.requests]
     if is_published:
         assert "already published; nothing to do" in execution.stdout
@@ -198,11 +218,12 @@ def test_8_3_7_checks_the_requested_version_in_registry_package_metadata(
 
 def test_8_3_8_rejects_malformed_package_metadata_without_attempting_publication(release: ReleaseFixture) -> None:
     release.write_json(
-        "packages/util/package.json", {"version": "1.2.3", "publishConfig": {"registry": "https://npm.pkg.github.com"}}
+        "packages/util/package.json",
+        {"name": "@zyplux/util", "version": "1.2.3", "publishConfig": {"registry": "https://npm.pkg.github.com"}},
     )
     release.env["NODE_AUTH_TOKEN"] = release.credential
     release.serve("https://npm.pkg.github.com/", Response({}))
-    release.run("publish-tagged-target", "util-v1.2.3", error="")
+    release.publish("util-v1.2.3", error="")
     assert not release.matching("pnpm pack|pnpm publish")
 
 
@@ -217,7 +238,7 @@ def test_8_4_1_publishes_only_missing_artifacts_and_creates_only_missing_github_
         '{"data":{"repository":{"release":{"id":"release-id"}}}}' if github_release else MISSING_RELEASE,
     )
     release.stage_npm()
-    release.run("publish-tagged-target", "--release", "util-v1.2.3")
+    release.publish("util-v1.2.3")
     if artifact:
         assert not release.matching("pnpm pack|pnpm publish")
     else:
@@ -232,7 +253,7 @@ def test_8_4_2_leaves_github_release_metadata_unpublished_when_the_registry_reje
     release: ReleaseFixture,
 ) -> None:
     release.stage_npm(exit_code=1)
-    release.run("publish-tagged-target", "--release", "util-v1.2.3", error="command failed with exit code 1")
+    release.publish("util-v1.2.3", error="command failed with exit code 1")
     assert not release.matching("gh api graphql|gh release create")
 
 
@@ -240,7 +261,7 @@ def test_8_4_3_rebuilds_incomplete_ghcr_releases_from_a_pushed_digest(
     release: ReleaseFixture, container: ContainerPublication
 ) -> None:
     release.published(ghcr=True)
-    release.run("publish-tagged-target", "--release", container.batch["tags"][0])
+    release.publish(container.batch["tags"][0])
     assert release.matching("podman build")
     assert release.matching("podman push --digestfile")
     assert release.matching("gh release upload ci-image-v3.4.5")

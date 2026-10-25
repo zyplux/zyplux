@@ -127,10 +127,6 @@ def test_22_2_2_rejects_unsupported_custom_builder_declarations(release: Release
     release.plan(error="Unrecognized key")
 
 
-def test_22_2_3_requires_release_finalization_for_container_publication(release: ReleaseFixture) -> None:
-    release.run("publish-tagged-target", "ci-image-v3.4.5", error="container publication requires --release")
-
-
 def test_22_2_4_rejects_published_container_releases_with_missing_manifests_during_planning(
     release: ReleaseFixture, container: ContainerPublication
 ) -> None:

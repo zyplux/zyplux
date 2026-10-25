@@ -89,13 +89,13 @@ def is_action_published(target: ReleaseTarget) -> bool:
     return alias is not None and alias.previous_sha == alias.commit
 
 
-def publish_action(target: ReleaseTarget, notes: str | None) -> None:
+def publish_action(target: ReleaseTarget, notes: str) -> None:
     try:
         parse_stable_version(target.version)
     except ValueError as exc:
         msg = f"action version '{target.version}' must be stable semver"
         raise ValueError(msg) from exc
-    if notes is not None and github.load_release(target.tag) is None:
+    if github.load_release(target.tag) is None:
         github.create_release(target.tag, notes, proc.run("git", "rev-parse", "HEAD"))
     for attempt in range(ACTION_POLL_ATTEMPTS):
         alias = resolve_action_alias(target)

@@ -82,14 +82,3 @@ def load_targets(root: Path | None = None) -> list[ReleaseTarget]:
             dockerfile = None if spec.dockerfile is None else resolve_build_path(root, spec.dockerfile)
         targets.append(ReleaseTarget(spec, version, root / Path(spec.version.file).parent, build_context, dockerfile))
     return targets
-
-
-def resolve_tag(tag: str) -> ReleaseTarget:
-    target = next((target for target in load_targets() if tag.startswith(target.spec.tag_prefix)), None)
-    if target is None:
-        msg = f"no release target in airlock-targets.toml owns tag '{tag}'"
-        raise ValueError(msg)
-    if tag != target.tag:
-        msg = f"tag '{tag}' does not match {target.spec.label} version '{target.version}' (expected '{target.tag}')"
-        raise ValueError(msg)
-    return target

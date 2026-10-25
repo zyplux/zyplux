@@ -4,20 +4,17 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
-
 from airlock import proc
 from airlock.actions import parse_stable_version
-from airlock.contracts import Finding
+from airlock.errors import RELEASE_ERRORS
 from airlock.registries import fetch_latest
 from airlock.targets import load_specs, parse_manifest, parse_version
 
+from cerberus.model import Finding, Status
+
 if TYPE_CHECKING:
-    from semantic_version import Version
-
     from airlock.contracts import TargetSpec
-
-CHECK_ERRORS = (OSError, ValueError, LookupError, proc.CommandError, httpx.HTTPError)
+    from semantic_version import Version
 
 
 def load_git_file(root: Path, ref: str, file: str) -> str | None:
@@ -30,14 +27,14 @@ def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Ver
     if version == previous:
         return []
     if version < previous:
-        return [Finding("fail", f"{target.label}: version {version} is below {label}")]
+        return [Finding(Status.FAIL, f"{target.label}: version {version} is below {label}")]
     steps = (previous.next_patch(), previous.next_minor(), previous.next_major())
     if version in steps:
-        return [Finding("pass", f"{target.label}: {version} is ahead of {label}")]
+        return [Finding(Status.PASS, f"{target.label}: {version} is ahead of {label}")]
     patch, minor, major = steps
     return [
         Finding(
-            "fail",
+            Status.FAIL,
             f"{target.label}: version {version} skips ahead of {label} — bump one step ({patch}, {minor}, or {major})",
         )
     ]
@@ -49,11 +46,11 @@ def validate_published(
     try:
         latest = fetch_latest(target, root / Path(target.version.file).parent)
         published = None if latest is None else parse_stable_version(latest)
-    except CHECK_ERRORS as exc:
-        return [Finding("error", f"{target.label}: cannot determine the latest published version: {exc}")]
+    except RELEASE_ERRORS as exc:
+        return [Finding(Status.ERROR, f"{target.label}: cannot determine the latest published version: {exc}")]
     if published is None:
         return (
-            [Finding("pass", f"{target.label}: not yet released")]
+            [Finding(Status.PASS, f"{target.label}: not yet released")]
             if baseline is None
             else validate_bump(target, version, baseline)
         )
@@ -64,12 +61,12 @@ def validate_published(
     tag = f"{target.tag_prefix}{published}"
     try:
         changed = proc.run("git", "diff", "--name-only", tag, "--", *target.surface, cwd=root)
-    except CHECK_ERRORS as exc:
-        return [Finding("error", f"{target.label}: cannot diff against {tag}: {exc}")]
+    except RELEASE_ERRORS as exc:
+        return [Finding(Status.ERROR, f"{target.label}: cannot diff against {tag}: {exc}")]
     return (
         [
             Finding(
-                "fail",
+                Status.FAIL,
                 f"{target.label}: surface changed since {tag} but version is still {version} — "
                 f"bump it (e.g. {version.next_patch()})",
             )
@@ -92,17 +89,17 @@ def validate_target(root: Path, target: TargetSpec, base: str | None, base_specs
         version = parse_stable_version(
             parse_version((root / target.version.file).read_text(encoding="utf-8"), target.version)
         )
-    except CHECK_ERRORS as exc:
-        return [Finding("fail", f"{target.label}: cannot read {target.version.file}: {exc}")]
+    except RELEASE_ERRORS as exc:
+        return [Finding(Status.FAIL, f"{target.label}: cannot read {target.version.file}: {exc}")]
     baseline = None
     previous = next((spec for spec in base_specs if spec.kind == target.kind and spec.label == target.label), None)
     if base is not None and previous is not None:
         try:
             base_version = load_base_version(root, base, previous)
-        except CHECK_ERRORS as exc:
-            return [Finding("error", f"{target.label}: cannot compare the target branch {base}: {exc}")]
+        except RELEASE_ERRORS as exc:
+            return [Finding(Status.ERROR, f"{target.label}: cannot compare the target branch {base}: {exc}")]
         if version < base_version:
-            return [Finding("fail", f"{target.label}: version must not decrease from {base} ({base_version})")]
+            return [Finding(Status.FAIL, f"{target.label}: version must not decrease from {base} ({base_version})")]
         baseline = f"{base} ({base_version})", base_version
     return validate_published(root, target, version, baseline)
 
@@ -110,8 +107,8 @@ def validate_target(root: Path, target: TargetSpec, base: str | None, base_specs
 def check_release_surface(root: Path | None = None, base: str | None = None) -> list[Finding]:
     try:
         return validate_surface(root or proc.find_root(), base)
-    except CHECK_ERRORS as exc:
-        return [Finding("error", f"cannot check release surfaces: {exc}")]
+    except RELEASE_ERRORS as exc:
+        return [Finding(Status.ERROR, f"cannot check release surfaces: {exc}")]
 
 
 def validate_surface(root: Path, base: str | None) -> list[Finding]:
@@ -121,6 +118,6 @@ def validate_surface(root: Path, base: str | None) -> list[Finding]:
     manifest = load_git_file(root, base, "airlock-targets.toml") if base and specs else None
     base_specs = parse_manifest(manifest) if manifest is not None else []
     findings = [finding for spec in specs for finding in validate_target(root, spec, base, base_specs)]
-    if all(finding.status == "pass" for finding in findings):
-        findings.append(Finding("pass", "every published target's version tracks its surface"))
+    if all(finding.status == Status.PASS for finding in findings):
+        findings.append(Finding(Status.PASS, "every published target's version tracks its surface"))
     return findings

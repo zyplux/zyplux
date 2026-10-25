@@ -42,3 +42,7 @@ zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:
     - native-action-notes
+zyplux-setup-pm@1.0.2:
+  dir: apps/action-setup-pm
+  intents:
+    - release-cache-guidance

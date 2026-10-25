@@ -22,8 +22,6 @@
 
 ### 22.2.2 rejects unsupported custom builder declarations
 
-### 22.2.3 requires release finalization for container publication
-
 ### 22.2.4 rejects published container releases with missing manifests during planning
 
 ### 22.2.5 rejects malformed pushed digests before uploading the manifest

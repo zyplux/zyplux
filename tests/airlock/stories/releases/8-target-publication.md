@@ -1,4 +1,4 @@
-# 8. [Publishing the target that owns a release tag](test_8_publish_tagged_target.py)
+# 8. [Publishing release artifacts](test_8_target_publication.py)
 
 ## 8.1 skipping an already-published target
 

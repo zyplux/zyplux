@@ -4,26 +4,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from release_fixture import ContainerPublication, ReleaseFixture
+from release_fixture import ContainerPublication, ReleaseFixture, release
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from cli_fixture import Command
 
-
-@pytest.fixture
-def release(tmp_path: Path) -> Iterator[ReleaseFixture]:
-    fixture = ReleaseFixture(tmp_path)
-    server, thread = fixture.start()
-    fixture.seed()
-    try:
-        yield fixture
-        assert not fixture.failures, "\n".join(fixture.failures)
-    finally:
-        server.shutdown()
-        thread.join()
-        server.server_close()
+__all__ = ["release"]
 
 
 @pytest.fixture

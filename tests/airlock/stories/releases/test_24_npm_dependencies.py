@@ -68,16 +68,6 @@ def test_24_1_3_rejects_invalid_workspace_dependencies(
     assert not release.matching("pnpm publish")
 
 
-def test_24_1_4_rejects_cycles_when_publishing_several_npm_targets_in_one_command(release: ReleaseFixture) -> None:
-    consumer = release.consumer()
-    release.write_json(
-        "packages/util/package.json",
-        {"dependencies": {consumer.label: consumer.version}, "name": "@zyplux/util", "version": "1.2.3"},
-    )
-    release.run("publish-npm", error="cyclic production workspace dependency")
-    assert not release.matching("pnpm publish")
-
-
 @pytest.mark.parametrize("hook", ["prepublishOnly", "publish", "postpublish"])
 def test_24_1_5_rejects_publish_only_lifecycle_hooks_before_packing(release: ReleaseFixture, hook: str) -> None:
     consumer = release.consumer()
