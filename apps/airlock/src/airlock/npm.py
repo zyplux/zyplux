@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -11,13 +10,11 @@ from semantic_version import NpmSpec, Version
 from airlock import proc
 from airlock.content_hash import build_archives, validate_content_hash
 from airlock.contracts import WORKSPACE_PACKAGES, NpmArchive, NpmPackage
-from airlock.registries import is_npm_available, is_published
+from airlock.registries import is_published, wait_for_dependencies
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
-
-DEPENDENCY_POLL_ATTEMPTS = 61
 
 
 def parse_dependency(name: str, specifier: str) -> tuple[str, str]:
@@ -82,25 +79,6 @@ def load_dependencies(target: ReleaseTarget, archive: Path) -> list[ReleaseTarge
             raise ValueError(msg)
         dependencies.append(dependency)
     return dependencies
-
-
-def wait_for_dependencies(dependencies: list[ReleaseTarget]) -> None:
-    if not dependencies:
-        return
-    pending = dependencies
-    typer.echo(
-        "Waiting for npm dependencies: " + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
-    )
-    for attempt in range(DEPENDENCY_POLL_ATTEMPTS):
-        pending = [target for target in pending if not is_npm_available(target)]
-        if not pending:
-            return
-        if attempt < DEPENDENCY_POLL_ATTEMPTS - 1:
-            time.sleep(10)
-    raise ValueError(
-        "npm dependencies did not become available: "
-        + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
-    )
 
 
 def validate_workspace(target: ReleaseTarget) -> None:

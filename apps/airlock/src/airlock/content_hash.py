@@ -18,6 +18,7 @@ from tomlkit.items import Table
 
 from airlock import proc
 from airlock.contracts import ActionSpec, PackageSpec
+from airlock.targets import resolve_repo_path
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
@@ -95,6 +96,13 @@ def calc_source_hash(target: ReleaseTarget) -> str:
         cwd=root,
     )
     files = {root / path for path in listing.split("\0") if path}
+    if isinstance(target.spec, ActionSpec):
+        for relative in target.spec.runtime_files:
+            path = resolve_repo_path(root, relative)
+            if not path.is_file():
+                msg = f"{target.spec.label}: runtime file must exist: {relative}"
+                raise ValueError(msg)
+            files.add(path)
     if target.spec.kind == "ghcr":
         context = target.build_context or target.directory
         dockerfile = target.dockerfile or next(

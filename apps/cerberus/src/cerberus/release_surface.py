@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from airlock import github
+from airlock.actions import validate_action_repository
 from airlock.content_hash import calc_target_hash
+from airlock.contracts import ActionSpec
 from airlock.errors import RELEASE_ERRORS
 from airlock.targets import build_release_target, parse_manifest, parse_stable_version, parse_version
 
@@ -13,7 +15,9 @@ from cerberus.model import Finding, Status
 from cerberus.source import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget, TargetSpec
+    from pathlib import Path
+
+    from airlock.contracts import PublishedRelease, ReleaseTarget, TargetSpec
     from semantic_version import Version
 
     from cerberus.context import Context
@@ -132,6 +136,13 @@ def validate_target(
     return validate_published(repo, ctx, lookup, version, baseline)
 
 
+def fetch_target_history(specs: list[TargetSpec], directory: Path) -> list[PublishedRelease]:
+    for spec in specs:
+        if isinstance(spec, ActionSpec):
+            validate_action_repository(spec, directory)
+    return github.fetch_release_history(directory=directory) if specs else []
+
+
 def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> list[Finding]:
     branch = os.getenv("GITHUB_BASE_REF")
     base = base or (f"origin/{branch}" if branch else None)
@@ -139,7 +150,7 @@ def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> 
         specs = parse_manifest(ctx.file(repo, "airlock-targets.toml") or "")
         manifest = ctx.file_at_ref(repo, base, "airlock-targets.toml") if base and specs else None
         base_specs = parse_manifest(manifest, is_historical=True) if manifest is not None else []
-        history = github.fetch_release_history(directory=ctx.source.root) if specs else []
+        history = fetch_target_history(specs, ctx.source.root)
     except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
         return [Finding(Status.ERROR, f"cannot check release contents: {exc}")]
     findings = []

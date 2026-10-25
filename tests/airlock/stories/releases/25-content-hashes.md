@@ -41,3 +41,7 @@
 ### 25.4.5 requires repository relative action paths
 
 ### 25.4.6 hashes symlink identity including directory and broken links
+
+### 25.4.7 covers declared action runtime files
+
+### 25.4.8 rejects missing or external action runtime files

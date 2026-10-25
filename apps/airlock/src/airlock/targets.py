@@ -69,7 +69,11 @@ def parse_version(text: str, source: JsonVersion | RegexVersion) -> str:
         for key in source.json_path.split("."):
             field = VERSION_OBJECT.validate_python(field)[key]
         return STRING.validate_python(field)
-    match = re.search(source.regex, text, re.MULTILINE)
+    try:
+        match = re.search(source.regex, text, re.MULTILINE)
+    except re.PatternError as exc:
+        msg = f"{source.file}: invalid version regex: {exc}"
+        raise ValueError(msg) from exc
     if match is None or match.lastindex is None:
         msg = f"could not read version from {source.file}"
         raise ValueError(msg)

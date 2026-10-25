@@ -47,6 +47,7 @@ class ActionSpec(TargetBase):
     kind: Literal["action"]
     repository: Annotated[str, Field(pattern=r"^[\w.-]+/[\w.-]+$")]
     path: Nonempty | None = None
+    runtime_files: list[Nonempty] = Field(default_factory=list)
 
 
 type TargetSpec = Annotated[PackageSpec | ContainerSpec | ActionSpec, Field(discriminator="kind")]

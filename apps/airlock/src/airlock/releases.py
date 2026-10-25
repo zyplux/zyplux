@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from airlock import github, proc
+from airlock import github, proc, pypi
 from airlock.actions import publish_action
 from airlock.containers import is_container_published, publish_container
 from airlock.content_hash import build_archives, validate_content_hash
 from airlock.contracts import ActionSpec, ReleaseBatch
 from airlock.notes import load_prepared_targets
 from airlock.npm import publish_npm
-from airlock.registries import is_published
+from airlock.registries import is_published, wait_for_dependencies
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
@@ -66,6 +66,7 @@ def publish_prepared(target: ReleaseTarget, notes: str) -> None:
         with TemporaryDirectory(prefix="release-pypi-") as directory:
             archives = build_archives(target, Path(directory))
             validate_content_hash(target, archives)
+            wait_for_dependencies(pypi.load_dependencies(target, archives))
             proc.run("uv", "publish", str(Path(directory) / "*"))
         typer.echo(f"Published {target.spec.label} {target.version}")
     if github.load_release(target.tag) is None:

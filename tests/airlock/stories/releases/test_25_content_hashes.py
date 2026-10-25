@@ -276,3 +276,31 @@ def test_25_4_6_hashes_symlink_identity_including_directory_and_broken_links(
     link.symlink_to("../../shared/second", target_is_directory=link_kind == "directory")
     release.run("prepare")
     assert release.read("airlock-targets.toml") != baseline
+
+
+@pytest.mark.parametrize("file", ["pyproject.toml", "uv.lock"])
+def test_25_4_7_covers_declared_action_runtime_files(release: ReleaseFixture, file: str) -> None:
+    release.action()
+    release.write("pyproject.toml", "[project]\n")
+    release.write("uv.lock", "version = 1\n")
+    release.configure("action", 'runtime_files = ["pyproject.toml", "uv.lock"]')
+    release.run("prepare")
+    release.write(file, release.read(file) + "\n# Changed installation input.\n")
+    release.publish("setup-pm-v1.0.0", error="release contents differ from content_hash")
+    assert not release.matching("gh release create|git push")
+
+
+@pytest.mark.parametrize(
+    ("file", "reason"),
+    [
+        ("missing.lock", "runtime file must exist"),
+        ("/etc/hosts", "repository-relative"),
+        ("../lock", "repository-relative"),
+    ],
+)
+def test_25_4_8_rejects_missing_or_external_action_runtime_files(
+    release: ReleaseFixture, file: str, reason: str
+) -> None:
+    release.action()
+    release.configure("action", f'runtime_files = ["{file}"]')
+    release.run("prepare", error=reason)

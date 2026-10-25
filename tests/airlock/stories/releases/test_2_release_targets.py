@@ -100,3 +100,10 @@ def test_2_5_4_rejects_version_sources_outside_the_repository(
     release.configure(kind, f'version = {{ file = "{path}", json = "version" }}')
     release.run("plan", error="release paths must be repository-relative")
     assert not release.matching("pnpm pack|uv build|publish")
+
+
+@pytest.mark.parametrize("command", ["plan", "prepare"])
+def test_2_5_5_reports_invalid_version_regexes_without_a_traceback(release: ReleaseFixture, command: str) -> None:
+    release.configure("pypi", 'version = { file = "apps/cerberus/pyproject.toml", regex = "[" }')
+    execution = release.run(command, error="apps/cerberus/pyproject.toml: invalid version regex")
+    assert "Traceback" not in execution.stderr

@@ -30,6 +30,8 @@
 
 ### 19.2.6 rejects a missing versioned tag instead of guessing the current commit
 
+### 19.2.7 rejects action repositories outside the checkout
+
 ## 19.3 preparing action versions through pnpm
 
 ### 19.3.1 synchronizes the private manifest native helper and lockfiles without a pypi target

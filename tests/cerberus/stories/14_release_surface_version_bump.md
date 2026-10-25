@@ -14,6 +14,8 @@
 
 ### 14.1.6 validates every target when one version is invalid
 
+### 14.1.7 reports invalid version regexes
+
 ## 14.2 requiring one-step release bumps
 
 ### 14.2.1 accepts a single patch minor or major bump
@@ -63,6 +65,8 @@
 ### 14.4.6 uses successful container releases
 
 ### 14.4.7 reads release history once for all targets
+
+### 14.4.8 rejects action repositories outside the checkout
 
 ## 14.6 reporting through Cerberus
 

@@ -9,7 +9,9 @@ from airlock.contracts import ActionSpec
 from airlock.targets import parse_stable_version
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget
+    from pathlib import Path
+
+    from airlock.contracts import ReleaseTarget, TargetSpec
 
 ACTION_POLL_ATTEMPTS = 12
 
@@ -31,11 +33,19 @@ class ActionAlias:
     release_ref: str
 
 
-def resolve_action_alias(target: ReleaseTarget) -> ActionAlias | None:
-    spec = target.spec
+def validate_action_repository(spec: TargetSpec, directory: Path | None = None) -> ActionSpec:
     if not isinstance(spec, ActionSpec):
         msg = "action publication requires an action target"
         raise TypeError(msg)
+    repository = proc.run("gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner", cwd=directory)
+    if spec.repository.casefold() != repository.casefold():
+        msg = f"action repository {spec.repository} must match checkout {repository}"
+        raise ValueError(msg)
+    return spec
+
+
+def resolve_action_alias(target: ReleaseTarget) -> ActionAlias | None:
+    spec = validate_action_repository(target.spec)
     try:
         version = parse_stable_version(target.version)
     except ValueError as exc:
@@ -61,6 +71,7 @@ def is_action_published(target: ReleaseTarget) -> bool:
 
 
 def publish_action(target: ReleaseTarget, notes: str) -> None:
+    validate_action_repository(target.spec)
     try:
         parse_stable_version(target.version)
     except ValueError as exc:

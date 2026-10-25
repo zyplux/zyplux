@@ -8,6 +8,7 @@ dependencies = [
     "docker>=7.2.0",
     "httpx>=0.28.1",
     "markdown-it-py>=4.0.0",
+    "packaging>=26.0",
     "pydantic>=2.12.0",
     "semantic-version>=2.10.0",
     "tomlkit>=0.15.2",

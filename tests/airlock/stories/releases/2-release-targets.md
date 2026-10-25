@@ -27,3 +27,5 @@
 ### 2.5.3 rejects malformed release declarations
 
 ### 2.5.4 rejects version sources outside the repository
+
+### 2.5.5 reports invalid version regexes without a traceback

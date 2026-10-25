@@ -50,11 +50,15 @@ def stage_packagers(release: ReleaseFixture) -> None:
 
     def build(call: Command) -> str:
         directory = Path(call.argv[call.argv.index("--out-dir") + 1])
-        source = release.root / "apps/cerberus"
+        source = Path(call.cwd)
         contents = {
             str(path.relative_to(source)): path.read_bytes() for path in sorted(source.rglob("*")) if path.is_file()
         }
-        write_wheel(directory / "cerberus.whl", contents)
+        project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+        metadata = f"Metadata-Version: 2.4\nName: {project['name']}\nVersion: {project['version']}\n" + "".join(
+            f"Requires-Dist: {requirement}\n" for requirement in project.get("dependencies", [])
+        )
+        write_wheel(directory / "cerberus.whl", {**contents, "package.dist-info/METADATA": metadata.encode()})
         write_tar(directory / "cerberus.tar.gz", {f"cerberus/{path}": contents for path, contents in contents.items()})
         return ""
 

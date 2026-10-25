@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import base64
 import os
+import time
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlsplit
 
 import httpx
+import typer
 from semantic_version import Version
 
 from airlock import proc
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
 
 REQUEST_TIMEOUT = 10
+DEPENDENCY_POLL_ATTEMPTS = 61
 MANIFEST_MEDIA_TYPES = (
     "application/vnd.oci.image.index.v1+json, "
     "application/vnd.oci.image.manifest.v1+json, "
@@ -181,9 +184,9 @@ def fetch_npm_availability(target: ReleaseTarget) -> bool:
         return True
 
 
-def is_npm_available(target: ReleaseTarget) -> bool:
+def is_package_available(target: ReleaseTarget) -> bool:
     try:
-        return fetch_npm_availability(target)
+        return fetch_npm_availability(target) if target.spec.kind == "npm" else is_published(target)
     except httpx.HTTPStatusError as exc:
         if (
             exc.response.status_code in {HTTPStatus.NOT_FOUND, HTTPStatus.REQUEST_TIMEOUT, HTTPStatus.TOO_MANY_REQUESTS}
@@ -193,6 +196,26 @@ def is_npm_available(target: ReleaseTarget) -> bool:
         raise
     except httpx.TimeoutException:
         return False
+
+
+def wait_for_dependencies(dependencies: list[ReleaseTarget]) -> None:
+    if not dependencies:
+        return
+    pending = dependencies
+    kind = pending[0].spec.kind
+    typer.echo(
+        f"Waiting for {kind} dependencies: " + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
+    )
+    for attempt in range(DEPENDENCY_POLL_ATTEMPTS):
+        pending = [target for target in pending if not is_package_available(target)]
+        if not pending:
+            return
+        if attempt < DEPENDENCY_POLL_ATTEMPTS - 1:
+            time.sleep(10)
+    raise ValueError(
+        f"{kind} dependencies did not become available: "
+        + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
+    )
 
 
 def is_container_available(label: str, reference: str) -> bool:

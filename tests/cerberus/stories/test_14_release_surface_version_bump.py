@@ -78,6 +78,13 @@ def test_14_1_6_validates_every_target_when_one_version_is_invalid(release: Rele
     assert "@zyplux/broken" in findings[1]["message"]
 
 
+def test_14_1_7_reports_invalid_version_regexes(release: ReleaseFixture) -> None:
+    release.configure("npm", 'version = { file = "packages/util/package.json", regex = "[" }')
+    findings = check_surface(release)
+    assert findings[0]["status"] == "fail"
+    assert "packages/util/package.json: invalid version regex" in findings[0]["message"]
+
+
 @pytest.mark.parametrize("version", ["1.2.4", "1.3.0", "2.0.0"])
 def test_14_2_1_accepts_a_single_patch_minor_or_major_bump(release: ReleaseFixture, version: str) -> None:
     release.write_json("packages/util/package.json", {"version": version})
@@ -309,6 +316,14 @@ def test_14_4_7_reads_release_history_once_for_all_targets(release: ReleaseFixtu
     assert findings[1]["message"].startswith("@zyplux/other:")
     assert len(release.matching("gh api --paginate")) == 1
     assert not release.requests
+
+
+def test_14_4_8_rejects_action_repositories_outside_the_checkout(release: ReleaseFixture) -> None:
+    release.configure("npm", 'kind = "action"\nrepository = "other/actions"')
+    findings = check_surface(release)
+    assert findings[0]["status"] == "error"
+    assert "action repository other/actions must match checkout zyplux/zyplux" in findings[0]["message"]
+    assert not release.matching("gh api --paginate")
 
 
 CHECK_ID = "release_surface_version_bump"

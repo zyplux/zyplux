@@ -88,7 +88,7 @@ class ReleaseFixture(CliFixture):
         self.on("git rev-parse origin/main", "sha-head")
         self.on("git fetch")
         self.on("git status --porcelain")
-        self.on("gh repo view", '{"nameWithOwner":"zyplux/zyplux"}')
+        self.on("gh repo view", "zyplux/zyplux")
         self.on("gh auth token", Reply(exit_code=1))
         self.on("gh api graphql", MISSING_RELEASE)
         self.on("gh release create")

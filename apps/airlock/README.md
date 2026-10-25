@@ -50,7 +50,7 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 | --- | --- |
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |
 | Python | Both the wheel and source distribution produced by `uv build`. |
-| Action | Git-visible files in the Action directory and the directory containing its version file. `path` selects the Action directory when it differs from the version directory. |
+| Action | Git-visible files in the Action directory and the directory containing its version file, plus declared `runtime_files`. `path` selects the Action directory when it differs from the version directory. |
 | Container | The Dockerfile and Git-visible build-context files, filtered with Docker's SDK matcher. `.containerignore` takes precedence over `.dockerignore`. |
 
 Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
@@ -76,6 +76,8 @@ Every target has its own publication job, concurrency ID and GitHub release. Env
 Planning selects pending targets without building or packing packages. Each npm job packs its target once, inspects the archive's manifest after lifecycle scripts and `beforePacking` hooks, then publishes that same archive. Declare workspace dependencies retained in `dependencies` or `optionalDependencies` as npm release targets; private implementation packages removed during packing need no release target. A matching retained dependency on a declared workspace package is treated as a release edge, regardless of local linking settings. Each job waits for those workspace versions and tarballs before uploading. Development-only dependencies do not delay publication. Missing dependencies are checked every ten seconds for up to sixty retries; failed dependencies block their consumers while unrelated jobs continue. Packing failures affect only their target's job.
 
 Each successful job finalizes its target's release; a failing job leaves the other jobs running. Npm publication requires each target to match a non-private workspace package at its configured version. Native pnpm publishes the inspected archive. Airlock verifies the exact version in registry metadata and uses GET to check tarball accessibility before creating its GitHub release. Airlock owns availability waiting; pnpm's HEAD-based wait is disabled because GitHub Packages rejects that method. Existing npm versions can have their GitHub releases repaired without packing or uploading again. PyPI completion requires a wheel and source archive; uv retries incomplete uploads. Action publication creates a fixed versioned release and advances its compatible major alias to the newest published stable version. Package `prepack` hooks own npm builds and archive validation; publish-only lifecycle hooks are rejected before packing.
+
+Python publication reads `Requires-Dist` from the built wheel and waits for matching versions of other configured PyPI targets before uploading those same archives. Matching dependencies include optional and conditional installations. The dependency's wheel and source archive must both be visible on PyPI; missing artifacts and transient registry failures use the same bounded wait as npm. A failed dependency blocks its consumers while unrelated jobs continue.
 
 To recover from a failed run, fix the cause and rerun the failed jobs in GitHub Actions, or dispatch `release.yml` on `main` with an optional `tag` to select one release.
 
@@ -112,7 +114,7 @@ label = "zyplux-airlock"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 ```
 
-Actions also declare their GitHub `repository`. Set `path = "apps/action-airlock"` when the Action directory differs from its version-file directory. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
+Actions also declare their GitHub `repository`, which must match the checkout because publication writes its release tags through `origin`. Set `path = "apps/action-airlock"` when the Action directory differs from its version-file directory. Declare installation inputs outside those directories with `runtime_files`; Airlock's action includes the root `pyproject.toml` and `uv.lock`. These files must exist inside the repository. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
 ## Container releases
 

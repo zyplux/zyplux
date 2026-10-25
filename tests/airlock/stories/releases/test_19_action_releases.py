@@ -154,6 +154,13 @@ def test_19_2_6_rejects_a_missing_versioned_tag_instead_of_guessing_the_current_
     assert not release.matching("git push")
 
 
+def test_19_2_7_rejects_action_repositories_outside_the_checkout(release: ReleaseFixture) -> None:
+    release.configure("action", 'repository = "other/actions"')
+    release.plan(error="action repository other/actions must match checkout zyplux/zyplux")
+    release.publish("setup-pm-v1.0.0", error="must match checkout")
+    assert not release.matching("git ls-remote|git fetch|git push|gh release create")
+
+
 def test_19_3_1_synchronizes_the_private_manifest_native_helper_and_lockfiles_without_a_pypi_target(
     release: ReleaseFixture,
 ) -> None:
