@@ -185,9 +185,6 @@ catalogs:
     '@types/node':
       specifier: ^26.6.5
       version: 26.6.5
-    '@types/semver':
-      specifier: ^7.8.0
-      version: 7.8.0
     '@typescript-eslint/type-utils':
       specifier: ^8.72.0
       version: 8.72.0
@@ -233,9 +230,6 @@ catalogs:
     publint:
       specifier: ^0.3.25
       version: 0.3.25
-    semver:
-      specifier: ^7.8.5
-      version: 7.8.5
     smol-toml:
       specifier: ^1.9.1
       version: 1.9.1
@@ -265,9 +259,6 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 5.0.5(vitest@5.0.5)
-      '@zyplux/airlock':
-        specifier: workspace:*
-        version: link:apps/airlock
       '@zyplux/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config
@@ -298,45 +289,7 @@ importers:
 
   apps/action-setup-pm: {}
 
-  apps/airlock:
-    dependencies:
-      '@optique/core':
-        specifier: 'catalog:'
-        version: 1.3.6
-      '@optique/run':
-        specifier: 'catalog:'
-        version: 1.3.6
-      '@zyplux/util':
-        specifier: workspace:*
-        version: link:../../packages/util-ts
-      commonmark:
-        specifier: 'catalog:'
-        version: 0.31.2
-      semver:
-        specifier: 'catalog:'
-        version: 7.8.5
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.7
-    devDependencies:
-      '@types/commonmark':
-        specifier: 'catalog:'
-        version: 0.27.10
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.5
-      '@types/semver':
-        specifier: 'catalog:'
-        version: 7.8.0
-      '@zyplux/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      publint:
-        specifier: 'catalog:'
-        version: 0.3.25
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
+  apps/airlock: {}
 
   apps/cerberus: {}
 
@@ -484,27 +437,6 @@ importers:
         version: 4.6.7
 
   packages/util_py: {}
-
-  tests/airlock:
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 26.6.5
-      '@zyplux/airlock':
-        specifier: workspace:*
-        version: link:../../apps/airlock
-      '@zyplux/spectra':
-        specifier: workspace:*
-        version: link:../../packages/spectra
-      '@zyplux/tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/tsconfig
-      '@zyplux/util':
-        specifier: workspace:*
-        version: link:../../packages/util-ts
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-istanbul@5.0.5)(happy-dom@21.0.4)(vite@8.1.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.9.1))
 
   tests/cz:
     devDependencies:
@@ -1391,9 +1323,6 @@ packages:
 
   '@types/node@26.6.5':
     resolution: {integrity: sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==}
-
-  '@types/semver@7.8.0':
-    resolution: {integrity: sha512-1mAINjtQCXXeLkJ9ehXkwOcBpqtLxiVtKhpUf83DdRNdQKV0iXZpaHYqRr7nj+wvxuJzoAmAwXI+sCNMv1CzLQ==}
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -3603,8 +3532,6 @@ snapshots:
   '@types/node@26.6.5':
     dependencies:
       undici-types: 8.9.0
-
-  '@types/semver@7.8.0': {}
 
   '@types/trusted-types@2.0.7':
     optional: true

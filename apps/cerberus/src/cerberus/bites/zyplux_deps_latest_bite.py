@@ -17,8 +17,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import yaml
+from airlock import registries
+from airlock.errors import RELEASE_ERRORS
 
-from cerberus import registries
 from cerberus.model import CheckResult, Repo, Scope
 
 if TYPE_CHECKING:
@@ -36,8 +37,7 @@ _GHCR_IMAGE = re.compile(r"ghcr\.io/(zyplux/[\w./-]+?):([\w.-]+)")
 _FLOATING_IMAGE_TAG = "latest"
 _MAX_CONCURRENT_LOOKUPS = 8
 
-_FETCHERS: dict[str, Callable[[str], str]] = {
-    "npm": registries.fetch_latest_npm,
+_FETCHERS: dict[str, Callable[[str], str | None]] = {
     "pypi": registries.fetch_latest_pypi,
     "ghcr": registries.fetch_latest_ghcr,
 }
@@ -105,15 +105,18 @@ def _collect_usages(repo: Repo, ctx: Context) -> list[Usage]:
 
 def _fetch_latest_versions(
     artifacts: Iterable[tuple[str, str, str]],
-) -> dict[tuple[str, str, str], str | registries.RegistryLookupError]:
-    def lookup(artifact: tuple[str, str, str]) -> str | registries.RegistryLookupError:
+) -> dict[tuple[str, str, str], str | Exception]:
+    def lookup(artifact: tuple[str, str, str]) -> str | Exception:
         kind, name, registry = artifact
         try:
-            if kind == "npm":
-                return registries.fetch_latest_npm(name, registry)
-            return _FETCHERS[kind](name)
-        except registries.RegistryLookupError as err:
+            version = registries.fetch_latest_npm(name, registry) if kind == "npm" else _FETCHERS[kind](name)
+            if version is None:
+                failure = f"{name}: no published versions"
+                raise ValueError(failure)
+        except RELEASE_ERRORS as err:
             return err
+        else:
+            return version
 
     ordered = sorted(artifacts)
     with ThreadPoolExecutor(max_workers=min(_MAX_CONCURRENT_LOOKUPS, len(ordered))) as pool:
@@ -134,7 +137,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     latest_versions = _fetch_latest_versions({usage.artifact for usage in usages})
     labels = {usage.artifact: usage.label for usage in usages}
     for artifact, outcome in sorted(latest_versions.items()):
-        if isinstance(outcome, registries.RegistryLookupError):
+        if isinstance(outcome, Exception):
             res.error(f"could not determine the latest `{labels[artifact]}`: {outcome}")
     for usage in usages:
         latest = latest_versions[usage.artifact]

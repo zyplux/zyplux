@@ -28,9 +28,13 @@ from dataclasses import dataclass, field
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
+from urllib.parse import quote
 
+import httpx
 import pytest
-from cerberus import bites, config, context, proc, registries, tool_pins
+from airlock import proc as airlock_proc
+from airlock import registries
+from cerberus import bites, config, context, proc, tool_pins
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
@@ -344,7 +348,7 @@ def fake_proc(monkeypatch: pytest.MonkeyPatch) -> FakeProc:
 
 @dataclass
 class FakeRegistry:
-    """An in-memory double for `cerberus.registries`' single HTTPS boundary."""
+    """Registry responses served through the shared HTTP transport."""
 
     payloads: dict[tuple[str, str], object] = field(default_factory=dict)
     requests: list[tuple[str, str]] = field(default_factory=list)
@@ -358,7 +362,7 @@ class FakeRegistry:
         host: str = "registry.npmjs.org",
         release_times: dict[str, str] | None = None,
     ) -> None:
-        encoded = package.replace("/", "%2F")
+        encoded = quote(package, safe="")
         release_times = {latest: "2000-01-01T00:00:00Z"} if release_times is None else release_times
         self.payloads[host, f"/{encoded}"] = {
             "dist-tags": {"latest": latest},
@@ -373,20 +377,28 @@ class FakeRegistry:
         self.payloads["ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull"] = {"token": "anonymous"}
         self.payloads["ghcr.io", f"/v2/{image}/tags/list"] = {"tags": tags}
 
-    def fetch_json(self, host: str, path: str, headers: dict[str, str] | None = None) -> object:
+    def respond(self, request: httpx.Request) -> httpx.Response:
+        host, path = request.url.host, request.url.raw_path.decode()
         self.requests.append((host, path))
-        self.request_headers.append(headers or {})
+        self.request_headers.append(dict(request.headers))
         if (host, path) not in self.payloads:
             failure = f"https://{host}{path}: connection refused"
-            raise registries.RegistryLookupError(failure)
-        return self.payloads[host, path]
+            raise httpx.ConnectError(failure, request=request)
+        return httpx.Response(200, json=self.payloads[host, path], request=request)
 
 
 @pytest.fixture
 def fake_registry(monkeypatch: pytest.MonkeyPatch, fake_proc: FakeProc) -> FakeRegistry:
+    def run(*argv: str) -> str:
+        execution = fake_proc.run(list(argv))
+        if execution.returncode:
+            raise airlock_proc.CommandError(argv, execution)
+        return execution.stdout.strip()
+
     for name in ("NODE_AUTH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "GITHUB_ACTOR"):
         monkeypatch.delenv(name, raising=False)
     fake_proc.serve("gh auth", returncode=1)
     fake = FakeRegistry()
-    monkeypatch.setattr(registries, "_fetch_json", fake.fetch_json)
+    monkeypatch.setattr(airlock_proc, "run", run)
+    monkeypatch.setattr(registries.httpx, "Client", partial(httpx.Client, transport=httpx.MockTransport(fake.respond)))
     return fake

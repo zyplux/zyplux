@@ -3,67 +3,75 @@
 scope = "@zyplux"
 
 [airlock]
-kind = "npm"
-version = { file = "apps/airlock/package.json", json = "version" }
-surface = ["apps/airlock", "apps/action-airlock"]
+kind = "pypi"
+label = "zyplux-airlock"
+version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
+content_hash = "sha256:7255528eee80b59e929c38f6589dfe795631e2a5ad2c6498ae6aedf5b7752e22"
+requires = []
 
 [action-airlock]
 kind = "action"
-label = "action-airlock"
+label = "zyplux-airlock"
 repository = "zyplux/zyplux"
-version = { file = "apps/airlock/package.json", json = "version" }
-surface = ["apps/airlock", "apps/action-airlock"]
+version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
+path = "apps/action-airlock"
+runtime_files = ["pyproject.toml", "uv.lock"]
+content_hash = "sha256:5f92722f895f5b75520807331d31bbfe6d8ed9d8181077998ed374882b8478a7"
 
 [setup-pm]
 kind = "action"
 label = "zyplux-setup-pm"
 repository = "zyplux/zyplux"
 version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
-surface = ["apps/action-setup-pm"]
+content_hash = "sha256:6d2b7fe919d00277f3abb83a01dcec5df7150c47748a067e0f85c02b2d73c9c6"
 
 [eslint-config]
 kind = "npm"
 version = { file = "packages/eslint-config/package.json", json = "version" }
-surface = [
-    "packages/eslint-config/package.json",
-    "packages/eslint-config/README.md",
-    "packages/eslint-config/src",
-]
+content_hash = "sha256:15209daefcab9b7443ef8739612239bcd8e21ab35f2546167b58c04b141bb1ff"
+requires = ["util-v0.9.3"]
 
 [tsconfig]
 kind = "npm"
 version = { file = "packages/tsconfig/package.json", json = "version" }
-surface = ["packages/tsconfig"]
+content_hash = "sha256:10a5b0aa09ffe5b7d4569c57a821df49bba76d3922d65d2aa54799bfbaffbfbd"
+requires = []
 
 [util]
 kind = "npm"
 version = { file = "packages/util-ts/package.json", json = "version" }
-surface = ["packages/util-ts/package.json", "packages/util-ts/README.md", "packages/util-ts/src"]
+content_hash = "sha256:d48852874fbdb2e2888b4368696a2df7aedc06325c4382c7737528c1dc6af9f8"
+requires = []
 
 [spectra]
 kind = "npm"
 version = { file = "packages/spectra/package.json", json = "version" }
-surface = ["packages/spectra/package.json", "packages/spectra/README.md", "packages/spectra/src"]
+content_hash = "sha256:fdbecd9ef1502c3f1d6176b97674b26cd995c60f7f66135a8c5b833047ff6261"
+requires = []
 
 [cz]
 kind = "npm"
 version = { file = "apps/cz/package.json", json = "version" }
-surface = ["apps/cz/package.json", "apps/cz/README.md", "apps/cz/src"]
+content_hash = "sha256:ef774b670cbe78ccd4752731548aa928e0fdc73286575991692dc43ca164c547"
+requires = ["util-v0.9.3"]
 
 [cerberus]
 kind = "pypi"
 label = "zyplux-cerberus"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
-surface = ["apps/cerberus/src", "apps/cerberus/pyproject.toml", "apps/cerberus/README.md"]
+content_hash = "sha256:4e6f90ab961a37e64e0161a1e31544f652fd242f6b333e911e3e213813810d1a"
+requires = ["airlock-v2.0.0"]
 
 [util-py]
 kind = "pypi"
 label = "zyplux-util"
 version = { file = "packages/util_py/pyproject.toml", regex = '^version = "([^"]+)"' }
-surface = ["packages/util_py/src", "packages/util_py/pyproject.toml", "packages/util_py/README.md"]
+content_hash = "sha256:3e4be0af069509e86b4b0817ea283f122bdae6c1be2dd36ddb8af29e750db777"
+requires = []
 
 [totchef]
 kind = "pypi"
 label = "totchef"
 version = { file = "apps/totchef/pyproject.toml", regex = '^version = "([^"]+)"' }
-surface = ["apps/totchef/src", "apps/totchef/pyproject.toml", "apps/totchef/README.md"]
+content_hash = "sha256:5e399b1497803588c60e5420a7268e74d62360a6a38146a5284247222e3660e4"
+requires = []

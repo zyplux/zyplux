@@ -31,7 +31,7 @@ def git_checkout(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def diffable_checkout(git_checkout: Path) -> Path:
+def versioned_checkout(git_checkout: Path) -> Path:
     (git_checkout / "tracked.txt").write_text("one")
     (git_checkout / "untouched.txt").write_text("stable")
     _git(git_checkout, "add", "-A")
@@ -160,35 +160,6 @@ def test_17_4_2_returns_no_workflows_when_there_is_no_workflows_directory(
 
 
 @requires_git
-def test_17_5_1_lists_surface_paths_changed_since_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
-    changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["tracked.txt"])
-
-    assert changed == ["tracked.txt"]
-
-
-@requires_git
-def test_17_5_2_excludes_surface_paths_unchanged_since_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
-    changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["untouched.txt"])
-
-    assert changed == []
-
-
-@requires_git
-def test_17_5_3_counts_uncommitted_working_tree_changes_against_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
-) -> None:
-    (diffable_checkout / "untouched.txt").write_text("edited, not committed")
-
-    changed = local_source(diffable_checkout).changed_paths(repo, "widget-v0.1.0", ["untouched.txt"])
-
-    assert changed == ["untouched.txt"]
-
-
-@requires_git
 def test_17_6_1_errors_when_git_history_cannot_be_read_outside_a_repo(
     tmp_path: Path,
     repo: Repo,
@@ -196,7 +167,7 @@ def test_17_6_1_errors_when_git_history_cannot_be_read_outside_a_repo(
     git_history_unavailable_error: type[GitHistoryUnavailableError],
 ) -> None:
     with pytest.raises(git_history_unavailable_error):
-        local_source(tmp_path).changed_paths(repo, "widget-v0.1.0", ["a.txt"])
+        local_source(tmp_path).file_at_ref(repo, "widget-v0.1.0", "a.txt")
 
 
 def test_17_6_2_errors_when_the_git_binary_is_missing(
@@ -208,7 +179,7 @@ def test_17_6_2_errors_when_the_git_binary_is_missing(
 ) -> None:
     del no_git
     with pytest.raises(git_history_unavailable_error):
-        local_source(tmp_path).changed_paths(repo, "widget-v0.1.0", ["a.txt"])
+        local_source(tmp_path).file_at_ref(repo, "widget-v0.1.0", "a.txt")
 
 
 def test_17_7_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
@@ -225,38 +196,29 @@ def test_17_7_1_serves_freshly_written_content_to_later_reads_in_the_same_run(
 
 
 @requires_git
-def test_17_7_2_keys_cached_history_reads_by_their_arguments(
-    diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]
-) -> None:
-    disk_ctx = make_context(diffable_checkout)
-
-    assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["tracked.txt"]) == ["tracked.txt"]
-    assert disk_ctx.changed_paths(repo, "widget-v0.1.0", ["untouched.txt"]) == []
-
-
-@requires_git
 def test_17_8_1_reads_file_content_at_each_git_ref(
-    diffable_checkout: Path, repo: Repo, make_context: Callable[..., Context]
+    versioned_checkout: Path, repo: Repo, make_context: Callable[..., Context]
 ) -> None:
-    disk_ctx = make_context(diffable_checkout)
+    disk_ctx = make_context(versioned_checkout)
 
     assert disk_ctx.file_at_ref(repo, "widget-v0.1.0", "tracked.txt") == "one"
     assert disk_ctx.file_at_ref(repo, "HEAD", "tracked.txt") == "two"
+    assert disk_ctx.file_at_ref(repo, "widget-v0.1.0", "untouched.txt") == "stable"
 
 
 @requires_git
 def test_17_8_2_returns_nothing_for_a_file_missing_at_the_ref(
-    diffable_checkout: Path, repo: Repo, local_source: type[LocalSource]
+    versioned_checkout: Path, repo: Repo, local_source: type[LocalSource]
 ) -> None:
-    assert local_source(diffable_checkout).file_at_ref(repo, "HEAD", "missing.txt") is None
+    assert local_source(versioned_checkout).file_at_ref(repo, "HEAD", "missing.txt") is None
 
 
 @requires_git
 def test_17_8_3_errors_for_an_unavailable_git_ref(
-    diffable_checkout: Path,
+    versioned_checkout: Path,
     repo: Repo,
     local_source: type[LocalSource],
     git_history_unavailable_error: type[GitHistoryUnavailableError],
 ) -> None:
     with pytest.raises(git_history_unavailable_error):
-        local_source(diffable_checkout).file_at_ref(repo, "missing-ref", "tracked.txt")
+        local_source(versioned_checkout).file_at_ref(repo, "missing-ref", "tracked.txt")

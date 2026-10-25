@@ -1,4 +1,4 @@
-# 21. [Publication batches](21-publication-batches.test.ts)
+# 21. [Publication batches](test_21_publication_batches.py)
 
 ## 21.1 planning isolated publication batches
 
@@ -12,21 +12,21 @@
 
 ### 21.2.1 publishes only the selected npm target and writes its summary
 
-### 21.2.2 honors a single-tag plan when several npm targets exist
+### 21.2.2 honors a single tag plan when several npm targets exist
 
-### 21.2.3 reports a failed npm batch without creating GitHub releases
+### 21.2.3 reports a failed npm batch without creating github releases
 
 ### 21.2.4 rejects batches that disagree with the checkout
 
-### 21.2.5 publishes a Python batch through uv
+### 21.2.5 publishes a python batch through uv
 
 ## 21.3 selecting incomplete releases
 
 ### 21.3.1 plans no batches when every release is complete
 
-### 21.3.2 retries a missing artifact whose GitHub release exists
+### 21.3.2 retries a missing artifact whose github release exists
 
-### 21.3.3 selects published artifacts with missing GitHub releases
+### 21.3.3 selects published artifacts with missing github releases
 
 ### 21.3.4 rejects a tag that does not match a configured version
 

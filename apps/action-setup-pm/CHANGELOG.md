@@ -1,5 +1,11 @@
 # zyplux-setup-pm
 
+## 1.0.2
+
+### Patch Changes
+
+- Clarify that publication jobs populate shared main-branch dependency caches, while release planning uses only the publisher runtime.
+
 ## 1.0.1
 
 ### Patch Changes

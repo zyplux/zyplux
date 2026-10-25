@@ -1,16 +1,6 @@
 # 22. [Keeping zyplux-published artifacts at their latest release](test_22_zyplux_deps_latest.py)
 
-The org publishes its own tooling — npm packages under the `@zyplux/` scope,
-PyPI distributions named `zyplux-*`, and container images under
-`ghcr.io/zyplux/` — and every repo must consume those at the latest published
-release, or fixes never propagate. The `zyplux_deps_latest` bite
-(`apps/cerberus/src/cerberus/bites/zyplux_deps_latest_bite.py`) detects usages by
-namespace (never a hardcoded list, so future packages are auto-covered), reads
-resolved and pinned versions — `pnpm-lock.yaml`, `uv.lock`, `==` pins in the
-justfile and workflows, image tags in workflows and the justfile — and
-compares each against the registry's latest via the `registries` module
-(`apps/cerberus/src/cerberus/registries.py`). There is no `--fix`: bumping is
-repo tooling's job, so lag findings point at `just upgrade`.
+The org publishes npm packages under `@zyplux/`, PyPI distributions named `zyplux-*`, and container images under `ghcr.io/zyplux/`. The `zyplux_deps_latest` bite (`apps/cerberus/src/cerberus/bites/zyplux_deps_latest_bite.py`) detects usages by namespace and compares resolved and pinned versions from lockfiles, justfiles and workflows against the latest published release through Airlock's shared registry client (`apps/airlock/src/airlock/registries.py`). Lag findings point at `just upgrade`.
 
 ## 22.1 detecting zyplux artifacts by namespace
 
@@ -80,8 +70,7 @@ resolves the latest at run time and passes.
 
 ## 22.4 keeping container images at the latest tag
 
-`ghcr.io/zyplux/<image>:<tag>` references in workflows and the justfile are
-compared against the image's highest published version tag.
+`ghcr.io/zyplux/<image>:<tag>` references in workflows and the justfile are compared against the image's highest published stable semantic version tag.
 
 ### 22.4.1 fails when a workflow pins an outdated ghcr image tag
 

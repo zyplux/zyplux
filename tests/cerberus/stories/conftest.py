@@ -1,5 +1,6 @@
 """Registers `seam_fixtures` (the trusted seam to cerberus internals) with pytest."""
 
+from release_fixture import release
 from seam_fixtures import (
     bite_module_names,
     check_result,
@@ -47,6 +48,7 @@ __all__ = [
     "npm_tool_spec",
     "ok",
     "register_fake_check",
+    "release",
     "repo",
     "rumdl_canonical",
     "run_check",

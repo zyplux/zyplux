@@ -2,6 +2,7 @@ preset = "strict"
 min-severity = "warn"
 
 project-includes = [
+    "apps/airlock/src",
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/action-setup-pm/src",
@@ -15,6 +16,8 @@ disable-project-excludes-heuristics = true
 project-excludes = ["**/node_modules"]
 use-ignore-files = false
 search-path = [
+    "apps/airlock/src",
+    "tests/release_fixtures",
     "apps/action-setup-pm/src",
     "apps/cerberus/src",
     "apps/clipy/src",

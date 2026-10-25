@@ -1,4 +1,4 @@
-# 19. [Publishing GitHub Actions](19-action-releases.test.ts)
+# 19. [Publishing GitHub Actions](test_19_action_releases.py)
 
 ## 19.1 publishing versioned action releases
 
@@ -20,7 +20,7 @@
 
 ### 19.2.1 requires a published stable release before moving its alias
 
-### 19.2.2 leaves the alias unchanged when GitHub release creation fails
+### 19.2.2 leaves the alias unchanged when github release creation fails
 
 ### 19.2.3 reports a rejected tag lease instead of forcing over a concurrent publisher
 
@@ -30,6 +30,8 @@
 
 ### 19.2.6 rejects a missing versioned tag instead of guessing the current commit
 
+### 19.2.7 rejects action repositories outside the checkout
+
 ## 19.3 preparing action versions through pnpm
 
-### 19.3.1 synchronizes the private manifest, native helper and lockfiles without a PyPI target
+### 19.3.1 synchronizes the private manifest native helper and lockfiles without a pypi target

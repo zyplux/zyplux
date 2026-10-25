@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from cerberus.source import LocalSource, RepoSource
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable
     from pathlib import Path
 
     from cerberus.config import Config
@@ -34,10 +34,6 @@ class Context:
 
     def paths(self, repo: Repo) -> list[str]:
         return self._cached(("paths", repo.name), lambda: self.source.list_paths(repo))
-
-    def changed_paths(self, repo: Repo, ref: str, surface: Sequence[str]) -> list[str]:
-        key = ("changed_paths", repo.name, ref, tuple(surface))
-        return self._cached(key, lambda: self.source.changed_paths(repo, ref, surface))
 
     def file_at_ref(self, repo: Repo, ref: str, path: str) -> str | None:
         key = ("file_at_ref", repo.name, ref, path)

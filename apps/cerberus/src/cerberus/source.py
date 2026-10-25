@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
 from cerberus import proc
 from cerberus.model import Repo
 
-if TYPE_CHECKING:
-    from collections.abc import Sequence
-
 
 class GitHistoryUnavailableError(RuntimeError):
-    """Git history (tags, ref diffs) could not be read — git failed or is absent."""
+    """Git history could not be read — git failed or is absent."""
 
 
 class RepoSource(Protocol):
@@ -24,7 +21,6 @@ class RepoSource(Protocol):
     def file(self, _repo: Repo, path: str) -> str | None: ...
     def file_at_ref(self, _repo: Repo, ref: str, path: str) -> str | None: ...
     def list_paths(self, _repo: Repo) -> list[str]: ...
-    def changed_paths(self, _repo: Repo, ref: str, surface: Sequence[str]) -> list[str]: ...
     def write_file(self, _repo: Repo, path: str, content: str) -> None: ...
     def workflows(self, _repo: Repo) -> dict[str, str]: ...
 
@@ -77,11 +73,6 @@ class LocalSource:
         if result.returncode != 0:
             raise GitHistoryUnavailableError(result.stderr.strip() or f"git {args[0]} failed")
         return result.stdout
-
-    def changed_paths(self, _repo: Repo, ref: str, surface: Sequence[str]) -> list[str]:
-        """Diffs `ref` against the working tree, so uncommitted local changes count too."""
-        diff = self._git(["diff", "--name-only", ref, "--", *surface])
-        return [path for path in diff.splitlines() if path]
 
     def file_at_ref(self, _repo: Repo, ref: str, path: str) -> str | None:
         if not self._git(["ls-tree", "--name-only", ref, "--", path]).strip():

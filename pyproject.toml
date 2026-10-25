@@ -8,26 +8,38 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+members = ["apps/airlock", "apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+
+[tool.uv.sources]
+zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
-addopts = "-n auto --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing"
-testpaths = ["tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
-markers = ["no_xdist: run this test outside the xdist worker pool (see tests/conftest.py)"]
+pythonpath = ["tests/release_fixtures"]
+addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
+testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
+
+[tool.coverage.run]
+data_file = "coverage/.coverage"
+patch = ["subprocess"]
+# Local convenience tool, maintained through linting and typechecking.
+omit = ["apps/clipy/src/clipy/justpty.py"]
 
 [tool.coverage.report]
 fail_under = 90
 
 [tool.vulture]
 paths = [
+    "apps/airlock/src",
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/action-setup-pm/src",
     "apps/totchef/src",
     "apps/token_stats/src",
     "packages/util_py/src",
+    "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
+    "tests/release_fixtures",
     "tests/setup_pm",
     "tests/totchef",
     "tests/token_stats",
@@ -36,7 +48,7 @@ ignore_decorators = ["@app.command", "@app.callback", "@model_validator"]
 # Cooks are resolved by entry point / config-dir convention (totchef.registry), so vulture
 # sees no static reference and reports every cook class as dead — they're totchef's plugins,
 # not dead code. `model_config` is read by pydantic's model metaclass, never called by name.
-ignore_names = ["pytestmark", "*Cook", "model_config", "_fake_tokenizer_backend", "_restore_signal_handlers"]
+ignore_names = ["pytestmark", "*Cook", "model_config", "_fake_tokenizer_backend"]
 
 [dependency-groups]
 lint = [
@@ -56,4 +68,5 @@ type = [
     "types-pyyaml>=6.0.12.20260906",
     # psutil ships no type stubs of its own; apps/clipy's ctop.py needs this to resolve them.
     "types-psutil>=7.2.2.20260906",
+    "types-docker>=7.2.0.20261006",
 ]

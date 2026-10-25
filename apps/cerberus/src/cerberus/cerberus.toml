@@ -154,6 +154,8 @@ min_coverage = 90
 
 [lib_py_test_seam]
 
+[release_readiness]
+
 [release_surface_version_bump]
 
 [codeowners_coverage]
