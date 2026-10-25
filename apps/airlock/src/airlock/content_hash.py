@@ -18,6 +18,7 @@ from tomlkit.items import Table
 
 from airlock import proc
 from airlock.contracts import ActionSpec, PackageSpec
+from airlock.dependencies import load_dependencies, validate_dependency_cycles, validate_prepared_dependencies
 from airlock.targets import resolve_repo_path
 
 if TYPE_CHECKING:
@@ -96,6 +97,7 @@ def calc_source_hash(target: ReleaseTarget) -> str:
         cwd=root,
     )
     files = {root / path for path in listing.split("\0") if path}
+    entries = []
     if isinstance(target.spec, ActionSpec):
         for relative in target.spec.runtime_files:
             path = resolve_repo_path(root, relative)
@@ -109,6 +111,10 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             (context / name for name in ("Containerfile", "Dockerfile") if (context / name).is_file()),
             context / "Containerfile",
         )
+        entries.extend([
+            ("build_context", context.relative_to(root).as_posix(), False, ""),
+            ("dockerfile", dockerfile.relative_to(root).as_posix(), False, ""),
+        ])
         ignorefile = next(
             (context / name for name in (".containerignore", ".dockerignore") if (context / name).is_file()),
             None,
@@ -131,7 +137,6 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             files.add(ignorefile)
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
     files.discard(root / "airlock-targets.toml")
-    entries = []
     for path in files:
         if path.is_symlink():
             kind, contents = "symlinks", os.fsencode(path.readlink())
@@ -148,32 +153,45 @@ def calc_source_hash(target: ReleaseTarget) -> str:
     return calc_entries_hash(entries)
 
 
-def calc_target_hash(target: ReleaseTarget) -> str:
-    if not isinstance(target.spec, PackageSpec):
-        return calc_source_hash(target)
-    with TemporaryDirectory(prefix="airlock-content-") as directory:
-        return calc_content_hash(build_archives(target, Path(directory)))
-
-
-def validate_content_hash(target: ReleaseTarget, archives: list[Path] | None = None) -> None:
+def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None) -> list[ReleaseTarget]:
     if target.spec.content_hash is None:
         msg = f"{target.spec.label}: missing content_hash; run airlock prepare"
         raise ValueError(msg)
-    fingerprint = calc_target_hash(target) if archives is None else calc_content_hash(archives)
+    if isinstance(target.spec, PackageSpec) and archives is None:
+        with TemporaryDirectory(prefix="airlock-validate-") as directory:
+            return validate_contents(target, build_archives(target, Path(directory)))
+    fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives)
     if fingerprint != target.spec.content_hash:
         msg = f"{target.spec.label}: release contents differ from content_hash; run airlock prepare"
         raise ValueError(msg)
+    if archives is None:
+        return []
+    dependencies = load_dependencies(target, archives)
+    validate_prepared_dependencies(target, dependencies)
+    validate_dependency_cycles(target, dependencies)
+    return dependencies
+
+
+def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None]:
+    if not isinstance(target.spec, PackageSpec):
+        return calc_source_hash(target), None
+    with TemporaryDirectory(prefix="airlock-prepare-") as directory:
+        archives = build_archives(target, Path(directory))
+        return calc_content_hash(archives), sorted(dependency.tag for dependency in load_dependencies(target, archives))
 
 
 def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     root = proc.find_root()
-    hashes = {target.spec.tag_prefix.removesuffix("-v"): calc_target_hash(target) for target in targets}
+    hashes = {target.spec.tag_prefix.removesuffix("-v"): prepare_contents(target) for target in targets}
     if not hashes:
         return
     path = root / "airlock-targets.toml"
     manifest = tomlkit.parse(path.read_text(encoding="utf-8"))
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
-            declaration["content_hash"] = hashes[name]
-            typer.echo(f"{name}: {hashes[name]}")
+            fingerprint, dependencies = hashes[name]
+            declaration["content_hash"] = fingerprint
+            if dependencies is not None:
+                declaration["requires"] = dependencies
+            typer.echo(f"{name}: {fingerprint}")
     path.write_text(tomlkit.dumps(manifest), encoding="utf-8")

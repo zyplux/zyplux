@@ -42,9 +42,16 @@ def release(release: ReleaseFixture) -> ReleaseFixture:
     return release
 
 
+@pytest.mark.parametrize("has_dynamic", [False, True])
 def test_26_1_1_waits_for_complete_dependency_artifacts_before_uploading_the_inspected_build(
-    release: ReleaseFixture,
+    release: ReleaseFixture, *, has_dynamic: bool
 ) -> None:
+    if has_dynamic:
+        release.write(
+            "packages/runtime/pyproject.toml",
+            '[project]\nname = "zyplux-util"\nversion = "1.0.0"\ndynamic = ["dependencies"]\n',
+        )
+        prepare_publication(release)
     attempts: list[Request] = []
     visibility_attempts = 2
 
@@ -111,7 +118,7 @@ def test_26_2_1_ignores_dependencies_that_do_not_use_a_configured_workspace_vers
 
 
 @pytest.mark.parametrize("problem", ["missing", "identity", "version", "requirement", "multiple"])
-def test_26_2_2_rejects_invalid_wheel_metadata_before_upload(release: ReleaseFixture, problem: str) -> None:
+def test_26_2_2_rejects_invalid_wheel_metadata_while_preparing(release: ReleaseFixture, problem: str) -> None:
     def build(call: Command) -> str:
         directory = Path(call.argv[call.argv.index("--out-dir") + 1])
         metadata = "Metadata-Version: 2.4\nName: zyplux-cerberus\nVersion: 2.3.4\n"
@@ -130,8 +137,7 @@ def test_26_2_2_rejects_invalid_wheel_metadata_before_upload(release: ReleaseFix
         return ""
 
     release.on("uv build", build)
-    prepare_publication(release)
-    execution = release.publish("cerberus-v2.3.4", error="wheel")
+    execution = release.run("prepare", error="wheel")
     assert "Traceback" not in execution.stderr
     assert not release.matching("uv publish|gh release create")
 
@@ -162,7 +168,7 @@ def test_26_3_1_rejects_cycles_before_waiting_and_keeps_unrelated_jobs_independe
     )
     prepare_publication(release)
     execution = release.publish("cerberus-v2.3.4", error="cyclic production workspace dependency")
-    assert "zyplux-util" in execution.stderr
+    assert "runtime-v1.0.0" in execution.stderr
     assert "zyplux-cerberus" in execution.stderr
     assert len([request for request in release.requests if request.url == DEPENDENCY_URL]) == 1
     assert len(release.matching("uv build")) == 1
@@ -200,17 +206,4 @@ def test_26_3_3_includes_optional_dependencies_in_cycle_detection(release: Relea
     )
     prepare_publication(release)
     release.publish("cerberus-v2.3.4", error="cyclic production workspace dependency")
-    assert not release.matching("uv publish")
-
-
-@pytest.mark.parametrize("has_project", [True, False])
-def test_26_3_4_requires_dynamic_workspace_dependencies_to_publish_first(
-    release: ReleaseFixture, *, has_project: bool
-) -> None:
-    release.write(
-        "packages/runtime/pyproject.toml",
-        ("[project]\n" if has_project else "")
-        + 'name = "zyplux-util"\nversion = "1.0.0"\ndynamic = ["dependencies"]\n',
-    )
-    release.publish("cerberus-v2.3.4", error="publish dynamic workspace dependencies before their consumers")
     assert not release.matching("uv publish")

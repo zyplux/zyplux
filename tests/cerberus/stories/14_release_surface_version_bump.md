@@ -88,6 +88,14 @@
 
 ### 14.7.4 accepts the first fingerprint before a release baseline exists
 
-### 14.7.5 reports package build failures
-
 ### 14.7.6 requires bumps for changed action and container inputs
+
+## 14.8 preserving partially published versions
+
+### 14.8.1 preserves target branch fingerprints after any registry artifact is uploaded
+
+### 14.8.2 allows identical contents to repair a missing github release
+
+### 14.8.3 allows same version repairs before any registry artifact exists
+
+### 14.8.4 reports registry errors during repair validation

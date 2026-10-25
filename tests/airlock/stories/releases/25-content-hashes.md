@@ -28,6 +28,8 @@
 
 ### 25.2.9 builds each package once when repairing a github release
 
+### 25.2.10 rejects missing or stale prepared dependencies before upload
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files
@@ -49,3 +51,5 @@
 ### 25.4.7 covers declared action runtime files
 
 ### 25.4.8 rejects missing or external action runtime files
+
+### 25.4.9 covers container build configuration with identical input files

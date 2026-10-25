@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from airlock import github, proc, pypi
+from airlock import github, proc
 from airlock.actions import publish_action
 from airlock.containers import is_container_published, publish_container
-from airlock.content_hash import build_archives, validate_content_hash
+from airlock.content_hash import build_archives, validate_contents
 from airlock.contracts import ActionSpec, ReleaseBatch
 from airlock.notes import load_prepared_targets
 from airlock.npm import publish_npm
@@ -50,7 +50,7 @@ def load_pending(tag: str | None) -> list[ReleaseTarget]:
 
 def publish_prepared(target: ReleaseTarget, notes: str) -> None:
     if target.spec.kind in {"action", "ghcr"}:
-        validate_content_hash(target)
+        validate_contents(target)
     if isinstance(target.spec, ActionSpec):
         publish_action(target, notes)
         return
@@ -61,14 +61,14 @@ def publish_prepared(target: ReleaseTarget, notes: str) -> None:
         publish_npm(target)
     elif is_published(target):
         if github.load_release(target.tag) is None:
-            validate_content_hash(target)
+            validate_contents(target)
         typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
     else:
         typer.echo(f"Publishing {target.spec.label} {target.version} to {target.spec.kind} ...")
         with TemporaryDirectory(prefix="release-pypi-") as directory:
             archives = build_archives(target, Path(directory))
-            validate_content_hash(target, archives)
-            wait_for_dependencies(pypi.load_dependencies(target, archives))
+            dependencies = validate_contents(target, archives)
+            wait_for_dependencies(dependencies)
             proc.run("uv", "publish", "--check-url", "https://pypi.org/simple/", str(Path(directory) / "*"))
         typer.echo(f"Published {target.spec.label} {target.version}")
     if github.load_release(target.tag) is None:

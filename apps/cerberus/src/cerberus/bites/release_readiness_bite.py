@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from airlock.content_hash import validate_content_hash
+from airlock.content_hash import validate_contents
 from airlock.errors import RELEASE_ERRORS
 from airlock.notes import load_prepared_targets
 
@@ -24,7 +24,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
     try:
         for target, _ in load_prepared_targets(root=ctx.source.root):
-            validate_content_hash(target)
+            validate_contents(target)
     except ValueError as exc:
         res.fail(str(exc))
     except RELEASE_ERRORS as exc:

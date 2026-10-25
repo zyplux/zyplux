@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import re
+import tomllib
 from typing import TYPE_CHECKING
 
 import pytest
 from archive_fixture import stage_packagers
 from cli_fixture import Reply, Response
-from release_fixture import list_workspace_packages
+from release_fixture import list_workspace_packages, prepare_publication
 
 if TYPE_CHECKING:
     from cli_fixture import Command, Request
@@ -88,7 +90,10 @@ def test_24_1_6_encodes_target_names_in_archive_filenames(release: ReleaseFixtur
         "airlock-targets.toml",
         release.read("airlock-targets.toml").replace("[consumer]", '["team/consumer"]\nlabel = "@zyplux/consumer"'),
     )
-    release.on("tar -xOf", json.dumps({"name": consumer.label, "version": consumer.version}))
+    release.on(
+        re.compile(r"^tar -xOf \S*/team%2Fconsumer-v1\.2\.3\.tgz "),
+        json.dumps({"name": consumer.label, "version": consumer.version}),
+    )
     batch = release.plan("team/consumer-v1.2.3")[0]
     release.stage_npm()
     release.publish_batch(batch)
@@ -204,7 +209,7 @@ def test_24_3_3_skips_workspace_waits_for_bundled_or_incompatible_dependencies(
 ) -> None:
     consumer = release.consumer()
     release.on(
-        "tar -xOf",
+        re.compile(r"^tar -xOf \S*/consumer-v1\.2\.3\.tgz "),
         json.dumps({
             "dependencies": {"@zyplux/util": "1.2.3"},
             "name": consumer.label,
@@ -226,3 +231,67 @@ def test_24_3_4_rejects_packing_hooks_that_change_the_package_identity(
     release.on("tar -xOf", json.dumps({"name": consumer.label, "version": consumer.version, **override}))
     release.publish_batch(release.plan(consumer.tag)[0], error="packed package identity must match")
     assert not release.matching("pnpm publish")
+
+
+@pytest.mark.parametrize("has_transitive", [False, True])
+def test_24_4_1_rejects_reachable_unpublished_cycles_without_packing_peers(
+    release: ReleaseFixture, *, has_transitive: bool
+) -> None:
+    consumer = release.consumer()
+    for name, dependency in (
+        ("util", "independent" if has_transitive else "consumer"),
+        ("independent", "consumer"),
+    ):
+        release.write_json(
+            f"packages/{name}/package.json",
+            {"name": f"@zyplux/{name}", "version": "1.2.3", "dependencies": {f"@zyplux/{dependency}": "1.2.3"}},
+        )
+    prepare_publication(release)
+    manifest = tomllib.loads(release.read("airlock-targets.toml"))
+    assert manifest["consumer"]["requires"] == ["util-v1.2.3"]
+    release.publish(consumer.tag, error="cyclic production workspace dependency")
+    assert len(release.matching("pnpm pack")) == 1
+    assert not release.matching("pnpm publish|gh release create")
+
+
+def test_24_4_2_uses_prepared_packing_hook_metadata_to_break_apparent_source_cycles(release: ReleaseFixture) -> None:
+    consumer = release.bundled_consumer()
+    for name, dependency in (("consumer", "util"), ("util", "consumer")):
+        release.write_json(
+            f"packages/{name}/package.json",
+            {"name": f"@zyplux/{name}", "version": "1.2.3", "dependencies": {f"@zyplux/{dependency}": "1.2.3"}},
+        )
+    release.write(
+        ".pnpmfile.mjs",
+        "export const hooks = { beforePacking(manifest) { "
+        "delete manifest.dependencies?.['@zyplux/consumer']; return manifest; } };",
+    )
+    release.stage_npm()
+    manifest = tomllib.loads(release.read("airlock-targets.toml"))
+    assert manifest["util"]["requires"] == []
+    release.serve(
+        "https://registry.npmjs.org/%40zyplux%2Futil",
+        Response({"versions": {"1.2.3": {"dist": {"tarball": "https://registry.npmjs.org/util.tgz"}}}}),
+    )
+    release.publish(consumer.tag)
+    release.expect_npm(consumer.dir)
+    release.expect_release(consumer.tag)
+
+
+@pytest.mark.parametrize("problem", ["missing", "unknown"])
+def test_24_4_3_rejects_invalid_prepared_peer_dependencies_without_packing_them(
+    release: ReleaseFixture, problem: str
+) -> None:
+    consumer = release.consumer()
+    manifest = release.read("airlock-targets.toml")
+    release.write(
+        "airlock-targets.toml",
+        manifest.replace("[util]\n", '[util]\nrequires = ["unknown-v1.0.0"]\n').replace("requires = []\n", ""),
+    )
+    if problem == "missing":
+        release.write(
+            "airlock-targets.toml", release.read("airlock-targets.toml").replace('requires = ["unknown-v1.0.0"]\n', "")
+        )
+    release.publish(consumer.tag, error="run airlock prepare")
+    assert len(release.matching("pnpm pack")) == 1
+    assert not release.matching("pnpm publish|gh release create")

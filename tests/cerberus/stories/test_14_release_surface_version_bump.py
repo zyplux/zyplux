@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from archive_fixture import stage_packagers
-from cli_fixture import Reply
+from cli_fixture import Reply, Response
 from release_fixture import build_release
 from release_surface_fixture import check_surface
 
@@ -124,6 +124,7 @@ def test_14_2_5_accepts_published_versions_with_unchanged_contents(release: Rele
 
 def test_14_2_6_rejects_changes_to_an_already_published_version(release: ReleaseFixture) -> None:
     release.write("packages/util/src/index.js", "changed contents")
+    release.run("prepare")
     assert check_surface(release) == [
         {
             "message": "@zyplux/util: contents changed since util-v1.2.3 "
@@ -157,6 +158,7 @@ def test_14_3_1_compares_current_versions_against_the_latest_baseline(
 ) -> None:
     release.base_version(base)
     release.published_version(published)
+    release.published()
     release.write_json("packages/util/package.json", {"version": current})
     expected: list[dict[str, str]] = (
         []
@@ -408,13 +410,6 @@ def test_14_7_4_accepts_the_first_fingerprint_before_a_release_baseline_exists(
     assert not release.matching("git -C .* diff")
 
 
-def test_14_7_5_reports_package_build_failures(release: ReleaseFixture) -> None:
-    release.on("pnpm pack", Reply(stderr="Packaging failed", exit_code=1))
-    findings = check_surface(release)
-    assert findings[0]["status"] == "error"
-    assert "Packaging failed" in findings[0]["message"]
-
-
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
 def test_14_7_6_requires_bumps_for_changed_action_and_container_inputs(release: ReleaseFixture, kind: str) -> None:
     fields = 'kind = "action"\nrepository = "zyplux/zyplux"' if kind == "action" else 'kind = "ghcr"'
@@ -427,3 +422,51 @@ def test_14_7_6_requires_bumps_for_changed_action_and_container_inputs(release: 
     findings = check_surface(release)
     assert findings[0]["status"] == "fail"
     assert "contents changed since util-v1.2.3" in findings[0]["message"]
+
+
+@pytest.fixture(params=["npm", "pypi"])
+def registry_repair(release: ReleaseFixture, request: pytest.FixtureRequest) -> ReleaseFixture:
+    if request.param == "pypi":
+        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
+        release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+    release.run("prepare")
+    release.published_version()
+    release.base_version("1.2.3")
+    release.published(npm=True, pypi=True)
+    release.serve("https://pypi.org/", Response({"urls": [{"packagetype": "bdist_wheel"}]}))
+    return release
+
+
+def test_14_8_1_preserves_target_branch_fingerprints_after_any_registry_artifact_is_uploaded(
+    registry_repair: ReleaseFixture,
+) -> None:
+    release = registry_repair
+    release.write("packages/util/src/index.js", "changed after registry upload")
+    release.run("prepare")
+    findings = check_surface(release, "origin/main")
+    assert findings[0]["status"] == "fail"
+    assert "already has registry artifacts" in findings[0]["message"]
+
+
+def test_14_8_2_allows_identical_contents_to_repair_a_missing_github_release(registry_repair: ReleaseFixture) -> None:
+    assert check_surface(registry_repair, "origin/main") == [DONE]
+    assert not registry_repair.requests
+
+
+def test_14_8_3_allows_same_version_repairs_before_any_registry_artifact_exists(
+    registry_repair: ReleaseFixture,
+) -> None:
+    registry_repair.published()
+    registry_repair.write("packages/util/src/index.js", "changed before first upload")
+    registry_repair.run("prepare")
+    assert check_surface(registry_repair, "origin/main") == [DONE]
+
+
+def test_14_8_4_reports_registry_errors_during_repair_validation(registry_repair: ReleaseFixture) -> None:
+    registry_repair.write("packages/util/src/index.js", "changed contents")
+    registry_repair.run("prepare")
+    for registry in ("https://registry.npmjs.org/", "https://pypi.org/"):
+        registry_repair.serve(registry, Response(status=403))
+    findings = check_surface(registry_repair, "origin/main")
+    assert findings[0]["status"] == "error"
+    assert "cannot validate registry artifacts" in findings[0]["message"]

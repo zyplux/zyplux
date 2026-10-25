@@ -29,3 +29,11 @@
 ### 24.3.3 skips workspace waits for bundled or incompatible dependencies
 
 ### 24.3.4 rejects packing hooks that change the package identity
+
+## 24.4 validating publication cycles
+
+### 24.4.1 rejects reachable unpublished cycles without packing peers
+
+### 24.4.2 uses prepared packing hook metadata to break apparent source cycles
+
+### 24.4.3 rejects invalid prepared peer dependencies without packing them

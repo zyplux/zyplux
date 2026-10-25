@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 
 from airlock import github
 from airlock.actions import validate_action_repository
-from airlock.content_hash import calc_target_hash
-from airlock.contracts import ActionSpec
+from airlock.contracts import ActionSpec, PackageSpec
 from airlock.errors import RELEASE_ERRORS
+from airlock.registries import has_package_artifacts
 from airlock.targets import build_release_target, parse_manifest, parse_stable_version, parse_version
 
 from cerberus.model import Finding, Status
@@ -17,7 +17,7 @@ from cerberus.source import GitHistoryUnavailableError
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from airlock.contracts import PublishedRelease, ReleaseTarget, TargetSpec
+    from airlock.contracts import PublishedRelease, TargetSpec
     from semantic_version import Version
 
     from cerberus.context import Context
@@ -48,18 +48,21 @@ def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Ver
     ]
 
 
-def has_content_changes(repo: Repo, ctx: Context, target: ReleaseTarget, tag: str) -> bool:
+def has_content_changes(repo: Repo, ctx: Context, target: TargetSpec, tag: str) -> bool:
     content = ctx.file_at_ref(repo, tag, "airlock-targets.toml")
     previous = next(
         (
             spec
             for spec in (parse_manifest(content, is_historical=True) if content is not None else [])
-            if spec.tag_prefix == target.spec.tag_prefix
+            if spec.tag_prefix == target.tag_prefix
         ),
         None,
     )
     return (
-        previous is not None and previous.content_hash is not None and calc_target_hash(target) != previous.content_hash
+        previous is not None
+        and previous.content_hash is not None
+        and target.content_hash is not None
+        and target.content_hash != previous.content_hash
     )
 
 
@@ -83,8 +86,7 @@ def validate_published(
         return validate_bump(target, version, baseline)
     tag = f"{target.tag_prefix}{published}"
     try:
-        release = build_release_target(ctx.source.root, target, str(version))
-        changed = has_content_changes(repo, ctx, release, tag)
+        changed = has_content_changes(repo, ctx, target, tag)
     except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
         return [Finding(Status.ERROR, f"{target.label}: cannot compare contents against {tag}: {exc}")]
     return (
@@ -106,6 +108,24 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
         message = f"version file {previous.version.file} is missing"
         raise ValueError(message)
     return parse_stable_version(parse_version(content, previous.version))
+
+
+def validate_registry_repair(root: Path, target: TargetSpec, previous: TargetSpec, version: Version) -> list[Finding]:
+    if previous.content_hash is None or target.content_hash == previous.content_hash:
+        return []
+    try:
+        release = build_release_target(root, target, str(version))
+        if not has_package_artifacts(release):
+            return []
+    except RELEASE_ERRORS as exc:
+        return [Finding(Status.ERROR, f"{target.label}: cannot validate registry artifacts: {exc}")]
+    return [
+        Finding(
+            Status.FAIL,
+            f"{target.label}: {version} already has registry artifacts; contents differ from the target branch — "
+            "bump the version",
+        )
+    ]
 
 
 def validate_target(
@@ -132,6 +152,14 @@ def validate_target(
             return [Finding(Status.ERROR, f"{target.label}: cannot compare the target branch {base}: {exc}")]
         if version < base_version:
             return [Finding(Status.FAIL, f"{target.label}: version must not decrease from {base} ({base_version})")]
+        if (
+            isinstance(target, PackageSpec)
+            and version == base_version
+            and (lookup.version is None or lookup.version < version)
+        ):
+            findings = validate_registry_repair(ctx.source.root, target, previous, version)
+            if findings:
+                return findings
         baseline = f"{base} ({base_version})", base_version
     return validate_published(repo, ctx, lookup, version, baseline)
 

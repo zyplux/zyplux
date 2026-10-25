@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
     from pydantic import BaseModel
 
-    from airlock.contracts import ReleaseTarget
+    from airlock.contracts import PypiFile, ReleaseTarget
 
 REQUEST_TIMEOUT = 10
 DEPENDENCY_POLL_ATTEMPTS = 61
@@ -232,6 +232,19 @@ def is_container_available(label: str, reference: str) -> bool:
         raise
 
 
+def fetch_pypi_files(target: ReleaseTarget) -> list[PypiFile]:
+    try:
+        return fetch_json(f"https://pypi.org/pypi/{target.spec.label}/{target.version}/json", PypiFiles).urls
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == HTTPStatus.NOT_FOUND:
+            return []
+        raise
+
+
+def has_package_artifacts(target: ReleaseTarget) -> bool:
+    return bool(fetch_pypi_files(target)) if target.spec.kind == "pypi" else is_published(target)
+
+
 def is_published(target: ReleaseTarget) -> bool:
     if target.spec.kind == "action":
         return is_action_published(target)
@@ -240,8 +253,7 @@ def is_published(target: ReleaseTarget) -> bool:
             url, headers = load_npm_request(target.directory, target.spec.label)
             return target.version in fetch_json(url, NpmVersions, headers).versions
         if target.spec.kind == "pypi":
-            files = fetch_json(f"https://pypi.org/pypi/{target.spec.label}/{target.version}/json", PypiFiles)
-            return {"bdist_wheel", "sdist"}.issubset(file.packagetype for file in files.urls)
+            return {"bdist_wheel", "sdist"}.issubset(file.packagetype for file in fetch_pypi_files(target))
         return is_container_available(target.spec.label, target.version)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == HTTPStatus.NOT_FOUND:

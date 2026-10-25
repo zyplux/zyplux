@@ -183,6 +183,26 @@ def test_25_2_9_builds_each_package_once_when_repairing_a_github_release(release
     assert not release.matching("pnpm publish|uv publish")
 
 
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+@pytest.mark.parametrize("problem", ["missing", "stale"])
+def test_25_2_10_rejects_missing_or_stale_prepared_dependencies_before_upload(
+    release: ReleaseFixture, kind: str, problem: str
+) -> None:
+    release.run("prepare")
+    manifest = release.read("airlock-targets.toml")
+    if problem == "missing":
+        release.write(
+            "airlock-targets.toml", "\n".join(line for line in manifest.splitlines() if "requires =" not in line)
+        )
+    else:
+        release.configure(kind, 'requires = ["unknown-v1.0.0"]')
+    release.publish(
+        release.target("util" if kind == "npm" else "cerberus").tag,
+        error="prepared dependencies differ from package contents",
+    )
+    assert not release.matching("pnpm publish|uv publish|gh release create")
+
+
 def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(release: ReleaseFixture) -> None:
     release.use_package()
     release.write_json(
@@ -340,3 +360,21 @@ def test_25_4_8_rejects_missing_or_external_action_runtime_files(
     release.action()
     release.configure("action", f'runtime_files = ["{file}"]')
     release.run("prepare", error=reason)
+
+
+@pytest.mark.parametrize("selection", ["dockerfile", "build_context"])
+def test_25_4_9_covers_container_build_configuration_with_identical_input_files(
+    release: ReleaseFixture, selection: str
+) -> None:
+    release.write("containers/ci/Alternative", "FROM scratch\n")
+    release.configure("ghcr", 'build_context = "containers"\ndockerfile = "containers/ci/Containerfile"')
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    declaration = (
+        'dockerfile = "containers/ci/Alternative"' if selection == "dockerfile" else 'build_context = "containers/ci"'
+    )
+    release.configure("ghcr", declaration)
+    release.publish("ci-image-v3.4.5", error="release contents differ from content_hash")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != baseline
+    assert not release.matching("podman build|gh release create")

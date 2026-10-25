@@ -42,7 +42,7 @@ If preparation needs regeneration, preserve the code and note text, restore gene
 
 ## Release content validation
 
-Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Unpublished target-branch versions can be repaired without another bump.
+Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Target-branch versions can be repaired without another bump before their first registry upload. Once any package artifact exists, including an incomplete PyPI upload, the target branch's fingerprint must remain unchanged until that version's GitHub release is finalized.
 
 `airlock prepare` records each target's `content_hash` in `airlock-targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
@@ -51,15 +51,15 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |
 | Python | Both the wheel and source distribution produced by `uv build`. |
 | Action | Git-visible files in the Action directory and the directory containing its version file, plus declared `runtime_files`. `path` selects the Action directory when it differs from the version directory. |
-| Container | The Dockerfile and Git-visible build-context files, filtered with Docker's SDK matcher. `.containerignore` takes precedence over `.dockerignore`. |
+| Container | The selected build-context and Dockerfile paths, plus the Dockerfile and Git-visible build-context files, filtered with Docker's SDK matcher. `.containerignore` takes precedence over `.dockerignore`. |
 
 Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
 
 Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
 
-Cerberus compares current contents with the fingerprint in the latest finalized stable GitHub release's tagged manifest. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. The first release with a fingerprint establishes the baseline; content comparisons begin after that release.
+Bump detection is a best-effort reminder using prepared fingerprints; release readiness owns artifact validation. Cerberus compares each prepared fingerprint with the latest finalized stable GitHub release's tagged manifest, without rebuilding packages. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. The first release with a fingerprint establishes the baseline; content comparisons begin after that release.
 
-Cerberus's `release_readiness` bite requires and recalculates every target's fingerprint. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
+Preparation also records each package's `requires` list of matching workspace release tags from its built metadata. Cerberus's `release_readiness` bite requires and recalculates every target's fingerprint and package dependency list. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
 
 Release checks require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
@@ -79,7 +79,7 @@ Each successful job finalizes its target's release; a failing job leaves the oth
 
 Python publication reads `Requires-Dist` from the built wheel and waits for matching versions of other configured PyPI targets before uploading those same archives. Matching dependencies include optional and conditional installations. The dependency's wheel and source archive must both be visible on PyPI; missing artifacts and transient registry failures use the same bounded wait as npm. A failed dependency blocks its consumers while unrelated jobs continue.
 
-Each Python job rejects cycles among its reachable unpublished workspace dependencies before waiting. Cycle checks use the target's built metadata and the other packages' static project dependencies, including extras. Dependencies with dynamic metadata must publish before their consumers. Existing publications break dependency cycles; unrelated jobs remain independent.
+Each npm and Python job rejects cycles among its reachable unpublished workspace dependencies before waiting. Cycle checks use the prepared `requires` lists, validated against the actual archives during readiness checks and publication. Packing hooks, bundled dependencies and dynamic Python metadata are resolved during preparation; publication does not repack peer packages. Existing publications break dependency cycles; unrelated jobs remain independent.
 
 To recover from a failed run, fix the cause and rerun the failed jobs in GitHub Actions, or dispatch `release.yml` on `main` with an optional `tag` to select one release.
 

@@ -55,8 +55,12 @@ def stage_packagers(release: ReleaseFixture) -> None:
             str(path.relative_to(source)): path.read_bytes() for path in sorted(source.rglob("*")) if path.is_file()
         }
         project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+        requirements = [
+            *project.get("dependencies", []),
+            *(requirement for group in project.get("optional-dependencies", {}).values() for requirement in group),
+        ]
         metadata = f"Metadata-Version: 2.4\nName: {project['name']}\nVersion: {project['version']}\n" + "".join(
-            f"Requires-Dist: {requirement}\n" for requirement in project.get("dependencies", [])
+            f"Requires-Dist: {requirement}\n" for requirement in requirements
         )
         write_wheel(directory / "cerberus.whl", {**contents, "package.dist-info/METADATA": metadata.encode()})
         write_tar(directory / "cerberus.tar.gz", {f"cerberus/{path}": contents for path, contents in contents.items()})
@@ -69,7 +73,7 @@ def stage_packagers(release: ReleaseFixture) -> None:
 def hash_archives(release: ReleaseFixture, archives: list[Path]) -> str:
     release.use_package()
     if archives[0].suffix != ".tgz":
-        release.configure("npm", 'kind = "pypi"')
+        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
 
     def build(call: Command) -> str:
         if "--out" in call.argv:
@@ -77,7 +81,15 @@ def hash_archives(release: ReleaseFixture, archives: list[Path]) -> str:
         else:
             directory = Path(call.argv[call.argv.index("--out-dir") + 1])
             for archive in archives:
-                shutil.copyfile(archive, directory / archive.name)
+                destination = directory / archive.name
+                shutil.copyfile(archive, destination)
+                if archive.suffix == ".whl":
+                    with zipfile.ZipFile(destination, "a") as wheel:
+                        if not any(name.endswith(".dist-info/METADATA") for name in wheel.namelist()):
+                            wheel.writestr(
+                                zipfile.ZipInfo("package.dist-info/METADATA"),
+                                b"Metadata-Version: 2.4\nName: zyplux-util\nVersion: 1.2.3\n",
+                            )
         return ""
 
     release.on("pnpm pack", build)

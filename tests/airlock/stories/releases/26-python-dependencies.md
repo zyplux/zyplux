@@ -14,7 +14,7 @@
 
 ### 26.2.1 ignores dependencies that do not use a configured workspace version
 
-### 26.2.2 rejects invalid wheel metadata before upload
+### 26.2.2 rejects invalid wheel metadata while preparing
 
 ### 26.2.3 rejects self dependencies before upload
 
@@ -25,5 +25,3 @@
 ### 26.3.2 allows an existing publication to break a dependency cycle
 
 ### 26.3.3 includes optional dependencies in cycle detection
-
-### 26.3.4 requires dynamic workspace dependencies to publish first
