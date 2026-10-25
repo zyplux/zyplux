@@ -19,5 +19,5 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if ctx.file(repo, "airlock-targets.toml") is None:
         res.skip("no airlock-targets.toml — repo publishes nothing")
         return res
-    res.findings.extend(check_release_surface(root=ctx.source.root))
+    res.findings.extend(check_release_surface(repo, ctx))
     return res

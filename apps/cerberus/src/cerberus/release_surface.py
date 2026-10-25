@@ -1,25 +1,22 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from airlock import proc
 from airlock.actions import parse_stable_version
 from airlock.errors import RELEASE_ERRORS
 from airlock.registries import fetch_latest
-from airlock.targets import load_specs, parse_manifest, parse_version
+from airlock.targets import parse_manifest, parse_version
 
 from cerberus.model import Finding, Status
+from cerberus.source import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
     from airlock.contracts import TargetSpec
     from semantic_version import Version
 
-
-def load_git_file(root: Path, ref: str, file: str) -> str | None:
-    entry = proc.run("git", "ls-tree", "--name-only", ref, "--", file, cwd=root)
-    return proc.run("git", "show", f"{ref}:{file}", cwd=root) if entry else None
+    from cerberus.context import Context
+    from cerberus.model import Repo
 
 
 def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Version]) -> list[Finding]:
@@ -41,10 +38,10 @@ def validate_bump(target: TargetSpec, version: Version, baseline: tuple[str, Ver
 
 
 def validate_published(
-    root: Path, target: TargetSpec, version: Version, baseline: tuple[str, Version] | None
+    repo: Repo, ctx: Context, target: TargetSpec, version: Version, baseline: tuple[str, Version] | None
 ) -> list[Finding]:
     try:
-        latest = fetch_latest(target, root / Path(target.version.file).parent)
+        latest = fetch_latest(target, (ctx.source.root / target.version.file).parent)
         published = None if latest is None else parse_stable_version(latest)
     except RELEASE_ERRORS as exc:
         return [Finding(Status.ERROR, f"{target.label}: cannot determine the latest published version: {exc}")]
@@ -60,8 +57,8 @@ def validate_published(
         return validate_bump(target, version, baseline)
     tag = f"{target.tag_prefix}{published}"
     try:
-        changed = proc.run("git", "diff", "--name-only", tag, "--", *target.surface, cwd=root)
-    except RELEASE_ERRORS as exc:
+        changed = ctx.changed_paths(repo, tag, target.surface)
+    except GitHistoryUnavailableError as exc:
         return [Finding(Status.ERROR, f"{target.label}: cannot diff against {tag}: {exc}")]
     return (
         [
@@ -76,48 +73,47 @@ def validate_published(
     )
 
 
-def load_base_version(root: Path, base: str, previous: TargetSpec) -> Version:
-    content = load_git_file(root, base, previous.version.file)
+def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec) -> Version:
+    content = ctx.file_at_ref(repo, base, previous.version.file)
     if content is None:
         message = f"version file {previous.version.file} is missing"
         raise ValueError(message)
     return parse_stable_version(parse_version(content, previous.version))
 
 
-def validate_target(root: Path, target: TargetSpec, base: str | None, base_specs: list[TargetSpec]) -> list[Finding]:
+def validate_target(
+    repo: Repo, ctx: Context, target: TargetSpec, base: str | None, base_specs: list[TargetSpec]
+) -> list[Finding]:
+    content = ctx.file(repo, target.version.file)
+    if content is None:
+        return [Finding(Status.FAIL, f"{target.label}: version file {target.version.file} is missing")]
     try:
-        version = parse_stable_version(
-            parse_version((root / target.version.file).read_text(encoding="utf-8"), target.version)
-        )
+        version = parse_stable_version(parse_version(content, target.version))
     except RELEASE_ERRORS as exc:
         return [Finding(Status.FAIL, f"{target.label}: cannot read {target.version.file}: {exc}")]
     baseline = None
     previous = next((spec for spec in base_specs if spec.kind == target.kind and spec.label == target.label), None)
     if base is not None and previous is not None:
         try:
-            base_version = load_base_version(root, base, previous)
-        except RELEASE_ERRORS as exc:
+            base_version = load_base_version(repo, ctx, base, previous)
+        except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
             return [Finding(Status.ERROR, f"{target.label}: cannot compare the target branch {base}: {exc}")]
         if version < base_version:
             return [Finding(Status.FAIL, f"{target.label}: version must not decrease from {base} ({base_version})")]
         baseline = f"{base} ({base_version})", base_version
-    return validate_published(root, target, version, baseline)
+    return validate_published(repo, ctx, target, version, baseline)
 
 
-def check_release_surface(root: Path | None = None, base: str | None = None) -> list[Finding]:
-    try:
-        return validate_surface(root or proc.find_root(), base)
-    except RELEASE_ERRORS as exc:
-        return [Finding(Status.ERROR, f"cannot check release surfaces: {exc}")]
-
-
-def validate_surface(root: Path, base: str | None) -> list[Finding]:
+def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> list[Finding]:
     branch = os.getenv("GITHUB_BASE_REF")
     base = base or (f"origin/{branch}" if branch else None)
-    specs = load_specs(root)
-    manifest = load_git_file(root, base, "airlock-targets.toml") if base and specs else None
-    base_specs = parse_manifest(manifest) if manifest is not None else []
-    findings = [finding for spec in specs for finding in validate_target(root, spec, base, base_specs)]
+    try:
+        specs = parse_manifest(ctx.file(repo, "airlock-targets.toml") or "")
+        manifest = ctx.file_at_ref(repo, base, "airlock-targets.toml") if base and specs else None
+        base_specs = parse_manifest(manifest) if manifest is not None else []
+        findings = [finding for spec in specs for finding in validate_target(repo, ctx, spec, base, base_specs)]
+    except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
+        return [Finding(Status.ERROR, f"cannot check release surfaces: {exc}")]
     if all(finding.status == Status.PASS for finding in findings):
         findings.append(Finding(Status.PASS, "every published target's version tracks its surface"))
     return findings

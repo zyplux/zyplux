@@ -257,8 +257,8 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
 
     def surface(self) -> None:
         self.write("airlock-targets.toml", SURFACE_MANIFEST)
-        self.on("git ls-tree")
-        self.on("git diff --name-only")
+        self.on(f"git -C {self.root} ls-tree")
+        self.on(f"git -C {self.root} diff --name-only")
         self.published_version("1.2.3")
 
     def published_version(self, version: str | None = None) -> None:
@@ -275,11 +275,15 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
 
     def base_version(self, version: str | None = None) -> None:
         self.on(
-            "git ls-tree --name-only origin/main -- airlock-targets.toml", "airlock-targets.toml" if version else ""
+            f"git -C {self.root} ls-tree --name-only origin/main -- airlock-targets.toml",
+            "airlock-targets.toml" if version else "",
         )
-        self.on("git show origin/main:airlock-targets.toml", self.read("airlock-targets.toml"))
-        self.on("git ls-tree --name-only origin/main -- packages/util/package.json", "packages/util/package.json")
-        self.on("git show origin/main:packages/util/package.json", json.dumps({"version": version}))
+        self.on(f"git -C {self.root} show origin/main:airlock-targets.toml", self.read("airlock-targets.toml"))
+        self.on(
+            f"git -C {self.root} ls-tree --name-only origin/main -- packages/util/package.json",
+            "packages/util/package.json",
+        )
+        self.on(f"git -C {self.root} show origin/main:packages/util/package.json", json.dumps({"version": version}))
 
     def publish(self, tag: str, *, error: str | None = None) -> subprocess.CompletedProcess[str]:
         name = tag.rsplit("-v", 1)[0]

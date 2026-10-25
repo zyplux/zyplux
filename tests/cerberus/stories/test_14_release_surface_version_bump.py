@@ -112,7 +112,7 @@ def test_14_2_5_accepts_published_versions_with_unchanged_surfaces(release: Rele
 
 
 def test_14_2_6_rejects_changes_to_an_already_published_version(release: ReleaseFixture) -> None:
-    release.on("git diff --name-only util-v1.2.3 -- packages/util/src", "packages/util/src/index.ts")
+    release.on(f"git -C {release.root} diff --name-only util-v1.2.3 -- packages/util/src", "packages/util/src/index.ts")
     assert check_surface(release) == [
         {
             "message": "@zyplux/util: surface changed since util-v1.2.3 "
@@ -123,7 +123,7 @@ def test_14_2_6_rejects_changes_to_an_already_published_version(release: Release
 
 
 def test_14_2_7_reports_unavailable_release_history(release: ReleaseFixture) -> None:
-    release.on("git diff", Reply(exit_code=1))
+    release.on(f"git -C {release.root} diff", Reply(exit_code=1))
     findings = check_surface(release)
     assert findings[0]["status"] == "error"
     assert "cannot diff against util-v1.2.3" in findings[0]["message"]
@@ -138,10 +138,10 @@ def test_14_3_1_permits_repairs_to_unpublished_target_branch_versions(
 ) -> None:
     release.base_version(base)
     release.published_version(published)
-    release.on("git diff", "packages/util/src/index.ts")
+    release.on(f"git -C {release.root} diff", "packages/util/src/index.ts")
     release.write_json("packages/util/package.json", {"version": current})
     assert check_surface(release, "origin/main") == [DONE]
-    assert not release.matching("git diff")
+    assert not release.matching("git -C .* diff")
 
 
 @pytest.mark.parametrize(
@@ -197,14 +197,14 @@ def test_14_3_5_allows_targets_introduced_by_the_pull_request(release: ReleaseFi
 @pytest.mark.parametrize("manifest", ["invalid json", "{}", '{"version":"invalid"}'])
 def test_14_3_6_rejects_malformed_target_branch_versions(release: ReleaseFixture, manifest: str) -> None:
     release.base_version("1.2.3")
-    release.on("git show origin/main:packages/util/package.json", manifest)
+    release.on(f"git -C {release.root} show origin/main:packages/util/package.json", manifest)
     findings = check_surface(release, "origin/main")
     assert findings[0]["status"] == "error"
     assert "cannot compare the target branch origin/main" in findings[0]["message"]
 
 
 def test_14_3_7_rejects_unavailable_target_branch_history(release: ReleaseFixture) -> None:
-    release.on("git ls-tree", Reply(exit_code=1))
+    release.on(f"git -C {release.root} ls-tree", Reply(exit_code=1))
     assert check_surface(release, "origin/main")[0]["status"] == "error"
 
 
@@ -220,7 +220,7 @@ def test_14_3_8_reads_the_base_version_with_its_own_extractor_and_path(release: 
 
 def test_14_3_9_reports_missing_base_version_files(release: ReleaseFixture) -> None:
     release.base_version("1.2.3")
-    release.on("git ls-tree --name-only origin/main -- packages/util/package.json")
+    release.on(f"git -C {release.root} ls-tree --name-only origin/main -- packages/util/package.json")
     findings = check_surface(release, "origin/main")
     assert findings[0]["status"] == "error"
     assert "version file packages/util/package.json is missing" in findings[0]["message"]
@@ -229,7 +229,8 @@ def test_14_3_9_reports_missing_base_version_files(release: ReleaseFixture) -> N
 def test_14_3_10_distinguishes_targets_sharing_a_version_file(release: ReleaseFixture) -> None:
     release.base_version("9.0.0")
     release.on(
-        "git show origin/main:airlock-targets.toml", release.read("airlock-targets.toml").replace("[util]", "[other]")
+        f"git -C {release.root} show origin/main:airlock-targets.toml",
+        release.read("airlock-targets.toml").replace("[util]", "[other]"),
     )
     release.published_version()
     assert check_surface(release, "origin/main") == [
@@ -244,6 +245,19 @@ def test_14_3_11_uses_the_github_target_branch_by_default(release: ReleaseFixtur
     assert check_surface(release) == [
         {"message": "@zyplux/util: version must not decrease from origin/main (1.2.4)", "status": "fail"}
     ]
+
+
+def test_14_3_12_reads_a_shared_baseline_version_file_once(release: ReleaseFixture) -> None:
+    release.write(
+        "airlock-targets.toml",
+        release.read("airlock-targets.toml") + '\n[other]\nkind = "npm"\nsurface = []\n'
+        'version = { file = "packages/util/package.json", json = "version" }\n',
+    )
+    release.base_version("1.2.3")
+    release.write_json("packages/util/package.json", {"version": "1.2.4"})
+
+    assert [finding["status"] for finding in check_surface(release, "origin/main")] == ["pass", "pass", "pass"]
+    assert len(release.matching("git -C .* show origin/main:packages/util/package.json$")) == 1
 
 
 @pytest.mark.parametrize(

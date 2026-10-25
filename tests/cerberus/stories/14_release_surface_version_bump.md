@@ -54,6 +54,8 @@
 
 ### 14.3.11 uses the github target branch by default
 
+### 14.3.12 reads a shared baseline version file once
+
 ## 14.4 reading published release versions
 
 ### 14.4.1 follows scoped publication registries

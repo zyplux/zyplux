@@ -6,6 +6,9 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import httpx
+from cerberus import config
+from cerberus.context import local_context
+from cerberus.model import Repo
 from cerberus.release_surface import check_release_surface
 from cli_fixture import Request
 
@@ -31,5 +34,5 @@ def check_surface(fixture: ReleaseFixture, base: str | None = None) -> list[dict
     ):
         return [
             {"message": finding.message, "status": finding.status.name.lower()}
-            for finding in check_release_surface(root=fixture.root, base=base)
+            for finding in check_release_surface(Repo("demo"), local_context(config.load(), fixture.root), base=base)
         ]
