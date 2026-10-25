@@ -7,6 +7,7 @@ from packaging.metadata import Metadata
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
+from airlock import proc
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
@@ -55,7 +56,7 @@ def load_dependencies(target: ReleaseTarget, archives: list[Path]) -> list[Relea
         return []
     targets: dict[str, ReleaseTarget] = {
         canonicalize_name(dependency.spec.label): dependency
-        for dependency in load_targets()
+        for dependency in load_targets(proc.find_root(target.directory))
         if dependency.spec.kind == "pypi"
     }
     return select_dependencies(requirements, targets)

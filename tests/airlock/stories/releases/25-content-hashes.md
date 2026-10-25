@@ -30,6 +30,8 @@
 
 ### 25.2.10 rejects missing or stale prepared dependencies before upload
 
+### 25.2.11 rejects root package archives that include the release manifest
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files

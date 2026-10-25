@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from airlock import npm_dependencies, pypi
+from airlock import npm_dependencies, proc, pypi
 from airlock.contracts import PackageSpec
 from airlock.registries import is_published
 from airlock.targets import load_targets
@@ -48,7 +48,9 @@ def load_prepared_dependencies(target: ReleaseTarget, targets: dict[str, Release
 
 
 def validate_dependency_cycles(target: ReleaseTarget, dependencies: list[ReleaseTarget]) -> None:
-    targets = {candidate.tag: candidate for candidate in load_targets()}
+    if not dependencies:
+        return
+    targets = {candidate.tag: candidate for candidate in load_targets(proc.find_root(target.directory))}
     graph: dict[str, set[str]] = {}
     pending = [target]
     while pending:

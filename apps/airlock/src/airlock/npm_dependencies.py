@@ -48,7 +48,7 @@ def load_dependencies(target: ReleaseTarget, archive: Path) -> list[ReleaseTarge
     ]
     if not requirements:
         return []
-    root = proc.find_root()
+    root = proc.find_root(target.directory)
     configured = {target.directory: target for target in load_targets(root) if target.spec.kind == "npm"}
     workspaces = WORKSPACE_PACKAGES.validate_json(
         proc.run("pnpm", "list", "--recursive", "--depth", "-1", "--json", cwd=root)

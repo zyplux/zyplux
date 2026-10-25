@@ -80,7 +80,7 @@ def test_25_2_1_initializes_all_target_hashes_and_preserves_manifest_comments(re
     for name in ("util", "cerberus", "ci-image"):
         assert manifest[name]["content_hash"].startswith("sha256:")
     assert release.read("airlock-targets.toml").startswith("# Release configuration\n")
-    assert not release.matching("publish|gh")
+    assert not release.matching(r"^gh\b|^(pnpm|uv) publish\b")
     prepared = release.read("airlock-targets.toml")
     release.run("prepare")
     assert release.read("airlock-targets.toml") == prepared
@@ -200,6 +200,24 @@ def test_25_2_10_rejects_missing_or_stale_prepared_dependencies_before_upload(
         release.target("util" if kind == "npm" else "cerberus").tag,
         error="prepared dependencies differ from package contents",
     )
+    assert not release.matching("pnpm publish|uv publish|gh release create")
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+def test_25_2_11_rejects_root_package_archives_that_include_the_release_manifest(
+    release: ReleaseFixture, kind: str
+) -> None:
+    release.use_package()
+    release.write_json("package.json", {"name": "zyplux-util", "version": "1.2.3"})
+    release.write("CHANGELOG.md", "## 1.2.3\n\n- Publish utility.\n")
+    release.configure(
+        "npm", f'kind = "{kind}"\nlabel = "zyplux-util"\nversion = {{ file = "package.json", json = "version" }}'
+    )
+    release.write("pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+    manifest = release.read("airlock-targets.toml")
+    execution = release.run("prepare", error="package archives must exclude airlock-targets.toml")
+    assert release.read("airlock-targets.toml") == manifest
+    assert "Traceback" not in execution.stderr
     assert not release.matching("pnpm publish|uv publish|gh release create")
 
 

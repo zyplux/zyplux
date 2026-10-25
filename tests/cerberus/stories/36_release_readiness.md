@@ -8,6 +8,8 @@
 
 ### 36.1.3 rejects malformed release manifests
 
+### 36.1.4 resolves dependencies inside the selected repository when invoked elsewhere
+
 ## 36.2 validating prepared release metadata
 
 ### 36.2.1 rejects unconsumed change intents

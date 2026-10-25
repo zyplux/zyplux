@@ -46,6 +46,8 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 
 `airlock prepare` records each target's `content_hash` in `airlock-targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
+Package archives must exclude `airlock-targets.toml` to avoid self-referential fingerprints.
+
 | Target | Fingerprinted contents |
 | --- | --- |
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |

@@ -8,6 +8,7 @@ from cli_fixture import Reply
 from release_surface_fixture import check_readiness
 
 if TYPE_CHECKING:
+    from cli_fixture import Command
     from release_fixture import ReleaseFixture
 
 
@@ -25,13 +26,40 @@ def test_36_1_2_validates_the_selected_repository_without_changing_release_metad
     assert check_readiness(release).status.name == "PASS"
     assert release.read("airlock-targets.toml") == manifest
     assert not release.requests
-    assert not release.matching("gh|pnpm version|uv version|pnpm install|uv lock|publish")
+    assert not release.matching(r"^gh\b|^(pnpm|uv) (version|install|lock|publish)\b")
 
 
 @pytest.mark.parametrize("manifest", ["invalid = [", 'scope = "@demo"\nutil = 1'])
 def test_36_1_3_rejects_malformed_release_manifests(release: ReleaseFixture, manifest: str) -> None:
     release.write("airlock-targets.toml", manifest)
     assert check_readiness(release).status.name == "FAIL"
+
+
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
+def test_36_1_4_resolves_dependencies_inside_the_selected_repository_when_invoked_elsewhere(
+    release: ReleaseFixture, kind: str
+) -> None:
+    if kind == "npm":
+        release.consumer()
+    else:
+        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
+        release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+        release.write(
+            "apps/cerberus/pyproject.toml",
+            release.read("apps/cerberus/pyproject.toml") + 'dependencies = ["zyplux-util>=1.0.0"]\n',
+        )
+    release.run("prepare")
+    release.calls.clear()
+
+    def find_root(call: Command) -> str:
+        assert call.cwd is not None
+        assert call.cwd.startswith(str(release.root) + "/")
+        return str(release.root)
+
+    release.on("git rev-parse --show-toplevel", find_root)
+    assert check_readiness(release).status.name == "PASS"
+    assert release.matching("git rev-parse --show-toplevel")
+    assert not release.requests
 
 
 def test_36_2_1_rejects_unconsumed_change_intents(release: ReleaseFixture) -> None:

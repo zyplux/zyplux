@@ -57,11 +57,15 @@ def calc_content_hash(archives: list[Path]) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
-    return calc_entries_hash([
+    entries = [
         (archive.suffix, path, executable, digest)
         for archive in archives
         for path, executable, digest in read_archive(archive)
-    ])
+    ]
+    if any(path == "airlock-targets.toml" for _, path, _, _ in entries):
+        msg = "package archives must exclude airlock-targets.toml to avoid a self-referential fingerprint"
+        raise ValueError(msg)
+    return calc_entries_hash(entries)
 
 
 def calc_entries_hash(entries: list[tuple[str, str, bool, str]]) -> str:
