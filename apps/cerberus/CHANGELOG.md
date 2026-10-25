@@ -10,6 +10,8 @@
 
 - Run Fallow 3.35.0 for source and coverage analysis.
 
+- Use Airlock's registry client for dependency and tool-pin freshness, sharing authentication and response validation with release checks while preserving npm's minimum release age.
+
 ## 0.25.2
 
 ### Patch Changes

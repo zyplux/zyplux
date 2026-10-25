@@ -16,6 +16,8 @@ Tooling-only repositories carry a Python tooling manifest and run Rumdl for Mark
 
 Release targets declare their source inputs in `airlock-targets.toml`. The `release_surface_version_bump` bite implements the version-bump policy, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. It reuses manifest parsing, registry access and version parsing from the `zyplux-airlock` Python dependency. Private registry reads reuse `gh auth login --scopes read:packages` locally, or explicit workflow credentials. Fetch complete Git history and the target branch before running the check.
 
+Dependency freshness, tool-pin freshness and release-surface checks share Airlock's registry client for npm, PyPI and GHCR. Tool-pin lookups select stable npm versions within the `latest` release line that satisfy the configured minimum release age. Lookup failures produce error findings.
+
 Named target tables derive their tag prefix as `<name>-v` and their label as `<scope>/<name>` from the manifest's top-level `scope`; an explicit `label` overrides the default. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Include both the action entrypoint and its implementation in `surface`; floating major tags do not define the version baseline.
 
 ## Lint a repo

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -127,6 +127,11 @@ class NpmTags(BaseModel):
 
 class NpmLatest(BaseModel):
     tags: NpmTags = Field(alias="dist-tags")
+
+
+class NpmHistory(NpmLatest):
+    versions: dict[str, object]
+    time: dict[str, AwareDatetime]
 
 
 class PypiFile(BaseModel):

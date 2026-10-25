@@ -13,7 +13,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from cerberus import registries, tool_pins, workspaces
+from airlock import registries
+from airlock.errors import RELEASE_ERRORS
+
+from cerberus import tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
 
 if TYPE_CHECKING:
@@ -36,7 +39,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     for tool, pinned in sorted(tool_pins.NPM_TOOL_PINS.items()):
         try:
             latest = registries.fetch_latest_npm(tool, minimum_age=timedelta(minutes=workspaces.RELEASE_AGE_MINUTES))
-        except registries.RegistryLookupError as err:
+        except RELEASE_ERRORS as err:
             res.error(f"could not determine the latest `{tool}`: {err}")
             continue
         if pinned != latest:

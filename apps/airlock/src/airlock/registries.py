@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlsplit
@@ -10,12 +11,13 @@ import httpx
 from semantic_version import Version
 
 from airlock import proc
-from airlock.actions import fetch_action_releases, is_action_published
+from airlock.actions import fetch_action_releases, is_action_published, parse_stable_version
 from airlock.contracts import (
     GhcrTags,
     GhcrToken,
     GithubUser,
     NpmArtifact,
+    NpmHistory,
     NpmLatest,
     NpmPackage,
     NpmVersions,
@@ -85,17 +87,25 @@ def load_npm_registry(directory: Path, label: str) -> str:
     configured = package.publish_config.get(
         registry_key, package.publish_config.get("registry", "https://registry.npmjs.org")
     )
-    if not isinstance(configured, str) or configured.rstrip("/") not in {
+    return validate_npm_registry(configured)
+
+
+def validate_npm_registry(registry: object) -> str:
+    if not isinstance(registry, str) or registry.rstrip("/") not in {
         "https://registry.npmjs.org",
         "https://npm.pkg.github.com",
     }:
-        msg = f"unsupported npm registry {configured!r}"
+        msg = f"unsupported npm registry {registry!r}"
         raise ValueError(msg)
-    return configured.rstrip("/")
+    return registry.rstrip("/")
 
 
 def load_npm_request(directory: Path, label: str) -> tuple[str, dict[str, str]]:
-    registry = load_npm_registry(directory, label)
+    return build_npm_request(label, load_npm_registry(directory, label))
+
+
+def build_npm_request(label: str, registry: str = "https://registry.npmjs.org") -> tuple[str, dict[str, str]]:
+    registry = validate_npm_registry(registry)
     headers = {}
     if registry == "https://npm.pkg.github.com":
         credential = load_github_token(os.getenv("NODE_AUTH_TOKEN"))
@@ -107,6 +117,47 @@ def load_npm_request(directory: Path, label: str) -> tuple[str, dict[str, str]]:
             raise ValueError(msg)
         headers["Authorization"] = f"Bearer {credential}"
     return f"{registry}/{quote(label, safe='')}", headers
+
+
+def fetch_latest_npm(
+    label: str, registry: str = "https://registry.npmjs.org", *, minimum_age: timedelta | None = None
+) -> str:
+    url, headers = build_npm_request(label, registry)
+    if minimum_age is None:
+        return fetch_json(url, NpmLatest, headers).tags.latest
+    history = fetch_json(url, NpmHistory, headers)
+    latest = Version(history.tags.latest)
+    published_before = datetime.now(UTC) - minimum_age
+    eligible = []
+    for name in history.versions:
+        try:
+            version = parse_stable_version(name)
+        except ValueError:
+            continue
+        if not version.build and version <= latest and history.time[name] <= published_before:
+            eligible.append(version)
+    if not eligible:
+        msg = f"{label}: no stable release is old enough to install"
+        raise ValueError(msg)
+    return str(max(eligible))
+
+
+def fetch_latest_pypi(label: str) -> str:
+    return fetch_json(f"https://pypi.org/pypi/{label}/json", PypiLatest).info.version
+
+
+def fetch_latest_ghcr(label: str) -> str | None:
+    image = label.removeprefix("ghcr.io/")
+    credential = fetch_ghcr_token(image)
+    tags = fetch_json(f"https://ghcr.io/v2/{image}/tags/list", GhcrTags, {"Authorization": f"Bearer {credential}"}).tags
+    versions = []
+    for tag in tags or []:
+        try:
+            version = parse_stable_version(tag)
+        except ValueError:
+            continue
+        versions.append(version)
+    return str(max(versions)) if versions else None
 
 
 def fetch_npm_availability(target: ReleaseTarget) -> bool:
@@ -179,22 +230,10 @@ def fetch_latest_version(spec: TargetSpec, directory: Path) -> str | None:
         releases = fetch_action_releases(spec)
         return str(releases[0][1]) if releases else None
     if spec.kind == "npm":
-        url, headers = load_npm_request(directory, spec.label)
-        return fetch_json(url, NpmLatest, headers).tags.latest
+        return fetch_latest_npm(spec.label, load_npm_registry(directory, spec.label))
     if spec.kind == "pypi":
-        return fetch_json(f"https://pypi.org/pypi/{spec.label}/json", PypiLatest).info.version
-    image = spec.label.removeprefix("ghcr.io/")
-    credential = fetch_ghcr_token(image)
-    tags = fetch_json(f"https://ghcr.io/v2/{image}/tags/list", GhcrTags, {"Authorization": f"Bearer {credential}"}).tags
-    versions = []
-    for tag in tags or []:
-        try:
-            version = Version(tag)
-        except ValueError:
-            continue
-        if not version.prerelease:
-            versions.append(version)
-    return str(max(versions)) if versions else None
+        return fetch_latest_pypi(spec.label)
+    return fetch_latest_ghcr(spec.label)
 
 
 def fetch_latest(spec: TargetSpec, directory: Path) -> str | None:

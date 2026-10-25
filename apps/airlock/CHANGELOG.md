@@ -8,6 +8,8 @@
 
 - Use `prepare`, `check`, `plan` and `publish` as the four release commands. Publication runs one target per batch, and planning installs only the Python publisher runtime. Cerberus owns release-surface enforcement.
 
+- Share npm, PyPI and GHCR metadata lookups with Cerberus, including credential discovery and minimum-age npm version selection.
+
 ## 1.1.1
 
 ### Patch Changes
