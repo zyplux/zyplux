@@ -9,7 +9,7 @@ from airlock.actions import validate_action_repository
 from airlock.contracts import ActionSpec, PackageSpec
 from airlock.errors import RELEASE_ERRORS
 from airlock.registries import has_package_artifacts
-from airlock.targets import build_release_target, parse_manifest, parse_stable_version, parse_version
+from airlock.targets import build_release_target, parse_manifest, parse_stable_version, parse_version, resolve_repo_path
 
 from cerberus.model import Finding, Status
 from cerberus.source import GitHistoryUnavailableError
@@ -136,10 +136,11 @@ def validate_target(
     base_specs: list[TargetSpec],
 ) -> list[Finding]:
     target = lookup.target
-    content = ctx.file(repo, target.version.file)
-    if content is None:
-        return [Finding(Status.FAIL, f"{target.label}: version file {target.version.file} is missing")]
     try:
+        resolve_repo_path(ctx.source.root, target.version.file)
+        content = ctx.file(repo, target.version.file)
+        if content is None:
+            return [Finding(Status.FAIL, f"{target.label}: version file {target.version.file} is missing")]
         version = parse_stable_version(parse_version(content, target.version))
     except RELEASE_ERRORS as exc:
         return [Finding(Status.FAIL, f"{target.label}: cannot read {target.version.file}: {exc}")]

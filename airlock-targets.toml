@@ -6,7 +6,7 @@ scope = "@zyplux"
 kind = "pypi"
 label = "zyplux-airlock"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:c6b08f7e198eeb89e990ef5fdb7f5476a2f83bd6a43a379203cb237a6f6319bf"
+content_hash = "sha256:7255528eee80b59e929c38f6589dfe795631e2a5ad2c6498ae6aedf5b7752e22"
 requires = []
 
 [action-airlock]
@@ -16,7 +16,7 @@ repository = "zyplux/zyplux"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-content_hash = "sha256:e84026330b5d13b76c61cbfb95cd6dd7c8ec603511d4474648de3ac0d73cef87"
+content_hash = "sha256:5f92722f895f5b75520807331d31bbfe6d8ed9d8181077998ed374882b8478a7"
 
 [setup-pm]
 kind = "action"
@@ -59,7 +59,7 @@ requires = ["util-v0.9.3"]
 kind = "pypi"
 label = "zyplux-cerberus"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:383d989230b48263f88f9ed095409701315fc41c81dd333ff54439c544859210"
+content_hash = "sha256:4e6f90ab961a37e64e0161a1e31544f652fd242f6b333e911e3e213813810d1a"
 requires = ["airlock-v2.0.0"]
 
 [util-py]

@@ -8,7 +8,11 @@ Follow the [Airlock release workflow](apps/airlock/README.md) when preparing or 
 
 ## Quality Gate
 
-Run `just c` to apply auto-fixes and verify the change. It is the full gate across both the pnpm (JS/TS) and uv (Python) workspaces — install, knip, typecheck, lint + format, tests (JavaScript, then Python), then cerberus verifying org invariants over the fresh coverage — with autofix throughout. Run it before considering a change done; it must pass clean.
+Run `./just lint typecheck` locally. Run targeted tests when needed; leave full-suite testing and Cerberus to CI. Use `./just c` locally only when explicitly requested. The full CI gate must pass clean before merging.
+
+The local `./just` logging wrapper is a convenience tool maintained through linting and typechecking. Its implementation, `apps/clipy/src/clipy/justpty.py`, is intentionally outside automated tests and coverage.
+
+Version-bump detection is a best-effort reminder. Fix clear bugs while favoring simple checks over support for unused edge cases.
 
 The `fallow` bite reads the istanbul coverage report, which only the full `pnpm run test` regenerates. `just c` always runs the full tests before cerberus; a standalone `uv run cerberus` after source changes may read stale coverage and report phantom complexity findings — run the full `pnpm run test` first.
 

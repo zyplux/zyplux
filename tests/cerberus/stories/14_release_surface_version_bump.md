@@ -16,6 +16,8 @@
 
 ### 14.1.7 reports invalid version regexes
 
+### 14.1.8 rejects version sources outside the selected repository
+
 ## 14.2 requiring one-step release bumps
 
 ### 14.2.1 accepts a single patch minor or major bump

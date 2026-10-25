@@ -55,7 +55,7 @@ Package archives must exclude `airlock-targets.toml` to avoid self-referential f
 | Action | Git-visible files in the Action directory and the directory containing its version file, plus declared `runtime_files`. `path` selects the Action directory when it differs from the version directory. |
 | Container | The selected build-context and Dockerfile paths, plus the Dockerfile and Git-visible build-context files, filtered with Docker's SDK matcher. `.containerignore` takes precedence over `.dockerignore`. |
 
-Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
+Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds. Git submodule contents are outside the check's scope.
 
 Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
@@ -83,6 +84,20 @@ def test_14_1_7_reports_invalid_version_regexes(release: ReleaseFixture) -> None
     findings = check_surface(release)
     assert findings[0]["status"] == "fail"
     assert "packages/util/package.json: invalid version regex" in findings[0]["message"]
+
+
+@pytest.mark.parametrize("location", ["absolute", "parent", "symlink"])
+def test_14_1_8_rejects_version_sources_outside_the_selected_repository(release: ReleaseFixture, location: str) -> None:
+    external = release.root.parent / f"{release.root.name}-external.json"
+    external.write_text('{"version":"1.2.3"}')
+    relative = str(external) if location == "absolute" else f"../{external.name}"
+    if location == "symlink":
+        (release.root / "external.json").symlink_to(external)
+        relative = "external.json"
+    release.configure("npm", f'version = {{ file = {json.dumps(relative)}, json = "version" }}')
+    findings = check_surface(release)
+    assert findings[0]["status"] == "fail"
+    assert "release paths must be repository-relative" in findings[0]["message"]
 
 
 @pytest.mark.parametrize("version", ["1.2.4", "1.3.0", "2.0.0"])
