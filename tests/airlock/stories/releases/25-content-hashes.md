@@ -55,3 +55,7 @@
 ### 25.4.8 rejects missing or external action runtime files
 
 ### 25.4.9 covers container build configuration with identical input files
+
+### 25.4.10 fingerprints declared runtime file symlinks and their contents
+
+### 25.4.11 rejects missing container dockerfiles while preparing

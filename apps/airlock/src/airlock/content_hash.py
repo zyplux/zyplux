@@ -108,13 +108,16 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             if not path.is_file():
                 msg = f"{target.spec.label}: runtime file must exist: {relative}"
                 raise ValueError(msg)
-            files.add(path)
+            files.update({root / relative, path})
     if target.spec.kind == "ghcr":
         context = target.build_context or target.directory
         dockerfile = target.dockerfile or next(
             (context / name for name in ("Containerfile", "Dockerfile") if (context / name).is_file()),
             context / "Containerfile",
         )
+        if not dockerfile.is_file():
+            msg = f"{target.spec.label}: Dockerfile must exist as a regular file: {dockerfile.relative_to(root)}"
+            raise ValueError(msg)
         entries.extend([
             ("build_context", context.relative_to(root).as_posix(), False, ""),
             ("dockerfile", dockerfile.relative_to(root).as_posix(), False, ""),

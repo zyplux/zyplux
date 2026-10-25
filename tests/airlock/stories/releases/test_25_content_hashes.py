@@ -396,3 +396,40 @@ def test_25_4_9_covers_container_build_configuration_with_identical_input_files(
     release.run("prepare")
     assert release.read("airlock-targets.toml") != baseline
     assert not release.matching("podman build|gh release create")
+
+
+@pytest.mark.parametrize("change", ["retarget", "contents"])
+def test_25_4_10_fingerprints_declared_runtime_file_symlinks_and_their_contents(
+    release: ReleaseFixture, change: str
+) -> None:
+    release.action()
+    directory = "apps/action-setup-pm" if change == "retarget" else "shared"
+    for name in ("first", "second"):
+        release.write(f"{directory}/{name}.lock", name)
+    link = release.root / "runtime.lock"
+    link.symlink_to(f"{directory}/first.lock")
+    release.configure("action", 'runtime_files = ["runtime.lock"]')
+    release.run("prepare")
+    if change == "retarget":
+        link.unlink()
+        link.symlink_to(f"{directory}/second.lock")
+    else:
+        release.write(f"{directory}/first.lock", "changed runtime dependency")
+    release.publish("setup-pm-v1.0.0", error="release contents differ from content_hash")
+    assert not release.matching("gh release create|git push")
+
+
+@pytest.mark.parametrize("selection", ["default", "explicit", "directory"])
+def test_25_4_11_rejects_missing_container_dockerfiles_while_preparing(release: ReleaseFixture, selection: str) -> None:
+    release.write_json("containers/ci/package.json", {"version": "3.4.5"})
+    release.configure("ghcr", 'version = { file = "containers/ci/package.json", json = "version" }')
+    if selection == "default":
+        (release.target("ci").dir / "Containerfile").unlink()
+    else:
+        release.configure("ghcr", 'dockerfile = "containers/ci/recipe"')
+        if selection == "directory":
+            (release.target("ci").dir / "recipe").mkdir()
+    manifest = release.read("airlock-targets.toml")
+    release.run("prepare", error="Dockerfile must exist as a regular file")
+    assert release.read("airlock-targets.toml") == manifest
+    assert not release.matching("podman build|gh release create")
