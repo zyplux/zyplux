@@ -33,6 +33,10 @@ zyplux-airlock@2.1.0:
   dir: apps/airlock
   intents:
     - little-horses-cross
+zyplux-airlock@2.1.1:
+  dir: apps/airlock
+  intents:
+    - big-wombats-compete
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:

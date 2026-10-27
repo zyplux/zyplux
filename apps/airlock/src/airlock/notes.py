@@ -9,7 +9,7 @@ from markdown_it.tree import SyntaxTreeNode
 from airlock import proc
 from airlock.content_hash import update_content_hashes
 from airlock.contracts import PythonTracking
-from airlock.registries import load_npm_registry
+from airlock.registries import load_npm_registry, load_pnpm_env
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
@@ -90,6 +90,7 @@ def prepare_release() -> None:
             msg = f"native pnpm preparation requires one publication registry per scope ({key})"
             raise ValueError(msg)
         registries[key] = registry
+    pnpm_env = load_pnpm_env(registries, root)
     proc.run(
         "pnpm",
         "version",
@@ -97,11 +98,12 @@ def prepare_release() -> None:
         "--no-git-checks",
         *(f"--config.{key}={registry}" for key, registry in registries.items()),
         cwd=root,
+        env=pnpm_env,
     )
     python_targets = [target for target in targets if Path(target.spec.version.file).name == "pyproject.toml"]
     for target in python_targets:
         proc.run("uv", "version", "--package", target.spec.label, "--frozen", load_python_version(target), cwd=root)
-    proc.run("pnpm", "install", "--lockfile-only", cwd=root)
+    proc.run("pnpm", "install", "--lockfile-only", cwd=root, env=pnpm_env)
     if python_targets:
         proc.run("uv", "lock", cwd=root)
     prepared = load_prepared_targets()

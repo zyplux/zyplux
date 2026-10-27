@@ -55,6 +55,7 @@ type TargetSpec = Annotated[PackageSpec | ContainerSpec | ActionSpec, Field(disc
 TARGET_SPEC = TypeAdapter(TargetSpec)
 STRING = TypeAdapter(str)
 VERSION_OBJECT = TypeAdapter(dict[str, object])
+NPM_AUTH = TypeAdapter(dict[str, dict[str, dict[str, str]]], config=ConfigDict(hide_input_in_errors=True))
 DIGEST = TypeAdapter(Digest)
 
 

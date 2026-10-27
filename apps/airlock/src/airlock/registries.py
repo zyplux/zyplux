@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import time
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote, urlsplit
 
 import httpx
 import typer
+import yaml
 from semantic_version import Version
 
 from airlock import proc
 from airlock.actions import is_action_published
 from airlock.contracts import (
+    NPM_AUTH,
+    VERSION_OBJECT,
     GhcrTags,
     GhcrToken,
     GithubUser,
@@ -29,13 +34,12 @@ from airlock.contracts import (
 from airlock.targets import parse_stable_version
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from pydantic import BaseModel
 
     from airlock.contracts import PypiFile, ReleaseTarget
 
 REQUEST_TIMEOUT = 10
+PNPM_AUTH_ENV = "pnpm_config__auth"
 DEPENDENCY_POLL_ATTEMPTS = 61
 MANIFEST_MEDIA_TYPES = (
     "application/vnd.oci.image.index.v1+json, "
@@ -106,6 +110,58 @@ def validate_npm_registry(registry: object) -> str:
 
 def load_npm_request(directory: Path, label: str) -> tuple[str, dict[str, str]]:
     return build_npm_request(label, load_npm_registry(directory, label))
+
+
+def load_pnpm_env(registries: dict[str, str], root: Path) -> dict[str, str] | None:
+    registry = "https://npm.pkg.github.com"
+    scopes = [key.removesuffix(":registry") for key, url in registries.items() if url == registry and key != "registry"]
+    if not scopes:
+        return None
+    configured = VERSION_OBJECT.validate_json(proc.run("pnpm", "config", "list", "--json", cwd=root))
+    configured.update(
+        (key.split("_", 2)[2], value)
+        for key, value in os.environ.items()
+        if key.lower().startswith(("pnpm_config_//", "npm_config_//"))
+    )
+    global_config = Path(proc.run("pnpm", "config", "get", "globalconfig", cwd=root))
+    try:
+        saved = (
+            VERSION_OBJECT.validate_python(yaml.safe_load(global_config.read_text(encoding="utf-8")) or {})
+            if global_config.is_file()
+            else {}
+        )
+        saved_auth = NPM_AUTH.validate_python(saved.get("_auth", {}))
+        env_auth = NPM_AUTH.validate_json(os.getenv(PNPM_AUTH_ENV) or os.getenv("PNPM_CONFIG__AUTH") or "{}")
+    except ValueError, yaml.YAMLError:
+        msg = "Cannot read pnpm registry authentication configuration"
+        raise ValueError(msg) from None
+    supplied = {
+        scope
+        for auth in (saved_auth, env_auth)
+        for url, entries in auth.items()
+        if url.rstrip("/") == registry
+        for scope in entries
+    }
+    scopes = [
+        scope
+        for scope in scopes
+        if scope not in supplied
+        and "@" not in supplied
+        and not any(
+            configured.get(f"//npm.pkg.github.com/:{prefix}{field}")
+            for prefix in ("", f"{scope}:")
+            for field in ("_authToken", "_auth", "username", "tokenHelper")
+        )
+    ]
+    if not scopes:
+        return None
+    credential = load_github_token(os.getenv("NODE_AUTH_TOKEN"))
+    if not credential:
+        return None
+    entries = env_auth.setdefault(registry, {})
+    for scope in scopes:
+        entries[scope] = {"authToken": credential}
+    return {**os.environ, PNPM_AUTH_ENV: json.dumps(env_auth)}
 
 
 def build_npm_request(label: str, registry: str = "https://registry.npmjs.org") -> tuple[str, dict[str, str]]:
