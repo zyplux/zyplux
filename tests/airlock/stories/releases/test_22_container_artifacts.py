@@ -105,6 +105,22 @@ def test_22_1_7_leaves_the_release_as_a_draft_when_manifest_upload_fails(
     assert release.matching("podman logout ghcr.io")
 
 
+@pytest.mark.parametrize("ignorefile", [".dockerignore", ".containerignore"])
+def test_22_1_8_builds_with_the_selected_adjacent_ignore_file(
+    release: ReleaseFixture, container: ContainerPublication, ignorefile: str
+) -> None:
+    release.configure("ghcr", 'dockerfile = "containers/ci/Containerfile"\nbuild_context = "."')
+    release.write(".containerignore", "src\n")
+    selected = f"containers/ci/{ignorefile}"
+    release.write(selected, "docs\n")
+    prepare_publication(release)
+    release.publish_batch(container.batch)
+    command = release.matching("podman build")[0].argv
+    assert command[command.index("--file") + 1] == str(release.root / "containers/ci/Containerfile")
+    assert command[command.index("--ignorefile") + 1] == str(release.root / selected)
+    assert command[-1] == str(release.root)
+
+
 @pytest.mark.parametrize(
     "fields",
     [

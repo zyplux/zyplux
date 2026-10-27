@@ -1,15 +1,15 @@
 [project]
 name = "zyplux-airlock"
-version = "2.0.0"
+version = "2.1.0"
 description = "Prepare and publish reviewed npm, Python, container and GitHub Action releases"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "docker>=7.2.0",
     "httpx>=0.28.1",
-    "markdown-it-py>=4.0.0",
-    "packaging>=26.0",
-    "pydantic>=2.12.0",
+    "markdown-it-py>=4.2.0",
+    "packaging>=26.3",
+    "pydantic>=2.14.1",
     "semantic-version>=2.10.0",
     "tomlkit>=0.15.2",
     "typer>=0.27.3",

@@ -16,6 +16,8 @@
 
 ### 22.1.7 leaves the release as a draft when manifest upload fails
 
+### 22.1.8 builds with the selected adjacent ignore file
+
 ## 22.2 validating container releases
 
 ### 22.2.1 requires repository relative build paths

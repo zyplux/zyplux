@@ -17,6 +17,10 @@
   dir: apps/cz
   intents:
     - shared-release-commands
+'@zyplux/eslint-config@0.12.2':
+  dir: packages/eslint-config
+  intents:
+    - funny-cows-retire
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
@@ -25,6 +29,10 @@ zyplux-airlock@2.0.0:
   dir: apps/airlock
   intents:
     - airlock-python
+zyplux-airlock@2.1.0:
+  dir: apps/airlock
+  intents:
+    - little-horses-cross
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -38,6 +46,10 @@ zyplux-cerberus@0.26.0:
   intents:
     - cerberus-fallow
     - cerberus-python-airlock
+zyplux-cerberus@0.26.1:
+  dir: apps/cerberus
+  intents:
+    - fair-trains-obey
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

@@ -19,7 +19,7 @@ from tomlkit.items import Table
 from airlock import proc
 from airlock.contracts import ActionSpec, PackageSpec
 from airlock.dependencies import load_dependencies, validate_dependency_cycles, validate_prepared_dependencies
-from airlock.targets import resolve_repo_path
+from airlock.targets import resolve_container_paths, resolve_repo_path
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
@@ -84,48 +84,13 @@ def build_archives(target: ReleaseTarget, directory: Path) -> list[Path]:
 
 def calc_source_hash(target: ReleaseTarget) -> str:
     root = proc.find_root(target.directory)
-    directories = (
-        {target.directory, target.action_directory or target.directory}
-        if isinstance(target.spec, ActionSpec)
-        else {target.build_context or target.directory}
-    )
-    listing = proc.run(
-        "git",
-        "ls-files",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "-z",
-        "--",
-        *(str(directory) for directory in sorted(directories)),
-        cwd=root,
-    )
-    files = {root / path for path in listing.split("\0") if path}
     entries = []
-    if isinstance(target.spec, ActionSpec):
-        for relative in target.spec.runtime_files:
-            path = resolve_repo_path(root, relative)
-            if not path.is_file():
-                msg = f"{target.spec.label}: runtime file must exist: {relative}"
-                raise ValueError(msg)
-            files.update({root / relative, path})
     if target.spec.kind == "ghcr":
-        context = target.build_context or target.directory
-        dockerfile = target.dockerfile or next(
-            (context / name for name in ("Containerfile", "Dockerfile") if (context / name).is_file()),
-            context / "Containerfile",
-        )
-        if not dockerfile.is_file():
-            msg = f"{target.spec.label}: Dockerfile must exist as a regular file: {dockerfile.relative_to(root)}"
-            raise ValueError(msg)
+        context, dockerfile, ignorefile = resolve_container_paths(target)
         entries.extend([
             ("build_context", context.relative_to(root).as_posix(), False, ""),
             ("dockerfile", dockerfile.relative_to(root).as_posix(), False, ""),
         ])
-        ignorefile = next(
-            (context / name for name in (".containerignore", ".dockerignore") if (context / name).is_file()),
-            None,
-        )
         patterns = (
             []
             if ignorefile is None
@@ -136,12 +101,39 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             ]
         )
         included = exclude_paths(
-            str(context), [".git", *patterns], dockerfile=dockerfile.relative_to(context, walk_up=True).as_posix()
+            str(context), patterns, dockerfile=dockerfile.relative_to(context, walk_up=True).as_posix()
         )
-        files &= {context / path for path in included}
+        if any(".git" in Path(path).parts for path in included):
+            msg = (
+                f"{target.spec.label}: container build context includes Git metadata; "
+                "exclude .git in the container ignore file"
+            )
+            raise ValueError(msg)
+        files = {context / path for path in included}
         files.add(dockerfile)
         if ignorefile is not None:
             files.add(ignorefile)
+    else:
+        directories = {target.directory, target.action_directory or target.directory}
+        listing = proc.run(
+            "git",
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            *(str(directory) for directory in sorted(directories)),
+            cwd=root,
+        )
+        files = {root / path for path in listing.split("\0") if path}
+        if isinstance(target.spec, ActionSpec):
+            for relative in target.spec.runtime_files:
+                path = resolve_repo_path(root, relative)
+                if not path.is_file():
+                    msg = f"{target.spec.label}: runtime file must exist: {relative}"
+                    raise ValueError(msg)
+                files.update({root / relative, path})
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
     files.discard(root / "airlock-targets.toml")
     for path in files:
@@ -170,6 +162,15 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
     fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives)
     if fingerprint != target.spec.content_hash:
         msg = f"{target.spec.label}: release contents differ from content_hash; run airlock prepare"
+        if target.spec.kind == "ghcr":
+            root = proc.find_root(target.directory)
+            context, dockerfile, ignorefile = resolve_container_paths(target)
+            msg = (
+                f"{target.spec.label}: build-input fingerprint differs from content_hash; run airlock prepare\n"
+                f"build context: {context.relative_to(root)}\n"
+                f"Dockerfile: {dockerfile.relative_to(root)}\n"
+                f"ignore file: {ignorefile.relative_to(root) if ignorefile is not None else 'none'}"
+            )
         raise ValueError(msg)
     if archives is None:
         return []

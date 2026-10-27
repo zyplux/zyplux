@@ -2,10 +2,8 @@ import { describe, expect, test } from './rules.ts';
 
 test.override({ ruleName: 'no-schemas-outside-contracts' });
 
-type ReportCase = [shape: string, code: string];
-type ReportNothingCase = [shape: string, code: string];
-
 describe('16.1 keeping schema exports in contracts', () => {
+  type ReportCase = [shape: string, code: string];
   test.for<ReportCase>([
     [
       '1 flags an exported schema declaration',
@@ -25,6 +23,7 @@ describe('16.1 keeping schema exports in contracts', () => {
 });
 
 describe('16.2 allowing local schema implementation', () => {
+  type ReportNothingCase = [shape: string, code: string];
   test.for<ReportNothingCase>([
     [
       '1 allows zod imports and local schema construction',

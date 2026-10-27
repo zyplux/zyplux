@@ -1,5 +1,13 @@
 # zyplux-cerberus
 
+## 0.26.1
+
+### Patch Changes
+
+- Require Airlock 2.1 for consistent container build-input fingerprints.
+
+- Run Fallow 3.36.0 for source and coverage analysis.
+
 ## 0.26.0
 
 ### Minor Changes

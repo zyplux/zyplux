@@ -4,9 +4,8 @@ test.override({ ruleId: 'no-restricted-imports' });
 
 const parentImportViolation = [{ ruleId: 'no-restricted-imports' }];
 
-type ImportCase = [shape: string, codes: string[]];
-
 describe('4. restricting parent-relative (../) imports', () => {
+  type ImportCase = [shape: string, codes: string[]];
   describe('4.1 flagging parent-relative import specifiers', () => {
     const cases: ImportCase[] = [
       ['1 flags a parent import at any depth', ["import { x } from '../x';", "import { x } from '../../../x';"]],

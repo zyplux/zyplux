@@ -93,7 +93,8 @@ def test_36_3_1_rejects_stale_fingerprints(release: ReleaseFixture, kind: str) -
     (target.dir / "changed.py").write_text("changed")
     findings = check_readiness(release).problems
     assert len(findings) == 1
-    assert "release contents differ from content_hash; run airlock prepare" in findings[0].message
+    reason = "build-input fingerprint differs" if kind == "ghcr" else "release contents differ"
+    assert f"{reason} from content_hash; run airlock prepare" in findings[0].message
 
 
 def test_36_3_2_reports_build_failures(release: ReleaseFixture) -> None:

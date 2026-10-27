@@ -2,9 +2,8 @@ import { describe, expect, test } from './rules.ts';
 
 test.override({ ruleName: 'no-return-array-push' });
 
-type PushCase = [shape: string, codes: string[], expectNoSuggestions?: true];
-
 describe('9.1 flagging consumed push and unshift return values', () => {
+  type PushCase = [shape: string, codes: string[], expectNoSuggestions?: true];
   const cases: PushCase[] = [
     [
       '1 flags the push or unshift length assigned to a variable',
@@ -67,9 +66,8 @@ describe('9.1 flagging consumed push and unshift return values', () => {
   });
 });
 
-type ReportNothingCase = [shape: string, codes: string[]];
-
 describe('9.2 permitting discarded pushes and non-array receivers', () => {
+  type ReportNothingCase = [shape: string, codes: string[]];
   const cases: ReportNothingCase[] = [
     [
       '1 allows push and unshift as their own statements',

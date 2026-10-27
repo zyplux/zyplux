@@ -59,3 +59,11 @@
 ### 25.4.10 fingerprints declared runtime file symlinks and their contents
 
 ### 25.4.11 rejects missing container dockerfiles while preparing
+
+### 25.4.12 fingerprints git ignored container inputs
+
+### 25.4.13 prefers dockerfile adjacent ignore rules and fingerprints the rules
+
+### 25.4.14 reports selected container inputs on fingerprint mismatch
+
+### 25.4.15 requires container ignore rules to exclude git metadata

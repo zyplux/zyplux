@@ -209,16 +209,15 @@ const isReassignedField = ({ key, parent }: TSESTree.PropertyDefinition) => {
   return hasMatchingNode(parent, node => isFieldWrite(node, fieldName));
 };
 
-type NarrowingReport = {
-  annotationNode: TSESTree.TSTypeAnnotation;
-  annotationType: ts.Type;
-  fix: TSESLint.ReportFixFunction;
-  messageId: 'narrowReturnType' | 'narrowVarType';
-  valueTypes: readonly ts.Type[];
-};
-
 export const noTypeAnnotations = createRule<NoTypeAnnotationsOptions, MessageId>({
   create: (context, [{ narrowing, redundant }]) => {
+    type NarrowingReport = {
+      annotationNode: TSESTree.TSTypeAnnotation;
+      annotationType: ts.Type;
+      fix: TSESLint.ReportFixFunction;
+      messageId: 'narrowReturnType' | 'narrowVarType';
+      valueTypes: readonly ts.Type[];
+    };
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();
     let exportedNames: ReadonlySet<string> = new Set();

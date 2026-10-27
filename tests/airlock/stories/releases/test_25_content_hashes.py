@@ -273,7 +273,7 @@ def test_25_4_2_covers_container_inputs_using_build_ignore_rules(release: Releas
     stage_git(release)
     release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
     release.write(".dockerignore", "src\n")
-    release.write(ignorefile, "docs\n!docs/include.txt\n*.tmp\n")
+    release.write(ignorefile, ".git\ndocs\n!docs/include.txt\n*.tmp\nscratch\n")
     release.write(".gitignore", "scratch/\n")
     release.write("src/app.js", "source")
     release.write("docs/include.txt", "included")
@@ -310,7 +310,8 @@ def test_25_4_3_rejects_stale_action_and_container_fingerprints_before_publicati
     release.run("prepare")
     previous = (release.root / path).read_text() if (release.root / path).is_file() else ""
     release.write(path, previous + "\n# Changed source\n")
-    release.publish(tag, error="release contents differ from content_hash")
+    reason = "build-input fingerprint" if kind == "ghcr" else "release contents differ from content_hash"
+    release.publish(tag, error=reason)
     assert not release.matching("podman build|gh release create|git push")
 
 
@@ -392,7 +393,7 @@ def test_25_4_9_covers_container_build_configuration_with_identical_input_files(
         'dockerfile = "containers/ci/Alternative"' if selection == "dockerfile" else 'build_context = "containers/ci"'
     )
     release.configure("ghcr", declaration)
-    release.publish("ci-image-v3.4.5", error="release contents differ from content_hash")
+    release.publish("ci-image-v3.4.5", error="build-input fingerprint")
     release.run("prepare")
     assert release.read("airlock-targets.toml") != baseline
     assert not release.matching("podman build|gh release create")
@@ -433,3 +434,72 @@ def test_25_4_11_rejects_missing_container_dockerfiles_while_preparing(release: 
     release.run("prepare", error="Dockerfile must exist as a regular file")
     assert release.read("airlock-targets.toml") == manifest
     assert not release.matching("podman build|gh release create")
+
+
+def test_25_4_12_fingerprints_git_ignored_container_inputs(release: ReleaseFixture) -> None:
+    stage_git(release)
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(".dockerignore", ".git\n")
+    release.write(".gitignore", "scratch/\n")
+    release.write("scratch/settings.json", '{"enabled":true}')
+    release.run("prepare")
+    release.write("scratch/settings.json", '{"enabled":false}')
+    release.publish("ci-image-v3.4.5", error="build-input fingerprint")
+    assert not release.matching("git ls-files|podman build|gh release create")
+
+
+@pytest.mark.parametrize("ignorefile", [".dockerignore", ".containerignore"])
+def test_25_4_13_prefers_dockerfile_adjacent_ignore_rules_and_fingerprints_the_rules(
+    release: ReleaseFixture, ignorefile: str
+) -> None:
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(".containerignore", "src\n")
+    selected = f"containers/ci/{ignorefile}"
+    rules = f"docs\n{selected}\n"
+    release.write(selected, rules)
+    release.write("src/app.js", "source")
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    release.write("docs/ignored.txt", "documentation")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == baseline
+    release.write("src/app.js", "changed source")
+    release.run("prepare")
+    source = release.read("airlock-targets.toml")
+    assert source != baseline
+    release.write(selected, rules + "*.cache\n")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") != source
+
+
+@pytest.mark.parametrize("has_ignorefile", [True, False])
+def test_25_4_14_reports_selected_container_inputs_on_fingerprint_mismatch(
+    release: ReleaseFixture, *, has_ignorefile: bool
+) -> None:
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    if has_ignorefile:
+        release.write("containers/ci/.dockerignore", "docs\n")
+    release.run("prepare")
+    release.write("src/app.js", "changed source")
+    execution = release.publish("ci-image-v3.4.5", error="build-input fingerprint")
+    message = execution.stdout + execution.stderr
+    assert "build context: ." in message
+    assert "Dockerfile: containers/ci/Containerfile" in message
+    assert f"ignore file: {'containers/ci/.dockerignore' if has_ignorefile else 'none'}" in message
+
+
+@pytest.mark.parametrize("metadata_path", [".git/HEAD", ".git"])
+def test_25_4_15_requires_container_ignore_rules_to_exclude_git_metadata(
+    release: ReleaseFixture, metadata_path: str
+) -> None:
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(metadata_path, "initial Git metadata\n")
+    manifest = release.read("airlock-targets.toml")
+    release.run("prepare", error="container build context includes Git metadata; exclude .git")
+    assert release.read("airlock-targets.toml") == manifest
+    release.write("containers/ci/.dockerignore", ".git\n")
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    release.write(metadata_path, "changed Git metadata\n")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == baseline

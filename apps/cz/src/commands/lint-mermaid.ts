@@ -10,9 +10,8 @@ export const lintMermaidCommand = command('lint-mermaid', object({ command: cons
   brief: message`Check Mermaid diagrams in tracked and unignored Markdown under the current Git directory.`,
 });
 
-type MermaidFence = { source: string; startLine: number };
-
 const listFences = (markdown: string) => {
+  type MermaidFence = { source: string; startLine: number };
   const fences: MermaidFence[] = [];
   const walker = new Parser().parse(markdown).walker();
   for (let visit = walker.next(); visit !== null; visit = walker.next()) {

@@ -6,7 +6,7 @@ scope = "@zyplux"
 kind = "pypi"
 label = "zyplux-airlock"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:7255528eee80b59e929c38f6589dfe795631e2a5ad2c6498ae6aedf5b7752e22"
+content_hash = "sha256:3f93daaf147faaa96b4ef86687e20d45e752ff727548ea267405b8ead474d645"
 requires = []
 
 [action-airlock]
@@ -16,7 +16,7 @@ repository = "zyplux/zyplux"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-content_hash = "sha256:5f92722f895f5b75520807331d31bbfe6d8ed9d8181077998ed374882b8478a7"
+content_hash = "sha256:c8b71c01d7f1ae30cd22ea924eff9352c9b8de958e81b3d43cdaa16d733a5bf2"
 
 [setup-pm]
 kind = "action"
@@ -28,7 +28,7 @@ content_hash = "sha256:6d2b7fe919d00277f3abb83a01dcec5df7150c47748a067e0f85c02b2
 [eslint-config]
 kind = "npm"
 version = { file = "packages/eslint-config/package.json", json = "version" }
-content_hash = "sha256:15209daefcab9b7443ef8739612239bcd8e21ab35f2546167b58c04b141bb1ff"
+content_hash = "sha256:a19bdbfd83157bb798fafd1706f72ebbbb8d1d173ba582bdcfe1cf5cd2342243"
 requires = ["util-v0.9.3"]
 
 [tsconfig]
@@ -59,8 +59,8 @@ requires = ["util-v0.9.3"]
 kind = "pypi"
 label = "zyplux-cerberus"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:4e6f90ab961a37e64e0161a1e31544f652fd242f6b333e911e3e213813810d1a"
-requires = ["airlock-v2.0.0"]
+content_hash = "sha256:2ef960bda923c93b1550b22b35fd35b5ec15b4b1b528a6d564171d9c135f1f34"
+requires = ["airlock-v2.1.0"]
 
 [util-py]
 kind = "pypi"

@@ -2,9 +2,8 @@ import { describe, expect, test } from './rules.ts';
 
 test.override({ ruleName: 'prefer-destructured-params' });
 
-type FixCase = [shape: string, pairs: [code: string, expected: string][], expectLintReport?: true];
-
 describe('8.1 rewriting property-only parameters into destructuring patterns', () => {
+  type FixCase = [shape: string, pairs: [code: string, expected: string][], expectLintReport?: true];
   const cases: FixCase[] = [
     [
       '1 rewrites a single property read in a concise body',

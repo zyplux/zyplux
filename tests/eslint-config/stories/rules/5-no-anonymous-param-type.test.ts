@@ -2,9 +2,8 @@ import { describe, test } from './rules.ts';
 
 test.override({ ruleName: 'no-anonymous-param-type' });
 
-type NameParamCase = [shape: string, codes: string[], messageIds: [string, ...string[]]];
-
 describe('5.1 flagging inline object types in parameter position', () => {
+  type NameParamCase = [shape: string, codes: string[], messageIds: [string, ...string[]]];
   const cases: NameParamCase[] = [
     [
       '1 flags a top-level inline object type on plain and destructured parameters',
@@ -51,9 +50,8 @@ describe('5.1 flagging inline object types in parameter position', () => {
   });
 });
 
-type PermitParamCase = [shape: string, codes: string[]];
-
 describe('5.2 permitting named, primitive, and non-parameter object types', () => {
+  type PermitParamCase = [shape: string, codes: string[]];
   const cases: PermitParamCase[] = [
     [
       '1 allows a named type reference, a primitive, and an untyped parameter',

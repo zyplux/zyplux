@@ -4,8 +4,6 @@ import { AST_NODE_TYPES } from '@typescript-eslint/utils';
 
 import { createRule } from '#create-rule';
 
-type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
-
 const anonymousObjectTypesIn = (typeNode: TSESTree.TypeNode): TSESTree.TSTypeLiteral[] => {
   if (typeNode.type === AST_NODE_TYPES.TSTypeLiteral) return [typeNode];
   return typeNode.type === AST_NODE_TYPES.TSUnionType || typeNode.type === AST_NODE_TYPES.TSIntersectionType
@@ -23,6 +21,7 @@ const parameterAnnotation = (param: TSESTree.Parameter) => {
 
 export const noAnonymousParamType = createRule({
   create: context => {
+    type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
     const checkFunction = ({ params }: FunctionNode) => {
       for (const param of params) {
         const annotation = parameterAnnotation(param);
