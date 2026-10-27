@@ -14,7 +14,7 @@ dependencies = [
     "tree-sitter-python>=0.25.0",
     "tree-sitter-typescript>=0.23.2",
     "typer>=0.27.3",
-    "zyplux-airlock>=2.0.0",
+    "zyplux-airlock>=2.1.0",
 ]
 
 [project.scripts]
