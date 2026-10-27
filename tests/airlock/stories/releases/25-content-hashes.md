@@ -65,3 +65,5 @@
 ### 25.4.13 prefers dockerfile adjacent ignore rules and fingerprints the rules
 
 ### 25.4.14 reports selected container inputs on fingerprint mismatch
+
+### 25.4.15 requires container ignore rules to exclude git metadata

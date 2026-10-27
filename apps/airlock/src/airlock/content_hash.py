@@ -103,6 +103,12 @@ def calc_source_hash(target: ReleaseTarget) -> str:
         included = exclude_paths(
             str(context), patterns, dockerfile=dockerfile.relative_to(context, walk_up=True).as_posix()
         )
+        if any(".git" in Path(path).parts for path in included):
+            msg = (
+                f"{target.spec.label}: container build context includes Git metadata; "
+                "exclude .git in the container ignore file"
+            )
+            raise ValueError(msg)
         files = {context / path for path in included}
         files.add(dockerfile)
         if ignorefile is not None:

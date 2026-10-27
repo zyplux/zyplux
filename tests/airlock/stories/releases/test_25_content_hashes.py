@@ -273,7 +273,7 @@ def test_25_4_2_covers_container_inputs_using_build_ignore_rules(release: Releas
     stage_git(release)
     release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
     release.write(".dockerignore", "src\n")
-    release.write(ignorefile, "docs\n!docs/include.txt\n*.tmp\nscratch\n")
+    release.write(ignorefile, ".git\ndocs\n!docs/include.txt\n*.tmp\nscratch\n")
     release.write(".gitignore", "scratch/\n")
     release.write("src/app.js", "source")
     release.write("docs/include.txt", "included")
@@ -439,6 +439,7 @@ def test_25_4_11_rejects_missing_container_dockerfiles_while_preparing(release: 
 def test_25_4_12_fingerprints_git_ignored_container_inputs(release: ReleaseFixture) -> None:
     stage_git(release)
     release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(".dockerignore", ".git\n")
     release.write(".gitignore", "scratch/\n")
     release.write("scratch/settings.json", '{"enabled":true}')
     release.run("prepare")
@@ -485,3 +486,20 @@ def test_25_4_14_reports_selected_container_inputs_on_fingerprint_mismatch(
     assert "build context: ." in message
     assert "Dockerfile: containers/ci/Containerfile" in message
     assert f"ignore file: {'containers/ci/.dockerignore' if has_ignorefile else 'none'}" in message
+
+
+@pytest.mark.parametrize("metadata_path", [".git/HEAD", ".git"])
+def test_25_4_15_requires_container_ignore_rules_to_exclude_git_metadata(
+    release: ReleaseFixture, metadata_path: str
+) -> None:
+    release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
+    release.write(metadata_path, "initial Git metadata\n")
+    manifest = release.read("airlock-targets.toml")
+    release.run("prepare", error="container build context includes Git metadata; exclude .git")
+    assert release.read("airlock-targets.toml") == manifest
+    release.write("containers/ci/.dockerignore", ".git\n")
+    release.run("prepare")
+    baseline = release.read("airlock-targets.toml")
+    release.write(metadata_path, "changed Git metadata\n")
+    release.run("prepare")
+    assert release.read("airlock-targets.toml") == baseline

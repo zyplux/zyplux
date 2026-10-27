@@ -6,6 +6,8 @@
 
 - Use Dockerfile-adjacent ignore files consistently for container builds and build-input fingerprints. Include all admitted context files, including Git-ignored inputs, and identify selected paths on fingerprint mismatches. Regenerate container fingerprints after upgrading.
 
+- Require container ignore files to exclude `.git` so fingerprints remain stable across commits and checkouts.
+
 ## 2.0.0
 
 ### Major Changes
