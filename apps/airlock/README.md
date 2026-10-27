@@ -53,9 +53,9 @@ Package archives must exclude `airlock-targets.toml` to avoid self-referential f
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |
 | Python | Both the wheel and source distribution produced by `uv build`. |
 | Action | Git-visible files in the Action directory and the directory containing its version file, plus declared `runtime_files`. `path` selects the Action directory when it differs from the version directory. |
-| Container | The selected build-context and Dockerfile paths, plus the Dockerfile and Git-visible build-context files, filtered with Docker's SDK matcher. `.containerignore` takes precedence over `.dockerignore`. |
+| Container | A build-input fingerprint of the selected context and Dockerfile paths, the Dockerfile, the selected ignore file and all build-context files admitted by its rules, filtered with Docker's SDK matcher. Git ignore rules do not filter container inputs. |
 
-Git-visible files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds. Git submodule contents are outside the check's scope.
+Git-visible Action files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
 
 Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
 
@@ -133,7 +133,9 @@ dockerfile = "apps/zyp-loop/Dockerfile"
 build_context = "."
 ```
 
-Both build paths are relative to the repository root and must stay inside it. The build context defaults to the version file's directory. When `dockerfile` is omitted, Podman discovers `Containerfile` or `Dockerfile` in the build context.
+Both build paths are relative to the repository root and must stay inside it. The build context defaults to the version file's directory. When `dockerfile` is omitted, Airlock selects `Containerfile` or `Dockerfile` in the build context.
+
+Airlock selects `.containerignore` or `.dockerignore` beside the Dockerfile, falling back to the build-context directory. Within each directory, `.containerignore` takes precedence. The same selection filters the build-input fingerprint and is passed to Podman with `--ignorefile`. Fingerprint mismatch diagnostics identify the selected context, Dockerfile and ignore file.
 
 Airlock authenticates GHCR, builds the versioned image with `org.opencontainers.image.version` and `org.opencontainers.image.revision` labels, and pushes it with Podman's `--digestfile`. It validates the returned SHA-256 digest and verifies registry availability before generating `release.json`:
 

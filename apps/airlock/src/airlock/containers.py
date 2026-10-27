@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from airlock import github, proc
 from airlock.contracts import DIGEST, ContainerManifest
 from airlock.registries import is_container_available
+from airlock.targets import resolve_container_paths
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
@@ -46,24 +47,27 @@ def publish_container(target: ReleaseTarget, notes: str) -> None:
         msg = "GITHUB_ACTOR is required to push to GHCR"
         raise ValueError(msg)
     revision = proc.run("git", "rev-parse", "HEAD")
+    context, dockerfile, ignorefile = resolve_container_paths(target)
+    ignore_args = [] if ignorefile is None else ["--ignorefile", str(ignorefile)]
     versioned = f"{target.spec.label}:{target.version}"
     with TemporaryDirectory(prefix="airlock-container-") as directory:
         digest_file = Path(directory) / "digest"
         manifest = Path(directory) / CONTAINER_MANIFEST
         proc.run("podman", "login", "ghcr.io", "-u", actor, "--password-stdin", stdin=token)
         try:
-            dockerfile = [] if target.dockerfile is None else ["--file", str(target.dockerfile)]
             proc.run(
                 "podman",
                 "build",
-                *dockerfile,
+                "--file",
+                str(dockerfile),
+                *ignore_args,
                 "--label",
                 f"org.opencontainers.image.version={target.version}",
                 "--label",
                 f"org.opencontainers.image.revision={revision}",
                 "-t",
                 versioned,
-                str(target.build_context),
+                str(context),
             )
             proc.run("podman", "push", "--digestfile", str(digest_file), versioned)
             digest = DIGEST.validate_python(digest_file.read_text(encoding="utf-8").strip())

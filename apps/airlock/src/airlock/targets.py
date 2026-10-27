@@ -88,6 +88,30 @@ def resolve_repo_path(root: Path, relative: str) -> Path:
     return resolved
 
 
+def resolve_container_paths(target: ReleaseTarget) -> tuple[Path, Path, Path | None]:
+    context = target.build_context or target.directory
+    dockerfile = target.dockerfile or next(
+        (context / name for name in ("Containerfile", "Dockerfile") if (context / name).is_file()),
+        context / "Containerfile",
+    )
+    if not dockerfile.is_file():
+        msg = (
+            f"{target.spec.label}: Dockerfile must exist as a regular file: "
+            f"{dockerfile.relative_to(proc.find_root(target.directory))}"
+        )
+        raise ValueError(msg)
+    ignorefile = next(
+        (
+            directory / name
+            for directory in (dockerfile.parent, context)
+            for name in (".containerignore", ".dockerignore")
+            if (directory / name).is_file()
+        ),
+        None,
+    )
+    return context, dockerfile, ignorefile
+
+
 def build_release_target(root: Path, spec: TargetSpec, version: str) -> ReleaseTarget:
     directory = resolve_repo_path(root, spec.version.file).parent
     build_context = None
