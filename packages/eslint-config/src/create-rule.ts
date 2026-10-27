@@ -5,16 +5,15 @@ import { ESLintUtils } from '@typescript-eslint/utils';
 
 export type EslintRule = NonNullable<ESLint.Plugin['rules']>[string];
 
-type StrictCreate = EslintRule['create'];
-type StrictVisitor = ReturnType<StrictCreate>;
-
 export const castToEslintRule = (rule: LooseRuleDefinition): EslintRule => {
+  type StrictCreate = EslintRule['create'];
   const source = typeof rule === 'function' ? { create: rule } : rule;
   if (typeof source.create !== 'function') {
     throw new TypeError('castToEslintRule: rule is missing a callable `create` method');
   }
   const looseCreate = source.create.bind(source);
   const create: StrictCreate = context => {
+    type StrictVisitor = ReturnType<StrictCreate>;
     const loose = looseCreate(context);
     const visitor: StrictVisitor = {};
     for (const [key, fn] of Object.entries(loose)) {

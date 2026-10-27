@@ -9,8 +9,6 @@ export type FetchFake = {
 
 export type FetchReply = (url: string) => Promise<Response> | Response;
 
-type FetchRoute = { match: RegExp | string; reply: FetchReply };
-
 const HTTP_NOT_FOUND = 404;
 const HTTP_OK = 200;
 
@@ -26,6 +24,7 @@ const getRequestUrl = (input: Request | string | URL) => {
 };
 
 export const createFetchFake = (): FetchFake => {
+  type FetchRoute = { match: RegExp | string; reply: FetchReply };
   const requests: string[] = [];
   const routes: FetchRoute[] = [];
   let fallback: FetchReply = notFoundResponse;

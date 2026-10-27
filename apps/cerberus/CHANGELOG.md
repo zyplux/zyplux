@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.26.1
+
+### Patch Changes
+
+- Require Airlock 2.1 for consistent container build-input fingerprints.
+
 ## 0.26.0
 
 ### Minor Changes

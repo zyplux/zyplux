@@ -13,16 +13,6 @@ type AliasAbsorption = {
   property: string;
 };
 
-type DestructurePlan = {
-  aliasAbsorptions: AliasAbsorption[];
-  directReads: PropertyRead[];
-  localCollisions: string[];
-  param: TSESTree.Identifier;
-  propertyNames: string[];
-};
-
-type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
-
 type PropertyRead = {
   member: TSESTree.MemberExpression;
   property: string;
@@ -204,6 +194,14 @@ const wholeLineRemovalSpan = ({ text }: Readonly<TSESLint.SourceCode>, { range }
 
 export const preferDestructuredParams = createRule({
   create: context => {
+    type FunctionNode = TSESTree.ArrowFunctionExpression | TSESTree.FunctionDeclaration | TSESTree.FunctionExpression;
+    type DestructurePlan = {
+      aliasAbsorptions: AliasAbsorption[];
+      directReads: PropertyRead[];
+      localCollisions: string[];
+      param: TSESTree.Identifier;
+      propertyNames: string[];
+    };
     const { sourceCode } = context;
     const services = ESLintUtils.getParserServices(context);
     const checker = services.program.getTypeChecker();

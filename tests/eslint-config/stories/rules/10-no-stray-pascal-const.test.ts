@@ -102,10 +102,9 @@ describe('10.3 permitting well-named schemas', () => {
   });
 });
 
-type NonStrayCase = [shape: string, entries: [code: string, options?: RuleLintOptions][]];
-type RuleLintOptions = { filename?: string; options?: unknown[] };
-
 describe('10.4 permitting non-schema names that are not PascalCase or not stray', () => {
+  type RuleLintOptions = { filename?: string; options?: unknown[] };
+  type NonStrayCase = [shape: string, entries: [code: string, options?: RuleLintOptions][]];
   const cases: NonStrayCase[] = [
     [
       '1 ignores camelCase values, UPPER_CASE constants, and non-schema destructured PascalCase',

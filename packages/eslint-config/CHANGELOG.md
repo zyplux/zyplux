@@ -1,5 +1,11 @@
 # @zyplux/eslint-config
 
+## 0.12.2
+
+### Patch Changes
+
+- Update the shared ESLint plugins and regenerate the resolved configuration snapshot.
+
 ## 0.12.1
 
 ### Patch Changes

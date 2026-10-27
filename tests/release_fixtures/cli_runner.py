@@ -56,7 +56,8 @@ def run_cli(root: Path, env: dict[str, str], args: tuple[str, ...]) -> subproces
             patch.object(sys, "argv", ["airlock", *args]),
             patch("airlock.registries.httpx.Client", side_effect=create_client),
             patch("airlock.proc.subprocess.run", side_effect=execute),
-            patch("time.sleep"),
+            patch("airlock.registries.time"),
+            patch("airlock.actions.time"),
             pytest.raises(SystemExit) as termination,
         ):
             main()
