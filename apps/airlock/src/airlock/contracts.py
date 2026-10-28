@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, HttpUrl, TypeAdapter
@@ -57,6 +57,12 @@ STRING = TypeAdapter(str)
 VERSION_OBJECT = TypeAdapter(dict[str, object])
 NPM_AUTH = TypeAdapter(dict[str, dict[str, dict[str, str]]], config=ConfigDict(hide_input_in_errors=True))
 DIGEST = TypeAdapter(Digest)
+
+
+@dataclass(frozen=True)
+class PnpmAuth:
+    env: dict[str, str] | None = None
+    install_registries: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

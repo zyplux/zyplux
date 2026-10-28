@@ -139,12 +139,15 @@ def test_18_1_9_prepares_without_a_github_login_when_no_fallback_is_available(re
     assert all(not command.env for command in release.matching("pnpm version|pnpm install"))
 
 
-def test_18_1_10_rejects_invalid_authentication_without_disclosing_credentials(release: ReleaseFixture) -> None:
+@pytest.mark.parametrize("variable", ["pnpm_config__auth", "PNPM_CONFIG__AUTH"])
+def test_18_1_10_rejects_invalid_authentication_without_disclosing_credentials(
+    release: ReleaseFixture, variable: str
+) -> None:
     configure_private_registry(release)
-    release.env["pnpm_config__auth"] = release.credential
+    release.env[variable] = release.credential
     execution = release.run("prepare", error="Cannot read pnpm registry authentication configuration")
     assert release.credential not in execution.stdout + execution.stderr
-    assert not release.matching("pnpm version")
+    assert not release.matching("pnpm")
 
 
 def test_18_1_11_adds_only_missing_scope_credentials_and_honors_lowercase_environment_precedence(
@@ -164,3 +167,24 @@ def test_18_1_11_adds_only_missing_scope_credentials_and_honors_lowercase_enviro
             **auth,
             "https://npm.pkg.github.com": {"@zyplux": {"authToken": release.credential}},
         }
+
+
+@pytest.mark.parametrize("scope_registry", [None, "https://registry.example.com"])
+def test_18_1_12_adds_authentication_without_changing_dependency_registry_routes(
+    release: ReleaseFixture, scope_registry: str | None
+) -> None:
+    configure_private_registry(release)
+    release.env["GH_TOKEN"] = release.credential
+    configured = {"registry": "https://registry.npmjs.org"}
+    if scope_registry:
+        configured["@zyplux:registry"] = scope_registry
+    release.on("pnpm config list --json", json.dumps(configured))
+    release.run("prepare")
+    versioning = release.matching("pnpm version")[0]
+    install = release.matching("pnpm install")[0]
+    assert "--config.@zyplux:registry=https://npm.pkg.github.com" in versioning.text
+    dependency_registry = scope_registry or configured["registry"]
+    assert install.text == f"pnpm install --lockfile-only --config.@zyplux:registry={dependency_registry}"
+    assert json.loads(install.env["pnpm_config__auth"]) == {
+        "https://npm.pkg.github.com": {"@zyplux": {"authToken": release.credential}}
+    }

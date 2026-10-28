@@ -19,6 +19,7 @@ from airlock import proc
 from airlock.actions import is_action_published
 from airlock.contracts import (
     NPM_AUTH,
+    STRING,
     VERSION_OBJECT,
     GhcrTags,
     GhcrToken,
@@ -28,6 +29,7 @@ from airlock.contracts import (
     NpmLatest,
     NpmPackage,
     NpmVersions,
+    PnpmAuth,
     PypiFiles,
     PypiLatest,
 )
@@ -112,11 +114,16 @@ def load_npm_request(directory: Path, label: str) -> tuple[str, dict[str, str]]:
     return build_npm_request(label, load_npm_registry(directory, label))
 
 
-def load_pnpm_env(registries: dict[str, str], root: Path) -> dict[str, str] | None:
+def load_pnpm_auth(registries: dict[str, str], root: Path) -> PnpmAuth:
     registry = "https://npm.pkg.github.com"
     scopes = [key.removesuffix(":registry") for key, url in registries.items() if url == registry and key != "registry"]
     if not scopes:
-        return None
+        return PnpmAuth()
+    try:
+        env_auth = NPM_AUTH.validate_json(os.getenv(PNPM_AUTH_ENV) or os.getenv("PNPM_CONFIG__AUTH") or "{}")
+    except ValueError:
+        msg = "Cannot read pnpm registry authentication configuration"
+        raise ValueError(msg) from None
     configured = VERSION_OBJECT.validate_json(proc.run("pnpm", "config", "list", "--json", cwd=root))
     configured.update(
         (key.split("_", 2)[2], value)
@@ -131,7 +138,6 @@ def load_pnpm_env(registries: dict[str, str], root: Path) -> dict[str, str] | No
             else {}
         )
         saved_auth = NPM_AUTH.validate_python(saved.get("_auth", {}))
-        env_auth = NPM_AUTH.validate_json(os.getenv(PNPM_AUTH_ENV) or os.getenv("PNPM_CONFIG__AUTH") or "{}")
     except ValueError, yaml.YAMLError:
         msg = "Cannot read pnpm registry authentication configuration"
         raise ValueError(msg) from None
@@ -154,14 +160,22 @@ def load_pnpm_env(registries: dict[str, str], root: Path) -> dict[str, str] | No
         )
     ]
     if not scopes:
-        return None
+        return PnpmAuth()
     credential = load_github_token(os.getenv("NODE_AUTH_TOKEN"))
     if not credential:
-        return None
+        return PnpmAuth()
     entries = env_auth.setdefault(registry, {})
     for scope in scopes:
         entries[scope] = {"authToken": credential}
-    return {**os.environ, PNPM_AUTH_ENV: json.dumps(env_auth)}
+    return PnpmAuth(
+        env={**os.environ, PNPM_AUTH_ENV: json.dumps(env_auth)},
+        install_registries={
+            f"{scope}:registry": STRING.validate_python(
+                configured.get(f"{scope}:registry", configured.get("registry", "https://registry.npmjs.org"))
+            )
+            for scope in scopes
+        },
+    )
 
 
 def build_npm_request(label: str, registry: str = "https://registry.npmjs.org") -> tuple[str, dict[str, str]]:

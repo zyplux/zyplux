@@ -25,3 +25,5 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.1.10 rejects invalid authentication without disclosing credentials
 
 ### 18.1.11 adds only missing scope credentials and honors lowercase environment precedence
+
+### 18.1.12 adds authentication without changing dependency registry routes
