@@ -24,6 +24,7 @@ patch = ["subprocess"]
 [tool.coverage.report]
 fail_under = 90
 """
+PRODUCT_TEST = "import product\n\ndef test_product():\n    assert product.answer == 42\n"
 
 
 def run_pytest(report_repo: ReportRepo, *args: str) -> subprocess.CompletedProcess[str]:
@@ -160,6 +161,32 @@ def test_40_2_3_allows_collection_outside_the_configuration_root(report_repo: Re
         f"import runpy\n\ndef test_external():\n    assert runpy.run_path({str(product)!r})['answer'] == 42\n"
     )
     execution = run_pytest(report_repo, "-c", str(config), str(outside))
+    assert execution.returncode == 0, execution.stdout + execution.stderr
+    assert "1 passed" in execution.stdout
+
+
+def test_40_2_4_skips_demo_conftests_before_importing_them(report_repo: ReportRepo) -> None:
+    report_repo.write("pyproject.toml", PYTEST_CONFIG)
+    report_repo.write("product.py", "answer = 42\n")
+    report_repo.write("tests/examples/conftest.py", 'raise RuntimeError("demo conftest must not load")\n')
+    report_repo.write("tests/examples/test_demo.py", 'raise RuntimeError("demo test must not load")\n')
+    report_repo.write("cerberus.toml", '[source]\ndemo_roots = ["tests/examples"]\n')
+    report_repo.write("tests/test_product.py", PRODUCT_TEST)
+    execution = run_pytest(report_repo)
+    assert execution.returncode == 0, execution.stdout + execution.stderr
+    assert "1 passed" in execution.stdout
+
+
+def test_40_2_5_retains_explicit_nested_owners_inside_demos(report_repo: ReportRepo) -> None:
+    report_repo.write("pyproject.toml", PYTEST_CONFIG)
+    report_repo.write(
+        "cerberus.toml",
+        '[source]\ndemo_roots = ["tests/examples"]\ntest_roots = ["tests", "tests/examples/product"]\n',
+    )
+    report_repo.write("product.py", "answer = 42\n")
+    report_repo.write("tests/examples/unused/conftest.py", 'raise RuntimeError("demo conftest must not load")\n')
+    report_repo.write("tests/examples/product/test_product.py", PRODUCT_TEST)
+    execution = run_pytest(report_repo)
     assert execution.returncode == 0, execution.stdout + execution.stderr
     assert "1 passed" in execution.stdout
 

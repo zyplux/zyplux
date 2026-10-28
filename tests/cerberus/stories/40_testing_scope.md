@@ -22,6 +22,10 @@ Coverage reports retain the Git-visible eligible file boundary even when a root 
 
 ### 40.2.3 allows collection outside the configuration root
 
+### 40.2.4 skips demo conftests before importing them
+
+### 40.2.5 retains explicit nested owners inside demos
+
 ## 40.3 applying ownership consistently
 
 ### 40.3.1 requires stories for infrastructure and tools but not demo or harnesses

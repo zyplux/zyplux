@@ -129,6 +129,18 @@ def test_38_1_6_includes_the_root_python_project_with_workspace_members(report_r
     assert_edge(report, "child", "root-project")
 
 
+def test_38_1_7_includes_the_root_npm_project_with_workspace_members(report_repo: ReportRepo) -> None:
+    report_repo.seed_workspaces()
+    report_repo.write_package("", name="root-project", version="1.0.0", devDependencies={"@acme/one": "workspace:*"})
+    report_repo.write_package(
+        "packages/one", name="@acme/one", version="1.0.0", dependencies={"root-project": "workspace:*"}
+    )
+    assert report_repo.invoke("workspace-graph").exit_code == 0
+    report = report_repo.read("WORKSPACE_GRAPH.md")
+    assert_edge(report, "root-project", "one")
+    assert_edge(report, "one", "root-project")
+
+
 def test_38_2_1_lists_frequent_foundations_and_keeps_reruns_deterministic(report_repo: ReportRepo) -> None:
     report_repo.seed_workspaces()
     for name in ("alpha", "beta", "gamma"):

@@ -14,6 +14,8 @@
 
 ### 38.1.6 includes the root python project with workspace members
 
+### 38.1.7 includes the root npm project with workspace members
+
 ## 38.2 writing the diagram
 
 ### 38.2.1 lists frequent foundations and keeps reruns deterministic

@@ -18,10 +18,23 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
-    # Descend into directories so a more specific owner can retain its nested tests.
-    if collection_path.is_dir() or not collection_path.is_relative_to(config.rootpath):
+    if not collection_path.is_relative_to(config.rootpath):
         return None
     relative = collection_path.relative_to(config.rootpath).as_posix()
-    if config.stash[SCOPE_KEY].classify(relative).kind is SourceKind.DEMO:
+    scope = config.stash[SCOPE_KEY]
+    if not collection_path.is_dir():
+        return True if scope.classify(relative).kind is SourceKind.DEMO else None
+    if scope.classify_directory(relative).kind is not SourceKind.DEMO:
+        return None
+    patterns = (*scope.production_roots, *scope.infrastructure_roots, *scope.tooling_roots, *scope.test_roots)
+    retained = (
+        path
+        for pattern in patterns
+        for path in config.rootpath.glob(pattern)
+        if path.is_dir()
+        and path.is_relative_to(collection_path)
+        and scope.classify_directory(path.relative_to(config.rootpath).as_posix()).kind is not SourceKind.DEMO
+    )
+    if not any(retained):
         return True
     return None

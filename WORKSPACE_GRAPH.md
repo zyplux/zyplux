@@ -30,6 +30,9 @@ flowchart LR
             ws_0["zyplux"]
         end
     end
+    ws_0 ws_0__ws_8@--> ws_8
+    ws_0 ws_0__ws_9@--> ws_9
+    ws_0 ws_0__ws_10@--> ws_10
     ws_3 ws_3__ws_2@--> ws_2
     classDef ws_3_edges stroke:#e467c9,stroke-width:2px
     class ws_3__ws_2 ws_3_edges

@@ -114,18 +114,26 @@ def load_type_dependencies(repo: Repo, ctx: Context, npm: dict[str, Workspace]) 
         }
 
 
+def load_npm_manifests(repo: Repo, ctx: Context, paths: list[str]) -> dict[str, NpmManifest]:
+    directories = workspaces.ts_member_dirs(repo, ctx, paths)
+    if "" not in directories and ctx.file(repo, "package.json") is not None:
+        directories.insert(0, "")
+    return {
+        directory: NpmManifest.model_validate_json(ctx.file(repo, f"{directory}/package.json".lstrip("/")) or "{}")
+        for directory in workspaces.list_source_members(directories, ctx.config.source)
+    }
+
+
 def load_workspaces(repo: Repo, ctx: Context) -> list[Workspace]:
     paths = ctx.paths(repo)
     npm: dict[str, Workspace] = {}
     python: dict[str, Workspace] = {}
     members: dict[str, Workspace] = {}
-    npm_manifests: dict[str, NpmManifest] = {}
+    npm_manifests = load_npm_manifests(repo, ctx, paths)
     python_manifests: dict[str, PythonManifest] = {}
-    for directory in workspaces.list_source_members(workspaces.ts_member_dirs(repo, ctx, paths), ctx.config.source):
-        manifest = NpmManifest.model_validate_json(ctx.file(repo, f"{directory}/package.json".lstrip("/")) or "{}")
+    for directory, manifest in npm_manifests.items():
         workspace = Workspace(directory, manifest.name.rsplit("/", 1)[-1])
         members[directory] = npm[manifest.name] = workspace
-        npm_manifests[directory] = manifest
     globs = workspaces.uv_member_globs(repo, ctx)
     directories = ["", *workspaces.member_dirs(paths, globs, "pyproject.toml")]
     for directory in workspaces.list_source_members(directories, ctx.config.source):
