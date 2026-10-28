@@ -42,7 +42,7 @@
 
 ## 25.4 fingerprinting actions and containers
 
-### 25.4.1 covers the action directory and versioned implementation
+### 25.4.1 covers implicit and explicit action sources
 
 ### 25.4.2 covers container inputs using build ignore rules
 
@@ -50,17 +50,17 @@
 
 ### 25.4.4 rejects manual surface declarations
 
-### 25.4.5 requires repository relative action paths
+### 25.4.5 rejects action path declarations
 
 ### 25.4.6 hashes symlink identity including directory and broken links
 
-### 25.4.7 covers declared action runtime files
+### 25.4.7 selects individual files outside the action directory with includes
 
-### 25.4.8 rejects missing or external action runtime files
+### 25.4.8 rejects action includes outside the repository
 
 ### 25.4.9 covers container build configuration with identical input files
 
-### 25.4.10 fingerprints declared runtime file symlinks and their contents
+### 25.4.10 fingerprints selected symlinks and selected target files
 
 ### 25.4.11 rejects missing container dockerfiles while preparing
 
@@ -73,3 +73,7 @@
 ### 25.4.15 requires container ignore rules to exclude git metadata
 
 ### 25.4.16 applies markdown selection to action and container inputs
+
+### 25.4.17 fingerprints configured runtime major and minor versions only
+
+### 25.4.18 rejects unknown minor version sources

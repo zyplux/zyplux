@@ -360,7 +360,7 @@ def test_18_2_10_removes_new_release_metadata_on_reported_failure(release: Relea
 
 def test_18_2_11_freezes_an_action_version_tag_before_release_finalization(release: ReleaseFixture) -> None:
     release.prepare_workspace()
-    release.configure("npm", 'kind = "action"\nrepository = "zyplux/zyplux"')
+    release.configure("npm", 'kind = "action"')
     release.run("prepare")
     release.on("git ls-remote origin refs/tags/util-v1.3.0", "published-sha\trefs/tags/util-v1.3.0")
     before = capture_metadata(release)

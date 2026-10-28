@@ -48,6 +48,7 @@ zyplux-airlock@2.1.1:
 zyplux-airlock@2.2.0:
   dir: apps/airlock
   intents:
+    - action-runtime-fingerprints
     - plain-target-dependencies
     - smooth-hawks-return
     - tiny-ants-chew
@@ -71,6 +72,7 @@ zyplux-cerberus@0.26.1:
 zyplux-cerberus@0.27.0:
   dir: apps/cerberus
   intents:
+    - cached-release-tools
     - loud-rabbits-enjoy
     - plain-target-dependencies
     - schema-validation
@@ -86,3 +88,7 @@ zyplux-setup-pm@1.0.2:
   dir: apps/action-setup-pm
   intents:
     - release-cache-guidance
+zyplux-setup-pm@1.1.0:
+  dir: apps/action-setup-pm
+  intents:
+    - cached-release-tools

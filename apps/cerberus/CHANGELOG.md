@@ -10,6 +10,8 @@
 
 ### Patch Changes
 
+- Add optional workspace dependency installation to the shared cached package-manager setup. Require dependency installation in the CI quality gate.
+
 - Use airlock_targets.toml with parsed package manifests, inferred npm and PyPI kinds, optional package_name and release_tag overrides, dependency target references and configurable fingerprints that omit Markdown by default.
 
 ## 0.26.1

@@ -1,5 +1,11 @@
 # zyplux-setup-pm
 
+## 1.1.0
+
+### Minor Changes
+
+- Add optional workspace dependency installation to the shared cached package-manager setup. Require dependency installation in the CI quality gate.
+
 ## 1.0.2
 
 ### Patch Changes

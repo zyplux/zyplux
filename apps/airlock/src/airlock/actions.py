@@ -5,13 +5,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from airlock import github, proc
-from airlock.contracts import ActionSpec
 from airlock.targets import parse_stable_version
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from airlock.contracts import ReleaseTarget, TargetSpec
+    from airlock.contracts import ReleaseTarget
 
 ACTION_POLL_ATTEMPTS = 12
 
@@ -33,19 +30,8 @@ class ActionAlias:
     release_ref: str
 
 
-def validate_action_repository(spec: TargetSpec, directory: Path | None = None) -> ActionSpec:
-    if not isinstance(spec, ActionSpec):
-        msg = "action publication requires an action target"
-        raise TypeError(msg)
-    repository = proc.run("gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner", cwd=directory)
-    if spec.repository.casefold() != repository.casefold():
-        msg = f"action repository {spec.repository} must match checkout {repository}"
-        raise ValueError(msg)
-    return spec
-
-
 def resolve_action_alias(target: ReleaseTarget) -> ActionAlias | None:
-    spec = validate_action_repository(target.spec)
+    spec = target.spec
     try:
         version = parse_stable_version(target.version)
     except ValueError as exc:
@@ -53,7 +39,7 @@ def resolve_action_alias(target: ReleaseTarget) -> ActionAlias | None:
         raise ValueError(msg) from exc
     ref = f"refs/tags/{spec.tag_prefix}{version.major}"
     previous_sha = parse_remote_tag(proc.run("git", "ls-remote", "origin", ref), ref)
-    releases = github.fetch_releases(spec.tag_prefix, spec.repository)
+    releases = github.fetch_releases(spec.tag_prefix)
     if all(tag != target.tag for tag, _ in releases):
         return None
     latest = next(tag for tag, candidate in releases if candidate.major == version.major)
@@ -71,7 +57,6 @@ def is_action_published(target: ReleaseTarget) -> bool:
 
 
 def publish_action(target: ReleaseTarget, notes: str) -> None:
-    validate_action_repository(target.spec)
     try:
         parse_stable_version(target.version)
     except ValueError as exc:

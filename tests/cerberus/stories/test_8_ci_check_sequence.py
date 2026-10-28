@@ -322,7 +322,12 @@ def test_8_5_6_rejects_pyrefly_warning_threshold_overrides(
 
 @pytest.mark.parametrize(
     "action",
-    ["./apps/action-setup-pm", "zyplux/zyplux/apps/action-setup-pm@main", "zyplux/zyplux/apps/action-setup-pm@abc123"],
+    [
+        "./apps/action-setup-pm",
+        "./apps/action-setup-pm\n        with: {install-dependencies: true}",
+        "zyplux/zyplux/apps/action-setup-pm@main\n        with: {install-dependencies: 'true'}",
+        "zyplux/zyplux/apps/action-setup-pm@abc123",
+    ],
 )
 def test_8_7_1_accepts_both_locked_installs_from_the_shared_action(
     run_ci_sequence: RunCiSequence, sequence_pass: Finding, action: str
@@ -370,7 +375,17 @@ def test_8_7_3_requires_shared_setup_before_quality_checks(
     ]
 
 
-@pytest.mark.parametrize("setting", ["if: false", "if: '${{ inputs.setup }}'", "continue-on-error: true"])
+@pytest.mark.parametrize(
+    "setting",
+    [
+        "if: false",
+        "if: '${{ inputs.setup }}'",
+        "continue-on-error: true",
+        "with: {install-dependencies: false}",
+        "with: {install-dependencies: 'false'}",
+        "with: {install-dependencies: '${{ inputs.install }}'}",
+    ],
+)
 def test_8_7_4_requires_unconditional_successful_setup(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, setting: str
 ) -> None:

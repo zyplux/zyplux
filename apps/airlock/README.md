@@ -54,22 +54,24 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 
 Package archives must exclude `airlock_targets.toml` to avoid self-referential fingerprints.
 
-Each target accepts an optional `includes` array of globs. It defaults to `["**/*", "!**/*.md", "!**/*.markdown"]`; positive patterns select files and `!` patterns exclude them. An explicit array replaces the defaults: `includes = ["**/*"]` includes Markdown. Archive paths are package-relative; Action and container paths are relative to the target's manifest directory. Existing build-context and runtime-file selection still applies. Python README descriptions follow the same selection, and derived wheel checksum indexes are omitted from fingerprints.
+Each target accepts an optional `includes` array of globs. It defaults to `["**/*", "!**/*.md", "!**/*.markdown"]`; positive patterns select files and `!` patterns exclude them. An explicit array replaces the defaults: `includes = ["**/*"]` includes Markdown. Archive paths are package-relative and container paths are relative to the target's manifest directory. Actions default to their manifest directory; an explicit `includes` array uses repository-relative paths. For an Action whose manifest lives elsewhere, select its sources with `includes = ["apps/action-airlock/**", "!**/*.md", "!**/*.markdown"]`; individual files such as `shared/schema.json` can also be selected. Container selection also follows its build-context ignore rules. Python README descriptions follow the same selection, and derived wheel checksum indexes are omitted from fingerprints.
 
 | Target | Fingerprinted contents |
 | --- | --- |
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |
 | Python | Both the wheel and source distribution produced by `uv build`. |
-| Action | Git-visible files in the Action directory and its manifest directory, plus declared `runtime_files`. `path` selects the Action directory when it differs from the manifest directory. |
+| Action | Git-visible repository files selected by `includes`, plus the major/minor version of its optional `sync_minor_from` target. |
 | Container | A build-input fingerprint of the selected context and Dockerfile paths, the Dockerfile, the selected ignore file and all build-context files admitted by its rules, filtered with Docker's SDK matcher. Git ignore rules do not filter container inputs. |
 
-Git-visible Action files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Container ignore rules must exclude `.git` when present, keeping fingerprints stable across commits and checkouts. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
+Git-visible Action files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Container ignore rules must exclude `.git` when present, keeping fingerprints stable across commits and checkouts. Action and container hashes are a best-effort check of the selected inputs; container fingerprints do not resolve remote base images or execute builds.
 
 Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
 
 Bump detection is a best-effort reminder using prepared fingerprints; release readiness owns artifact validation. Cerberus compares each prepared fingerprint with the latest finalized stable GitHub release's tagged manifest, without rebuilding packages. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. Fingerprints are comparable when their `includes` policies match; the first release under a selection policy establishes its baseline.
 
 Preparation also records each package's `depends_on` list of matching workspace target names from its built metadata, for example `depends_on = ["airlock"]`. References use the target's table name; its manifest supplies the exact version to await during publication. The field is omitted when there are no dependencies; an explicit empty list has the same meaning. Cerberus's `release_readiness` bite recalculates every target's fingerprint and package dependency list. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
+
+Actions can set `sync_minor_from = "airlock"` to include that target's major/minor version in their fingerprint. Airlock patch bumps and source edits leave the Action hash unchanged. This setting only controls fingerprinting; package publication ordering uses `depends_on`.
 
 Release checks require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
@@ -126,7 +128,7 @@ manifest = "apps/airlock/pyproject.toml"
 
 `package_name` defaults to the name read from the manifest. An explicit override supplies the publishing identity, which npm and Python archives must match. GHCR targets require their full container name in `package_name`.
 
-Actions also declare their GitHub `repository`, which must match the checkout because publication writes its release tags through `origin`. Set `path = "apps/action-airlock"` when the Action directory differs from its manifest directory. Declare installation inputs outside those directories with `runtime_files`; Airlock's action includes the root `pyproject.toml` and `uv.lock`. These files must exist inside the repository. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
+Actions publish releases and tags in the checked-out GitHub repository. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
 ## Container releases
 

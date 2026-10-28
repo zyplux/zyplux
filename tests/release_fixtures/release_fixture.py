@@ -231,7 +231,6 @@ class ReleaseFixture(CliFixture):
             "airlock_targets.toml",
             """[setup-pm]
 kind = "action"
-repository = "zyplux/zyplux"
 manifest = "apps/action-setup-pm/pyproject.toml"
 """,
         )

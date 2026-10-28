@@ -272,26 +272,26 @@ def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(releas
     assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"] != baseline
 
 
-def test_25_4_1_covers_the_action_directory_and_versioned_implementation(release: ReleaseFixture) -> None:
+@pytest.mark.parametrize("directory", ["apps/action-setup-pm", "actions/setup"])
+def test_25_4_1_covers_implicit_and_explicit_action_sources(release: ReleaseFixture, directory: str) -> None:
     release.action()
-    release.configure("action", 'path = "actions/setup"')
-    release.write("actions/setup/action.yml", "name: Setup\n")
-    release.write("apps/action-setup-pm/src/setup.py", "print('setup')\n")
+    if directory == "actions/setup":
+        release.configure("action", 'includes = ["actions/setup/**", "!**/*.md", "!**/*.markdown"]')
+    excluded = "shared/unrelated.py" if directory == "apps/action-setup-pm" else "apps/action-setup-pm/src/setup.py"
+    release.write(f"{directory}/action.yml", "name: Setup\n")
+    release.write(excluded, "print('unselected source')\n")
     release.write(".gitignore", "**/__pycache__/\n")
     stage_git(release)
     release.run("prepare")
     baseline = release.read("airlock_targets.toml")
-    release.write("apps/action-setup-pm/__pycache__/setup.pyc", "generated")
+    release.write(f"{directory}/__pycache__/setup.pyc", "generated")
+    release.write(excluded, "print('changed unselected source')\n")
     release.write("docs/unrelated.md", "unrelated")
     release.run("prepare")
     assert release.read("airlock_targets.toml") == baseline
-    release.write("actions/setup/action.yml", "name: Changed setup\n")
+    release.write(f"{directory}/action.yml", "name: Changed setup\n")
     release.run("prepare")
-    metadata = release.read("airlock_targets.toml")
-    assert metadata != baseline
-    release.write("apps/action-setup-pm/src/setup.py", "print('changed setup')\n")
-    release.run("prepare")
-    assert release.read("airlock_targets.toml") != metadata
+    assert release.read("airlock_targets.toml") != baseline
 
 
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
@@ -368,10 +368,10 @@ def test_25_4_4_rejects_manual_surface_declarations(release: ReleaseFixture, kin
 
 
 @pytest.mark.parametrize("path", ["../outside", "/outside"])
-def test_25_4_5_requires_repository_relative_action_paths(release: ReleaseFixture, path: str) -> None:
+def test_25_4_5_rejects_action_path_declarations(release: ReleaseFixture, path: str) -> None:
     release.action()
     release.configure("action", f'path = "{path}"')
-    release.run("prepare", error="release paths must be repository-relative")
+    release.run("prepare", error="Unrecognized key")
 
 
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
@@ -400,31 +400,24 @@ def test_25_4_6_hashes_symlink_identity_including_directory_and_broken_links(
 
 
 @pytest.mark.parametrize("file", ["pyproject.toml", "uv.lock"])
-def test_25_4_7_covers_declared_action_runtime_files(release: ReleaseFixture, file: str) -> None:
+def test_25_4_7_selects_individual_files_outside_the_action_directory_with_includes(
+    release: ReleaseFixture, file: str
+) -> None:
     release.action()
     release.write("pyproject.toml", "[project]\n")
     release.write("uv.lock", "version = 1\n")
-    release.configure("action", 'runtime_files = ["pyproject.toml", "uv.lock"]')
+    release.configure("action", 'includes = ["apps/action-setup-pm/**", "pyproject.toml", "uv.lock"]')
     release.run("prepare")
     release.write(file, release.read(file) + "\n# Changed installation input.\n")
     release.publish("setup-pm-v1.0.0", error="release contents differ from hash")
     assert not release.matching("gh release create|git push")
 
 
-@pytest.mark.parametrize(
-    ("file", "reason"),
-    [
-        ("missing.lock", "runtime file must exist"),
-        ("/etc/hosts", "repository-relative"),
-        ("../lock", "repository-relative"),
-    ],
-)
-def test_25_4_8_rejects_missing_or_external_action_runtime_files(
-    release: ReleaseFixture, file: str, reason: str
-) -> None:
+@pytest.mark.parametrize("pattern", ["/etc/hosts", "../../../outside.lock"])
+def test_25_4_8_rejects_action_includes_outside_the_repository(release: ReleaseFixture, pattern: str) -> None:
     release.action()
-    release.configure("action", f'runtime_files = ["{file}"]')
-    release.run("prepare", error=reason)
+    release.configure("action", f'includes = ["{pattern}"]')
+    release.run("prepare", error="Action includes must stay within the repository")
 
 
 @pytest.mark.parametrize("selection", ["dockerfile", "build_context"])
@@ -446,16 +439,14 @@ def test_25_4_9_covers_container_build_configuration_with_identical_input_files(
 
 
 @pytest.mark.parametrize("change", ["retarget", "contents"])
-def test_25_4_10_fingerprints_declared_runtime_file_symlinks_and_their_contents(
-    release: ReleaseFixture, change: str
-) -> None:
+def test_25_4_10_fingerprints_selected_symlinks_and_selected_target_files(release: ReleaseFixture, change: str) -> None:
     release.action()
     directory = "apps/action-setup-pm" if change == "retarget" else "shared"
     for name in ("first", "second"):
         release.write(f"{directory}/{name}.lock", name)
     link = release.root / "runtime.lock"
     link.symlink_to(f"{directory}/first.lock")
-    release.configure("action", 'runtime_files = ["runtime.lock"]')
+    release.configure("action", 'includes = ["apps/action-setup-pm/**", "runtime.lock", "shared/*.lock"]')
     release.run("prepare")
     if change == "retarget":
         link.unlink()
@@ -464,6 +455,50 @@ def test_25_4_10_fingerprints_declared_runtime_file_symlinks_and_their_contents(
         release.write(f"{directory}/first.lock", "changed runtime dependency")
     release.publish("setup-pm-v1.0.0", error="release contents differ from hash")
     assert not release.matching("gh release create|git push")
+
+
+@pytest.mark.parametrize("change", ["source", "patch", "minor", "major", "lockfile", "root_manifest"])
+def test_25_4_17_fingerprints_configured_runtime_major_and_minor_versions_only(
+    release: ReleaseFixture, change: str
+) -> None:
+    release.action()
+    release.write("apps/airlock/pyproject.toml", '[project]\nname = "zyplux-airlock"\nversion = "2.2.0"\n')
+    release.write_json("apps/airlock/package.json", {"name": "zyplux-airlock", "version": "2.2.0", "private": True})
+    release.write("apps/airlock/CHANGELOG.md", "# Airlock\n\n## 2.2.0\n\n- Prepare releases.\n")
+    release.write("apps/airlock/src/airlock.py", "print('release')\n")
+    release.write(
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + '\n[airlock]\nmanifest = "apps/airlock/pyproject.toml"\n',
+    )
+    release.configure(
+        "action",
+        'manifest = "apps/airlock/pyproject.toml"\n'
+        'includes = ["apps/action-setup-pm/**", "!**/*.md", "!**/*.markdown"]\n'
+        'sync_minor_from = "airlock"',
+    )
+    release.run("prepare")
+    baseline = tomllib.loads(release.read("airlock_targets.toml"))["setup-pm"]
+    assert baseline["sync_minor_from"] == "airlock"
+    if change in {"patch", "minor", "major"}:
+        version = {"patch": "2.2.1", "minor": "2.3.0", "major": "3.0.0"}[change]
+        for filename in ("pyproject.toml", "package.json", "CHANGELOG.md"):
+            path = f"apps/airlock/{filename}"
+            release.write(path, release.read(path).replace("2.2.0", version))
+    else:
+        path = {"source": "apps/airlock/src/airlock.py", "lockfile": "uv.lock", "root_manifest": "pyproject.toml"}[
+            change
+        ]
+        release.write(path, "# Changed input\n")
+    release.run("prepare")
+    updated = tomllib.loads(release.read("airlock_targets.toml"))["setup-pm"]
+    assert updated["sync_minor_from"] == "airlock"
+    assert (updated["hash"] != baseline["hash"]) == (change in {"minor", "major"})
+
+
+def test_25_4_18_rejects_unknown_minor_version_sources(release: ReleaseFixture) -> None:
+    release.action()
+    release.configure("action", 'sync_minor_from = "missing"')
+    release.run("prepare", error="unknown sync_minor_from target: missing")
 
 
 @pytest.mark.parametrize("selection", ["default", "explicit", "directory"])

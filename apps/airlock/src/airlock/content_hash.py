@@ -21,7 +21,7 @@ from tomlkit.items import Table
 from airlock import proc
 from airlock.contracts import ActionSpec, PackageSpec
 from airlock.dependencies import load_dependencies, validate_dependency_cycles, validate_prepared_dependencies
-from airlock.targets import resolve_container_paths, resolve_repo_path
+from airlock.targets import load_targets, parse_stable_version, resolve_container_paths
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
@@ -117,6 +117,31 @@ def build_archives(target: ReleaseTarget, directory: Path) -> list[Path]:
     return sorted(directory.glob("*.whl")) + sorted(directory.glob("*.tar.gz"))
 
 
+def list_action_files(root: Path, target: ReleaseTarget) -> set[Path]:
+    includes = target.spec.includes
+    if "includes" not in target.spec.model_fields_set:
+        includes = [
+            glob if glob.startswith("!") else (target.directory.relative_to(root) / glob).as_posix()
+            for glob in includes
+        ]
+    for glob in includes:
+        relative = PurePosixPath(glob.removeprefix("!"))
+        if relative.is_absolute() or ".." in relative.parts:
+            msg = f"Action includes must stay within the repository: {glob}"
+            raise ValueError(msg)
+    listing = proc.run("git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", str(root), cwd=root)
+    return {root / path for path in listing.split("\0") if path and is_included(path, includes)}
+
+
+def load_minor_version(root: Path, name: str) -> str:
+    target = next((target for target in load_targets(root) if target.spec.name == name), None)
+    if target is None:
+        msg = f"unknown sync_minor_from target: {name}"
+        raise ValueError(msg)
+    version = parse_stable_version(target.version)
+    return f"{version.major}.{version.minor}"
+
+
 def calc_source_hash(target: ReleaseTarget) -> str:
     root = proc.find_root(target.directory)
     entries = []
@@ -148,34 +173,18 @@ def calc_source_hash(target: ReleaseTarget) -> str:
         files.add(dockerfile)
         if ignorefile is not None:
             files.add(ignorefile)
+        files = {
+            path
+            for path in files
+            if is_included(path.relative_to(target.directory, walk_up=True).as_posix(), target.spec.includes)
+        }
     else:
-        directories = {target.directory, target.action_directory or target.directory}
-        listing = proc.run(
-            "git",
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            *(str(directory) for directory in sorted(directories)),
-            cwd=root,
-        )
-        files = {root / path for path in listing.split("\0") if path}
-        if isinstance(target.spec, ActionSpec):
-            for relative in target.spec.runtime_files:
-                path = resolve_repo_path(root, relative)
-                if not path.is_file():
-                    msg = f"{target.package_name}: runtime file must exist: {relative}"
-                    raise ValueError(msg)
-                files.update({root / relative, path})
+        files = list_action_files(root, target)
+        if isinstance(target.spec, ActionSpec) and target.spec.sync_minor_from is not None:
+            name = target.spec.sync_minor_from
+            entries.append(("sync_minor_from", name, False, load_minor_version(root, name)))
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
     files.discard(root / "airlock_targets.toml")
-    files = {
-        path
-        for path in files
-        if is_included(path.relative_to(target.directory, walk_up=True).as_posix(), target.spec.includes)
-    }
     for path in files:
         if path.is_symlink():
             kind, contents = "symlinks", os.fsencode(path.readlink())

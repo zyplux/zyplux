@@ -44,9 +44,7 @@ class ContainerSpec(TargetBase):
 class ActionSpec(TargetBase):
     kind: Literal["action"]
     package_name: Nonempty | None = None
-    repository: Annotated[str, Field(pattern=r"^[\w.-]+/[\w.-]+$")]
-    path: Nonempty | None = None
-    runtime_files: list[Nonempty] = Field(default_factory=list)
+    sync_minor_from: Nonempty | None = None
 
 
 type TargetSpec = Annotated[PackageSpec | ContainerSpec | ActionSpec, Field(discriminator="kind")]
@@ -71,7 +69,6 @@ class ReleaseTarget:
     directory: Path
     build_context: Path | None = None
     dockerfile: Path | None = None
-    action_directory: Path | None = None
 
     @property
     def tag(self) -> str:

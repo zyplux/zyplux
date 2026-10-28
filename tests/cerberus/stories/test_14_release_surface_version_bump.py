@@ -288,7 +288,7 @@ def test_14_4_4_reports_release_history_failures_as_errors(release: ReleaseFixtu
 
 
 def test_14_4_5_compares_stable_action_releases_across_all_pages(release: ReleaseFixture) -> None:
-    release.configure("npm", 'kind = "action"\nrepository = "zyplux/zyplux"')
+    release.configure("npm", 'kind = "action"')
     release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.10.1"})
     release.action_releases(
         [build_release("other-v99.0.0"), build_release("util-v1.9.0")],
@@ -333,12 +333,11 @@ def test_14_4_7_reads_release_history_once_for_all_targets(release: ReleaseFixtu
     assert not release.requests
 
 
-def test_14_4_8_rejects_action_repositories_outside_the_checkout(release: ReleaseFixture) -> None:
-    release.configure("npm", 'kind = "action"\nrepository = "other/actions"')
+def test_14_4_8_reads_action_release_history_from_the_checkout(release: ReleaseFixture) -> None:
+    release.configure("npm", 'kind = "action"')
     findings = check_surface(release)
-    assert findings[0]["status"] == "error"
-    assert "action repository other/actions must match checkout zyplux/zyplux" in findings[0]["message"]
-    assert not release.matching("gh api --paginate")
+    assert all(finding["status"] == "pass" for finding in findings)
+    assert len(release.matching(r"gh api --paginate --slurp repos/\{owner\}/\{repo\}/releases")) == 1
 
 
 CHECK_ID = "release_surface_version_bump"
@@ -444,11 +443,7 @@ def test_14_7_4_accepts_the_first_fingerprint_before_a_release_baseline_exists(
 
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
 def test_14_7_6_requires_bumps_for_changed_action_and_container_inputs(release: ReleaseFixture, kind: str) -> None:
-    fields = (
-        'kind = "action"\nrepository = "zyplux/zyplux"'
-        if kind == "action"
-        else 'kind = "ghcr"\npackage_name = "ghcr.io/zyplux/util"'
-    )
+    fields = 'kind = "action"' if kind == "action" else 'kind = "ghcr"\npackage_name = "ghcr.io/zyplux/util"'
     release.configure("npm", fields)
     release.write("packages/util/Containerfile", "FROM scratch\n")
     release.run("prepare")

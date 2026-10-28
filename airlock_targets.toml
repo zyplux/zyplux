@@ -2,21 +2,19 @@
 
 [airlock]
 manifest = "apps/airlock/pyproject.toml"
-hash = "sha256:4f50864c6ce61ead9af03dd7337e633e5abfdafa68cd3d1c08a3954bb26dee44"
+hash = "sha256:be0474cbeb8aeb3b3d3d63b0b9b22e6cb39e3e93e79022893587012187ca35d7"
 
 [action-airlock]
 kind = "action"
-repository = "zyplux/zyplux"
 manifest = "apps/airlock/pyproject.toml"
-path = "apps/action-airlock"
-runtime_files = ["pyproject.toml", "uv.lock"]
-hash = "sha256:ac3346815ffa47eca1e8737d2faac930bf0b2e1d89d676f31c6b4d82f46dd79b"
+includes = ["apps/action-airlock/**", "!**/*.md", "!**/*.markdown"]
+sync_minor_from = "airlock"
+hash = "sha256:7faec8112b5f8819b091ff8fe5e004e4e90e961fde0c5be27fe3fea0e5cb6ca2"
 
 [setup-pm]
 kind = "action"
-repository = "zyplux/zyplux"
 manifest = "apps/action-setup-pm/pyproject.toml"
-hash = "sha256:425dbbe71027d36fa41bcab820a2c47a15f6907b9d46444b49b8f1d843512e48"
+hash = "sha256:38be8854b903badddafe4a49a842a448a921d3e7c5aad61065ddb0189db87b95"
 
 [eslint-config]
 manifest = "packages/eslint-config/package.json"
@@ -42,7 +40,7 @@ depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:a8e4abdc94153267d3b01a77ec30b4ce46e9397619a048d8b2c2438011051fb8"
+hash = "sha256:2a84f0a7afdefc0f277539d11a670c9acae703444a5ed8b252e6a08f92597e02"
 depends_on = ["airlock"]
 
 [totchef]

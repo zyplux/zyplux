@@ -27,19 +27,13 @@ runs:
       if: inputs.command == 'publish'
       shell: bash
       run: printf '%s\n' '//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}' > "$RUNNER_TEMP/airlock.npmrc"
-    - name: Set up workspace dependencies
-      if: inputs.command == 'publish'
+    - name: Set up package managers
       uses: zyplux/zyplux/apps/action-setup-pm@setup-pm-v1
+      with:
+        install-dependencies: ${{ inputs.command == 'publish' }}
       env:
         NODE_AUTH_TOKEN: ${{ inputs.token }}
         NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/airlock.npmrc
-    - name: Set up planning runtime
-      if: inputs.command == 'plan'
-      uses: astral-sh/setup-uv@v9.0.0
-      with:
-        version: '0.13.4'
-        enable-cache: true
-        cache-dependency-glob: ${{ github.action_path }}/../../uv.lock
     - name: Install Airlock
       shell: bash
       run: uv sync --project "$GITHUB_ACTION_PATH/../.." --locked --package zyplux-airlock --no-dev

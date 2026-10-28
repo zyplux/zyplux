@@ -68,7 +68,7 @@
 
 ### 14.4.7 reads release history once for all targets
 
-### 14.4.8 rejects action repositories outside the checkout
+### 14.4.8 reads action release history from the checkout
 
 ## 14.6 reporting through Cerberus
 

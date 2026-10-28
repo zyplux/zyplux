@@ -11,7 +11,6 @@ from airlock.contracts import (
     STRING,
     TARGET_SPEC,
     VERSION_OBJECT,
-    ActionSpec,
     ContainerSpec,
     PackageIdentity,
     ReleaseTarget,
@@ -117,15 +116,10 @@ def build_release_target(root: Path, spec: TargetSpec, package: PackageIdentity)
     directory = resolve_repo_path(root, spec.manifest).parent
     build_context = None
     dockerfile = None
-    action_directory = None
     if isinstance(spec, ContainerSpec):
         build_context = resolve_repo_path(root, spec.build_context or str(Path(spec.manifest).parent))
         dockerfile = None if spec.dockerfile is None else resolve_repo_path(root, spec.dockerfile)
-    if isinstance(spec, ActionSpec):
-        action_directory = directory if spec.path is None else resolve_repo_path(root, spec.path)
-    return ReleaseTarget(
-        spec, spec.package_name or package.name, package.version, directory, build_context, dockerfile, action_directory
-    )
+    return ReleaseTarget(spec, spec.package_name or package.name, package.version, directory, build_context, dockerfile)
 
 
 def load_targets(root: Path | None = None) -> list[ReleaseTarget]:

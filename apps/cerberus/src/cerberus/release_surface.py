@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from airlock import github
-from airlock.actions import validate_action_repository
-from airlock.contracts import ActionSpec, PackageSpec
+from airlock.contracts import PackageSpec
 from airlock.errors import RELEASE_ERRORS
 from airlock.registries import has_package_artifacts
 from airlock.targets import build_release_target, parse_manifest, parse_package, parse_stable_version, resolve_repo_path
@@ -15,9 +14,7 @@ from cerberus.model import Finding, Status
 from cerberus.source import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from airlock.contracts import PublishedRelease, ReleaseTarget, TargetSpec
+    from airlock.contracts import ReleaseTarget, TargetSpec
     from semantic_version import Version
 
     from cerberus.context import Context
@@ -175,20 +172,13 @@ def validate_target(
     return validate_published(repo, ctx, lookup, release, baseline)
 
 
-def fetch_target_history(specs: list[TargetSpec], directory: Path) -> list[PublishedRelease]:
-    for spec in specs:
-        if isinstance(spec, ActionSpec):
-            validate_action_repository(spec, directory)
-    return github.fetch_release_history(directory=directory) if specs else []
-
-
 def check_release_surface(repo: Repo, ctx: Context, base: str | None = None) -> list[Finding]:
     branch = os.getenv("GITHUB_BASE_REF")
     base = base or (f"origin/{branch}" if branch else None)
     try:
         specs = parse_manifest(ctx.file(repo, "airlock_targets.toml") or "")
         base_specs = load_specs_at_ref(repo, ctx, base) if base and specs else []
-        history = fetch_target_history(specs, ctx.source.root)
+        history = github.fetch_release_history(directory=ctx.source.root) if specs else []
     except (*RELEASE_ERRORS, GitHistoryUnavailableError) as exc:
         return [Finding(Status.ERROR, f"cannot check release contents: {exc}")]
     findings = []
