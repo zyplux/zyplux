@@ -8,23 +8,27 @@
 
 </div>
 
+Apps provide commands and actions; packages provide reusable libraries and configuration.
+
 ## Published packages
 
 | Package                                          | Registry | What it is                                                                       |
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
-| [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Org-invariant linter: CI workflows, justfiles, CODEOWNERS, coverage, releases |
-| [@zyplux/cz](apps/cz)                            | npm      | Repo automation CLI: PR flow, workspace maintenance, cleanup                  |
-| [zyplux-airlock](apps/airlock) | PyPI | Release preparation and publication with native pnpm |
+| [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Repository guard: source classification and quality/release checks |
+| [@zyplux/cz](apps/cz)                            | npm      | Repository helper CLI: PRs, maintenance, reports and file chunking                  |
+| [zyplux-airlock](apps/airlock) | PyPI | Release CLI: versions, changelogs and publication |
+| [zyplux-clipy](apps/clipy) | PyPI | Python CLI helpers: repository metrics and terminal tools |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |
 | [@zyplux/eslint-config](packages/eslint-config)  | npm      | Shared ESLint flat config and custom rules                                       |
 | [@zyplux/tsconfig](packages/tsconfig)            | npm      | Shared TypeScript presets                                                        |
-| [@zyplux/util](packages/util-ts)                 | npm      | Node utilities: assertions, polling, zod-validated parsing, git/gh shell harness |
-| [zyplux-util](packages/util_py)                  | PyPI     | Python counterpart of the shared utilities                                       |
+| [@zyplux/util](packages/util-ts)                 | npm      | Shared TypeScript/Node library: parsing, polling and shell utilities |
 | [@zyplux/spectra](packages/spectra)         | npm      | Vitest fixtures, matchers, polling, and journal reporting                            |
 | [setup-pm](apps/action-setup-pm) | GitHub | Cached pnpm and uv setup for dual workspaces |
-| [Airlock](apps/action-airlock) | GitHub | Plan and publish reviewed workspace releases |
+| [Airlock](apps/action-airlock) | GitHub | GitHub Actions entry point for the Airlock release CLI |
 
-Each package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock-targets.toml](airlock-targets.toml).
+Local app: [token-stats](apps/token_stats) compares Python tokenizers. [zyplux-util](packages/util_py) is deprecated; it contained no utility functions.
+
+Each app or package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock-targets.toml](airlock-targets.toml).
 
 For releasable changes, run `pnpm change`, then `pnpm release:prepare` before review. Each GitHub release contains its target version's reviewed changelog entry. See the [release workflow](.changeset/README.md).
 

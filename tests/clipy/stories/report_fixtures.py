@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 from airlock import notes
-from cerberus import code_metrics, fingerprint
-from cerberus.cli import app
+from cerberus.cli import app as guard_app
+from clipy import code_metrics, fingerprint
+from clipy.cli import app
 from tiktoken import Encoding
 from typer.testing import CliRunner
 
@@ -48,6 +49,10 @@ class ReportRepo:
     def invoke(*args: str) -> Result:
         return CliRunner().invoke(app, list(args))
 
+    @staticmethod
+    def check_readiness() -> Result:
+        return CliRunner().invoke(guard_app, ["--check", "release_readiness"])
+
     def read(self, path: str) -> str:
         return (self.root / path).read_text()
 
@@ -57,6 +62,14 @@ def report_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReportRepo:
     repo = ReportRepo(tmp_path)
     repo.git("init", "-q")
     monkeypatch.chdir(tmp_path)
+
+    def write_graph(*args: str, cwd: Path) -> str:
+        assert args == ("pnpm", "exec", "cz", "workspace-graph", str(repo.root))
+        assert cwd == repo.root
+        repo.write("WORKSPACE_GRAPH.md", "# Workspace Dependency Graph\n\n```mermaid\nflowchart LR\n    A --> B\n```\n")
+        return ""
+
+    monkeypatch.setattr(fingerprint, "run", write_graph)
     return repo
 
 

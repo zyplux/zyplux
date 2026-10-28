@@ -203,7 +203,7 @@ def test_6_9_1_type_checks_a_configured_production_workspace_outside_the_default
 ) -> None:
     result = run_pyrefly(
         paths=["tools/lint/src/lint/cli.py"],
-        config_toml='[source]\nproduction_roots = ["tools/*"]\n',
+        config_toml='[source_oracle.types.prod]\nroots = ["tools/*"]\n',
     )
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: tools/lint/src")]
@@ -228,7 +228,7 @@ def test_6_4_4_requires_coverage_for_tests_inside_a_production_workspace(
 def test_6_9_2_supports_production_roots_at_any_directory_depth(run_pyrefly: RunPyrefly, fail: MakeFinding) -> None:
     result = run_pyrefly(
         paths=["services/internal/worker/src/worker.py"],
-        config_toml='[source]\nproduction_roots = ["services/internal/*"]\n',
+        config_toml='[source_oracle.types.prod]\nroots = ["services/internal/*"]\n',
     )
 
     assert result.findings == [fail("pyrefly.toml project-includes does not cover: services/internal/worker/src")]

@@ -6,7 +6,7 @@ scope = "@zyplux"
 kind = "pypi"
 label = "zyplux-airlock"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:1a34ed75f0151f52f390fd4b50bb6d332558ed8bb378ea1a95c7102e8cec45d6"
+content_hash = "sha256:1334840824e32d4199c52f61766bfae131961f4a9e8859e7c8a0e07a0359f44c"
 requires = []
 
 [action-airlock]
@@ -16,7 +16,7 @@ repository = "zyplux/zyplux"
 version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-content_hash = "sha256:64b9702881ba4d6da5b4caf0ea8c8c8a1a69de13cab7c2f320cbd323d5ceab26"
+content_hash = "sha256:cc946c69fdcc96a989c0467b728799bec7b714857e8b26f3d4b5e68c1370916a"
 
 [setup-pm]
 kind = "action"
@@ -52,22 +52,15 @@ requires = []
 [cz]
 kind = "npm"
 version = { file = "apps/cz/package.json", json = "version" }
-content_hash = "sha256:ef774b670cbe78ccd4752731548aa928e0fdc73286575991692dc43ca164c547"
+content_hash = "sha256:385948b437afd041083ff1ebfcc71c7ecffff0c6f26839ab571effc20b001eac"
 requires = ["util-v0.9.3"]
 
 [cerberus]
 kind = "pypi"
 label = "zyplux-cerberus"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:b9e7108ccb8923775ce648a83b0db2162e898d8aad8743811f5ea605aba65b73"
+content_hash = "sha256:ba47edaa668076f9bc13d79b072f247c794231edfd9d7ed31bc330f03b0a3012"
 requires = ["airlock-v2.2.0"]
-
-[util-py]
-kind = "pypi"
-label = "zyplux-util"
-version = { file = "packages/util_py/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:3e4be0af069509e86b4b0817ea283f122bdae6c1be2dd36ddb8af29e750db777"
-requires = []
 
 [totchef]
 kind = "pypi"
@@ -75,3 +68,10 @@ label = "totchef"
 version = { file = "apps/totchef/pyproject.toml", regex = '^version = "([^"]+)"' }
 content_hash = "sha256:5e399b1497803588c60e5420a7268e74d62360a6a38146a5284247222e3660e4"
 requires = []
+
+[clipy]
+kind = "pypi"
+label = "zyplux-clipy"
+version = { file = "apps/clipy/pyproject.toml", regex = '^version = "([^"]+)"' }
+content_hash = "sha256:4c63b64e4bd32d90ea2761e9dd58a4a7fc26c9e513c350d9d8144c7bcadb5729"
+requires = ["airlock-v2.2.0", "cerberus-v0.27.0"]

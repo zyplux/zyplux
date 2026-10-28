@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import Repo
-    from cerberus.source_scope import SourceScope
+    from cerberus.source_oracle import SourceOracle
 
 _SUBTREE_SUFFIX = "/**"
 RELEASE_AGE_MINUTES = 1440
@@ -87,5 +87,5 @@ def ts_member_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     return [""]
 
 
-def list_source_members(dirs: list[str], source: SourceScope) -> list[str]:
+def list_source_members(dirs: list[str], source: SourceOracle) -> list[str]:
     return [directory for directory in dirs if not source.classify_directory(directory).is_test]

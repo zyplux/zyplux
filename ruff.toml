@@ -17,9 +17,6 @@ ignore = [
     "start-process-with-partial-path",   # tooling (git, just, pnpm) is intentionally invoked by name off PATH
 ]
 
-[lint.isort]
-known-third-party = ["coverage"]
-
 [lint.per-file-ignores]
 "**/tests/**" = [
     "implicit-namespace-package", # the tests tree is deliberately not an importable package (pytest rootdir layout)

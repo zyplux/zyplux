@@ -1,6 +1,6 @@
 # Airlock
 
-Airlock is a Python 3.14+ CLI. It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
+The release CLI (Python 3.14+). It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
 
 *How does a code change become a published release?*
 
@@ -34,7 +34,7 @@ pnpm release:prepare
 ./just lint typecheck
 ```
 
-With Cerberus installed, `uv run cerberus fingerprint` prepares versions, generates repository reports, then calculates release fingerprints. See [repository reports](../cerberus/README.md#repository-reports).
+With CZ and Clipy installed, `cz fingerprint` prepares versions, generates repository reports, then calculates release fingerprints. See [repository reports](../cz/README.md#repository-reports).
 
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
 

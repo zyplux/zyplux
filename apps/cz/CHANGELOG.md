@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.16.0
+
+### Minor Changes
+
+- Add workspace dependency diagrams, balanced file chunking and commands that delegate repository statistics and release preparation to Clipy.
+
 ## 0.15.0
 
 ### Minor Changes

@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 import typer
 from airlock.notes import prepare_release
-from airlock.proc import find_root
+from airlock.proc import find_root, run
 from airlock.targets import load_targets
 
-from cerberus import code_metrics, workspace_graph
+from clipy import code_metrics
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,7 +18,7 @@ def prepare_fingerprint(path: Path) -> None:
     root = find_root(path)
 
     def write_reports() -> None:
-        typer.echo(f"wrote {workspace_graph.write_report(root)}")
+        run("pnpm", "exec", "cz", "workspace-graph", str(root), cwd=root)
         typer.echo(f"wrote {code_metrics.write_report(root)}")
 
     if (root / "airlock-targets.toml").is_file() and load_targets(root):

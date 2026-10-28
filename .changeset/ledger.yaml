@@ -17,6 +17,10 @@
   dir: apps/cz
   intents:
     - shared-release-commands
+'@zyplux/cz@0.16.0':
+  dir: apps/cz
+  intents:
+    - gentle-owls-report
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
@@ -62,6 +66,10 @@ zyplux-cerberus@0.27.0:
   dir: apps/cerberus
   intents:
     - loud-rabbits-enjoy
+zyplux-clipy@0.1.0:
+  dir: apps/clipy
+  intents:
+    - bright-foxes-measure
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

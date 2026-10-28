@@ -16,19 +16,12 @@ CHECK_ID = "pytest"
 PYPROJECT = "pyproject.toml"
 
 _OK_MESSAGE = "pytest coverage gate enforces >= 90% ([tool.coverage.report] fail_under)"
-_SELECTION = """
-[tool.pytest.ini_options]
-addopts = "-p cerberus --cov --cov-report=term-missing"
-[tool.coverage.run]
-plugins = ["cerberus.coverage_plugin"]
-"""
-_VALID_CONFIG = "[tool.coverage.report]\nfail_under = 90\n" + _SELECTION
 
 
 @pytest.fixture
 def run_pytest_coverage(run_check_with_files: RunCheckWithFiles) -> RunPytestCoverage:
     def _run(pyproject: str | None) -> CheckResult:
-        files = {} if pyproject is None else {PYPROJECT: pyproject + _SELECTION, "app.py": ""}
+        files = {} if pyproject is None else {PYPROJECT: pyproject, "app.py": ""}
         return run_check_with_files(CHECK_ID, files)
 
     return _run
@@ -92,43 +85,3 @@ def test_18_3_2_passes_when_fail_under_meets_or_exceeds_the_required_floor(
     result = run_pytest_coverage(pyproject)
 
     assert result.findings == [ok(_OK_MESSAGE)]
-
-
-@pytest.mark.parametrize(
-    ("config", "message"),
-    [
-        (_VALID_CONFIG.replace('plugins = ["cerberus.coverage_plugin"]', "plugins = []"), "plugins must include"),
-        (_VALID_CONFIG.replace("-p cerberus ", ""), "load the shared discovery policy"),
-        (_VALID_CONFIG.replace("--cov ", "--cov=api "), "without package selectors"),
-        (_VALID_CONFIG + 'omit = ["apps/api/**"]\n', "not coverage run.omit"),
-    ],
-)
-def test_18_4_1_requires_source_and_discovery_selection_to_come_from_cerberus(
-    run_check_with_files: RunCheckWithFiles, config: str, message: str
-) -> None:
-    result = run_check_with_files(CHECK_ID, {PYPROJECT: config, "apps/api/src/api.py": ""})
-    assert any(message in finding.message for finding in result.problems)
-
-
-def test_18_4_2_detects_test_directories_missing_from_pytest_discovery(run_check_with_files: RunCheckWithFiles) -> None:
-    config = _VALID_CONFIG.replace("[tool.pytest.ini_options]", '[tool.pytest.ini_options]\ntestpaths = ["tests/unit"]')
-    result = run_check_with_files(
-        CHECK_ID,
-        {
-            PYPROJECT: config,
-            "apps/api/src/api.py": "",
-            "checks/test_api.py": "",
-            "tests/demo/test_demo.py": "",
-        },
-        '[source]\ndemo_roots = ["tests/demo"]\n',
-    )
-    assert len(result.problems) == 1
-    assert (
-        result.problems[0].message
-        == "pyproject.toml pytest testpaths does not collect eligible tests: checks/test_api.py"
-    )
-
-
-def test_18_4_3_does_not_require_tests_for_a_demo_only_repository(run_check_with_files: RunCheckWithFiles) -> None:
-    result = run_check_with_files(CHECK_ID, {PYPROJECT: "[project]\n", "demo/app.py": ""})
-    assert result.status.name == "SKIP"

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cerberus import workspaces
-from cerberus.source_scope import SourceKind
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -178,7 +177,7 @@ def _py_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
         packages = workspaces.member_dirs(paths, members, "pyproject.toml")
     else:
         packages = [""] if isinstance(data.get("project"), dict) else []
-    return [package for package in packages if ctx.config.source.classify_directory(package).requires_tests]
+    return [package for package in packages if ctx.config.source_oracle.classify_directory(package).needs_tests]
 
 
 def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
@@ -265,7 +264,7 @@ def _check_group(res: CheckResult, ctx: Context, repo: Repo, group: _Group) -> N
 
 
 def run_story_check(repo: Repo, ctx: Context, res: CheckResult, language: Language) -> None:
-    paths = [path for path in ctx.paths(repo) if ctx.config.source.classify(path).kind is not SourceKind.DEMO]
+    paths = ctx.paths(repo)
     packages = language.package_dirs(repo, ctx, paths)
     if not packages:
         res.skip(f"no {language.name} packages")

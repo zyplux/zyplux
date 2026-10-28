@@ -3,19 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from repository_fixture import read_row
+from report_fixtures import read_row
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from repository_fixture import ReportRepo
+    from report_fixtures import ReportRepo
 
 pytestmark = pytest.mark.usefixtures("metrics_encoding")
 
 TS_SOURCE = "// tally the total\nconst total = 1 + 2;\n\nconst label = total > 2 ? 'big' : 'small';\n"
 
 
-def test_37_1_1_splits_typescript_into_prose_code_and_branches(report_repo: ReportRepo) -> None:
+def test_3_1_1_splits_typescript_into_prose_code_and_branches(report_repo: ReportRepo) -> None:
     report_repo.write("tally.ts", TS_SOURCE)
     report_repo.stage()
     result = report_repo.invoke("stats")
@@ -51,7 +51,7 @@ def test_37_1_1_splits_typescript_into_prose_code_and_branches(report_repo: Repo
         ("Dockerfile", '# base image\nFROM node:26\nRUN echo "hello"\n', "Dockerfile"),
     ],
 )
-def test_37_1_2_measures_each_supported_grammar_without_network_access(
+def test_3_1_2_measures_each_supported_grammar_without_network_access(
     report_repo: ReportRepo, path: str, source: str, language: str
 ) -> None:
     report_repo.write(path, source)
@@ -63,7 +63,7 @@ def test_37_1_2_measures_each_supported_grammar_without_network_access(
     assert int(read_row(report, "Lexical Token and CST Node Counts", language)["Total"]) > 0
 
 
-def test_37_1_3_keeps_prose_unknown_languages_and_binaries_distinct(report_repo: ReportRepo) -> None:
+def test_3_1_3_keeps_prose_unknown_languages_and_binaries_distinct(report_repo: ReportRepo) -> None:
     report_repo.write("readme.md", "# Title\n\nSome prose.\n")
     report_repo.write("notes.txt", "first\n\nsecond\n")
     report_repo.write("logo.png", "image\0binary")
@@ -76,7 +76,7 @@ def test_37_1_3_keeps_prose_unknown_languages_and_binaries_distinct(report_repo:
     assert read_row(report, "Line Counts", "**Total**")["Files"] == "2"
 
 
-def test_37_1_4_rolls_up_typescript_without_counting_it_twice(report_repo: ReportRepo) -> None:
+def test_3_1_4_rolls_up_typescript_without_counting_it_twice(report_repo: ReportRepo) -> None:
     report_repo.write("a.ts", TS_SOURCE)
     report_repo.write("ui.tsx", "export const ui = <p>hello</p>;\n")
     report_repo.stage()
@@ -86,7 +86,7 @@ def test_37_1_4_rolls_up_typescript_without_counting_it_twice(report_repo: Repor
     assert read_row(report, "Line Counts", "**Total**")["Files"] == "2"
 
 
-def test_37_2_1_reads_tracked_worktree_content_without_changing_the_index(report_repo: ReportRepo) -> None:
+def test_3_2_1_reads_tracked_worktree_content_without_changing_the_index(report_repo: ReportRepo) -> None:
     report_repo.write("readme.md", "# Original\n")
     report_repo.stage()
     before = report_repo.git("ls-files", "--stage")
@@ -98,7 +98,7 @@ def test_37_2_1_reads_tracked_worktree_content_without_changing_the_index(report
     assert report_repo.git("ls-files", "--stage") == before
 
 
-def test_37_2_2_excludes_lockfiles_deleted_files_and_custom_report_destinations(report_repo: ReportRepo) -> None:
+def test_3_2_2_excludes_lockfiles_deleted_files_and_custom_report_destinations(report_repo: ReportRepo) -> None:
     report_repo.write("readme.md", "# Title\n")
     report_repo.write("pnpm-lock.yaml", "lockfileVersion: 9\n")
     report_repo.write("uv.lock", "version = 1\n")
@@ -110,8 +110,11 @@ def test_37_2_2_excludes_lockfiles_deleted_files_and_custom_report_destinations(
     assert read_row(report_repo.read("report.md"), "Line Counts", "**Total**")["Files"] == "1"
 
 
-def test_37_2_3_uses_shared_production_ownership_in_scoped_reports(report_repo: ReportRepo) -> None:
-    report_repo.write("cerberus.toml", '[source]\nproduction_roots = ["services/*"]\ndemo_roots = ["services/demo"]\n')
+def test_3_2_3_uses_shared_production_ownership_in_scoped_reports(report_repo: ReportRepo) -> None:
+    report_repo.write(
+        "cerberus.toml",
+        '[source_oracle.types.prod]\nroots = ["services/*"]\n[source_oracle.types.demo]\nroots = ["services/demo"]\n',
+    )
     report_repo.write("services/api/server.ts", TS_SOURCE)
     report_repo.write("services/api/server.test.ts", TS_SOURCE)
     report_repo.write("services/demo/server.ts", TS_SOURCE)
@@ -124,12 +127,12 @@ def test_37_2_3_uses_shared_production_ownership_in_scoped_reports(report_repo: 
     assert read_row(report, "Production Line Counts", ".ts")["Files"] == "1"
 
 
-def test_37_3_1_reports_empty_scopes_and_missing_repositories(report_repo: ReportRepo, tmp_path: Path) -> None:
+def test_3_3_1_reports_empty_scopes_and_missing_repositories(report_repo: ReportRepo, tmp_path: Path) -> None:
     empty = report_repo.invoke("stats")
     assert empty.exit_code == 1
-    assert "no tracked files" in empty.output
+    assert "no tracked files" in str(empty.exception)
     outside = tmp_path.parent / "outside"
     outside.mkdir()
     missing = report_repo.invoke("stats", str(outside))
     assert missing.exit_code == 1
-    assert "not inside a git repository" in missing.output
+    assert "not inside a git repository" in str(missing.exception)

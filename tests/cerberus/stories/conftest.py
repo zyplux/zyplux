@@ -1,11 +1,9 @@
 """Registers `seam_fixtures` (the trusted seam to cerberus internals) with pytest."""
 
 from release_fixture import release
-from repository_fixture import metrics_encoding, release_preparation, report_repo, unchanged_versions
 from seam_fixtures import (
     bite_module_names,
     check_result,
-    configure_coverage,
     ctx,
     error,
     fail,
@@ -35,7 +33,6 @@ from seam_fixtures import (
 __all__ = [
     "bite_module_names",
     "check_result",
-    "configure_coverage",
     "ctx",
     "error",
     "fail",
@@ -46,16 +43,13 @@ __all__ = [
     "known_check_ids",
     "local_source",
     "make_context",
-    "metrics_encoding",
     "no_git",
     "npm_tool_pins",
     "npm_tool_spec",
     "ok",
     "register_fake_check",
     "release",
-    "release_preparation",
     "repo",
-    "report_repo",
     "rumdl_canonical",
     "run_check",
     "run_check_on_disk",
@@ -64,5 +58,4 @@ __all__ = [
     "scope",
     "skip",
     "status",
-    "unchanged_versions",
 ]

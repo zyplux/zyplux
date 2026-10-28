@@ -35,7 +35,6 @@ import pytest
 from airlock import proc as airlock_proc
 from airlock import registries
 from cerberus import bites, config, context, proc, tool_pins
-from cerberus.coverage_plugin import SourceCoverage
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
 from cerberus.source import GitHistoryUnavailableError, LocalSource
@@ -45,7 +44,6 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from cerberus.context import Context
-    from coverage import Coverage
 
 type RunCheck = Callable[[str, Repo, Context], CheckResult]
 
@@ -62,12 +60,6 @@ type MakeContext = Callable[..., Context]
 type RegisterFakeCheck = Callable[[str, Callable[[Repo, Context], CheckResult]], None]
 type MakeFinding = Callable[[str], Finding]
 type NpmToolSpec = Callable[[str], str]
-type ConfigureCoverage = Callable[[Coverage], None]
-
-
-@pytest.fixture
-def configure_coverage() -> ConfigureCoverage:
-    return SourceCoverage().configure
 
 
 @pytest.fixture

@@ -61,12 +61,8 @@ allowed_setup_actions = [
     "./apps/action-setup-pm",
 ]
 
-[source]
-production_roots = ["apps/*", "packages/*", "src"]
-infrastructure_roots = ["infra"]
-tooling_roots = ["tools", "scripts"]
-demo_roots = ["demo", "examples", "apps/*/examples", "packages/*/examples"]
-test_roots = ["tests", "doubles"]
+[source_oracle]
+default_type = "infra"
 test_exempt_files = []
 test_files = [
     "**/tests/**",
@@ -77,6 +73,31 @@ test_files = [
     "**/*_test.py",
     "**/conftest.py",
 ]
+
+[source_oracle.types.prod]
+roots = ["apps/*", "packages/*", "src", "tools/*"]
+needs_tests = true
+allowed_child_types = ["prod", "infra", "demo", "test", "docs"]
+
+[source_oracle.types.infra]
+roots = ["infra", "scripts", ".github"]
+needs_tests = true
+allowed_child_types = ["prod", "infra", "demo", "test", "docs"]
+
+[source_oracle.types.demo]
+roots = ["demo", "examples", "apps/*/examples", "packages/*/examples"]
+needs_tests = false
+allowed_child_types = []
+
+[source_oracle.types.test]
+roots = ["tests", "doubles", "scripts/merge-coverage.ts"]
+needs_tests = false
+allowed_child_types = ["test", "demo", "docs"]
+
+[source_oracle.types.docs]
+roots = ["docs", "apps/*/docs", "packages/*/docs"]
+needs_tests = false
+allowed_child_types = []
 
 [pyrefly]
 error_kinds = [

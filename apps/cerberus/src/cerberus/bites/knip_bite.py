@@ -9,7 +9,7 @@ packages knip cannot see consumed. Knip's defaults are the baseline.
 by being consumed by other production code, never by tests alone.
 `includeEntryExports` puts a workspace's own `exports["."]` surface under
 scrutiny instead of trusting it as public API, and `ignoreWorkspaces` drops
-every member outside `[source].production_roots` — test harnesses, dev
+every member outside `[source_oracle.types.prod].roots` — test harnesses, dev
 tooling — so an export only they reach reads as unused. Any glob spelling
 will do: what is checked is the members it resolves to — every non-production
 workspace dropped, no production one with it. Published packages are the exception
@@ -156,7 +156,7 @@ def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], r
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" must be a JSON array of workspace globs')
         return
     members = workspaces.ts_member_dirs(repo, ctx, ctx.paths(repo))
-    production = {m for m in members if not m or ctx.config.source.is_production_file(f"{m}/{PACKAGE_JSON}")}
+    production = {m for m in members if not m or ctx.config.source_oracle.is_production_file(f"{m}/{PACKAGE_JSON}")}
     dropped = {member for member in members if workspaces.matches_globs(member, globs)}
     kept = sorted(set(members) - dropped - production)
     dropped_production = sorted(dropped & production)

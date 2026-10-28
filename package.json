@@ -32,6 +32,7 @@
     "knip": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@zyplux/cz": "workspace:*"
   }
 }

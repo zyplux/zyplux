@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, override
 
 import typer
-import yaml
 from airlock.errors import RELEASE_ERRORS
+from airlock.proc import find_root
 from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
 
-from cerberus import __version__, bites, code_metrics, config, context, fingerprint, workspace_graph
+from cerberus import __version__, bites, config, context
 from cerberus.graph import build as build_graph
 from cerberus.graph import explain_text, query_text
 from cerberus.graph import load as load_graph
@@ -186,42 +188,17 @@ def graph(
     console.print(f"wrote {out_dir / 'graph.json'}")
 
 
-@app.command(help="Report tracked code metrics, production scope and BPE token counts as Markdown.")
-def stats(
-    directory: Annotated[Path, typer.Argument(help="Directory to measure (default: current directory).")] = Path(),
-    out: Annotated[Path | None, typer.Option("--out", "-o", help="Report destination.")] = None,
-    title: Annotated[str | None, typer.Option(help="Measured scope name in the report heading.")] = None,
+@app.command(name="source-oracle", help="Print source classifications for repository checks and reports as JSON.")
+def classify_sources(
+    path: Annotated[Path, typer.Argument(help="Path inside the repository.")] = Path(),
 ) -> None:
     try:
-        destination = code_metrics.write_report(directory, title=title, out=out)
-    except (*RELEASE_ERRORS, code_metrics.GitError) as exc:
-        err.print(str(exc), markup=False)
-        raise typer.Exit(code=1) from exc
-    console.print(f"wrote {destination}", markup=False)
-
-
-@app.command(name="workspace-graph", help="Write the Python and TypeScript workspace dependency diagram.")
-def workspace_graph_command(
-    path: Annotated[Path, typer.Argument(help="Path inside the repository (default: current directory).")] = Path(),
-) -> None:
-    try:
-        destination = workspace_graph.write_report(path)
-    except (*RELEASE_ERRORS, yaml.YAMLError) as exc:
-        err.print(str(exc), markup=False)
-        raise typer.Exit(code=1) from exc
-    console.print(f"wrote {destination}", markup=False)
-
-
-@app.command(
-    name="fingerprint",
-    help="Prepare configured releases, the workspace diagram and tracked code statistics, in that order.",
-)
-def fingerprint_command(
-    path: Annotated[Path, typer.Argument(help="Path inside the repository (default: current directory).")] = Path(),
-) -> None:
-    try:
-        fingerprint.prepare_fingerprint(path)
-    except (*RELEASE_ERRORS, code_metrics.GitError, yaml.YAMLError) as exc:
+        root = find_root(path)
+        ctx = context.local_context(config.load(repo_root=root), root)
+        repo = ctx.repos()[0]
+        classifications = {path: asdict(ctx.config.source_oracle.classify(path)) for path in ctx.paths(repo)}
+        typer.echo(json.dumps(classifications, separators=(",", ":")))
+    except RELEASE_ERRORS as exc:
         err.print(str(exc), markup=False)
         raise typer.Exit(code=1) from exc
 

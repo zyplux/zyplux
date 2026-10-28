@@ -17,11 +17,3 @@
 ### 18.3.1 fails when fail under is below the required floor
 
 ### 18.3.2 passes when fail under meets or exceeds the required floor
-
-## 18.4 deriving selection from shared ownership
-
-### 18.4.1 requires source and discovery selection to come from cerberus
-
-### 18.4.2 detects test directories missing from pytest discovery
-
-### 18.4.3 does not require tests for a demo only repository

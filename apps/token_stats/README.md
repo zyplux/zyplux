@@ -1,6 +1,6 @@
 # token-stats
 
-Profiles a Python codebase's token counts under several tokenizers side by side — native compiler tokens, AST node counts, and three tiktoken encodings (`cl100k`, `o200k`, `gpt2`) — so the numbers, and how long each counter takes, can be compared.
+A tokenizer comparison app. Profiles a Python codebase's token counts under several tokenizers side by side — native compiler tokens, AST node counts, and three tiktoken encodings (`cl100k`, `o200k`, `gpt2`) — so the numbers, and how long each counter takes, can be compared.
 
 ## Usage
 

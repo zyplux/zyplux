@@ -4,14 +4,13 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
-    "clipy",
     "token-stats",
     "totchef",
     "zyplux",
     "zyplux-airlock",
     "zyplux-cerberus",
+    "zyplux-clipy",
     "zyplux-setup-pm",
-    "zyplux-util",
 ]
 
 [[package]]
@@ -146,25 +145,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9d/8a/b618149cc5207943a0242068d7a27897f56a62947b5a039085f2a22029f8/charset_normalizer-3.5.2-cp37-abi3-win_amd64.whl", hash = "sha256:9f56f72050826f63dcee7a7f55b0a77168cb3bfc553fd405e7f8f9ece75a4036", size = 200092, upload-time = "2026-09-30T04:38:49.707Z" },
     { url = "https://files.pythonhosted.org/packages/03/cf/4c66866fa9e2b1c78e3c911516d1de497a677b7ac60f1eceda74ce777ca3/charset_normalizer-3.5.2-cp37-abi3-win_arm64.whl", hash = "sha256:40ab6bffa02ae10a0581e6c198be7d2d8ca5c2a0c64e4ed3465d766df457573e", size = 294363, upload-time = "2026-09-30T04:38:51.312Z" },
     { url = "https://files.pythonhosted.org/packages/fc/ad/d07d7862a62ffa6d79d68074d14823243dd235a77c45262acbf6adeb28bf/charset_normalizer-3.5.2-py3-none-any.whl", hash = "sha256:b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685", size = 68872, upload-time = "2026-09-30T04:39:21.828Z" },
-]
-
-[[package]]
-name = "clipy"
-version = "0.1.0"
-source = { editable = "apps/clipy" }
-dependencies = [
-    { name = "psutil" },
-    { name = "rich" },
-    { name = "typer" },
-    { name = "websockets" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "psutil", specifier = ">=7.2.2" },
-    { name = "rich", specifier = ">=15.0.0" },
-    { name = "typer", specifier = ">=0.27.3" },
-    { name = "websockets", specifier = ">=17.3" },
 ]
 
 [[package]]
@@ -1457,13 +1437,37 @@ name = "zyplux-cerberus"
 version = "0.27.0"
 source = { editable = "apps/cerberus" }
 dependencies = [
-    { name = "coverage" },
     { name = "networkx" },
-    { name = "packaging" },
-    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "rust-just" },
     { name = "semantic-version" },
+    { name = "tree-sitter" },
+    { name = "tree-sitter-python" },
+    { name = "tree-sitter-typescript" },
+    { name = "typer" },
+    { name = "zyplux-airlock" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "networkx", specifier = ">=3.7" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "rust-just", specifier = ">=1.59.0" },
+    { name = "semantic-version", specifier = ">=2.10.0" },
+    { name = "tree-sitter", specifier = ">=0.26.0" },
+    { name = "tree-sitter-python", specifier = ">=0.25.0" },
+    { name = "tree-sitter-typescript", specifier = ">=0.23.2" },
+    { name = "typer", specifier = ">=0.27.3" },
+    { name = "zyplux-airlock", editable = "apps/airlock" },
+]
+
+[[package]]
+name = "zyplux-clipy"
+version = "0.1.0"
+source = { editable = "apps/clipy" }
+dependencies = [
+    { name = "psutil" },
+    { name = "rich" },
     { name = "tiktoken" },
     { name = "tree-sitter" },
     { name = "tree-sitter-bash" },
@@ -1478,18 +1482,15 @@ dependencies = [
     { name = "tree-sitter-typescript" },
     { name = "tree-sitter-yaml" },
     { name = "typer" },
+    { name = "websockets" },
     { name = "zyplux-airlock" },
+    { name = "zyplux-cerberus" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "coverage", specifier = ">=7.17.0" },
-    { name = "networkx", specifier = ">=3.7" },
-    { name = "packaging", specifier = ">=26.3" },
-    { name = "pydantic", specifier = ">=2.14.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rust-just", specifier = ">=1.59.0" },
-    { name = "semantic-version", specifier = ">=2.10.0" },
+    { name = "psutil", specifier = ">=7.2.2" },
+    { name = "rich", specifier = ">=15.0.0" },
     { name = "tiktoken", specifier = ">=0.14.0" },
     { name = "tree-sitter", specifier = ">=0.26.0" },
     { name = "tree-sitter-bash", specifier = ">=0.25.1" },
@@ -1504,15 +1505,12 @@ requires-dist = [
     { name = "tree-sitter-typescript", specifier = ">=0.23.2" },
     { name = "tree-sitter-yaml", specifier = ">=0.7.2" },
     { name = "typer", specifier = ">=0.27.3" },
+    { name = "websockets", specifier = ">=17.3" },
     { name = "zyplux-airlock", editable = "apps/airlock" },
+    { name = "zyplux-cerberus", editable = "apps/cerberus" },
 ]
 
 [[package]]
 name = "zyplux-setup-pm"
 version = "1.0.2"
 source = { editable = "apps/action-setup-pm" }
-
-[[package]]
-name = "zyplux-util"
-version = "0.1.2"
-source = { editable = "packages/util_py" }

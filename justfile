@@ -80,15 +80,15 @@ alias d := dump-rules
 
 # Prepare release metadata, the workspace graph and code statistics.
 fingerprint:
-    uv run cerberus fingerprint
+    pnpm run --silent cz fingerprint
 
 # Write tracked code statistics for a directory.
 stats dir='.' *args='':
-    uv run cerberus stats {{ quote(join(invocation_directory(), dir)) }} {{ args }}
+    pnpm run --silent cz stats {{ quote(join(invocation_directory(), dir)) }} {{ args }}
 
 # Write the workspace dependency diagram.
 dep-graph:
-    uv run cerberus workspace-graph
+    pnpm run --silent cz workspace-graph
 
 # Shallow-clone a reference repo into reference_clones/ (optional branch or tag).
 clone repo ref="":

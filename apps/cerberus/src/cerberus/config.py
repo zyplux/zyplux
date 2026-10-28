@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import TYPE_CHECKING, Any
 
-from cerberus.source_scope import SourceScope
+from cerberus.source_oracle import SourceKind, SourceOracle, SourceType
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Config:
-    source: SourceScope
+    source_oracle: SourceOracle
     default_recipe_marker: str
     required_aliases: dict[str, str]
     recommended_aliases: dict[str, str]
@@ -81,25 +81,26 @@ def _from_dict(data: dict[str, Any]) -> Config:
     jscpd = _table(data, "jscpd")
     for section in ("knip", "pyrefly"):
         if "prod_workspaces" in _table(data, section):
-            msg = f"Move [{section}].prod_workspaces to [source].production_roots in cerberus.toml"
+            msg = f"Move [{section}].prod_workspaces to [source_oracle.types.prod].roots in cerberus.toml"
             raise ValueError(msg)
     if "min_coverage" in _table(data, "vitest"):
         message = "Move [vitest].min_coverage to [vitest_coverage].min_coverage in cerberus.toml"
         raise ValueError(message)
-    source = _table(data, "source")
+    source_oracle = _table(data, "source_oracle")
     return Config(
-        source=SourceScope(**{
-            name: tuple(source[name])
-            for name in (
-                "production_roots",
-                "test_files",
-                "infrastructure_roots",
-                "tooling_roots",
-                "demo_roots",
-                "test_roots",
-                "test_exempt_files",
-            )
-        }),
+        source_oracle=SourceOracle(
+            types={
+                SourceKind(name): SourceType(
+                    roots=tuple(settings["roots"]),
+                    needs_tests=settings["needs_tests"],
+                    allowed_child_types=frozenset(SourceKind(child) for child in settings["allowed_child_types"]),
+                )
+                for name, settings in _table(source_oracle, "types").items()
+            },
+            default_type=SourceKind(source_oracle["default_type"]),
+            test_files=tuple(source_oracle["test_files"]),
+            test_exempt_files=tuple(source_oracle["test_exempt_files"]),
+        ),
         default_recipe_marker=justfile["default_recipe_marker"],
         required_aliases=_aliases(required),
         recommended_aliases=_aliases(recommended),
@@ -148,14 +149,17 @@ def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     in for it; either names only what it overrides, key by key.
     """
     data = tomllib.loads(resources.files("cerberus").joinpath("cerberus.toml").read_text())
-    if path is not None:
-        return _from_dict(_overlay(data, tomllib.loads(path.read_text())))
-    repo_toml = repo_root / "cerberus.toml" if repo_root is not None else None
-    if repo_toml is not None and repo_toml.is_file():
-        data = _overlay(data, tomllib.loads(repo_toml.read_text()))
+    repo_toml = path if path is not None else repo_root / "cerberus.toml" if repo_root is not None else None
+    if repo_toml is not None and (path is not None or repo_toml.is_file()):
+        overlay = tomllib.loads(repo_toml.read_text())
+        for kind, settings in _table(_table(overlay, "source_oracle"), "types").items():
+            if kind not in data["source_oracle"]["types"] or set(settings) - {"roots"}:
+                message = f"[source_oracle.types.{kind}] overrides may change only roots; policies are shared defaults"
+                raise ValueError(message)
+        data = _overlay(data, overlay)
     return _from_dict(data)
 
 
-def load_source_scope(repo_root: Path) -> SourceScope:
+def load_source_oracle(repo_root: Path) -> SourceOracle:
     """Load shared defaults overlaid by the repository's cerberus.toml."""
-    return load(repo_root=repo_root).source
+    return load(repo_root=repo_root).source_oracle

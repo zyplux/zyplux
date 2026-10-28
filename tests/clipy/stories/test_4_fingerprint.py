@@ -3,17 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from repository_fixture import read_row
+from report_fixtures import read_row
 
 if TYPE_CHECKING:
-    from repository_fixture import ReleasePreparation, ReportRepo
+    from report_fixtures import ReleasePreparation, ReportRepo
 
 pytestmark = pytest.mark.usefixtures("metrics_encoding")
 
 TARGET = 'scope = "@fixture"\n[app]\nkind = "npm"\n[app.version]\nfile = "package.json"\njson = "version"\n'
 
 
-def test_39_1_1_prepares_releases_then_generates_the_graph_before_measuring_it(
+def test_4_1_1_prepares_releases_then_generates_the_graph_before_measuring_it(
     report_repo: ReportRepo, release_preparation: ReleasePreparation
 ) -> None:
     report_repo.write_package("", name="fixture", version="1.0.0")
@@ -35,7 +35,7 @@ def test_39_1_1_prepares_releases_then_generates_the_graph_before_measuring_it(
 
 
 @pytest.mark.parametrize("manifest", [None, 'scope = "@fixture"\n'])
-def test_39_1_2_skips_release_preparation_without_targets(
+def test_4_1_2_skips_release_preparation_without_targets(
     report_repo: ReportRepo, release_preparation: ReleasePreparation, manifest: str | None
 ) -> None:
     report_repo.write("readme.md", "# Repository\n")
@@ -50,7 +50,7 @@ def test_39_1_2_skips_release_preparation_without_targets(
     assert (report_repo.root / "line_and_token_stats.md").is_file()
 
 
-def test_39_1_3_resolves_explicit_and_nested_paths_to_the_repository_root(
+def test_4_1_3_resolves_explicit_and_nested_paths_to_the_repository_root(
     report_repo: ReportRepo, release_preparation: ReleasePreparation, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     report_repo.write_package("", name="fixture", version="1.0.0")
@@ -70,7 +70,7 @@ def test_39_1_3_resolves_explicit_and_nested_paths_to_the_repository_root(
     "declaration",
     ['kind = "action"\nrepository = "fixture/repository"\n', 'kind = "ghcr"\nlabel = "ghcr.io/fixture/app"\n'],
 )
-def test_39_1_4_fingerprints_release_contents_after_generating_reports(
+def test_4_1_4_fingerprints_release_contents_after_generating_reports(
     report_repo: ReportRepo, declaration: str
 ) -> None:
     report_repo.write_package("", name="fixture", version="1.0.0")
@@ -84,11 +84,11 @@ def test_39_1_4_fingerprints_release_contents_after_generating_reports(
     assert result.exit_code == 0, result.output
     assert (report_repo.root / "WORKSPACE_GRAPH.md").exists()
     assert (report_repo.root / "line_and_token_stats.md").exists()
-    readiness = report_repo.invoke("--check", "release_readiness")
+    readiness = report_repo.check_readiness()
     assert readiness.exit_code == 0, readiness.output
 
 
-def test_39_2_1_stops_before_generating_reports_when_preparation_fails(
+def test_4_2_1_stops_before_generating_reports_when_preparation_fails(
     report_repo: ReportRepo, release_preparation: ReleasePreparation
 ) -> None:
     report_repo.write_package("", name="fixture", version="1.0.0")
@@ -97,12 +97,12 @@ def test_39_2_1_stops_before_generating_reports_when_preparation_fails(
     release_preparation.should_fail = True
     result = report_repo.invoke("fingerprint")
     assert result.exit_code == 1
-    assert "release preparation failed" in result.output
+    assert "release preparation failed" in str(result.exception)
     assert not (report_repo.root / "WORKSPACE_GRAPH.md").exists()
     assert not (report_repo.root / "line_and_token_stats.md").exists()
 
 
-def test_39_2_2_reports_invalid_targets_before_starting_preparation(
+def test_4_2_2_reports_invalid_targets_before_starting_preparation(
     report_repo: ReportRepo, release_preparation: ReleasePreparation
 ) -> None:
     report_repo.write("airlock-targets.toml", "broken = [")

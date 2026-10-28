@@ -1,4 +1,10 @@
-import { IdSchema, RepositorySchema, StringRecordSchema, VersionKeySchema } from '@zyplux/util/contracts';
+import {
+  IdSchema,
+  PyProjectSchema,
+  RepositorySchema,
+  StringRecordSchema,
+  VersionKeySchema,
+} from '@zyplux/util/contracts';
 import * as z from 'zod';
 
 export const DepsCatalogSchema = z.array(z.string());
@@ -19,3 +25,28 @@ const PypiInfoSchema = z.object({ home_page: z.string().nullish(), project_urls:
 export const PypiProjectSchema = z.object({ info: PypiInfoSchema });
 
 export type DepsDevPackage = z.infer<typeof DepsDevPackageSchema>;
+
+const SourceClassificationSchema = z.object({
+  is_test: z.boolean(),
+  kind: z.enum(['prod', 'infra', 'demo', 'test', 'docs']),
+  needs_tests: z.boolean(),
+  root: z.string(),
+});
+export const SourceSnapshotSchema = z.record(z.string(), SourceClassificationSchema);
+
+const PythonWorkspaceSchema = z.object({
+  tool: z
+    .object({
+      uv: z
+        .object({
+          workspace: z
+            .object({ exclude: z.array(z.string()).default([]), members: z.array(z.string()).default([]) })
+            .optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+export const PythonWorkspaceManifestSchema = PyProjectSchema.and(PythonWorkspaceSchema);
+
+export type SourceSnapshot = z.infer<typeof SourceSnapshotSchema>;

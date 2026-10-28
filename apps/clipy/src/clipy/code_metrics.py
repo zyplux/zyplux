@@ -9,10 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from airlock.proc import CommandError, find_root, run
+from cerberus import load_source_oracle
 from tree_sitter import Language, Parser
-
-from cerberus import load_source_scope
-from cerberus.graph.parse import parse_python, parse_typescript
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -249,10 +247,6 @@ def get_parser(grammar_key: str) -> Parser:
 
 
 def parse_source(source: bytes, grammar_key: str) -> Tree:
-    if grammar_key in {".cts", ".mts", ".ts", ".tsx"}:
-        return parse_typescript(grammar_key, source.decode("utf-8", errors="replace"))
-    if grammar_key == ".py":
-        return parse_python(source.decode("utf-8", errors="replace"))
     return get_parser(grammar_key).parse(source)
 
 
@@ -554,8 +548,8 @@ def write_report(directory: Path, *, title: str | None = None, out: Path | None 
         message = f"no tracked files under {directory}"
         raise ValueError(message)
 
-    source_scope = load_source_scope(root)
-    production_paths = {path for path in paths if source_scope.is_production_file(path.relative_to(root).as_posix())}
+    oracle = load_source_oracle(root)
+    production_paths = {path for path in paths if oracle.is_production_file(path.relative_to(root).as_posix())}
     report = build_report(paths, title or name_scope(directory, root), root, production_paths)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
@@ -612,7 +606,7 @@ def build_report(paths: list[Path], title: str, root: Path, production_paths: se
             sections += [
                 "",
                 (
-                    "Production scope: Cerberus source defaults, overlaid by `[source]` in the repository's "
+                    "Production scope: Cerberus source defaults, overlaid by `[source_oracle]` in the repository's "
                     "`cerberus.toml`. Includes assets and configuration under production roots; excludes test files. "
                     "Metrics use the legends above."
                 ),

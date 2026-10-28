@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Add shared fingerprint, workspace graph and code metrics commands. Derive Python testing and coverage from source ownership; demo and test harness code stay linted and typechecked without requiring their own tests. Configure pytest with -p cerberus and bare --cov, and enable cerberus.coverage_plugin instead of handwritten coverage selections.
+- Add shared source classification for production, infrastructure, demo, test and docs. Existing test-presence checks respect category testability, and repository helpers use the same classifications.
 
 ## 0.26.1
 
