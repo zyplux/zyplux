@@ -14,7 +14,13 @@ class CommandError(RuntimeError):
         super().__init__(message)
 
 
-def run(*argv: str, cwd: Path | None = None, stdin: str | None = None, interactive: bool = False) -> str:
+def run(
+    *argv: str,
+    cwd: Path | None = None,
+    stdin: str | None = None,
+    interactive: bool = False,
+    env: dict[str, str] | None = None,
+) -> str:
     executable = shutil.which(argv[0])
     if executable is None:
         msg = f"`{argv[0]}` not found on PATH"
@@ -22,6 +28,7 @@ def run(*argv: str, cwd: Path | None = None, stdin: str | None = None, interacti
     execution = subprocess.run(
         [executable, *argv[1:]],
         cwd=cwd,
+        env=env,
         input=stdin,
         stdin=None if interactive or stdin is not None else subprocess.DEVNULL,
         capture_output=not interactive,

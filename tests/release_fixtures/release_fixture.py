@@ -96,6 +96,8 @@ class ReleaseFixture(CliFixture):
             "gh release download", json.dumps({"image": f"ghcr.io/zyplux/ci@sha256:{'1' * 64}", "version": "3.4.5"})
         )
         self.on("pnpm version")
+        self.on("pnpm config list --json", "{}")
+        self.on("pnpm config get globalconfig", str(self.root / "pnpm-config.yaml"))
         self.on("pnpm install")
         self.on("uv version")
         self.on("uv lock")

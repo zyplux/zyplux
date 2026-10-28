@@ -29,6 +29,7 @@ class Command:
     argv: list[str]
     cwd: str
     stdin: str = ""
+    env: dict[str, str] = field(default_factory=dict)
 
     @property
     def text(self) -> str:
@@ -180,6 +181,8 @@ class CliFixture:
             "GITHUB_BASE_REF",
             "GITHUB_OUTPUT",
             "GITHUB_STEP_SUMMARY",
+            "pnpm_config__auth",
+            "PNPM_CONFIG__AUTH",
         ):
             self.env.pop(name, None)
         return server, thread

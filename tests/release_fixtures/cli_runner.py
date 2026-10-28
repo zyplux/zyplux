@@ -38,6 +38,7 @@ def run_cli(root: Path, env: dict[str, str], args: tuple[str, ...]) -> subproces
                     "argv": argv[1:],
                     "cwd": str(options.get("cwd") or Path.cwd()),
                     "stdin": options.get("input") or "",
+                    "env": options.get("env") or {},
                 },
             )
             response.raise_for_status()

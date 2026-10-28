@@ -36,6 +36,8 @@ pnpm release:prepare
 
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
 
+For GitHub Packages, preparation preserves configured pnpm credentials and falls back to `NODE_AUTH_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token`. Fallback credentials are scoped to the declared GitHub package scopes in the pnpm child environment; lockfile refresh retains the configured dependency registries. No authentication files are written.
+
 Python targets have a private pnpm tracking `package.json` beside `pyproject.toml`; preparation synchronizes the native Python version through uv. Preparation initializes or refreshes every target's fingerprint after versioning. Cerberus's `release_readiness` bite rejects unconsumed fragments, mismatched versions, stale fingerprints and missing or empty changelog entries.
 
 If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.

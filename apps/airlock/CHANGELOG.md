@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.1.1
+
+### Patch Changes
+
+- Reuse GitHub login for private package registry lookups during release preparation while preserving configured pnpm credentials.
+
 ## 2.1.0
 
 ### Minor Changes

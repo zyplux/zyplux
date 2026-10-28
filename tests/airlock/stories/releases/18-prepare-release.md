@@ -13,3 +13,17 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.1.4 propagates a workspace dependency bump through pnpm
 
 ### 18.1.5 directs version lookups to the package publication registry
+
+### 18.1.6 authenticates private preparation with existing github credentials
+
+### 18.1.7 preserves explicit registry authentication
+
+### 18.1.8 keeps public preparation independent of github credentials
+
+### 18.1.9 prepares without a github login when no fallback is available
+
+### 18.1.10 rejects invalid authentication without disclosing credentials
+
+### 18.1.11 adds only missing scope credentials and honors lowercase environment precedence
+
+### 18.1.12 adds authentication without changing dependency registry routes
