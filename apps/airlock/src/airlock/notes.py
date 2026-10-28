@@ -9,11 +9,12 @@ from markdown_it.tree import SyntaxTreeNode
 from airlock import proc
 from airlock.content_hash import update_content_hashes
 from airlock.contracts import PythonTracking
+from airlock.preparation import prepare_metadata, save_preparation
 from airlock.registries import load_npm_registry, load_pnpm_auth
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget
+    from airlock.contracts import PnpmAuth, ReleaseTarget
 
 
 def load_release_notes(directory: Path, version: str) -> str:
@@ -44,16 +45,16 @@ def load_release_notes(directory: Path, version: str) -> str:
 def load_python_version(target: ReleaseTarget) -> str:
     manifest = target.directory / "package.json"
     tracking = PythonTracking.model_validate_json(manifest.read_text(encoding="utf-8"))
-    if tracking.name != target.spec.label:
-        msg = f"{manifest}: expected Python release target {target.spec.label}"
+    if tracking.name != target.package_name:
+        msg = f"{manifest}: expected Python release target {target.package_name}"
         raise ValueError(msg)
     return tracking.version
 
 
 def validate_python_versions(targets: list[ReleaseTarget]) -> None:
     for target in targets:
-        if Path(target.spec.version.file).name == "pyproject.toml" and load_python_version(target) != target.version:
-            msg = f"{target.spec.label}: package.json and pyproject.toml versions must match"
+        if Path(target.spec.manifest).name == "pyproject.toml" and load_python_version(target) != target.version:
+            msg = f"{target.package_name}: package.json and pyproject.toml versions must match"
             raise ValueError(msg)
 
 
@@ -80,17 +81,30 @@ def prepare_release() -> None:
     root = proc.find_root()
     targets = load_targets(root)
     validate_python_versions(targets)
+    registries = load_publication_registries(targets)
+    with prepare_metadata(root, targets) as baseline:
+        pnpm_auth = load_pnpm_auth(registries, root)
+        prepare_versions(root, load_targets(root), registries, pnpm_auth)
+        prepared = load_prepared_targets()
+        save_preparation(root, baseline, [target for target, _ in prepared])
+        update_content_hashes([target for target, _ in prepared])
+
+
+def load_publication_registries(targets: list[ReleaseTarget]) -> dict[str, str]:
     registries: dict[str, str] = {}
     for target in targets:
         if target.spec.kind != "npm":
             continue
-        key = f"{target.spec.label.split('/', 1)[0]}:registry" if target.spec.label.startswith("@") else "registry"
-        registry = load_npm_registry(target.directory, target.spec.label)
+        key = f"{target.package_name.split('/', 1)[0]}:registry" if target.package_name.startswith("@") else "registry"
+        registry = load_npm_registry(target.directory, target.package_name)
         if key in registries and registries[key] != registry:
             msg = f"native pnpm preparation requires one publication registry per scope ({key})"
             raise ValueError(msg)
         registries[key] = registry
-    pnpm_auth = load_pnpm_auth(registries, root)
+    return registries
+
+
+def prepare_versions(root: Path, targets: list[ReleaseTarget], registries: dict[str, str], pnpm_auth: PnpmAuth) -> None:
     proc.run(
         "pnpm",
         "version",
@@ -100,9 +114,9 @@ def prepare_release() -> None:
         cwd=root,
         env=pnpm_auth.env,
     )
-    python_targets = [target for target in targets if Path(target.spec.version.file).name == "pyproject.toml"]
+    python_targets = [target for target in targets if Path(target.spec.manifest).name == "pyproject.toml"]
     for target in python_targets:
-        proc.run("uv", "version", "--package", target.spec.label, "--frozen", load_python_version(target), cwd=root)
+        proc.run("uv", "version", "--package", target.package_name, "--frozen", load_python_version(target), cwd=root)
     proc.run(
         "pnpm",
         "install",
@@ -113,5 +127,3 @@ def prepare_release() -> None:
     )
     if python_targets:
         proc.run("uv", "lock", cwd=root)
-    prepared = load_prepared_targets()
-    update_content_hashes([target for target, _ in prepared])

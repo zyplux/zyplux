@@ -1,6 +1,6 @@
 # Next
 
-> please delete the entry once implemented. The very same PR it has moved to a changelog, must be removed from here
+Keep this roadmap for planned work. Remove completed entries in their implementation PR.
 
 ## eslint-config
 

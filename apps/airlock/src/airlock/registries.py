@@ -91,9 +91,9 @@ def fetch_ghcr_token(image: str) -> str:
     return fetch_json(f"https://ghcr.io/token?service=ghcr.io&scope=repository:{image}:pull", GhcrToken, headers).token
 
 
-def load_npm_registry(directory: Path, label: str) -> str:
+def load_npm_registry(directory: Path, package_name: str) -> str:
     package = NpmPackage.model_validate_json((directory / "package.json").read_text(encoding="utf-8"))
-    registry_key = f"{label.split('/', 1)[0]}:registry" if label.startswith("@") else "registry"
+    registry_key = f"{package_name.split('/', 1)[0]}:registry" if package_name.startswith("@") else "registry"
     configured = package.publish_config.get(
         registry_key, package.publish_config.get("registry", "https://registry.npmjs.org")
     )
@@ -110,8 +110,8 @@ def validate_npm_registry(registry: object) -> str:
     return registry.rstrip("/")
 
 
-def load_npm_request(directory: Path, label: str) -> tuple[str, dict[str, str]]:
-    return build_npm_request(label, load_npm_registry(directory, label))
+def load_npm_request(directory: Path, package_name: str) -> tuple[str, dict[str, str]]:
+    return build_npm_request(package_name, load_npm_registry(directory, package_name))
 
 
 def load_pnpm_auth(registries: dict[str, str], root: Path) -> PnpmAuth:
@@ -178,7 +178,7 @@ def load_pnpm_auth(registries: dict[str, str], root: Path) -> PnpmAuth:
     )
 
 
-def build_npm_request(label: str, registry: str = "https://registry.npmjs.org") -> tuple[str, dict[str, str]]:
+def build_npm_request(package_name: str, registry: str = "https://registry.npmjs.org") -> tuple[str, dict[str, str]]:
     registry = validate_npm_registry(registry)
     headers = {}
     if registry == "https://npm.pkg.github.com":
@@ -190,13 +190,13 @@ def build_npm_request(label: str, registry: str = "https://registry.npmjs.org") 
             )
             raise ValueError(msg)
         headers["Authorization"] = f"Bearer {credential}"
-    return f"{registry}/{quote(label, safe='')}", headers
+    return f"{registry}/{quote(package_name, safe='')}", headers
 
 
 def fetch_latest_npm(
-    label: str, registry: str = "https://registry.npmjs.org", *, minimum_age: timedelta | None = None
+    package_name: str, registry: str = "https://registry.npmjs.org", *, minimum_age: timedelta | None = None
 ) -> str:
-    url, headers = build_npm_request(label, registry)
+    url, headers = build_npm_request(package_name, registry)
     if minimum_age is None:
         return fetch_json(url, NpmLatest, headers).tags.latest
     history = fetch_json(url, NpmHistory, headers)
@@ -211,17 +211,17 @@ def fetch_latest_npm(
         if not version.build and version <= latest and history.time[name] <= published_before:
             eligible.append(version)
     if not eligible:
-        msg = f"{label}: no stable release is old enough to install"
+        msg = f"{package_name}: no stable release is old enough to install"
         raise ValueError(msg)
     return str(max(eligible))
 
 
-def fetch_latest_pypi(label: str) -> str:
-    return fetch_json(f"https://pypi.org/pypi/{label}/json", PypiLatest).info.version
+def fetch_latest_pypi(package_name: str) -> str:
+    return fetch_json(f"https://pypi.org/pypi/{package_name}/json", PypiLatest).info.version
 
 
-def fetch_latest_ghcr(label: str) -> str | None:
-    image = label.removeprefix("ghcr.io/")
+def fetch_latest_ghcr(package_name: str) -> str | None:
+    image = package_name.removeprefix("ghcr.io/")
     credential = fetch_ghcr_token(image)
     tags = fetch_json(f"https://ghcr.io/v2/{image}/tags/list", GhcrTags, {"Authorization": f"Bearer {credential}"}).tags
     versions = []
@@ -235,7 +235,7 @@ def fetch_latest_ghcr(label: str) -> str | None:
 
 
 def fetch_npm_availability(target: ReleaseTarget) -> bool:
-    url, headers = load_npm_request(target.directory, target.spec.label)
+    url, headers = load_npm_request(target.directory, target.package_name)
     metadata = fetch_json(url, NpmVersions, headers)
     if target.version not in metadata.versions:
         return False
@@ -274,7 +274,8 @@ def wait_for_dependencies(dependencies: list[ReleaseTarget]) -> None:
     pending = dependencies
     kind = pending[0].spec.kind
     typer.echo(
-        f"Waiting for {kind} dependencies: " + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
+        f"Waiting for {kind} dependencies: "
+        + ", ".join(f"{target.package_name}@{target.version}" for target in pending)
     )
     for attempt in range(DEPENDENCY_POLL_ATTEMPTS):
         pending = [target for target in pending if not is_package_available(target)]
@@ -284,12 +285,12 @@ def wait_for_dependencies(dependencies: list[ReleaseTarget]) -> None:
             time.sleep(10)
     raise ValueError(
         f"{kind} dependencies did not become available: "
-        + ", ".join(f"{target.spec.label}@{target.version}" for target in pending)
+        + ", ".join(f"{target.package_name}@{target.version}" for target in pending)
     )
 
 
-def is_container_available(label: str, reference: str) -> bool:
-    image = label.removeprefix("ghcr.io/")
+def is_container_available(package_name: str, reference: str) -> bool:
+    image = package_name.removeprefix("ghcr.io/")
     try:
         credential = fetch_ghcr_token(image)
         headers = {"Accept": MANIFEST_MEDIA_TYPES, "Authorization": f"Bearer {credential}"}
@@ -304,7 +305,7 @@ def is_container_available(label: str, reference: str) -> bool:
 
 def fetch_pypi_files(target: ReleaseTarget) -> list[PypiFile]:
     try:
-        return fetch_json(f"https://pypi.org/pypi/{target.spec.label}/{target.version}/json", PypiFiles).urls
+        return fetch_json(f"https://pypi.org/pypi/{target.package_name}/{target.version}/json", PypiFiles).urls
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == HTTPStatus.NOT_FOUND:
             return []
@@ -320,11 +321,11 @@ def is_published(target: ReleaseTarget) -> bool:
         return is_action_published(target)
     try:
         if target.spec.kind == "npm":
-            url, headers = load_npm_request(target.directory, target.spec.label)
+            url, headers = load_npm_request(target.directory, target.package_name)
             return target.version in fetch_json(url, NpmVersions, headers).versions
         if target.spec.kind == "pypi":
             return {"bdist_wheel", "sdist"}.issubset(file.packagetype for file in fetch_pypi_files(target))
-        return is_container_available(target.spec.label, target.version)
+        return is_container_available(target.package_name, target.version)
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == HTTPStatus.NOT_FOUND:
             return False

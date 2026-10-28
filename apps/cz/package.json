@@ -1,7 +1,7 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.15.0",
-  "description": "Repo automation CLI: push branches and PRs, maintain workspaces, and clone reference repos.",
+  "version": "0.16.0",
+  "description": "Repository helper CLI: PRs, workspace maintenance, reports and file chunking.",
   "keywords": [
     "cli",
     "monorepo",
@@ -27,7 +27,8 @@
   },
   "imports": {
     "#deps-catalog": "./src/deps-catalog.ts",
-    "#optique": "./src/optique.ts"
+    "#optique": "./src/optique.ts",
+    "#workspace-graph": "./src/workspace-graph.ts"
   },
   "files": [
     "README.md",
@@ -37,7 +38,8 @@
     "access": "public",
     "imports": {
       "#deps-catalog": "./dist/src/deps-catalog.js",
-      "#optique": "./dist/src/optique.js"
+      "#optique": "./dist/src/optique.js",
+      "#workspace-graph": "./dist/src/workspace-graph.js"
     },
     "bin": {
       "cz": "./dist/src/index.js"
@@ -64,6 +66,8 @@
     "@zyplux/util": "workspace:*",
     "commonmark": "catalog:",
     "mermaid": "catalog:",
+    "typescript": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

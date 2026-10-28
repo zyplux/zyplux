@@ -8,7 +8,14 @@ requires-python = ">=3.14"
 package = false
 
 [tool.uv.workspace]
-members = ["apps/airlock", "apps/cerberus", "apps/clipy", "apps/action-setup-pm", "apps/totchef", "apps/token_stats", "packages/util_py"]
+members = [
+    "apps/airlock",
+    "apps/cerberus",
+    "apps/clipy",
+    "apps/action-setup-pm",
+    "apps/totchef",
+    "apps/token_stats",
+]
 
 [tool.uv.sources]
 zyplux-airlock = { workspace = true }
@@ -16,7 +23,14 @@ zyplux-airlock = { workspace = true }
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
 addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
-testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
+testpaths = [
+    "tests/airlock",
+    "tests/cerberus",
+    "tests/clipy",
+    "tests/setup_pm",
+    "tests/totchef",
+    "tests/token_stats",
+]
 
 [tool.coverage.run]
 data_file = "coverage/.coverage"
@@ -35,7 +49,6 @@ paths = [
     "apps/action-setup-pm/src",
     "apps/totchef/src",
     "apps/token_stats/src",
-    "packages/util_py/src",
     "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
@@ -48,16 +61,17 @@ ignore_decorators = ["@app.command", "@app.callback", "@model_validator"]
 # Cooks are resolved by entry point / config-dir convention (totchef.registry), so vulture
 # sees no static reference and reports every cook class as dead — they're totchef's plugins,
 # not dead code. `model_config` is read by pydantic's model metaclass, never called by name.
-ignore_names = ["pytestmark", "*Cook", "model_config", "_fake_tokenizer_backend"]
+ignore_names = [
+    "pytestmark",
+    "*Cook",
+    "model_config",
+    "_fake_tokenizer_backend",
+]
 
 [dependency-groups]
-lint = [
-    "ruff>=0.17.3",
-    "rumdl>=0.3.0",
-    "vulture>=2.16",
-]
+lint = ["ruff>=0.17.3", "rumdl>=0.3.1", "vulture>=2.16"]
 test = [
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
     "pytest-xdist>=3.8.0",
     "tomli-w>=1.2.0",

@@ -24,12 +24,12 @@ def is_container_published(target: ReleaseTarget) -> bool:
     manifest = ContainerManifest.model_validate_json(
         proc.run("gh", "release", "download", target.tag, "--pattern", CONTAINER_MANIFEST, "--output", "-")
     )
-    prefix = f"{target.spec.label}@"
+    prefix = f"{target.package_name}@"
     if manifest.version != target.version or not manifest.image.startswith(prefix):
         msg = f"published release {target.tag} has an invalid container manifest"
         raise ValueError(msg)
     digest = DIGEST.validate_python(manifest.image.removeprefix(prefix))
-    if not is_container_available(target.spec.label, digest):
+    if not is_container_available(target.package_name, digest):
         msg = f"published release {target.tag} is missing image {manifest.image}"
         raise ValueError(msg)
     return True
@@ -49,7 +49,7 @@ def publish_container(target: ReleaseTarget, notes: str) -> None:
     revision = proc.run("git", "rev-parse", "HEAD")
     context, dockerfile, ignorefile = resolve_container_paths(target)
     ignore_args = [] if ignorefile is None else ["--ignorefile", str(ignorefile)]
-    versioned = f"{target.spec.label}:{target.version}"
+    versioned = f"{target.package_name}:{target.version}"
     with TemporaryDirectory(prefix="airlock-container-") as directory:
         digest_file = Path(directory) / "digest"
         manifest = Path(directory) / CONTAINER_MANIFEST
@@ -71,11 +71,13 @@ def publish_container(target: ReleaseTarget, notes: str) -> None:
             )
             proc.run("podman", "push", "--digestfile", str(digest_file), versioned)
             digest = DIGEST.validate_python(digest_file.read_text(encoding="utf-8").strip())
-            if not is_container_available(target.spec.label, digest):
+            if not is_container_available(target.package_name, digest):
                 msg = f"container push did not publish image {versioned}"
                 raise ValueError(msg)
             manifest.write_text(
-                json.dumps({"image": f"{target.spec.label}@{digest}", "version": target.version}, separators=(",", ":"))
+                json.dumps(
+                    {"image": f"{target.package_name}@{digest}", "version": target.version}, separators=(",", ":")
+                )
                 + "\n",
                 encoding="utf-8",
             )

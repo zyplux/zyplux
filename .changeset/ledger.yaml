@@ -17,10 +17,18 @@
   dir: apps/cz
   intents:
     - shared-release-commands
+'@zyplux/cz@0.16.0':
+  dir: apps/cz
+  intents:
+    - gentle-owls-report
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
     - funny-cows-retire
+'@zyplux/eslint-config@0.12.3':
+  dir: packages/eslint-config
+  intents:
+    - eslint-typescript-patch
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
@@ -37,6 +45,13 @@ zyplux-airlock@2.1.1:
   dir: apps/airlock
   intents:
     - big-wombats-compete
+zyplux-airlock@2.2.0:
+  dir: apps/airlock
+  intents:
+    - action-runtime-fingerprints
+    - plain-target-dependencies
+    - smooth-hawks-return
+    - tiny-ants-chew
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -54,6 +69,17 @@ zyplux-cerberus@0.26.1:
   dir: apps/cerberus
   intents:
     - fair-trains-obey
+zyplux-cerberus@0.27.0:
+  dir: apps/cerberus
+  intents:
+    - cached-release-tools
+    - loud-rabbits-enjoy
+    - plain-target-dependencies
+    - schema-validation
+zyplux-clipy@0.1.0:
+  dir: apps/clipy
+  intents:
+    - bright-foxes-measure
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:
@@ -62,3 +88,7 @@ zyplux-setup-pm@1.0.2:
   dir: apps/action-setup-pm
   intents:
     - release-cache-guidance
+zyplux-setup-pm@1.1.0:
+  dir: apps/action-setup-pm
+  intents:
+    - cached-release-tools

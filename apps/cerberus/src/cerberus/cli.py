@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, override
 
 import typer
+from airlock.errors import RELEASE_ERRORS
+from airlock.proc import find_root
 from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
@@ -149,19 +153,18 @@ def lint(
     """
     if path is None:
         return
-    ctx = context.local_context(config.load(config_path, repo_root=path), path, fix=fix, verbose=verbose)
-    repo = ctx.repos()[0]
     selected = _select_checks(check)
-
+    ctx = context.local_context(config.load(), path, fix=fix, verbose=verbose, config_path=config_path)
+    repo = ctx.repos()[0]
+    schema_result = _run_check(bites.BY_ID["cerberus_schema"], repo, ctx)
+    if schema_result.problems:
+        _render_lint(repo, [schema_result], verbose=verbose)
+        raise typer.Exit(code=1)
+    ctx.config = config.load(config_path, repo_root=path)
     off = ctx.config.disabled_bites
-    for retired in sorted(off & bites.RETIRED.keys()):
-        err.print(f"[yellow]retired bite {retired}; use {bites.RETIRED[retired]}[/yellow]")
-    unknown_off = off - bites.BY_ID.keys() - bites.RETIRED.keys()
-    if unknown_off:
-        err.print(f"[yellow]unknown off bites ignored: {', '.join(sorted(unknown_off))}[/yellow]")
     active = selected if check else [chk for chk in selected if chk.id not in off]
 
-    results = [_run_check(chk, repo, ctx) for chk in active]
+    results = [schema_result, *(_run_check(chk, repo, ctx) for chk in active if chk.id != "cerberus_schema")]
 
     _render_lint(repo, results, verbose=verbose)
     if _failed(results):
@@ -182,6 +185,21 @@ def graph(
     out_dir = out if out is not None else path
     write_graph(result, out_dir)
     console.print(f"wrote {out_dir / 'graph.json'}")
+
+
+@app.command(name="source-oracle", help="Print source classifications for repository checks and reports as JSON.")
+def classify_sources(
+    path: Annotated[Path, typer.Argument(help="Path inside the repository.")] = Path(),
+) -> None:
+    try:
+        root = find_root(path)
+        ctx = context.local_context(config.load(repo_root=root), root)
+        repo = ctx.repos()[0]
+        classifications = {path: asdict(ctx.config.source_oracle.classify(path)) for path in ctx.paths(repo)}
+        typer.echo(json.dumps(classifications, separators=(",", ":")))
+    except RELEASE_ERRORS as exc:
+        err.print(str(exc), markup=False)
+        raise typer.Exit(code=1) from exc
 
 
 GraphOpt = Annotated[Path, typer.Option("--graph", help="Path to a graph.json built by `cerberus graph`.")]

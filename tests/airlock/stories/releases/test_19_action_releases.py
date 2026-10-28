@@ -138,7 +138,9 @@ def test_19_2_4_refuses_to_publish_a_floating_alias_to_a_changed_versioned_tag(r
 
 
 def test_19_2_5_rejects_invalid_action_versions_before_creating_a_release(release: ReleaseFixture) -> None:
-    release.write("apps/action-setup-pm/pyproject.toml", 'version = "1.0.0-beta.1"\n')
+    release.write(
+        "apps/action-setup-pm/pyproject.toml", '[project]\nname = "zyplux-setup-pm"\nversion = "1.0.0-beta.1"\n'
+    )
     release.write_json(
         "apps/action-setup-pm/package.json", {"name": "zyplux-setup-pm", "private": True, "version": "1.0.0-beta.1"}
     )
@@ -154,10 +156,10 @@ def test_19_2_6_rejects_a_missing_versioned_tag_instead_of_guessing_the_current_
     assert not release.matching("git push")
 
 
-def test_19_2_7_rejects_action_repositories_outside_the_checkout(release: ReleaseFixture) -> None:
+def test_19_2_7_rejects_action_repository_overrides(release: ReleaseFixture) -> None:
     release.configure("action", 'repository = "other/actions"')
-    release.plan(error="action repository other/actions must match checkout zyplux/zyplux")
-    release.publish("setup-pm-v1.0.0", error="must match checkout")
+    release.plan(error="Unrecognized key")
+    release.publish("setup-pm-v1.0.0", error="Unrecognized key")
     assert not release.matching("git ls-remote|git fetch|git push|gh release create")
 
 

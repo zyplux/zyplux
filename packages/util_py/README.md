@@ -1,9 +1,3 @@
 # zyplux-util
 
-Small Python utilities shared across zyplux repos.
-
-## Install
-
-```sh
-uv add zyplux-util
-```
+Deprecated. Published versions remain available; no further releases are planned.

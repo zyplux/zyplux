@@ -4,17 +4,17 @@
 
 ### 14.1.1 rejects malformed manifests
 
-### 14.1.2 accepts a scope with no targets
+### 14.1.2 accepts an empty manifest
 
 ### 14.1.3 rejects missing or invalid versions
 
 ### 14.1.4 reports missing version files
 
-### 14.1.5 reads native python versions with the configured regex
+### 14.1.5 reads native python versions from toml
 
 ### 14.1.6 validates every target when one version is invalid
 
-### 14.1.7 reports invalid version regexes
+### 14.1.7 reports unsupported manifest formats
 
 ### 14.1.8 rejects version sources outside the selected repository
 
@@ -48,7 +48,7 @@
 
 ### 14.3.7 rejects unavailable target branch history
 
-### 14.3.8 reads the base version with its own extractor and path
+### 14.3.8 reads the base version with its own manifest format and path
 
 ### 14.3.9 reports missing base version files
 
@@ -68,7 +68,7 @@
 
 ### 14.4.7 reads release history once for all targets
 
-### 14.4.8 rejects action repositories outside the checkout
+### 14.4.8 reads action release history from the checkout
 
 ## 14.6 reporting through Cerberus
 
@@ -92,6 +92,8 @@
 
 ### 14.7.6 requires bumps for changed action and container inputs
 
+### 14.7.7 reads fingerprints from the manifest in published tags
+
 ## 14.8 preserving partially published versions
 
 ### 14.8.1 preserves target branch fingerprints after any registry artifact is uploaded
@@ -101,3 +103,5 @@
 ### 14.8.3 allows same version repairs before any registry artifact exists
 
 ### 14.8.4 reports registry errors during repair validation
+
+### 14.8.5 checks registry artifacts when fingerprint selection changes

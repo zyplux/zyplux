@@ -9,25 +9,23 @@ if TYPE_CHECKING:
     from release_fixture import ReleaseFixture
 
 
-def test_2_1_1_loads_every_declared_target_reading_versions_from_json_and_regex_sources(
+def test_2_1_1_loads_every_declared_target_reading_versions_from_json_and_toml_manifests(
     release: ReleaseFixture,
 ) -> None:
     release.all_published()
     assert release.plan() == []
 
 
-def test_2_2_1_rejects_reading_a_version_whose_regex_does_not_match_the_file(release: ReleaseFixture) -> None:
+def test_2_2_1_rejects_manifests_without_a_version(release: ReleaseFixture) -> None:
     release.write(
-        "airlock-targets.toml",
-        """scope = "@zyplux"
-[broken]
+        "airlock_targets.toml",
+        """[broken]
 kind = "npm"
-label = "broken-target"
-version = { file = "VERSION", regex = '^nomatch$' }
+manifest = "package.json"
 """,
     )
-    release.write("VERSION", "1.2.3\n")
-    release.run("plan", error="could not read version from VERSION")
+    release.write_json("package.json", {"name": "broken-target"})
+    release.run("plan", error="version")
 
 
 def test_2_3_1_rejects_finalized_releases_when_their_image_cannot_be_accessed(release: ReleaseFixture) -> None:
@@ -58,25 +56,23 @@ def test_2_4_1_loads_a_version_for_every_target_declared_in_airlock_targets_toml
     assert not release.matching("pnpm pack|uv build")
 
 
-def test_2_5_1_derives_labels_from_the_configured_scope_and_tags_from_table_names(release: ReleaseFixture) -> None:
-    release.write(
-        "airlock-targets.toml", release.read("airlock-targets.toml").replace('scope = "@zyplux"', 'scope = "@demo"')
-    )
-    release.published(npm=True)
-    assert release.plan("util-v1.2.3")[0]["tags"] == ["util-v1.2.3"]
-    assert any(request.url == "https://registry.npmjs.org/%40demo%2Futil" for request in release.requests)
-
-
-def test_2_5_2_honors_explicit_labels_without_changing_the_derived_tag_prefix(release: ReleaseFixture) -> None:
-    release.configure("npm", 'label = "@demo/custom"')
+def test_2_5_1_reads_package_names_from_manifests_and_derives_tags_from_table_names(release: ReleaseFixture) -> None:
+    release.write_json("packages/util/package.json", {"name": "@demo/custom", "version": "1.2.3"})
     release.published(npm=True)
     assert release.plan("util-v1.2.3")[0]["tags"] == ["util-v1.2.3"]
     assert any(request.url == "https://registry.npmjs.org/%40demo%2Fcustom" for request in release.requests)
 
 
-@pytest.mark.parametrize("manifest", ["", 'scope = ""', "scope = 1", 'scope = "@demo"\nutil = 1'])
+def test_2_5_2_honors_package_name_overrides_without_changing_the_release_tag(release: ReleaseFixture) -> None:
+    release.configure("npm", 'package_name = "@demo/custom"')
+    release.published(npm=True)
+    assert release.plan("util-v1.2.3")[0]["tags"] == ["util-v1.2.3"]
+    assert any(request.url == "https://registry.npmjs.org/%40demo%2Fcustom" for request in release.requests)
+
+
+@pytest.mark.parametrize("manifest", ['scope = ""', "scope = 1", "util = 1"])
 def test_2_5_3_rejects_malformed_release_declarations(release: ReleaseFixture, manifest: str) -> None:
-    release.write("airlock-targets.toml", manifest)
+    release.write("airlock_targets.toml", manifest)
     release.run("plan", error="")
 
 
@@ -97,13 +93,45 @@ def test_2_5_4_rejects_version_sources_outside_the_repository(
         case _:
             (release.root / "linked").symlink_to(outside, target_is_directory=True)
             path = "linked/package.json"
-    release.configure(kind, f'version = {{ file = "{path}", json = "version" }}')
+    release.configure(kind, f'manifest = "{path}"')
     release.run("plan", error="release paths must be repository-relative")
     assert not release.matching("pnpm pack|uv build|publish")
 
 
 @pytest.mark.parametrize("command", ["plan", "prepare"])
-def test_2_5_5_reports_invalid_version_regexes_without_a_traceback(release: ReleaseFixture, command: str) -> None:
-    release.configure("pypi", 'version = { file = "apps/cerberus/pyproject.toml", regex = "[" }')
-    execution = release.run(command, error="apps/cerberus/pyproject.toml: invalid version regex")
+def test_2_5_5_reports_unsupported_manifest_formats_without_a_traceback(release: ReleaseFixture, command: str) -> None:
+    release.configure("pypi", 'manifest = "apps/cerberus/VERSION"')
+    release.write("apps/cerberus/VERSION", "2.3.4")
+    execution = release.run(command, error="apps/cerberus/VERSION: manifest must be JSON or TOML")
     assert "Traceback" not in execution.stderr
+
+
+@pytest.mark.parametrize("quote", ['"', "'"])
+def test_2_1_2_reads_project_versions_from_parsed_toml(release: ReleaseFixture, quote: str) -> None:
+    release.write(
+        "apps/cerberus/pyproject.toml",
+        f'version = "9.9.9"\n[project]\nname = "zyplux-cerberus"\nversion = {quote}2.3.4{quote}\n',
+    )
+    assert release.plan("cerberus-v2.3.4")[0]["tags"] == ["cerberus-v2.3.4"]
+
+
+def test_2_1_3_infers_package_kinds_from_json_and_toml_manifests(release: ReleaseFixture) -> None:
+    release.write(
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml").replace('kind = "npm"\n', "").replace('kind = "pypi"\n', ""),
+    )
+    assert [(batch["id"], batch["kind"]) for batch in release.plan()][:2] == [
+        ("npm-util", "npm"),
+        ("pypi-cerberus", "pypi"),
+    ]
+
+
+def test_2_5_6_honors_release_tag_overrides_without_changing_target_names(release: ReleaseFixture) -> None:
+    release.use_package()
+    release.configure("npm", 'release_tag = "short"')
+    release.published()
+    batch = release.plan("short-v1.2.3")[0]
+    assert batch["id"] == "npm-util"
+    release.stage_npm()
+    release.publish_batch(batch)
+    assert release.matching("gh release create short-v1.2.3")

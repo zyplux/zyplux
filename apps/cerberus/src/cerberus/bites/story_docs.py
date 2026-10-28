@@ -174,8 +174,10 @@ def _py_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     workspace = uv.get("workspace") if isinstance(uv, dict) else None
     if isinstance(workspace, dict):
         members = [g for g in workspace.get("members", []) if isinstance(g, str)]
-        return workspaces.without_test_harness(workspaces.member_dirs(paths, members, "pyproject.toml"))
-    return [""] if isinstance(data.get("project"), dict) else []
+        packages = workspaces.member_dirs(paths, members, "pyproject.toml")
+    else:
+        packages = [""] if isinstance(data.get("project"), dict) else []
+    return [package for package in packages if ctx.config.source_oracle.classify_directory(package).needs_tests]
 
 
 def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:

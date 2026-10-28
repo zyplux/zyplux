@@ -1,19 +1,20 @@
 # clipy
 
-Personal typer-based CLI tools that totchef installs from this local checkout.
+Python CLI helpers for repository metrics and terminal tools, published as `zyplux-clipy`.
 
-- `ctop` — live top-like CPU view of the VS Code process trees.
-- `justpty` — runs a `just` recipe under a PTY, teeing output to a per-run log; this repo's own `./just` is a symlink to it.
+```sh
+uv add --dev zyplux-clipy
+uv run clipy stats [PATH] [--out FILE] [--title TITLE]
+```
 
-## Usage
+## Terminal tools
 
-```bash
+- `ctop` — live CPU view of VS Code process trees.
+- `justpty` — runs a `just` recipe under a PTY and saves a transcript; this repo's `./just` uses it.
+
+```sh
 uv run ctop [--interval SECONDS] [--once] [--profile-exthost]
 uv run justpty [JUST_ARGS...]
 ```
 
-Each tool is also a self-contained PEP 723 script (see its own `# /// script` header), so it can be copied
-anywhere and run standalone via `uv run --script` without this workspace — that's how totchef's
-`[local_bin_dir]` recipe entry installs it to `~/.local/bin`: it auto-discovers every script in this
-directory meeting the version contract (embeds `__version__`, offers `--version`/`--help`), so a new tool
-dropped in here lands on PATH on the next `totchef up` with no recipe edit.
+`ctop` and `justpty` also run as self-contained PEP 723 scripts.

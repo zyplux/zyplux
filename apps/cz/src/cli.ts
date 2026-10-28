@@ -1,10 +1,12 @@
 import { loadPackageVersion } from '@zyplux/util/manifest';
 
+import { chunkFilesCommand, runChunkFiles } from './commands/chunk-files.ts';
 import { cleanCommand, runClean } from './commands/clean.ts';
 import { cloneReferenceRepoCommand, runCloneReferenceRepo } from './commands/clone-reference-repo.ts';
 import { depsCatalogCommand, runDepsCatalog } from './commands/deps-catalog.ts';
 import { lintMermaidCommand, runLintMermaid } from './commands/lint-mermaid.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
+import { runStats, runWorkspaceGraph, statsCommand, workspaceGraphCommand } from './commands/reports.ts';
 import { runUpgrade, upgradeCommand } from './commands/upgrade.ts';
 import { defineProgram, message, or, run } from './optique.ts';
 
@@ -17,6 +19,9 @@ const program = defineProgram({
     version: VERSION,
   },
   parser: or(
+    chunkFilesCommand,
+    statsCommand,
+    workspaceGraphCommand,
     pushBranchCommand,
     cloneReferenceRepoCommand,
     depsCatalogCommand,
@@ -44,6 +49,9 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
   });
 
   switch (result.command) {
+    case 'chunk-files': {
+      return runChunkFiles(result);
+    }
     case 'clean': {
       return runClean(result);
     }
@@ -59,8 +67,14 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     case 'push-branch': {
       return runPushBranch(result);
     }
+    case 'stats': {
+      return runStats(result);
+    }
     case 'upgrade': {
       return runUpgrade(result);
+    }
+    case 'workspace-graph': {
+      return runWorkspaceGraph(result);
     }
   }
 };

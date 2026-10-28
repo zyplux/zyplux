@@ -1,5 +1,19 @@
 # zyplux-airlock
 
+## 2.2.0
+
+### Minor Changes
+
+- Use airlock_targets.toml with parsed package manifests, inferred npm and PyPI kinds, optional package_name and release_tag overrides, dependency target references and configurable fingerprints that omit Markdown by default.
+
+- Consolidate repeated release preparation into one pending release and restore release metadata after preparation failures.
+
+### Patch Changes
+
+- Fingerprint Action code and the major/minor version of a configured sync_minor_from target independently of runtime patches and shared lockfiles. Use the shared cached package-manager setup for release planning and publication, and publish Action releases in the checked-out repository.
+
+- Allow release preparation to replay after formatting the intent ledger.
+
 ## 2.1.1
 
 ### Patch Changes

@@ -16,18 +16,19 @@ if TYPE_CHECKING:
 DEPENDENCY_URL = "https://pypi.org/pypi/zyplux-util/1.0.0/json"
 
 
-def add_python_target(release: ReleaseFixture, name: str, label: str, requirements: tuple[str, ...] = ()) -> None:
+def add_python_target(
+    release: ReleaseFixture, name: str, package_name: str, requirements: tuple[str, ...] = ()
+) -> None:
     directory = f"packages/{name}"
     release.write(
         f"{directory}/pyproject.toml",
-        f'[project]\nname = "{label}"\nversion = "1.0.0"\ndependencies = {json.dumps(requirements)}\n',
+        f'[project]\nname = "{package_name}"\nversion = "1.0.0"\ndependencies = {json.dumps(requirements)}\n',
     )
-    release.write_json(f"{directory}/package.json", {"name": label, "private": True, "version": "1.0.0"})
-    release.write(f"{directory}/CHANGELOG.md", f"## 1.0.0\n\n- Publish {label}.\n")
+    release.write_json(f"{directory}/package.json", {"name": package_name, "private": True, "version": "1.0.0"})
+    release.write(f"{directory}/CHANGELOG.md", f"## 1.0.0\n\n- Publish {package_name}.\n")
     release.write(
-        "airlock-targets.toml",
-        release.read("airlock-targets.toml") + f'\n[{name}]\nkind = "pypi"\nlabel = "{label}"\n'
-        f'version = {{ file = "{directory}/pyproject.toml", regex = \'^version = "([^"]+)"\' }}\n',
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + f'\n[{name}]\nkind = "pypi"\nmanifest = "{directory}/pyproject.toml"\n',
     )
 
 
@@ -168,7 +169,7 @@ def test_26_3_1_rejects_cycles_before_waiting_and_keeps_unrelated_jobs_independe
     )
     prepare_publication(release)
     execution = release.publish("cerberus-v2.3.4", error="cyclic production workspace dependency")
-    assert "runtime-v1.0.0" in execution.stderr
+    assert "'runtime'" in execution.stderr
     assert "zyplux-cerberus" in execution.stderr
     assert len([request for request in release.requests if request.url == DEPENDENCY_URL]) == 1
     assert len(release.matching("uv build")) == 1

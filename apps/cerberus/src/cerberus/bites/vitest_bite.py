@@ -17,7 +17,7 @@ ID = "vitest"
 SUMMARY = "TypeScript tests use Vitest instead of Bun's built-in test runner"
 SCOPE = Scope.CONTENT
 
-_TEST_FILE = re.compile(r"\.(?:test|spec)\.[cm]?[jt]sx?$")
+_SOURCE_SUFFIXES = (".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs")
 _BUN_TEST_RUNNER = re.compile(r"\bbun\s+(?:--\S+\s+)*test\b")
 _ROOT_CONFIG = re.compile(r"^vitest\.config\.[cm]?[jt]s$")
 
@@ -30,10 +30,6 @@ def _is_manifest(path: str) -> bool:
     return path.rsplit("/", 1)[-1] == "package.json" and not _is_vendored(path)
 
 
-def _is_test_file(path: str) -> bool:
-    return _TEST_FILE.search(path) is not None and not _is_vendored(path)
-
-
 def _invokes_bun_test_runner(script: str) -> bool:
     return any(_BUN_TEST_RUNNER.search(line) for line in workflow.strip_comment_lines(script).splitlines())
 
@@ -41,7 +37,9 @@ def _invokes_bun_test_runner(script: str) -> bool:
 def _check_sources(repo: Repo, ctx: Context, res: CheckResult) -> None:
     for path in ctx.paths(repo):
         is_manifest = _is_manifest(path)
-        is_test = _is_test_file(path)
+        is_test = (
+            path.endswith(_SOURCE_SUFFIXES) and not _is_vendored(path) and ctx.config.source_oracle.is_test_file(path)
+        )
         if not (is_manifest or is_test):
             continue
         content = ctx.file(repo, path)

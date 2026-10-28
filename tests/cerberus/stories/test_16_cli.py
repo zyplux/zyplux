@@ -217,8 +217,9 @@ def test_16_5_2_rejects_a_config_file_whose_section_is_not_a_table(
 
     result = invoke_lint("--check", "codeowners_coverage", "--config", str(config_path))
 
-    assert isinstance(result.exception, TypeError)
-    assert "[jscpd] must be a table" in str(result.exception)
+    assert result.exit_code == 1
+    assert "cerberus_schema" in result.output
+    assert "jscpd: Input should be a valid dictionary" in result.output
 
 
 @requires_just
@@ -260,13 +261,13 @@ def test_16_6_3_re_enables_a_bundled_off_bite_when_the_repo_overlay_sets_off_to_
     assert "○ tool_pins_latest: no cerberus tool pins source in the repo" in result.output
 
 
-def test_16_6_4_warns_and_carries_on_when_an_off_table_names_an_unknown_bite(
+def test_16_6_4_rejects_an_off_table_naming_an_unknown_bite(
     conforming_repo: Path, invoke_lint: Callable[..., Result]
 ) -> None:
     (conforming_repo / "cerberus.toml").write_text("[no_such_bite]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
-    assert result.exit_code == 0, result.output
-    assert "unknown off bites ignored: no_such_bite" in result.output
+    assert result.exit_code == 1, result.output
+    assert "no_such_bite: Extra inputs are not permitted" in " ".join(Text.from_ansi(result.output).plain.split())
 
 
 def test_16_6_5_disables_coverage_enforcement_independently_of_the_vitest_runner(
@@ -319,7 +320,7 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
 ) -> None:
     def skipping(repo: Repo, _ctx: Context) -> CheckResult:
         result = check_result("codeowners_coverage", repo.name)
-        result.skip("no airlock-targets.toml — repo publishes nothing")
+        result.skip("no airlock_targets.toml — repo publishes nothing")
         return result
 
     register_fake_check("codeowners_coverage", skipping)
@@ -327,7 +328,7 @@ def test_16_11_1_renders_a_skipped_bite_with_its_skip_glyph_and_reason(
     result = invoke_lint("--check", "codeowners_coverage")
 
     assert result.exit_code == 0, result.output
-    assert "○ codeowners_coverage: no airlock-targets.toml — repo publishes nothing" in result.output
+    assert "○ codeowners_coverage: no airlock_targets.toml — repo publishes nothing" in result.output
     assert "🐾 codeowners_coverage" not in result.output
 
 
@@ -432,29 +433,30 @@ def test_16_4_3_explains_replacements_for_retired_bites(
     assert replacement in " ".join(Text.from_ansi(result.output).plain.replace("│", " ").split()), result.output
     (conforming_repo / "cerberus.toml").write_text(f"[{retired}]\noff = true\n")
     result = invoke_lint("--check", "codeowners_coverage")
-    assert result.exit_code == 0, result.output
-    assert f"retired bite {retired}; use" in result.output
+    assert result.exit_code == 1, result.output
+    assert f"{retired}: Extra inputs are not permitted" in " ".join(Text.from_ansi(result.output).plain.split())
 
 
-def test_16_5_3_explains_where_to_move_a_coverage_floor(
+def test_16_5_3_rejects_an_unknown_bite_setting(
     conforming_repo: Path,
     invoke_lint: Callable[..., Result],
 ) -> None:
     (conforming_repo / "cerberus.toml").write_text("[vitest]\nmin_coverage = 95\n")
     result = invoke_lint("--check", "vitest_coverage")
-    assert isinstance(result.exception, ValueError)
-    assert "Move [vitest].min_coverage to [vitest_coverage].min_coverage" in str(result.exception)
+    assert result.exit_code == 1
+    diagnostic = " ".join(Text.from_ansi(result.output).plain.split())
+    assert "vitest.min_coverage: Extra inputs are not permitted" in diagnostic
 
 
 def test_16_14_1_bite_settings_match_module_names(bite_module_names: dict[str, str]) -> None:
     settings = tomllib.loads(resources.files("cerberus").joinpath("cerberus.toml").read_text())
     assert bite_module_names == {name: name for name in bite_module_names}
-    assert settings.keys() - {"source"} == bite_module_names.keys()
+    assert settings.keys() == bite_module_names.keys() - {"cerberus_schema"}
 
 
 def test_16_14_2_local_overrides_use_bite_names_and_explain_each_setting(bite_module_names: dict[str, str]) -> None:
     local = (Path(__file__).resolve().parents[3] / "cerberus.toml").read_text()
-    assert tomllib.loads(local).keys() <= bite_module_names.keys() | {"source"}
+    assert tomllib.loads(local).keys() <= bite_module_names.keys()
     assignments = re.finditer(r"(?m)^[ \t]*(?:\"[^\"\n]+\"|'[^'\n]+'|[\w.-]+)[ \t]*=", local)
     undocumented = []
     for assignment in assignments:

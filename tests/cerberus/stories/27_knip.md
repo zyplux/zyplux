@@ -46,15 +46,15 @@
 
 ### 27.4.7 passes when every published npm target is exempted and nothing else is
 
-### 27.4.8 passes with no airlock-targets.toml and no workspace exemptions
+### 27.4.8 passes with no airlock targets toml and no workspace exemptions
 
 ### 27.4.9 errors when knip.prod.json cannot be parsed
 
 ### 27.4.10 errors when knip.prod.json is not an object
 
-### 27.4.11 ignores a malformed airlock-targets.toml as no published targets
+### 27.4.11 ignores a malformed airlock targets toml as no published targets
 
-### 27.4.12 ignores an airlock-targets.toml with a non-table entry
+### 27.4.12 ignores an airlock targets toml with a non-table entry
 
 ### 27.4.13 ignores non npm targets when computing published workspace dirs
 
@@ -85,3 +85,9 @@
 ### 27.4.26 takes the production workspaces from cerberus configuration
 
 ### 27.4.27 ignores workspace members the pnpm manifest excludes
+
+## 27.5 deriving configuration
+
+### 27.5.1 regenerates workspace selection from source categories
+
+`--fix` writes exact non-production workspace directories from the shared classification into `knip.prod.json`.

@@ -34,11 +34,23 @@ typecheck:
 
 # Lint and format both workspaces with autofix.
 lint:
+    @just lint-ts
+    @just lint-md
+    @just lint-py
+
+# Lint TypeScript and format Prettier-supported files with autofix.
+lint-ts:
     pnpm run lint:fix
     pnpm run format
+
+# Lint and format Markdown, including Mermaid validation.
+lint-md:
     pnpm run lint:mermaid
-    uv run rumdl check --fix
+    uv run rumdl check --fix --no-cache
     uv run rumdl fmt
+
+# Lint and format Python with autofix.
+lint-py:
     uv run ruff check --fix
     uv run ruff format
 
@@ -77,6 +89,20 @@ clean *flags:
 # CUSTOM
 
 alias d := dump-rules
+
+# Prepare release metadata, the workspace graph and code statistics.
+fingerprint:
+    pnpm run --silent cz workspace-graph
+    uv run clipy stats
+    pnpm release:prepare
+
+# Write tracked code statistics for a directory.
+stats dir='.' *args='':
+    pnpm run --silent cz stats {{ quote(join(invocation_directory(), dir)) }} {{ args }}
+
+# Write the workspace dependency diagram.
+dep-graph:
+    pnpm run --silent cz workspace-graph
 
 # Shallow-clone a reference repo into reference_clones/ (optional branch or tag).
 clone repo ref="":

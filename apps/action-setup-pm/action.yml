@@ -1,6 +1,9 @@
 name: Set up package managers
 description: Set up cached pnpm and uv toolchains and install locked workspace dependencies on Linux.
 inputs:
+  install-dependencies:
+    description: Install locked pnpm and Python workspace dependencies.
+    default: 'true'
   uv-version:
     description: Exact uv version.
     default: '0.13.4'
@@ -60,6 +63,7 @@ runs:
         PNPM_VERSION: ${{ steps.config.outputs.pnpm-version }}
         PNPM_HOME: ${{ runner.tool_cache }}/zyplux-pnpm/${{ steps.config.outputs.pnpm-version }}
     - name: Restore pnpm dependencies and metadata
+      if: inputs.install-dependencies == 'true'
       uses: actions/cache@v6
       with:
         path: |
@@ -68,6 +72,7 @@ runs:
         key: setup-pm-store-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: setup-pm-store-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.config.outputs.pnpm-version }}-
     - name: Install pnpm dependencies
+      if: inputs.install-dependencies == 'true'
       shell: bash
       run: pnpm install --frozen-lockfile --no-runtime
     - name: Restore uv executable
@@ -85,5 +90,6 @@ runs:
           uv.lock
           .python-version
     - name: Install uv dependencies
+      if: inputs.install-dependencies == 'true'
       shell: bash
       run: uv sync --locked --all-packages --all-groups

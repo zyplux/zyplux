@@ -1,6 +1,6 @@
 # Airlock
 
-Airlock is a Python 3.14+ CLI. It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock-targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
+The release CLI (Python 3.14+). It prepares reviewed versions and changelogs with native pnpm, then publishes npm packages, Python packages, containers and GitHub Actions declared in `airlock_targets.toml`. Merging a prepared feature PR into `main` starts publication automatically.
 
 *How does a code change become a published release?*
 
@@ -26,12 +26,12 @@ flowchart TD
 
 1. Run `uv run cerberus --check release_surface_version_bump` to identify changed published targets.
 2. Run `pnpm change`, select those targets and choose patch for fixes, minor for compatible features or major for breaking changes. Write a concise consumer-facing summary, including migration steps for breaking changes; pnpm adds the list marker. Use separate fragments when targets need different descriptions.
-3. Run the commands below. Review the versions, dependency changes, changelog entries, `.changeset/ledger.yaml` and both lockfiles, then include those edits with the feature.
+3. Run the commands below. Review the versions, dependency changes, changelog entries, `.changeset/ledger.yaml`, `.changeset/preparation.json` and both lockfiles, then include those edits with the feature. CI runs the full test suite and Cerberus.
 4. Submit the PR through the repository's normal review process. After merge, check the automatic release run and its per-batch summaries; each GitHub release should contain the prepared entry for that version.
 
 ```sh
 pnpm release:prepare
-./just c
+./just lint typecheck
 ```
 
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
@@ -40,30 +40,38 @@ For GitHub Packages, preparation preserves configured pnpm credentials and falls
 
 Python targets have a private pnpm tracking `package.json` beside `pyproject.toml`; preparation synchronizes the native Python version through uv. Preparation initializes or refreshes every target's fingerprint after versioning. Cerberus's `release_readiness` bite rejects unconsumed fragments, mismatched versions, stale fingerprints and missing or empty changelog entries.
 
-If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.
+Add further change intents and rerun preparation while a release is pending. Airlock saves the original metadata and consumed intents in `.changeset/preparation.json`, then replays pnpm's planner from that baseline. Two patch intents produce one patch release; a patch and a minor produce one minor release. Both notes appear once, dependency versions are replanned, and source edits are preserved. Commit the preparation record so the same baseline survives checkout and review.
+
+Once all recorded releases have GitHub releases or uploaded artifacts, preparation starts a new baseline. A partial PyPI upload or an existing Action version tag also freezes that version. Finish or retry a partially published preparation before adding more release intents. If a newer version has published elsewhere, merge the latest target branch first. Prepared releases without a preparation record must publish before adoption, or have their original baseline and intents restored; the ledger records intent IDs, not their deleted text. Overlapping manual edits to generated metadata require resolution before replay; write additional release notes as intents.
+
+On a reported preparation failure, Airlock restores the release metadata present at invocation: manifests, versions, changelogs, intents, ledger, lockfiles, fingerprints and the preparation record. Existing staged, unstaged and untracked edits remain; the Git index is untouched. Run preparation without concurrent edits. Build-hook outputs outside release metadata are retained. This recovery handles raised errors and interrupts, not an abrupt process kill or filesystem failure.
 
 ## Release content validation
 
-Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Target-branch versions can be repaired without another bump before their first registry upload. Once any package artifact exists, including an incomplete PyPI upload, the target branch's fingerprint must remain unchanged until that version's GitHub release is finalized.
+Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Target-branch versions can be repaired without another bump before their first registry upload. Once any package artifact exists, including an incomplete PyPI upload, the target branch's fingerprint and `includes` selection must remain unchanged until that version's GitHub release is finalized.
 
-`airlock prepare` records each target's `content_hash` in `airlock-targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
+`airlock prepare` records each target's `hash` in `airlock_targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
-Package archives must exclude `airlock-targets.toml` to avoid self-referential fingerprints.
+Package archives must exclude `airlock_targets.toml` to avoid self-referential fingerprints.
+
+Each target accepts an optional `includes` array of globs. It defaults to `["**/*", "!**/*.md", "!**/*.markdown"]`; positive patterns select files and `!` patterns exclude them. An explicit array replaces the defaults: `includes = ["**/*"]` includes Markdown. Archive paths are package-relative and container paths are relative to the target's manifest directory. Actions default to their manifest directory; an explicit `includes` array uses repository-relative paths. For an Action whose manifest lives elsewhere, select its sources with `includes = ["apps/action-airlock/**", "!**/*.md", "!**/*.markdown"]`; individual files such as `shared/schema.json` can also be selected. Container selection also follows its build-context ignore rules. Python README descriptions follow the same selection, and derived wheel checksum indexes are omitted from fingerprints.
 
 | Target | Fingerprinted contents |
 | --- | --- |
 | npm | The normal `pnpm pack` archive, including bundled code and package metadata. |
 | Python | Both the wheel and source distribution produced by `uv build`. |
-| Action | Git-visible files in the Action directory and the directory containing its version file, plus declared `runtime_files`. `path` selects the Action directory when it differs from the version directory. |
+| Action | Git-visible repository files selected by `includes`, plus the major/minor version of its optional `sync_minor_from` target. |
 | Container | A build-input fingerprint of the selected context and Dockerfile paths, the Dockerfile, the selected ignore file and all build-context files admitted by its rules, filtered with Docker's SDK matcher. Git ignore rules do not filter container inputs. |
 
-Git-visible Action files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Container ignore rules must exclude `.git` when present, keeping fingerprints stable across commits and checkouts. Action and container hashes are a best-effort check of local inputs: they do not follow dependencies outside these directories, resolve remote base images or execute container builds.
+Git-visible Action files include tracked files and new files permitted by Git's ignore rules. The release manifest is excluded from source fingerprints because it stores the fingerprints themselves. Container ignore rules must exclude `.git` when present, keeping fingerprints stable across commits and checkouts. Action and container hashes are a best-effort check of the selected inputs; container fingerprints do not resolve remote base images or execute builds.
 
 Python packages pin `uv_build` exactly in `build-system.requires`. uv uses that backend version even when its bundled backend differs, keeping wheel metadata and fingerprints consistent across preparation, CI and publication.
 
-Bump detection is a best-effort reminder using prepared fingerprints; release readiness owns artifact validation. Cerberus compares each prepared fingerprint with the latest finalized stable GitHub release's tagged manifest, without rebuilding packages. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. The first release with a fingerprint establishes the baseline; content comparisons begin after that release.
+Bump detection is a best-effort reminder using prepared fingerprints; release readiness owns artifact validation. Cerberus compares each prepared fingerprint with the latest finalized stable GitHub release's tagged manifest, without rebuilding packages. The current PR's fingerprint cannot replace that baseline. One GitHub release-history lookup serves all targets; comparisons read Git history without downloading published artifacts. Fingerprints are comparable when their `includes` policies match; the first release under a selection policy establishes its baseline.
 
-Preparation also records each package's `requires` list of matching workspace release tags from its built metadata. Cerberus's `release_readiness` bite requires and recalculates every target's fingerprint and package dependency list. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
+Preparation also records each package's `depends_on` list of matching workspace target names from its built metadata, for example `depends_on = ["airlock"]`. References use the target's table name; its manifest supplies the exact version to await during publication. The field is omitted when there are no dependencies; an explicit empty list has the same meaning. Cerberus's `release_readiness` bite recalculates every target's fingerprint and package dependency list. Run `uv run cerberus --check release_readiness` for a focused readiness check. Publication verifies the same npm/Python archives it uploads and verifies Action/container inputs before publication. Build and fingerprint failures are errors.
+
+Actions can set `sync_minor_from = "airlock"` to include that target's major/minor version in their fingerprint. Airlock patch bumps and source edits leave the Action hash unchanged. This setting only controls fingerprinting; package publication ordering uses `depends_on`.
 
 Release checks require the GitHub CLI to read published releases. Authenticate locally with `gh auth login`; in CI, set `GH_TOKEN` to the workflow token with `contents: read` permission.
 
@@ -83,13 +91,13 @@ Each successful job finalizes its target's release; a failing job leaves the oth
 
 Python publication reads `Requires-Dist` from the built wheel and waits for matching versions of other configured PyPI targets before uploading those same archives. Matching dependencies include optional and conditional installations. The dependency's wheel and source archive must both be visible on PyPI; missing artifacts and transient registry failures use the same bounded wait as npm. A failed dependency blocks its consumers while unrelated jobs continue.
 
-Each npm and Python job rejects cycles among its reachable unpublished workspace dependencies before waiting. Cycle checks use the prepared `requires` lists, validated against the actual archives during readiness checks and publication. Packing hooks, bundled dependencies and dynamic Python metadata are resolved during preparation; publication does not repack peer packages. Existing publications break dependency cycles; unrelated jobs remain independent.
+Each npm and Python job rejects cycles among its reachable unpublished workspace dependencies before waiting. Cycle checks use the prepared `depends_on` lists, validated against the actual archives during readiness checks and publication. Packing hooks, bundled dependencies and dynamic Python metadata are resolved during preparation; publication does not repack peer packages. Existing publications break dependency cycles; unrelated jobs remain independent.
 
 To recover from a failed run, fix the cause and rerun the failed jobs in GitHub Actions, or dispatch `release.yml` on `main` with an optional `tag` to select one release.
 
 ## Add Airlock to a repository
 
-Configure pnpm versioning and declare `airlock-targets.toml`. Cerberus includes Airlock in its Python dependencies, so repositories using Cerberus can run `uv run airlock`. For a standalone CLI, use `uv tool install zyplux-airlock`. Use the [release workflow](../../.github/workflows/release.yml) as the consumer template, replacing its local action references with:
+Configure pnpm versioning and declare `airlock_targets.toml`. Cerberus includes Airlock in its Python dependencies, so repositories using Cerberus can run `uv run airlock`. For a standalone CLI, use `uv tool install zyplux-airlock`. Use the [release workflow](../../.github/workflows/release.yml) as the consumer template, replacing its local action references with:
 
 ```yaml
 - uses: zyplux/zyplux/apps/action-airlock@action-airlock-v2
@@ -105,37 +113,37 @@ Airlock supplies each npm scope's `publishConfig` registry to pnpm for preparati
 
 ## Add a release target
 
-1. Add a named table with its kind and version source to `airlock-targets.toml`. The table name supplies the `<name>-v` tag prefix; its label defaults to `<scope>/<name>` and can be overridden explicitly.
+`manifest` is a repository-relative JSON or TOML package manifest. Airlock reads JSON `name` and `version` or TOML `project.name` and `project.version`; its parent directory defines the target directory. The release kind defaults to `npm` for JSON and `pypi` for TOML. Actions and containers declare their kind explicitly.
+
+1. Add a named table with its manifest to `airlock_targets.toml`. The table name identifies the release target and supplies the `<name>-v` tag prefix. Optional `release_tag` overrides that base name: `release_tag = "short"` produces `short-vX.Y.Z`. Dependency references use table names independently of release tags.
 2. Ensure pnpm discovers its version manifest. Python packages need the private tracking manifest described above; actions use a workspace `package.json`, with `private: true` when there is no npm package.
 3. Complete the registry setup below, then prepare and merge the release through the feature PR procedure.
 
-Version files and declared paths must be repository-relative and resolve inside the repository. Set the top-level `scope` before the target tables:
+Manifests and declared paths must be repository-relative and resolve inside the repository:
 
 ```toml
-scope = "@zyplux"
-
 [airlock]
-kind = "pypi"
-label = "zyplux-airlock"
-version = { file = "apps/airlock/pyproject.toml", regex = '^version = "([^"]+)"' }
+manifest = "apps/airlock/pyproject.toml"
 ```
 
-Actions also declare their GitHub `repository`, which must match the checkout because publication writes its release tags through `origin`. Set `path = "apps/action-airlock"` when the Action directory differs from its version-file directory. Declare installation inputs outside those directories with `runtime_files`; Airlock's action includes the root `pyproject.toml` and `uv.lock`. These files must exist inside the repository. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
+`package_name` defaults to the name read from the manifest. An explicit override supplies the publishing identity, which npm and Python archives must match. GHCR targets require their full container name in `package_name`.
+
+Actions publish releases and tags in the checked-out GitHub repository. Airlock publishes as Python distribution `zyplux-airlock` with `airlock-vX.Y.Z` tags; its action uses fixed `action-airlock-vX.Y.Z` tags and the `action-airlock-vX` alias. The package-manager action uses `setup-pm-vX.Y.Z` and `setup-pm-vX`.
 
 ## Container releases
 
-Declare a GHCR target with a version source, build paths and image label:
+Declare a GHCR target with a manifest, build paths and container package name:
 
 ```toml
-[core]
+[zyploop]
 kind = "ghcr"
-label = "ghcr.io/zyplux/zyploop"
-version = { file = "apps/zyp-loop/package.json", json = "version" }
-dockerfile = "apps/zyp-loop/Dockerfile"
+package_name = "ghcr.io/zyplux/zyploop"
+manifest = "apps/zyploop/package.json"
+dockerfile = "apps/zyploop/Dockerfile"
 build_context = "."
 ```
 
-Both build paths are relative to the repository root and must stay inside it. The build context defaults to the version file's directory. When `dockerfile` is omitted, Airlock selects `Containerfile` or `Dockerfile` in the build context.
+Both build paths are relative to the repository root and must stay inside it. The build context defaults to the manifest's directory. When `dockerfile` is omitted, Airlock selects `Containerfile` or `Dockerfile` in the build context.
 
 Airlock selects `.containerignore` or `.dockerignore` beside the Dockerfile, falling back to the build-context directory. Within each directory, `.containerignore` takes precedence. The same selection filters the build-input fingerprint and is passed to Podman with `--ignorefile`. Fingerprint mismatch diagnostics identify the selected context, Dockerfile and ignore file.
 

@@ -24,7 +24,7 @@ def select_dependencies(requirements: list[Requirement], targets: dict[str, Rele
         for dependency in targets.values()
         if any(
             requirement.url is None
-            and canonicalize_name(requirement.name) == canonicalize_name(dependency.spec.label)
+            and canonicalize_name(requirement.name) == canonicalize_name(dependency.package_name)
             and requirement.specifier.contains(dependency.version, prereleases=True)
             for requirement in requirements
         )
@@ -34,28 +34,28 @@ def select_dependencies(requirements: list[Requirement], targets: dict[str, Rele
 def load_dependencies(target: ReleaseTarget, archives: list[Path]) -> list[ReleaseTarget]:
     wheels = [archive for archive in archives if archive.suffix == ".whl"]
     if len(wheels) != 1:
-        msg = f"{target.spec.label}: Python build must produce exactly one wheel"
+        msg = f"{target.package_name}: Python build must produce exactly one wheel"
         raise ValueError(msg)
     with zipfile.ZipFile(wheels[0]) as wheel:
         files = [name for name in wheel.namelist() if name.endswith(".dist-info/METADATA")]
         if len(files) != 1:
-            msg = f"{target.spec.label}: wheel must contain exactly one METADATA file"
+            msg = f"{target.package_name}: wheel must contain exactly one METADATA file"
             raise ValueError(msg)
         try:
             metadata = Metadata.from_email(wheel.read(files[0]))
         except ExceptionGroup as exc:
-            msg = f"{target.spec.label}: invalid wheel metadata: {exc}"
+            msg = f"{target.package_name}: invalid wheel metadata: {exc}"
             raise ValueError(msg) from exc
-    if canonicalize_name(metadata.name) != canonicalize_name(target.spec.label) or metadata.version != Version(
+    if canonicalize_name(metadata.name) != canonicalize_name(target.package_name) or metadata.version != Version(
         target.version
     ):
-        msg = f"{target.spec.label}: wheel identity must match {target.spec.label}@{target.version}"
+        msg = f"{target.package_name}: wheel identity must match {target.package_name}@{target.version}"
         raise ValueError(msg)
     requirements = metadata.requires_dist or []
     if not requirements:
         return []
     targets: dict[str, ReleaseTarget] = {
-        canonicalize_name(dependency.spec.label): dependency
+        canonicalize_name(dependency.package_name): dependency
         for dependency in load_targets(proc.find_root(target.directory))
         if dependency.spec.kind == "pypi"
     }

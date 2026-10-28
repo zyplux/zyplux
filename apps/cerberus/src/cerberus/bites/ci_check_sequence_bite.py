@@ -51,10 +51,14 @@ def _is_required(step: dict[str, Any]) -> bool:
 
 def _is_shared_setup(step: dict[str, Any]) -> bool:
     uses = step.get("uses", "")
+    inputs = step.get("with", {})
     identity, _, ref = uses.partition("@") if isinstance(uses, str) else ("", "", "")
     return (
-        uses == "./apps/action-setup-pm" or (identity == "zyplux/zyplux/apps/action-setup-pm" and bool(ref))
-    ) and _is_required(step)
+        (uses == "./apps/action-setup-pm" or (identity == "zyplux/zyplux/apps/action-setup-pm" and bool(ref)))
+        and _is_required(step)
+        and isinstance(inputs, dict)
+        and str(inputs.get("install-dependencies", "true")).lower() == "true"
+    )
 
 
 def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:

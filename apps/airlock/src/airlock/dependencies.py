@@ -27,21 +27,21 @@ def validate_prepared_dependencies(target: ReleaseTarget, dependencies: list[Rel
     if not isinstance(target.spec, PackageSpec):
         msg = "prepared dependencies require a package target"
         raise TypeError(msg)
-    expected = sorted(dependency.tag for dependency in dependencies)
-    if target.spec.requires is None or sorted(target.spec.requires) != expected:
-        msg = f"{target.spec.label}: prepared dependencies differ from package contents; run airlock prepare"
+    expected = sorted(dependency.spec.name for dependency in dependencies)
+    if sorted(target.spec.depends_on) != expected:
+        msg = f"{target.package_name}: prepared dependencies differ from package contents; run airlock prepare"
         raise ValueError(msg)
 
 
 def load_prepared_dependencies(target: ReleaseTarget, targets: dict[str, ReleaseTarget]) -> list[ReleaseTarget]:
-    if not isinstance(target.spec, PackageSpec) or target.spec.requires is None:
-        msg = f"{target.spec.label}: missing prepared dependencies; run airlock prepare"
-        raise ValueError(msg)
+    if not isinstance(target.spec, PackageSpec):
+        msg = "prepared dependencies require a package target"
+        raise TypeError(msg)
     dependencies = []
-    for tag in target.spec.requires:
-        dependency = targets.get(tag)
+    for name in target.spec.depends_on:
+        dependency = targets.get(name)
         if dependency is None or dependency.spec.kind != target.spec.kind:
-            msg = f"{target.spec.label}: unknown package dependency {tag}; run airlock prepare"
+            msg = f"{target.package_name}: unknown package dependency {name}; run airlock prepare"
             raise ValueError(msg)
         dependencies.append(dependency)
     return dependencies
@@ -50,15 +50,16 @@ def load_prepared_dependencies(target: ReleaseTarget, targets: dict[str, Release
 def validate_dependency_cycles(target: ReleaseTarget, dependencies: list[ReleaseTarget]) -> None:
     if not dependencies:
         return
-    targets = {candidate.tag: candidate for candidate in load_targets(proc.find_root(target.directory))}
+    targets = {candidate.spec.name: candidate for candidate in load_targets(proc.find_root(target.directory))}
     graph: dict[str, set[str]] = {}
     pending = [target]
     while pending:
         current = pending.pop()
-        if current.tag in graph:
+        name = current.spec.name
+        if name in graph:
             continue
         neighbors = dependencies if current.tag == target.tag else load_prepared_dependencies(current, targets)
-        graph[current.tag] = {dependency.tag for dependency in neighbors}
+        graph[name] = {dependency.spec.name for dependency in neighbors}
         pending.extend(neighbors)
     try:
         TopologicalSorter(graph).prepare()
@@ -67,20 +68,20 @@ def validate_dependency_cycles(target: ReleaseTarget, dependencies: list[Release
     else:
         return
     unpublished: dict[str, set[str]] = {}
-    pending_tags = [target.tag]
-    while pending_tags:
-        tag = pending_tags.pop()
-        if tag in unpublished:
+    pending_names = [target.spec.name]
+    while pending_names:
+        name = pending_names.pop()
+        if name in unpublished:
             continue
         try:
-            has_published = is_published(targets[tag])
+            has_published = is_published(targets[name])
         except httpx.HTTPError:
             # Dependency waiting owns retries and authentication errors.
             return
-        unpublished[tag] = set() if has_published else graph[tag]
-        pending_tags.extend(unpublished[tag])
+        unpublished[name] = set() if has_published else graph[name]
+        pending_names.extend(unpublished[name])
     try:
         TopologicalSorter(unpublished).prepare()
     except CycleError as exc:
-        msg = f"{target.spec.label}: cyclic production workspace dependency: {exc}"
+        msg = f"{target.package_name}: cyclic production workspace dependency: {exc}"
         raise ValueError(msg) from exc

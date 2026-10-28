@@ -7,9 +7,10 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from cerberus.model import CheckResult, Status
-    from seam_fixtures import MakeFinding, RunCheckWithFiles
+    from seam_fixtures import MakeFinding, RunCheckOnDisk, RunCheckWithFiles
 
 type RunKnipConfig = Callable[..., CheckResult]
 
@@ -61,19 +62,8 @@ _ENTRY_EXPORTS_WITH_ALLOWANCES = (
     '"ignoreBinaries": ["podman", "uv"], "ignoreDependencies": ["cloudflare"]}'
 )
 
-_RELEASE_TARGETS_ONE_NPM = (
-    'scope = "@demo"\n[lib]\n'
-    'kind = "npm"\n'
-    'label = "@demo/lib"\n'
-    'version = { file = "packages/lib/package.json", json = "version" }\n'
-)
-_RELEASE_TARGETS_MIXED_KINDS = (
-    _RELEASE_TARGETS_ONE_NPM + "\n"
-    "[tool]\n"
-    'kind = "pypi"\n'
-    'label = "demo-tool"\n'
-    'version = { file = "tool/pyproject.toml", regex = \'^version = "([^"]+)"\' }\n'
-)
+_RELEASE_TARGETS_ONE_NPM = '[lib]\nmanifest = "packages/lib/package.json"\n'
+_RELEASE_TARGETS_MIXED_KINDS = _RELEASE_TARGETS_ONE_NPM + '\n[tool]\nmanifest = "tool/pyproject.toml"\n'
 
 _OK = "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
 
@@ -101,7 +91,7 @@ _TOOLS_LAYOUT = {
     "tools/lint/package.json": '{"name": "@demo/lint"}',
 }
 
-_TOOLS_ARE_PRODUCTION = '[source]\nproduction_roots = ["apps/*", "packages/*", "tools/*"]\n'
+_TOOLS_ARE_INFRA = '[source_oracle.types.prod]\nroots = ["apps/*", "packages/*"]\n'
 
 
 @pytest.fixture
@@ -124,7 +114,7 @@ def run_knip_config(run_check_with_files: RunCheckWithFiles) -> RunKnipConfig:
             **(layout or {}),
             "knip.json": knip,
             "knip.prod.json": prod,
-            "airlock-targets.toml": release_targets,
+            "airlock_targets.toml": release_targets,
         }
         present = {path: content for path, content in files.items() if content is not None}
         return run_check_with_files(CHECK_ID, present, config_toml)
@@ -293,7 +283,7 @@ def test_27_4_11_ignores_a_malformed_airlock_targets_toml_as_no_published_target
 def test_27_4_12_ignores_an_airlock_targets_toml_with_a_non_table_entry(
     run_knip_config: RunKnipConfig, ok: MakeFinding
 ) -> None:
-    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='scope = "@demo"\nlib = "not-a-table"\n')
+    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='lib = "not-a-table"\n')
     assert result.findings == [ok(_OK)]
 
 
@@ -427,7 +417,7 @@ def test_27_4_24_fails_when_a_nested_non_production_workspace_stays_in_the_graph
 def test_27_4_25_fails_when_a_workspace_outside_the_production_roots_stays_in_the_graph(
     run_knip_config: RunKnipConfig, fail: MakeFinding
 ) -> None:
-    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=_TOOLS_LAYOUT)
+    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=_TOOLS_LAYOUT, config_toml=_TOOLS_ARE_INFRA)
 
     assert (
         fail('knip.prod.json "ignoreWorkspaces" leaves non-production workspace(s) in the graph: tools/lint')
@@ -441,7 +431,7 @@ def test_27_4_26_takes_the_production_workspaces_from_cerberus_configuration(
     result = run_knip_config(
         prod=_ENTRY_EXPORTS_OK,
         layout=_TOOLS_LAYOUT,
-        config_toml=_TOOLS_ARE_PRODUCTION,
+        config_toml=_TOOLS_ARE_INFRA.replace('"packages/*"', '"packages/*", "tools/*"'),
     )
 
     assert result.findings == [ok(_OK)]
@@ -458,3 +448,16 @@ def test_27_4_27_ignores_workspace_members_the_pnpm_manifest_excludes(
     result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=layout)
 
     assert result.findings == [ok(_OK)]
+
+
+def test_27_5_1_regenerates_workspace_selection_from_source_categories(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path
+) -> None:
+    files = {
+        **_REPO_LAYOUT,
+        **_TOOLS_LAYOUT,
+        "knip.prod.json": _ENTRY_EXPORTS_IGNORE_PRODUCTION,
+        "cerberus.toml": _TOOLS_ARE_INFRA,
+    }
+    assert not run_check_on_disk(CHECK_ID, files, fix=True).problems
+    assert json.loads((tmp_path / "knip.prod.json").read_text())["ignoreWorkspaces"] == ["tests/lib", "tools/lint"]

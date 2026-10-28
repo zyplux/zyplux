@@ -19,6 +19,7 @@ class Context:
     source: RepoSource
     fix: bool = False
     verbose: bool = False
+    config_path: Path | None = None
     _cache: dict[object, Any] = field(default_factory=dict)
 
     def _cached[T](self, key: object, producer: Callable[[], T]) -> T:
@@ -47,5 +48,7 @@ class Context:
         return self._cached(("workflows", repo.name), lambda: self.source.workflows(repo))
 
 
-def local_context(config: Config, root: Path, *, fix: bool = False, verbose: bool = False) -> Context:
-    return Context(config=config, source=LocalSource(root), fix=fix, verbose=verbose)
+def local_context(
+    config: Config, root: Path, *, fix: bool = False, verbose: bool = False, config_path: Path | None = None
+) -> Context:
+    return Context(config=config, source=LocalSource(root), fix=fix, verbose=verbose, config_path=config_path)

@@ -32,7 +32,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=apps/clipy/pyproject.toml,target=apps/clipy/pyproject.toml \
     --mount=type=bind,source=apps/action-setup-pm/pyproject.toml,target=apps/action-setup-pm/pyproject.toml \
     --mount=type=bind,source=apps/token_stats/pyproject.toml,target=apps/token_stats/pyproject.toml \
-    --mount=type=bind,source=packages/util_py/pyproject.toml,target=packages/util_py/pyproject.toml \
     uv sync --locked --no-install-project --package totchef
 
 COPY pyproject.toml uv.lock ./
@@ -42,7 +41,6 @@ COPY apps/cerberus/pyproject.toml ./apps/cerberus/pyproject.toml
 COPY apps/clipy/pyproject.toml ./apps/clipy/pyproject.toml
 COPY apps/action-setup-pm/pyproject.toml ./apps/action-setup-pm/pyproject.toml
 COPY apps/token_stats/pyproject.toml ./apps/token_stats/pyproject.toml
-COPY packages/util_py/pyproject.toml ./packages/util_py/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --package totchef
 

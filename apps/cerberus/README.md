@@ -1,6 +1,6 @@
 # cerberus
 
-Verifies invariants for zyplux repository checkouts — CI workflow structure, justfile and dependency conventions, CODEOWNERS, and release-version bumps.
+The repository guard and shared source classifier. Verifies invariants for zyplux repository checkouts — CI workflow structure, justfile and dependency conventions, CODEOWNERS, and release-version bumps.
 
 ## Requirements
 
@@ -14,11 +14,11 @@ CI uses one unquoted canonical command with literal arguments per `run` step. Py
 
 Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.
 
-Release targets record their content fingerprints in `airlock-targets.toml`. The `release_surface_version_bump` bite implements the version-bump policy, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. The `release_readiness` bite validates consumed change intents, synchronized Python versions, current release notes and content fingerprints. Both checks reuse release helpers from the `zyplux-airlock` Python dependency. Release-history reads use `gh auth login` locally or `GH_TOKEN` in CI. Fetch complete Git history and the target branch before running the check.
+Release targets record their content fingerprints in `airlock_targets.toml`. The `release_surface_version_bump` bite implements the version-bump policy, including repairs to unpublished versions and `GITHUB_BASE_REF` comparisons. The `release_readiness` bite validates consumed change intents, synchronized Python versions, current release notes and content fingerprints. Both checks reuse release helpers from the `zyplux-airlock` Python dependency. Release-history reads use `gh auth login` locally or `GH_TOKEN` in CI. Fetch complete Git history and the target branch before running the check.
 
 Dependency freshness and tool-pin freshness share Airlock's registry client for npm, PyPI and GHCR. Tool-pin lookups select stable npm versions within the `latest` release line that satisfy the configured minimum release age. Lookup failures produce error findings.
 
-Named target tables derive their tag prefix as `<name>-v` and their label as `<scope>/<name>` from the manifest's top-level `scope`; an explicit `label` overrides the default. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Action fingerprints cover the action directory and its version-file directory; set `path` when those differ. Floating major tags do not define the version baseline.
+Named target tables derive their tag prefix as `<name>-v`; optional `release_tag` overrides the base name. Package names come from the referenced manifest, with optional `package_name` overrides. JSON and TOML manifests default to npm and PyPI publication respectively. Action targets use `kind = "action"` and a GitHub `repository`. Their latest published stable version comes from GitHub releases matching the derived tag prefix, across all pages. Action fingerprints cover the action directory and its manifest directory; set `path` when those differ. Floating major tags do not define the version baseline.
 
 ## Lint a repo
 
@@ -42,6 +42,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 | ID                             | Scope       | Verifies                                                                            |
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| `cerberus_schema` | content | Repository configuration matches the schema; always runs before loading overrides |
+| `source_oracle`             | content     | Category globs and shared policies enforce unambiguous classification and allowed nesting |
 | `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
 | `ci_check_sequence`            | content     | `ci.yml` uses shared package-manager setup before the canonical checks             |
@@ -52,8 +54,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `line_length`                  | content     | ruff `line-length` and prettier `printWidth` both match the configured width (120)   |
 | `rumdl`                        | content     | `.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)    |
 | `knip`                         | content     | knip config is standalone, never inline in `package.json`; `knip.prod.json` runs the entry-exports pass and exempts exactly the repo's published npm targets |
-| `vitest`                       | content     | TypeScript tests use Vitest rather than Bun's test runner |
-| `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
+| `vitest`                       | content     | TypeScript tests use Vitest |
+| `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`) |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
 | `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
 | `consistent_package_export_entries` | content | Workspace packages use index roots or named modules, with matching source/publication keys; application router roots match their TanStack Vite entry |
@@ -68,7 +70,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `release_readiness` | content | Change intents are consumed, Python versions match, release notes exist and fingerprints match current contents |
 | `release_surface_version_bump` | git-history | A published target's version is bumped by exactly one step whenever its release contents change |
 | `codeowners_coverage`          | content     | `CODEOWNERS` present and covers `/.github/`                                          |
-| `pytest`                       | content     | `pyproject.toml` `[tool.coverage.report] fail_under` meets the floor (90%)           |
+| `pytest` | content | pytest configuration enforces a coverage floor of at least 90% |
 | `jscpd`                        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |
 | `fallow`                       | content     | fallow finds no unused code, circular imports, or functions above its complexity thresholds |
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
@@ -86,45 +88,41 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 ## Config
 
-Every default lives in [`cerberus.toml`](src/cerberus/cerberus.toml): shared source ownership under `[source]`, and check settings under their bite's table (`[justfile]`, `[pytest]`, `[jscpd]`, …). The bundled file is the single home of the defaults; missing required keys are errors. A repo adjusts them with a root `cerberus.toml`, overlaid key by key. An explicit `--config PATH` stands in for that repository file. Lists replace the corresponding default list.
+Every default lives in [`cerberus.toml`](src/cerberus/cerberus.toml), under its bite's table (`[source_oracle]`, `[justfile]`, `[pytest]`, …). The bundled file is the single home of the defaults; missing required keys are errors. A repo adjusts them with a root `cerberus.toml`, overlaid key by key. An explicit `--config PATH` stands in for that repository file. Lists replace the corresponding default list.
 
-Every bite table also takes a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
+The mandatory `cerberus_schema` bite validates repository overrides against the [configuration schema](src/cerberus/config_schema.py) before other bites run. Unknown settings, invalid types and malformed TOML produce failure findings. It has no configuration table and cannot be disabled.
 
-### Shared source ownership
+Configurable bite tables also take a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
+
+### Shared source classification
+
+`source_oracle` is the single classifier used by repository checks and reports. Each category defines `roots`, `needs_tests` and `allowed_child_types` in the bundled defaults:
+
+| Category | Purpose | Needs tests | Allowed child categories |
+| --- | --- | --- | --- |
+| `prod` | Shipped applications and libraries | Yes | All |
+| `infra` | Repository, CI and deployment code | Yes | All |
+| `demo` | Examples and demonstrations | No | None |
+| `test` | Tests, fixtures and coverage reporting | No | test, demo, docs |
+| `docs` | Documentation, including embedded executable code | No | None |
+
+Consumer overlays replace category globs; policies remain shared. For example:
 
 ```toml
-[source]
-production_roots = ["apps/*", "packages/*", "infra"]
-test_files = [
-    "**/tests/**",
-    "**/__tests__/**",
-    "**/*.test.*",
-    "**/*.spec.*",
-    "**/test_*.py",
-    "**/*_test.py",
-    "**/conftest.py",
-]
+[source_oracle.types.prod]
+roots = ["apps/*", "packages/*", "src", "tools/*"]
+
+[source_oracle.types.demo]
+roots = ["demo", "examples", "infra/demo"]
 ```
 
-Production roots are repository-relative directory globs; their descendants belong to production, including source assets, build configuration, and deployment infrastructure. Test-file globs take precedence even inside a production root. `*` matches one path segment and `**` spans directories. Files outside both selections are other maintained files, such as development tooling. These conventions apply independently of which bites are enabled.
+Root globs are repository-relative paths. Deeper matches win; equally deep matches use the most literal pattern. Equally specific conflicting categories fail. `allowed_child_types` names the categories permitted **inside** a category. Demo and docs roots are terminal; their contents retain that category. Unmatched paths are infra. Colocated tests retain their enclosing category and have an independent `is_test` flag, derived from `[source_oracle].test_files`.
 
-Knip intersects this ownership with registered TypeScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
+Existing test-presence checks use `needs_tests`. Repositories configure test discovery, runners and coverage. `[source_oracle].test_exempt_files` records explicit repository policy exceptions. Linting and strict typechecking cover every category.
 
-Pyrefly requires `min-severity = "warn"` so warnings are displayed and fail the quality gate. Settings must be declared directly in `pyrefly.toml`; `extends` and command-line `--min-severity` overrides are rejected.
+Knip uses prod classification and registered TypeScript workspaces; `uv run cerberus --check knip --fix` regenerates `ignoreWorkspaces`. Pyrefly requires `min-severity = "warn"`; `extends` and command-line severity overrides are rejected.
 
-Other tools can consume the public API without scanning files or invoking the CLI:
-
-```python
-from pathlib import Path
-from cerberus import load_source_scope
-
-scope = load_source_scope(Path("/path/to/repository"))
-scope.is_production_file("infra/deploy.py")  # True with bundled defaults
-scope.is_test_file("apps/widget/tests/widget.test.tsx")  # True
-scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
-```
-
-`load_source_scope` reads the defaults and repository overlay. The returned `SourceScope` classifies repository-relative POSIX paths without filesystem access; the caller owns file discovery and any generated-file filtering.
+Python callers use `load_source_oracle(repo_root).classify(relative_path)` from `cerberus`; the result contains `kind`, `root`, `is_test` and `needs_tests`. Classification is pure; callers discover files.
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
@@ -132,7 +130,7 @@ scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 
 ## Package and source checks
 
-TypeScript seam checks use ESLint's resolved imports. The retired `cli_ts_test_seam`, `lib_ts_test_seam`, and `fixture_roles_ts` IDs report migration guidance when encountered in overlays. Their package policies are covered by the focused export, ownership, and reference checks.
+TypeScript seam checks use ESLint's resolved imports. Focused export, ownership and reference checks enforce package policies.
 
 Worker traversal covers first-party static imports and literal dynamic imports. Normal output summarizes static coverage limits; `--verbose` lists computed imports, third-party modules, and framework-provided entries that require production bundle validation.
 

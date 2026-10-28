@@ -1,0 +1,53 @@
+# Release targets used by Airlock and Cerberus to prepare, publish and enforce version bumps.
+
+[airlock]
+manifest = "apps/airlock/pyproject.toml"
+hash = "sha256:be0474cbeb8aeb3b3d3d63b0b9b22e6cb39e3e93e79022893587012187ca35d7"
+
+[action-airlock]
+kind = "action"
+manifest = "apps/airlock/pyproject.toml"
+includes = ["apps/action-airlock/**", "!**/*.md", "!**/*.markdown"]
+sync_minor_from = "airlock"
+hash = "sha256:7faec8112b5f8819b091ff8fe5e004e4e90e961fde0c5be27fe3fea0e5cb6ca2"
+
+[setup-pm]
+kind = "action"
+manifest = "apps/action-setup-pm/pyproject.toml"
+hash = "sha256:38be8854b903badddafe4a49a842a448a921d3e7c5aad61065ddb0189db87b95"
+
+[eslint-config]
+manifest = "packages/eslint-config/package.json"
+hash = "sha256:3c9a363ff930e9cad05957bf517aff11e7cd5a28d7a1fcf09db3336e41007487"
+depends_on = ["util"]
+
+[tsconfig]
+manifest = "packages/tsconfig/package.json"
+hash = "sha256:af8aa4ecaf8d1bd2fa16a88f36ec45b7f80b82c635dc77e55c4dad8c0f73a7f5"
+
+[util]
+manifest = "packages/util-ts/package.json"
+hash = "sha256:90aa22ea897c7b9da12daaf7b6c091cbafb4e097021c32c97e51211997dea9c9"
+
+[spectra]
+manifest = "packages/spectra/package.json"
+hash = "sha256:a094534928caa4fe04ddc83e95eef9a206af50ad3a92bedb243505c860f967cb"
+
+[cz]
+manifest = "apps/cz/package.json"
+hash = "sha256:0bdde0a353e08883894a74bcf5fc88f558f1d4b5b891def1432548fb8b136e38"
+depends_on = ["util"]
+
+[cerberus]
+manifest = "apps/cerberus/pyproject.toml"
+hash = "sha256:2a84f0a7afdefc0f277539d11a670c9acae703444a5ed8b252e6a08f92597e02"
+depends_on = ["airlock"]
+
+[totchef]
+manifest = "apps/totchef/pyproject.toml"
+hash = "sha256:ac5fbc79721f9c47ca571c8ce1451a87089325d01306d1995e304f7b1bbad479"
+
+[clipy]
+manifest = "apps/clipy/pyproject.toml"
+hash = "sha256:83ff3a58135d9f7ecb584b9698655a503ee985769aa513a8473a4a49b2031f19"
+depends_on = ["airlock", "cerberus"]

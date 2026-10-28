@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
 _SUBTREE_SUFFIX = "/**"
 RELEASE_AGE_MINUTES = 1440
-TEST_HARNESS_ROOT = "tests"  # the workspace root reserved for cross-package test tooling, never a product itself
 
 
 def ts_member_globs(repo: Repo, ctx: Context) -> list[str]:
@@ -85,12 +84,3 @@ def ts_member_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     if globs:
         return member_dirs(paths, globs, "package.json")
     return [""]
-
-
-def is_test_harness(member_dir: str) -> bool:
-    """Whether a member dir is one of the `tests/` workspaces this org tears every package's tests out to."""
-    return member_dir.split("/", 1)[0] == TEST_HARNESS_ROOT
-
-
-def without_test_harness(dirs: list[str]) -> list[str]:
-    return [d for d in dirs if not is_test_harness(d)]

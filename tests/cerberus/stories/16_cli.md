@@ -38,7 +38,7 @@
 
 ### 16.5.2 rejects a config file whose section is not a table
 
-### 16.5.3 explains where to move a coverage floor
+### 16.5.3 rejects an unknown bite setting
 
 ## 16.6 switching bites off in configuration
 
@@ -50,7 +50,7 @@ Any bite switches off with `off = true` in its `[<bite id>]` config table — th
 
 ### 16.6.3 re-enables a bundled-off bite when the repo overlay sets off to false
 
-### 16.6.4 warns and carries on when an off table names an unknown bite
+### 16.6.4 rejects an off table naming an unknown bite
 
 ### 16.6.5 disables coverage enforcement independently of the vitest runner
 

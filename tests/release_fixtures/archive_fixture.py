@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import shutil
 import tarfile
 import tomllib
@@ -70,10 +71,21 @@ def stage_packagers(release: ReleaseFixture) -> None:
     release.on("uv build", build)
 
 
-def hash_archives(release: ReleaseFixture, archives: list[Path]) -> str:
+def configure_python_package(release: ReleaseFixture) -> None:
+    release.configure("npm", 'kind = "pypi"\nmanifest = "packages/util/pyproject.toml"')
+    release.write_json("packages/util/package.json", {"name": "zyplux-util", "version": "1.2.3", "private": True})
+    release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+
+
+def hash_archives(release: ReleaseFixture, archives: list[Path], includes: list[str] | None = None) -> str:
     release.use_package()
     if archives[0].suffix != ".tgz":
-        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
+        configure_python_package(release)
+        release.write(
+            "packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\nreadme = "README.md"\n'
+        )
+    if includes is not None:
+        release.configure("pypi" if archives[0].suffix != ".tgz" else "npm", f"includes = {json.dumps(includes)}")
 
     def build(call: Command) -> str:
         if "--out" in call.argv:
@@ -95,7 +107,7 @@ def hash_archives(release: ReleaseFixture, archives: list[Path]) -> str:
     release.on("pnpm pack", build)
     release.on("uv build", build)
     release.run("prepare")
-    return tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"]
+    return tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"]
 
 
 def stage_git(release: ReleaseFixture) -> None:

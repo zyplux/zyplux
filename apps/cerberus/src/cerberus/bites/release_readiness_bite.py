@@ -19,8 +19,8 @@ SCOPE = Scope.CONTENT
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    if ctx.file(repo, "airlock-targets.toml") is None:
-        res.skip("no airlock-targets.toml — repo publishes nothing")
+    if ctx.file(repo, "airlock_targets.toml") is None:
+        res.skip("no airlock_targets.toml — repo publishes nothing")
         return res
     try:
         for target, _ in load_prepared_targets(root=ctx.source.root):

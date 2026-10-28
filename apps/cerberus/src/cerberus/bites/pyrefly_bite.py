@@ -9,7 +9,7 @@ from cerberus.stacks import SOURCE_SUFFIXES, has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
-    from cerberus.source_scope import SourceScope
+    from cerberus.source_oracle import SourceOracle
 
 ID = "pyrefly"
 SUMMARY = "all code, tests included, type-checks under strict pyrefly with no relaxations"
@@ -23,7 +23,7 @@ _TESTS_TOP = "tests"
 _NAMESPACE_DEPTH = 2
 
 
-def _python_roots(paths: list[str], source: SourceScope) -> tuple[set[str], set[str]]:
+def _python_roots(paths: list[str], source: SourceOracle) -> tuple[set[str], set[str]]:
     production: set[str] = set()
     tests: set[str] = set()
     for path in paths:
@@ -36,7 +36,8 @@ def _python_roots(paths: list[str], source: SourceScope) -> tuple[set[str], set[
                 if seg[0] == _TESTS_TOP and len(seg) > _NAMESPACE_DEPTH
                 else str(PurePosixPath(path).parent)
             )
-        elif (root := source.find_production_root(path)) is not None:
+        else:
+            root = source.classify(path).root
             src = PurePosixPath(root) / "src"
             production.add(str(src) if PurePosixPath(path).is_relative_to(src) else root)
     return production, tests
@@ -122,7 +123,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="pyrefly") is None:
         return res
 
-    production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source)
+    production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source_oracle)
     if not has_source(repo, ctx, "python") and ctx.file(repo, PATH) is None:
         res.skip("no Python source or pyrefly.toml")
         return res

@@ -75,7 +75,7 @@ def ctx() -> Context:
 @pytest.fixture
 def make_context() -> MakeContext:
     def _make(root: Path, *, fix: bool = False, verbose: bool = False, config_path: Path | None = None) -> Context:
-        return context.local_context(config.load(config_path), root, fix=fix, verbose=verbose)
+        return context.local_context(config.load(config_path, repo_root=root), root, fix=fix, verbose=verbose)
 
     return _make
 

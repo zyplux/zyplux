@@ -15,24 +15,21 @@ if TYPE_CHECKING:
     import subprocess
     from collections.abc import Iterator
 
-MANIFEST = """scope = "@zyplux"
-[util]
+MANIFEST = """[util]
 kind = "npm"
-version = { file = "packages/util/package.json", json = "version" }
+manifest = "packages/util/package.json"
 [cerberus]
 kind = "pypi"
-label = "zyplux-cerberus"
-version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
+manifest = "apps/cerberus/pyproject.toml"
 [ci-image]
 kind = "ghcr"
-label = "ghcr.io/zyplux/ci"
-version = { file = "containers/ci/Containerfile", regex = '^LABEL org\\.opencontainers\\.image\\.version="([^"]+)"' }
+package_name = "ghcr.io/zyplux/ci"
+manifest = "containers/ci/package.json"
 """
 
-PACKAGE_MANIFEST = """scope = "@zyplux"
-[util]
+PACKAGE_MANIFEST = """[util]
 kind = "npm"
-version = { file = "packages/util/package.json", json = "version" }
+manifest = "packages/util/package.json"
 """
 MISSING_RELEASE = json.dumps({"data": {"repository": {"release": None}}})
 PUBLISHED_RELEASE = json.dumps({
@@ -55,7 +52,7 @@ def build_release(tag: str, *, draft: bool = False, prerelease: bool = False) ->
 @dataclass(frozen=True)
 class Target:
     dir: Path
-    label: str
+    package_name: str
     tag: str
     version: str
 
@@ -71,11 +68,12 @@ class ContainerPublication:
 
 class ReleaseFixture(CliFixture):
     def seed(self) -> None:
-        self.write("airlock-targets.toml", MANIFEST)
+        self.write("airlock_targets.toml", MANIFEST)
         self.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.3"})
         self.write("apps/cerberus/pyproject.toml", '[project]\nname = "zyplux-cerberus"\nversion = "2.3.4"\n')
         self.write_json("apps/cerberus/package.json", {"name": "zyplux-cerberus", "private": True, "version": "2.3.4"})
         self.write("containers/ci/Containerfile", 'FROM scratch\nLABEL org.opencontainers.image.version="3.4.5"\n')
+        self.write_json("containers/ci/package.json", {"name": "ci-image", "private": True, "version": "3.4.5"})
         self.write(".changeset/README.md", "# Release notes\n")
         for directory, version, notes in (
             ("packages/util", "1.2.3", "Publish the reviewed utility changes."),
@@ -88,6 +86,7 @@ class ReleaseFixture(CliFixture):
         self.on("git rev-parse origin/main", "sha-head")
         self.on("git fetch")
         self.on("git status --porcelain")
+        self.on("git merge-file", self.run_real)
         self.on("gh repo view", "zyplux/zyplux")
         self.on("gh auth token", Reply(exit_code=1))
         self.on("gh api graphql", MISSING_RELEASE)
@@ -115,8 +114,8 @@ class ReleaseFixture(CliFixture):
             "cerberus": ("apps/cerberus", "zyplux-cerberus", "cerberus-v2.3.4", "2.3.4"),
             "ci": ("containers/ci", "ghcr.io/zyplux/ci", "ci-image-v3.4.5", "3.4.5"),
         }
-        directory, label, tag, version = fields[name]
-        return Target(self.root / directory, label, tag, version)
+        directory, package_name, tag, version = fields[name]
+        return Target(self.root / directory, package_name, tag, version)
 
     def published(self, *, npm: bool = False, pypi: bool = False, ghcr: bool = False) -> None:
         self.serve("https://ghcr.io/token", Response({"token": "gh-token"}))
@@ -155,20 +154,20 @@ class ReleaseFixture(CliFixture):
         self.on("pnpm publish", publish)
 
     def configure(self, kind: str, fields: str) -> None:
-        sections = re.split(r"(?=^\[)", self.read("airlock-targets.toml"), flags=re.MULTILINE)
+        sections = re.split(r"(?=^\[)", self.read("airlock_targets.toml"), flags=re.MULTILINE)
         index = next(index for index, section in enumerate(sections) if f'kind = "{kind}"' in section)
         lines = sections[index].splitlines()
         for declaration in fields.splitlines():
             key = declaration.split("=", 1)[0].strip()
             if key == "kind" and declaration in {'kind = "action"', 'kind = "ghcr"'}:
-                lines = [line for line in lines if not line.startswith("requires =")]
+                lines = [line for line in lines if not line.startswith("depends_on =")]
             found = next((index for index, line in enumerate(lines) if line.lstrip().startswith(f"{key} =")), None)
             if found is None:
                 lines.append(declaration)
             else:
                 lines[found] = declaration
         sections[index] = "\n".join(lines) + "\n"
-        self.write("airlock-targets.toml", "".join(sections))
+        self.write("airlock_targets.toml", "".join(sections))
 
     def plan(self, tag: str | None = None, *, error: str | None = None) -> list[dict[str, Any]]:
         execution = self.run("plan", *(["--tag", tag] if tag else []), error=error)
@@ -229,13 +228,10 @@ class ReleaseFixture(CliFixture):
 
     def action(self) -> None:
         self.write(
-            "airlock-targets.toml",
-            """scope = "@zyplux"
-[setup-pm]
+            "airlock_targets.toml",
+            """[setup-pm]
 kind = "action"
-label = "zyplux-setup-pm"
-repository = "zyplux/zyplux"
-version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "([^"]+)"' }
+manifest = "apps/action-setup-pm/pyproject.toml"
 """,
         )
         self.write("apps/action-setup-pm/pyproject.toml", '[project]\nname = "zyplux-setup-pm"\nversion = "1.0.0"\n')
@@ -267,7 +263,7 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         return batch
 
     def use_package(self) -> None:
-        self.write("airlock-targets.toml", PACKAGE_MANIFEST)
+        self.write("airlock_targets.toml", PACKAGE_MANIFEST)
         self.on(f"git -C {self.root} ls-tree")
         self.published_version("1.2.3")
 
@@ -285,19 +281,23 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
 
     def base_version(self, version: str | None = None) -> None:
         self.on(
-            f"git -C {self.root} ls-tree --name-only origin/main -- airlock-targets.toml",
-            "airlock-targets.toml" if version else "",
+            f"git -C {self.root} ls-tree --name-only origin/main -- airlock_targets.toml",
+            "airlock_targets.toml" if version else "",
         )
-        self.on(f"git -C {self.root} show origin/main:airlock-targets.toml", self.read("airlock-targets.toml"))
-        self.on(
-            f"git -C {self.root} ls-tree --name-only origin/main -- packages/util/package.json",
-            "packages/util/package.json",
-        )
-        self.on(f"git -C {self.root} show origin/main:packages/util/package.json", json.dumps({"version": version}))
+        self.on(f"git -C {self.root} show origin/main:airlock_targets.toml", self.read("airlock_targets.toml"))
+        manifest = tomllib.loads(self.read("airlock_targets.toml"))["util"]["manifest"]
+        if Path(manifest).suffix == ".json":
+            package = json.loads(self.read(manifest))
+            contents = json.dumps({**package, "version": version})
+        else:
+            package = tomllib.loads(self.read(manifest))["project"]
+            contents = f'[project]\nname = "{package["name"]}"\nversion = "{version}"\n'
+        self.on(f"git -C {self.root} ls-tree --name-only origin/main -- {manifest}", manifest)
+        self.on(f"git -C {self.root} show origin/main:{manifest}", contents)
 
     def publish(self, tag: str, *, error: str | None = None) -> subprocess.CompletedProcess[str]:
         name = tag.rsplit("-v", 1)[0]
-        spec = tomllib.loads(self.read("airlock-targets.toml"))[name]
+        spec = tomllib.loads(self.read("airlock_targets.toml"))[name]
         return self.run(
             "publish",
             "--batch",
@@ -314,15 +314,13 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
     def consumer(self) -> Target:
         extra = ""
         for name in ("consumer", "independent"):
-            extra += (
-                f'[{name}]\nkind = "npm"\nversion = {{ file = "packages/{name}/package.json", json = "version" }}\n'
-            )
+            extra += f'[{name}]\nkind = "npm"\nmanifest = "packages/{name}/package.json"\n'
             manifest: dict[str, Any] = {"name": f"@zyplux/{name}", "version": "1.2.3"}
             if name == "consumer":
                 manifest["dependencies"] = {"@zyplux/util": "^1.2.0"}
             self.write_json(f"packages/{name}/package.json", manifest)
             self.write(f"packages/{name}/CHANGELOG.md", f"# {name}\n\n## 1.2.3\n\n- Publish {name}.\n")
-        self.write("airlock-targets.toml", self.read("airlock-targets.toml").replace("[util]", extra + "[util]"))
+        self.write("airlock_targets.toml", self.read("airlock_targets.toml").replace("[util]", extra + "[util]"))
         prepare_publication(self)
         return Target(self.root / "packages/consumer", "@zyplux/consumer", "consumer-v1.2.3", "1.2.3")
 
@@ -337,7 +335,7 @@ version = { file = "apps/action-setup-pm/pyproject.toml", regex = '^version = "(
         self.write_json(
             "packages/consumer/package.json",
             {
-                "name": consumer.label,
+                "name": consumer.package_name,
                 "version": consumer.version,
                 "dependencies": {"@zyplux/implementation": "workspace:*"},
             },

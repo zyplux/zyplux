@@ -1,5 +1,11 @@
 # @zyplux/eslint-config
 
+## 0.12.3
+
+### Patch Changes
+
+- Update TypeScript ESLint integrations to 8.72.1.
+
 ## 0.12.2
 
 ### Patch Changes

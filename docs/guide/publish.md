@@ -20,7 +20,7 @@ Use a clean, reviewed checkout of `main` with prepared versions and a passing qu
    - Organization: `zyplux`.
    - Repository: `zyplux`.
    - Workflow filename: `release.yml`.
-   - Environment: the target's `environment` in `airlock-targets.toml`, defaulting to `npm`.
+   - Environment: the target's `environment` in `airlock_targets.toml`, defaulting to `npm`.
    - Allowed actions: enable **Allow npm publish** for direct publication.
 
    Follow [npm's trusted-publisher instructions](https://docs.npmjs.com/trusted-publishers/). The workflow obtains its publishing credentials through OIDC.

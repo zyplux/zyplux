@@ -23,16 +23,16 @@ def validate_workspace(target: ReleaseTarget) -> None:
         (workspace for workspace in workspaces if Path(workspace.path).resolve() == target.directory), None
     )
     if workspace is None:
-        msg = f"{target.spec.label}: {target.directory} is not a pnpm workspace package"
+        msg = f"{target.package_name}: {target.directory} is not a pnpm workspace package"
         raise ValueError(msg)
-    if workspace.name != target.spec.label:
-        msg = f"{target.spec.label}: workspace package name is {workspace.name}"
+    if workspace.name != target.package_name:
+        msg = f"{target.package_name}: workspace package name is {workspace.name}"
         raise ValueError(msg)
     if workspace.private:
-        msg = f"{target.spec.label}: private workspace packages cannot be published"
+        msg = f"{target.package_name}: private workspace packages cannot be published"
         raise ValueError(msg)
     if workspace.version != target.version:
-        msg = f"{target.spec.label}: workspace version must be {target.version}"
+        msg = f"{target.package_name}: workspace version must be {target.version}"
         raise ValueError(msg)
 
 
@@ -42,12 +42,12 @@ def publish_npm(target: ReleaseTarget) -> None:
         wait_for_dependencies([target])
         if github.load_release(target.tag) is None:
             validate_contents(target)
-        typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
+        typer.echo(f"{target.package_name} {target.version} is already published; nothing to do")
         return
     manifest = NpmPackage.model_validate_json((target.directory / "package.json").read_text(encoding="utf-8"))
     if {"prepublishOnly", "publish", "postpublish"}.intersection(manifest.scripts):
         msg = (
-            f"{target.spec.label}: archive publication requires prepack/prepare/postpack hooks; "
+            f"{target.package_name}: archive publication requires prepack/prepare/postpack hooks; "
             "publish-only hooks are unsupported"
         )
         raise ValueError(msg)
