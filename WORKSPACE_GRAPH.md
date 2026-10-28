@@ -25,7 +25,6 @@ flowchart LR
         ws_10["tsconfig"]:::foundation
         ws_11["util"]
     end
-    ws_0 ws_0__ws_5@--> ws_5
     ws_0 ws_0__ws_8@--> ws_8
     ws_0 ws_0__ws_9@--> ws_9
     ws_3 ws_3__ws_2@--> ws_2

@@ -395,21 +395,21 @@ def test_14_7_2_detects_changes_even_after_the_pr_fingerprint_is_refreshed(relea
     assert not release.requests
 
 
-def test_14_7_7_reads_fingerprints_from_the_manifest_in_published_tags(release: ReleaseFixture) -> None:
+@pytest.mark.parametrize("manifest_name", ["airlock-targets.toml", "airlock_targets.toml"])
+def test_14_7_7_reads_fingerprints_from_the_manifest_in_published_tags(
+    release: ReleaseFixture, manifest_name: str
+) -> None:
     release.configure("npm", 'includes = ["**/*"]')
     release.run("prepare")
-    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml")
-    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock-targets.toml", "airlock-targets.toml")
-    release.on(
-        f"git -C {release.root} show util-v1.2.3:airlock-targets.toml",
-        release
-        .read("airlock_targets.toml")
-        .replace('includes = ["**/*"]\n', "")
-        .replace(
+    manifest = release.read("airlock_targets.toml").replace("hash =", "content_hash =")
+    if manifest_name == "airlock-targets.toml":
+        release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml")
+        manifest = manifest.replace('includes = ["**/*"]\n', "").replace(
             'manifest = "packages/util/package.json"',
             'version = { file = "packages/util/package.json", json = "version" }',
-        ),
-    )
+        )
+    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- {manifest_name}", manifest_name)
+    release.on(f"git -C {release.root} show util-v1.2.3:{manifest_name}", manifest)
     release.write("packages/util/src/index.js", "changed contents")
     release.run("prepare")
     findings = check_surface(release)

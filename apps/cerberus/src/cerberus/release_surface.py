@@ -67,9 +67,9 @@ def has_content_changes(repo: Repo, ctx: Context, target: TargetSpec, tag: str) 
     return (
         previous is not None
         and previous.includes == target.includes
-        and previous.content_hash is not None
-        and target.content_hash is not None
-        and target.content_hash != previous.content_hash
+        and previous.hash is not None
+        and target.hash is not None
+        and target.hash != previous.hash
     )
 
 
@@ -119,11 +119,7 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
 
 
 def validate_registry_repair(target: ReleaseTarget, previous: TargetSpec) -> list[Finding]:
-    if (
-        previous.includes != target.spec.includes
-        or previous.content_hash is None
-        or target.spec.content_hash == previous.content_hash
-    ):
+    if previous.includes != target.spec.includes or previous.hash is None or target.spec.hash == previous.hash:
         return []
     try:
         if not has_package_artifacts(target):

@@ -107,7 +107,7 @@ def hash_archives(release: ReleaseFixture, archives: list[Path], includes: list[
     release.on("pnpm pack", build)
     release.on("uv build", build)
     release.run("prepare")
-    return tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"]
+    return tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"]
 
 
 def stage_git(release: ReleaseFixture) -> None:

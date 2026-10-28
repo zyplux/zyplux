@@ -34,6 +34,8 @@ def parse_stable_version(version: str) -> Version:
 def parse_target(name: str, settings: object, *, is_historical: bool) -> TargetSpec:
     declaration = VERSION_OBJECT.validate_python(settings)
     if is_historical:
+        if "hash" not in declaration and "content_hash" in declaration:
+            declaration["hash"] = declaration["content_hash"]
         if "manifest" not in declaration:
             source = VERSION_OBJECT.validate_python(declaration.get("version", {}))
             declaration["manifest"] = source.get("file")

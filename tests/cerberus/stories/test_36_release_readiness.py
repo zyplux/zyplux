@@ -93,7 +93,7 @@ def test_36_3_1_rejects_stale_fingerprints(release: ReleaseFixture, kind: str) -
     findings = check_readiness(release).problems
     assert len(findings) == 1
     reason = "build-input fingerprint differs" if kind == "ghcr" else "release contents differ"
-    assert f"{reason} from content_hash; run airlock prepare" in findings[0].message
+    assert f"{reason} from hash; run airlock prepare" in findings[0].message
 
 
 def test_36_3_2_reports_build_failures(release: ReleaseFixture) -> None:
@@ -108,5 +108,5 @@ def test_36_3_2_reports_build_failures(release: ReleaseFixture) -> None:
 def test_36_3_3_rejects_missing_fingerprints(release: ReleaseFixture) -> None:
     result = check_readiness(release)
     assert result.status.name == "FAIL"
-    assert "missing content_hash; run airlock prepare" in result.problems[0].message
+    assert "missing hash; run airlock prepare" in result.problems[0].message
     assert not release.matching("pnpm pack|uv build|publish")

@@ -50,7 +50,7 @@ On a reported preparation failure, Airlock restores the release metadata present
 
 Cerberus's `release_surface_version_bump` bite enforces single-step version bumps against finalized GitHub releases and the pull request target branch. Set `GITHUB_BASE_REF` to compare against a target branch; published versions also require unchanged release contents. Target-branch versions can be repaired without another bump before their first registry upload. Once any package artifact exists, including an incomplete PyPI upload, the target branch's fingerprint must remain unchanged until that version's GitHub release is finalized.
 
-`airlock prepare` records each target's `content_hash` in `airlock_targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
+`airlock prepare` records each target's `hash` in `airlock_targets.toml` after preparing versions, changelogs and lockfiles. Fingerprints use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
 Package archives must exclude `airlock_targets.toml` to avoid self-referential fingerprints.
 

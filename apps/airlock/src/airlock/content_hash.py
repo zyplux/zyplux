@@ -193,20 +193,20 @@ def calc_source_hash(target: ReleaseTarget) -> str:
 
 
 def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None) -> list[ReleaseTarget]:
-    if target.spec.content_hash is None:
-        msg = f"{target.package_name}: missing content_hash; run airlock prepare"
+    if target.spec.hash is None:
+        msg = f"{target.package_name}: missing hash; run airlock prepare"
         raise ValueError(msg)
     if isinstance(target.spec, PackageSpec) and archives is None:
         with TemporaryDirectory(prefix="airlock-validate-") as directory:
             return validate_contents(target, build_archives(target, Path(directory)))
     fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives, target)
-    if fingerprint != target.spec.content_hash:
-        msg = f"{target.package_name}: release contents differ from content_hash; run airlock prepare"
+    if fingerprint != target.spec.hash:
+        msg = f"{target.package_name}: release contents differ from hash; run airlock prepare"
         if target.spec.kind == "ghcr":
             root = proc.find_root(target.directory)
             context, dockerfile, ignorefile = resolve_container_paths(target)
             msg = (
-                f"{target.package_name}: build-input fingerprint differs from content_hash; run airlock prepare\n"
+                f"{target.package_name}: build-input fingerprint differs from hash; run airlock prepare\n"
                 f"build context: {context.relative_to(root)}\n"
                 f"Dockerfile: {dockerfile.relative_to(root)}\n"
                 f"ignore file: {ignorefile.relative_to(root) if ignorefile is not None else 'none'}"
@@ -240,7 +240,7 @@ def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
             fingerprint, dependencies = hashes[name]
-            declaration["content_hash"] = fingerprint
+            declaration["hash"] = fingerprint
             if dependencies:
                 declaration["depends_on"] = dependencies
             else:

@@ -117,7 +117,7 @@ def test_25_2_1_initializes_all_target_hashes_and_preserves_manifest_comments(re
     release.run("prepare")
     manifest = tomllib.loads(release.read("airlock_targets.toml"))
     for name in ("util", "cerberus", "ci-image"):
-        assert manifest[name]["content_hash"].startswith("sha256:")
+        assert manifest[name]["hash"].startswith("sha256:")
         assert "includes" not in manifest[name]
     assert release.read("airlock_targets.toml").startswith("# Release configuration\n")
     assert not release.matching(r"^gh\b|^(pnpm|uv) publish\b")
@@ -132,7 +132,7 @@ def test_25_2_2_rejects_stale_hashes_before_publishing(release: ReleaseFixture, 
     release.run("prepare")
     target = release.target("util" if kind == "npm" else "cerberus")
     (target.dir / "changed.py").write_text("changed")
-    release.publish(target.tag, error="release contents differ from content_hash")
+    release.publish(target.tag, error="release contents differ from hash")
     assert not release.matching("pnpm publish|uv publish|gh release create")
 
 
@@ -145,7 +145,7 @@ def test_25_2_3_leaves_the_manifest_unchanged_when_packaging_fails(release: Rele
 
 
 def test_25_2_4_rejects_invalid_hash_formats(release: ReleaseFixture) -> None:
-    release.configure("npm", 'content_hash = "sha256:invalid"')
+    release.configure("npm", 'hash = "sha256:invalid"')
     release.run("plan", error="String should match pattern")
 
 
@@ -166,7 +166,7 @@ def test_25_2_6_refreshes_hashes_after_versioning_and_keeps_repeated_preparation
     stage_packagers(release)
     release.run("prepare")
     prepared = tomllib.loads(release.read("airlock_targets.toml"))
-    assert all(prepared[name]["content_hash"] != previous[name]["content_hash"] for name in ("util", "cerberus"))
+    assert all(prepared[name]["hash"] != previous[name]["hash"] for name in ("util", "cerberus"))
     release.run("prepare")
     assert tomllib.loads(release.read("airlock_targets.toml")) == prepared
 
@@ -178,12 +178,12 @@ def test_25_2_7_rejects_missing_fingerprints_before_publication(release: Release
         manifest = release.read("airlock_targets.toml")
         release.write(
             "airlock_targets.toml",
-            "\n".join(line for line in manifest.splitlines() if not line.startswith("content_hash")),
+            "\n".join(line for line in manifest.splitlines() if not line.startswith("hash")),
         )
         tag = "setup-pm-v1.0.0"
     else:
         tag = release.target({"npm": "util", "pypi": "cerberus", "ghcr": "ci"}[kind]).tag
-    release.publish(tag, error="missing content_hash; run airlock prepare")
+    release.publish(tag, error="missing hash; run airlock prepare")
     assert not release.matching("pnpm publish|uv publish|podman build|gh release create|git push")
 
 
@@ -200,15 +200,13 @@ def test_25_2_8_validates_package_fingerprints_before_repairing_github_releases(
         release.write(
             "airlock_targets.toml",
             "\n".join(
-                line
-                for line in release.read("airlock_targets.toml").splitlines()
-                if not line.startswith("content_hash")
+                line for line in release.read("airlock_targets.toml").splitlines() if not line.startswith("hash")
             ),
         )
-        error = "missing content_hash"
+        error = "missing hash"
     else:
         (target.dir / "changed.py").write_text("changed release contents")
-        error = "release contents differ from content_hash"
+        error = "release contents differ from hash"
     release.publish(target.tag, error=error)
     assert not release.matching("pnpm publish|uv publish|gh release create")
 
@@ -265,13 +263,13 @@ def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(releas
     release.write("shared/schema.js", "export const required = true;\n")
     release.on("pnpm pack", release.run_real)
     release.run("prepare")
-    baseline = tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"]
+    baseline = tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"]
     release.write("packages/util/tests/example.js", "development-only file")
     release.run("prepare")
-    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"] == baseline
+    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"] == baseline
     release.write("shared/schema.js", "export const required = false;\n")
     release.run("prepare")
-    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"] != baseline
+    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["hash"] != baseline
 
 
 def test_25_4_1_covers_the_action_directory_and_versioned_implementation(release: ReleaseFixture) -> None:
@@ -358,7 +356,7 @@ def test_25_4_3_rejects_stale_action_and_container_fingerprints_before_publicati
     release.run("prepare")
     previous = (release.root / path).read_text() if (release.root / path).is_file() else ""
     release.write(path, previous + "\n# Changed source\n")
-    reason = "build-input fingerprint" if kind == "ghcr" else "release contents differ from content_hash"
+    reason = "build-input fingerprint" if kind == "ghcr" else "release contents differ from hash"
     release.publish(tag, error=reason)
     assert not release.matching("podman build|gh release create|git push")
 
@@ -409,7 +407,7 @@ def test_25_4_7_covers_declared_action_runtime_files(release: ReleaseFixture, fi
     release.configure("action", 'runtime_files = ["pyproject.toml", "uv.lock"]')
     release.run("prepare")
     release.write(file, release.read(file) + "\n# Changed installation input.\n")
-    release.publish("setup-pm-v1.0.0", error="release contents differ from content_hash")
+    release.publish("setup-pm-v1.0.0", error="release contents differ from hash")
     assert not release.matching("gh release create|git push")
 
 
@@ -464,7 +462,7 @@ def test_25_4_10_fingerprints_declared_runtime_file_symlinks_and_their_contents(
         link.symlink_to(f"{directory}/second.lock")
     else:
         release.write(f"{directory}/first.lock", "changed runtime dependency")
-    release.publish("setup-pm-v1.0.0", error="release contents differ from content_hash")
+    release.publish("setup-pm-v1.0.0", error="release contents differ from hash")
     assert not release.matching("gh release create|git push")
 
 

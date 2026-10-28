@@ -19,7 +19,7 @@ class TargetBase(BaseModel):
     name: str = ""
     release_tag: Nonempty | None = None
     environment: Nonempty | None = None
-    content_hash: ContentHash | None = None
+    hash: ContentHash | None = None
     includes: list[Nonempty] = Field(default_factory=lambda: ["**/*", "!**/*.md", "!**/*.markdown"])
     manifest: Nonempty
 
