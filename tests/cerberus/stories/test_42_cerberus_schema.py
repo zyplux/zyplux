@@ -109,4 +109,4 @@ def test_42_2_4_reports_an_unreadable_explicit_configuration(tmp_path: Path) -> 
     )
     assert result.exit_code == 1
     assert "error: 💢 cerberus_schema:" in result.output
-    assert "missing.toml" in result.output
+    assert str(tmp_path / "missing.toml") in result.output.replace("\n", "")

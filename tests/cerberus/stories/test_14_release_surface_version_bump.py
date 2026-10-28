@@ -505,3 +505,26 @@ def test_14_8_4_reports_registry_errors_during_repair_validation(registry_repair
     findings = check_surface(registry_repair, "origin/main")
     assert findings[0]["status"] == "error"
     assert "cannot validate registry artifacts" in findings[0]["message"]
+
+
+@pytest.mark.parametrize("has_artifacts", [True, False])
+@pytest.mark.parametrize("has_changed_contents", [True, False])
+def test_14_8_5_checks_registry_artifacts_when_fingerprint_selection_changes(
+    registry_repair: ReleaseFixture, *, has_artifacts: bool, has_changed_contents: bool
+) -> None:
+    release = registry_repair
+    if not has_artifacts:
+        release.published()
+    release.write(
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml").replace("[util]\n", '[util]\nincludes = ["**/*"]\n'),
+    )
+    if has_changed_contents:
+        release.write("packages/util/src/index.js", "changed after selection update")
+    release.run("prepare")
+    findings = check_surface(release, "origin/main")
+    if has_artifacts:
+        assert findings[0]["status"] == "fail"
+        assert "already has registry artifacts" in findings[0]["message"]
+    else:
+        assert findings == [DONE]

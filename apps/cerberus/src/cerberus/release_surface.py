@@ -119,7 +119,7 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
 
 
 def validate_registry_repair(target: ReleaseTarget, previous: TargetSpec) -> list[Finding]:
-    if previous.includes != target.spec.includes or previous.hash is None or target.spec.hash == previous.hash:
+    if previous.includes == target.spec.includes and (previous.hash is None or target.spec.hash == previous.hash):
         return []
     try:
         if not has_package_artifacts(target):
