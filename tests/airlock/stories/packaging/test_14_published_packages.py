@@ -39,3 +39,16 @@ def test_14_1_2_installs_airlock_from_its_python_wheel(tmp_path: Path) -> None:
     assert execution.returncode == 1
     assert "error: command failed" in execution.stderr
     assert "Traceback" not in execution.stderr
+
+
+def test_14_1_3_starts_cerberus_with_its_declared_runtime_dependencies(tmp_path: Path) -> None:
+    for package in ("zyplux-airlock", "zyplux-cerberus"):
+        subprocess.run(["uv", "build", "--package", package, "--out-dir", str(tmp_path)], cwd=REPO_ROOT, check=True)
+    command = ["uv", "run", "--isolated", "--no-project"]
+    for wheel in sorted(tmp_path.glob("*.whl")):
+        command.extend(["--with", str(wheel)])
+    execution = subprocess.run(
+        [*command, "cerberus", "version"], cwd=tmp_path, text=True, capture_output=True, check=True
+    )
+    project = tomllib.loads((REPO_ROOT / "apps/cerberus/pyproject.toml").read_text(encoding="utf-8"))
+    assert execution.stdout.strip() == project["project"]["version"]

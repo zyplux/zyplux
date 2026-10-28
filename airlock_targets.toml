@@ -10,7 +10,7 @@ repository = "zyplux/zyplux"
 manifest = "apps/airlock/pyproject.toml"
 path = "apps/action-airlock"
 runtime_files = ["pyproject.toml", "uv.lock"]
-hash = "sha256:5ec604d2cb8b0708dc3f1ec0366d6027604acafcc37af3f31b828ef885e2c1e2"
+hash = "sha256:ac3346815ffa47eca1e8737d2faac930bf0b2e1d89d676f31c6b4d82f46dd79b"
 
 [setup-pm]
 kind = "action"
@@ -42,7 +42,7 @@ depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:b46d913c0884b00138ece3191bfbbdfe322ca09b7a87c73202d9a54d0d62984d"
+hash = "sha256:a8e4abdc94153267d3b01a77ec30b4ce46e9397619a048d8b2c2438011051fb8"
 depends_on = ["airlock"]
 
 [totchef]

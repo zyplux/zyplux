@@ -11,6 +11,7 @@ dependencies = [
     "rust-just>=1.59.0",
     "semantic-version>=2.10.0",
     "tree-sitter>=0.26.0",
+    "tree-sitter-bash>=0.25.1",
     "tree-sitter-python>=0.25.0",
     "tree-sitter-typescript>=0.23.2",
     "typer>=0.27.3",
