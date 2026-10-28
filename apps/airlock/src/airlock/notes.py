@@ -45,16 +45,16 @@ def load_release_notes(directory: Path, version: str) -> str:
 def load_python_version(target: ReleaseTarget) -> str:
     manifest = target.directory / "package.json"
     tracking = PythonTracking.model_validate_json(manifest.read_text(encoding="utf-8"))
-    if tracking.name != target.spec.label:
-        msg = f"{manifest}: expected Python release target {target.spec.label}"
+    if tracking.name != target.package_name:
+        msg = f"{manifest}: expected Python release target {target.package_name}"
         raise ValueError(msg)
     return tracking.version
 
 
 def validate_python_versions(targets: list[ReleaseTarget]) -> None:
     for target in targets:
-        if Path(target.spec.version.file).name == "pyproject.toml" and load_python_version(target) != target.version:
-            msg = f"{target.spec.label}: package.json and pyproject.toml versions must match"
+        if Path(target.spec.manifest).name == "pyproject.toml" and load_python_version(target) != target.version:
+            msg = f"{target.package_name}: package.json and pyproject.toml versions must match"
             raise ValueError(msg)
 
 
@@ -95,8 +95,8 @@ def load_publication_registries(targets: list[ReleaseTarget]) -> dict[str, str]:
     for target in targets:
         if target.spec.kind != "npm":
             continue
-        key = f"{target.spec.label.split('/', 1)[0]}:registry" if target.spec.label.startswith("@") else "registry"
-        registry = load_npm_registry(target.directory, target.spec.label)
+        key = f"{target.package_name.split('/', 1)[0]}:registry" if target.package_name.startswith("@") else "registry"
+        registry = load_npm_registry(target.directory, target.package_name)
         if key in registries and registries[key] != registry:
             msg = f"native pnpm preparation requires one publication registry per scope ({key})"
             raise ValueError(msg)
@@ -114,9 +114,9 @@ def prepare_versions(root: Path, targets: list[ReleaseTarget], registries: dict[
         cwd=root,
         env=pnpm_auth.env,
     )
-    python_targets = [target for target in targets if Path(target.spec.version.file).name == "pyproject.toml"]
+    python_targets = [target for target in targets if Path(target.spec.manifest).name == "pyproject.toml"]
     for target in python_targets:
-        proc.run("uv", "version", "--package", target.spec.label, "--frozen", load_python_version(target), cwd=root)
+        proc.run("uv", "version", "--package", target.package_name, "--frozen", load_python_version(target), cwd=root)
     proc.run(
         "pnpm",
         "install",

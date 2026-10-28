@@ -402,7 +402,7 @@ def capture_metadata(release: ReleaseFixture) -> dict[str, bytes]:
         "pnpm-lock.yaml",
         "pnpm-workspace.yaml",
         "uv.lock",
-        "airlock-targets.toml",
+        "airlock_targets.toml",
     }
     return {
         str(path.relative_to(release.root)): path.read_bytes()

@@ -14,39 +14,36 @@ type Digest = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
 type ContentHash = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
 
 
-class JsonVersion(BaseModel):
-    file: str
-    json_path: str = Field(alias="json")
-
-
-class RegexVersion(BaseModel):
-    file: str
-    regex: str
-
-
 class TargetBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    label: str = ""
-    tag_prefix: str = ""
+    name: str = ""
+    release_tag: Nonempty | None = None
     environment: Nonempty | None = None
     content_hash: ContentHash | None = None
     includes: list[Nonempty] = Field(default_factory=lambda: ["**/*", "!**/*.md", "!**/*.markdown"])
-    version: JsonVersion | RegexVersion
+    manifest: Nonempty
+
+    @property
+    def tag_prefix(self) -> str:
+        return f"{self.release_tag or self.name}-v"
 
 
 class PackageSpec(TargetBase):
     kind: Literal["npm", "pypi"]
-    requires: list[Nonempty] | None = None
+    package_name: Nonempty | None = None
+    depends_on: list[Nonempty] = Field(default_factory=list)
 
 
 class ContainerSpec(TargetBase):
     kind: Literal["ghcr"]
+    package_name: Nonempty
     dockerfile: Nonempty | None = None
     build_context: Nonempty | None = None
 
 
 class ActionSpec(TargetBase):
     kind: Literal["action"]
+    package_name: Nonempty | None = None
     repository: Annotated[str, Field(pattern=r"^[\w.-]+/[\w.-]+$")]
     path: Nonempty | None = None
     runtime_files: list[Nonempty] = Field(default_factory=list)
@@ -69,6 +66,7 @@ class PnpmAuth:
 @dataclass(frozen=True)
 class ReleaseTarget:
     spec: TargetSpec
+    package_name: str
     version: str
     directory: Path
     build_context: Path | None = None
@@ -82,6 +80,11 @@ class ReleaseTarget:
     @property
     def environment(self) -> str:
         return self.spec.environment or ("actions" if self.spec.kind == "action" else self.spec.kind)
+
+
+class PackageIdentity(BaseModel):
+    name: Nonempty
+    version: Nonempty
 
 
 class ReleaseBatch(BaseModel):

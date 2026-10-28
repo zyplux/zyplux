@@ -14,7 +14,7 @@ tooling — so an export only they reach reads as unused. Any glob spelling
 will do: what is checked is the members it resolves to — every non-production
 workspace dropped, no production one with it. Published packages are the exception
 and opt out of `includeEntryExports` one by one — exactly the npm-kind targets
-in `airlock-targets.toml`, whose consumers live outside this repo.
+in `airlock_targets.toml`, whose consumers live outside this repo.
 
 Each config uses the shared allowances independently: production may omit
 exemptions for tools and dependencies used only outside its graph. It may set
@@ -24,10 +24,10 @@ exemptions for tools and dependencies used only outside its graph. It may set
 from __future__ import annotations
 
 import json
-import tomllib
 from typing import TYPE_CHECKING, Any
 
 import yaml
+from airlock.targets import parse_manifest
 
 from cerberus import workspaces
 from cerberus.model import CheckResult, Scope
@@ -47,7 +47,7 @@ SCOPE = Scope.CONTENT
 PACKAGE_JSON = "package.json"
 BASE_CONFIG = "knip.json"
 PROD_CONFIG = "knip.prod.json"
-_RELEASE_TARGETS = "airlock-targets.toml"
+_RELEASE_TARGETS = "airlock_targets.toml"
 _PROD_EXTRA_KEYS = frozenset({"$schema", "workspaces", "exclude", "ignoreWorkspaces"})
 _OK_MESSAGE = (
     "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
@@ -60,18 +60,14 @@ def _without_schema(parsed: dict[str, Any]) -> dict[str, Any]:
 
 def _npm_workspace_dirs(manifest: str) -> set[str]:
     try:
-        data = tomllib.loads(manifest)
-    except tomllib.TOMLDecodeError:
+        specs = parse_manifest(manifest)
+    except ValueError:
         return set()
-    dirs: set[str] = set()
-    for entry in data.values():
-        if not isinstance(entry, dict) or entry.get("kind") != "npm":
-            continue
-        version = entry.get("version")
-        file = version.get("file") if isinstance(version, dict) else None
-        if isinstance(file, str) and file.endswith(f"/{PACKAGE_JSON}"):
-            dirs.add(file[: -len(f"/{PACKAGE_JSON}")])
-    return dirs
+    return {
+        spec.manifest[: -len(f"/{PACKAGE_JSON}")]
+        for spec in specs
+        if spec.kind == "npm" and spec.manifest.endswith(f"/{PACKAGE_JSON}")
+    }
 
 
 def _check_no_inline_key(manifest: dict[str, Any], res: CheckResult) -> None:

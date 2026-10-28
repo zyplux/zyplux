@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from archive_fixture import stage_packagers
+from archive_fixture import configure_python_package, stage_packagers
 from cli_fixture import Reply
 from release_surface_fixture import check_readiness
 
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 def test_36_1_1_skips_repositories_without_release_targets(release: ReleaseFixture) -> None:
-    (release.root / "airlock-targets.toml").unlink()
+    (release.root / "airlock_targets.toml").unlink()
     assert check_readiness(release).status.name == "SKIP"
     assert not release.calls
 
@@ -21,17 +21,17 @@ def test_36_1_1_skips_repositories_without_release_targets(release: ReleaseFixtu
 def test_36_1_2_validates_the_selected_repository_without_changing_release_metadata(release: ReleaseFixture) -> None:
     stage_packagers(release)
     release.run("prepare")
-    manifest = release.read("airlock-targets.toml")
+    manifest = release.read("airlock_targets.toml")
     release.calls.clear()
     assert check_readiness(release).status.name == "PASS"
-    assert release.read("airlock-targets.toml") == manifest
+    assert release.read("airlock_targets.toml") == manifest
     assert not release.requests
     assert not release.matching(r"^gh\b|^(pnpm|uv) (version|install|lock|publish)\b")
 
 
-@pytest.mark.parametrize("manifest", ["invalid = [", 'scope = "@demo"\nutil = 1'])
+@pytest.mark.parametrize("manifest", ["invalid = [", "util = 1"])
 def test_36_1_3_rejects_malformed_release_manifests(release: ReleaseFixture, manifest: str) -> None:
-    release.write("airlock-targets.toml", manifest)
+    release.write("airlock_targets.toml", manifest)
     assert check_readiness(release).status.name == "FAIL"
 
 
@@ -42,8 +42,7 @@ def test_36_1_4_resolves_dependencies_inside_the_selected_repository_when_invoke
     if kind == "npm":
         release.consumer()
     else:
-        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
-        release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+        configure_python_package(release)
         release.write(
             "apps/cerberus/pyproject.toml",
             release.read("apps/cerberus/pyproject.toml") + 'dependencies = ["zyplux-util>=1.0.0"]\n',

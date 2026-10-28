@@ -237,11 +237,10 @@ const buildReport = (members: Workspace[]) => {
     '---',
     'flowchart LR',
   ];
-  const groups = [...new Set(members.map(member => member.kind))].toSorted((a, b) => a.localeCompare(b));
-  for (const group of groups) {
+  const groups = [...Map.groupBy(members, member => member.kind)].toSorted(([a], [b]) => a.localeCompare(b));
+  for (const [group, groupMembers] of groups) {
     lines.push(`    subgraph group_${group}["${group}"]`);
-    for (const member of members) {
-      if (member.kind !== group) continue;
+    for (const member of groupMembers) {
       lines.push(
         `        ${ids.get(member.directory)}["${quoteLabel(member.label)}"]${foundations.has(member.directory) ? ':::foundation' : ''}`,
       );

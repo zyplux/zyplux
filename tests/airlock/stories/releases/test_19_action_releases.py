@@ -138,7 +138,9 @@ def test_19_2_4_refuses_to_publish_a_floating_alias_to_a_changed_versioned_tag(r
 
 
 def test_19_2_5_rejects_invalid_action_versions_before_creating_a_release(release: ReleaseFixture) -> None:
-    release.write("apps/action-setup-pm/pyproject.toml", 'version = "1.0.0-beta.1"\n')
+    release.write(
+        "apps/action-setup-pm/pyproject.toml", '[project]\nname = "zyplux-setup-pm"\nversion = "1.0.0-beta.1"\n'
+    )
     release.write_json(
         "apps/action-setup-pm/package.json", {"name": "zyplux-setup-pm", "private": True, "version": "1.0.0-beta.1"}
     )

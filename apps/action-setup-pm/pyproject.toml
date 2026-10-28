@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-setup-pm"
-version = "1.0.3"
+version = "1.0.2"
 description = "Preflight configuration for the shared package-manager setup action."
 requires-python = ">=3.12"
 

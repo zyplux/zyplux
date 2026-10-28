@@ -11,7 +11,7 @@ import yaml
 from pydantic import BaseModel
 
 from airlock import github, proc
-from airlock.contracts import VERSION_OBJECT
+from airlock.contracts import VERSION_OBJECT, PackageIdentity
 from airlock.registries import has_package_artifacts
 from airlock.targets import build_release_target, parse_stable_version, resolve_repo_path
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
 
 PREPARATION_FILE = ".changeset/preparation.json"
-REGENERATED_FILES = {PREPARATION_FILE, "airlock-targets.toml", "pnpm-lock.yaml", "pnpm-workspace.yaml", "uv.lock"}
+REGENERATED_FILES = {PREPARATION_FILE, "airlock_targets.toml", "pnpm-lock.yaml", "pnpm-workspace.yaml", "uv.lock"}
 type MetadataSnapshot = dict[Path, tuple[bytes, int] | None]
 
 
@@ -44,7 +44,7 @@ def list_metadata(root: Path, targets: list[ReleaseTarget]) -> set[Path]:
     }
     return {
         *(directory / name for directory in directories for name in ("package.json", "pyproject.toml", "CHANGELOG.md")),
-        *(resolve_repo_path(root, target.spec.version.file) for target in targets),
+        *(resolve_repo_path(root, target.spec.manifest) for target in targets),
         *(path for path in (root / ".changeset").rglob("*") if path.is_file()),
         root / ".changeset/ledger.yaml",
         *(root / name for name in REGENERATED_FILES),
@@ -79,7 +79,7 @@ def validate_legacy_preparation(root: Path, targets: list[ReleaseTarget]) -> Non
     if not ledger.is_file() or not any(path.name != "README.md" for path in (root / ".changeset").glob("*.md")):
         return
     consumed = VERSION_OBJECT.validate_python(yaml.safe_load(ledger.read_text(encoding="utf-8")) or {})
-    prepared = [target for target in targets if f"{target.spec.label}@{target.version}" in consumed]
+    prepared = [target for target in targets if f"{target.package_name}@{target.version}" in consumed]
     if not prepared:
         return
     tags = {release.tag_name for release in github.fetch_release_history(directory=root)}
@@ -154,9 +154,13 @@ def rewind_preparation(root: Path, saved: PreparedRelease, targets: list[Release
     for tag in saved.tags:
         target = next((target for target in targets if tag.startswith(target.spec.tag_prefix)), None)
         if target is None:
-            msg = f"{tag}: prepared target is missing from airlock-targets.toml"
+            msg = f"{tag}: prepared target is missing from airlock_targets.toml"
             raise ValueError(msg)
-        release = build_release_target(root, target.spec, tag.removeprefix(target.spec.tag_prefix))
+        release = build_release_target(
+            root,
+            target.spec,
+            PackageIdentity(name=target.package_name, version=tag.removeprefix(target.spec.tag_prefix)),
+        )
         releases = github.select_releases(history, target.spec.tag_prefix)
         if releases and releases[0][1] > parse_stable_version(release.version):
             msg = f"{tag}: a newer release is published; merge the latest target branch before preparing again"
@@ -217,8 +221,7 @@ def save_preparation(root: Path, baseline: MetadataSnapshot, targets: list[Relea
     tags = sorted(
         target.tag
         for target in targets
-        if target.spec.version.file in files
-        or (target.directory / "CHANGELOG.md").relative_to(root).as_posix() in files
+        if target.spec.manifest in files or (target.directory / "CHANGELOG.md").relative_to(root).as_posix() in files
     )
     saved = PreparedRelease(tags=tags, files=dict(sorted(files.items())))
     path = root / PREPARATION_FILE

@@ -8,6 +8,10 @@
 
 - Validate repository configuration with a mandatory schema bite before applying overrides. Invalid settings produce normal bite failures with their configuration paths.
 
+### Patch Changes
+
+- Use airlock_targets.toml with parsed package manifests, inferred npm and PyPI kinds, optional package_name and release_tag overrides, dependency target references and configurable fingerprints that omit Markdown by default.
+
 ## 0.26.1
 
 ### Patch Changes

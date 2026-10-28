@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 def build_batch(target: ReleaseTarget) -> ReleaseBatch:
     return ReleaseBatch(
         environment=target.environment,
-        id=f"{target.spec.kind}-{target.spec.tag_prefix.removesuffix('-v')}",
+        id=f"{target.spec.kind}-{target.spec.name}",
         kind=target.spec.kind,
         runner="ubuntu-latest",
         tags=[target.tag],
@@ -62,15 +62,15 @@ def publish_prepared(target: ReleaseTarget, notes: str) -> None:
     elif is_published(target):
         if github.load_release(target.tag) is None:
             validate_contents(target)
-        typer.echo(f"{target.spec.label} {target.version} is already published; nothing to do")
+        typer.echo(f"{target.package_name} {target.version} is already published; nothing to do")
     else:
-        typer.echo(f"Publishing {target.spec.label} {target.version} to {target.spec.kind} ...")
+        typer.echo(f"Publishing {target.package_name} {target.version} to {target.spec.kind} ...")
         with TemporaryDirectory(prefix="release-pypi-") as directory:
             archives = build_archives(target, Path(directory))
             dependencies = validate_contents(target, archives)
             wait_for_dependencies(dependencies)
             proc.run("uv", "publish", "--check-url", "https://pypi.org/simple/", str(Path(directory) / "*"))
-        typer.echo(f"Published {target.spec.label} {target.version}")
+        typer.echo(f"Published {target.package_name} {target.version}")
     if github.load_release(target.tag) is None:
         github.create_release(target.tag, notes, proc.run("git", "rev-parse", "HEAD"))
 

@@ -28,7 +28,7 @@ Apps provide commands and actions; packages provide reusable libraries and confi
 
 Local app: [token-stats](apps/token_stats) compares Python tokenizers. Deprecated package: [zyplux-util](packages/util_py).
 
-Each app or package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock-targets.toml](airlock-targets.toml).
+Each app or package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock_targets.toml](airlock_targets.toml).
 
 For releasable changes, run `pnpm change`, then `pnpm release:prepare` before review. Each GitHub release contains its target version's reviewed changelog entry. See the [release workflow](.changeset/README.md).
 

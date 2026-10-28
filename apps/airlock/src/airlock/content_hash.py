@@ -97,8 +97,8 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
         for path, executable, contents in read_archive(archive)
         if is_included(path, target.spec.includes) and not path.endswith(".dist-info/RECORD")
     ]
-    if any(path == "airlock-targets.toml" for _, path, _, _ in entries):
-        msg = "package archives must exclude airlock-targets.toml to avoid a self-referential fingerprint"
+    if any(path == "airlock_targets.toml" for _, path, _, _ in entries):
+        msg = "package archives must exclude airlock_targets.toml to avoid a self-referential fingerprint"
         raise ValueError(msg)
     return calc_entries_hash(entries)
 
@@ -113,7 +113,7 @@ def build_archives(target: ReleaseTarget, directory: Path) -> list[Path]:
         archive = directory / f"{quote(target.tag, safe='')}.tgz"
         proc.run("pnpm", "pack", "--out", str(archive), cwd=target.directory)
         return [archive]
-    proc.run("uv", "build", "--package", target.spec.label, "--out-dir", str(directory), cwd=target.directory)
+    proc.run("uv", "build", "--package", target.package_name, "--out-dir", str(directory), cwd=target.directory)
     return sorted(directory.glob("*.whl")) + sorted(directory.glob("*.tar.gz"))
 
 
@@ -140,7 +140,7 @@ def calc_source_hash(target: ReleaseTarget) -> str:
         )
         if any(".git" in Path(path).parts for path in included):
             msg = (
-                f"{target.spec.label}: container build context includes Git metadata; "
+                f"{target.package_name}: container build context includes Git metadata; "
                 "exclude .git in the container ignore file"
             )
             raise ValueError(msg)
@@ -166,14 +166,17 @@ def calc_source_hash(target: ReleaseTarget) -> str:
             for relative in target.spec.runtime_files:
                 path = resolve_repo_path(root, relative)
                 if not path.is_file():
-                    msg = f"{target.spec.label}: runtime file must exist: {relative}"
+                    msg = f"{target.package_name}: runtime file must exist: {relative}"
                     raise ValueError(msg)
                 files.update({root / relative, path})
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
-    files.discard(root / "airlock-targets.toml")
+    files.discard(root / "airlock_targets.toml")
+    files = {
+        path
+        for path in files
+        if is_included(path.relative_to(target.directory, walk_up=True).as_posix(), target.spec.includes)
+    }
     for path in files:
-        if not is_included(path.relative_to(target.directory, walk_up=True).as_posix(), target.spec.includes):
-            continue
         if path.is_symlink():
             kind, contents = "symlinks", os.fsencode(path.readlink())
         elif path.is_file():
@@ -191,19 +194,19 @@ def calc_source_hash(target: ReleaseTarget) -> str:
 
 def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None) -> list[ReleaseTarget]:
     if target.spec.content_hash is None:
-        msg = f"{target.spec.label}: missing content_hash; run airlock prepare"
+        msg = f"{target.package_name}: missing content_hash; run airlock prepare"
         raise ValueError(msg)
     if isinstance(target.spec, PackageSpec) and archives is None:
         with TemporaryDirectory(prefix="airlock-validate-") as directory:
             return validate_contents(target, build_archives(target, Path(directory)))
     fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives, target)
     if fingerprint != target.spec.content_hash:
-        msg = f"{target.spec.label}: release contents differ from content_hash; run airlock prepare"
+        msg = f"{target.package_name}: release contents differ from content_hash; run airlock prepare"
         if target.spec.kind == "ghcr":
             root = proc.find_root(target.directory)
             context, dockerfile, ignorefile = resolve_container_paths(target)
             msg = (
-                f"{target.spec.label}: build-input fingerprint differs from content_hash; run airlock prepare\n"
+                f"{target.package_name}: build-input fingerprint differs from content_hash; run airlock prepare\n"
                 f"build context: {context.relative_to(root)}\n"
                 f"Dockerfile: {dockerfile.relative_to(root)}\n"
                 f"ignore file: {ignorefile.relative_to(root) if ignorefile is not None else 'none'}"
@@ -223,26 +226,24 @@ def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None]:
     with TemporaryDirectory(prefix="airlock-prepare-") as directory:
         archives = build_archives(target, Path(directory))
         return calc_content_hash(archives, target), sorted(
-            dependency.tag for dependency in load_dependencies(target, archives)
+            dependency.spec.name for dependency in load_dependencies(target, archives)
         )
 
 
 def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     root = proc.find_root()
-    hashes = {
-        target.spec.tag_prefix.removesuffix("-v"): (target.spec.includes, *prepare_contents(target))
-        for target in targets
-    }
+    hashes = {target.spec.name: prepare_contents(target) for target in targets}
     if not hashes:
         return
-    path = root / "airlock-targets.toml"
+    path = root / "airlock_targets.toml"
     manifest = tomlkit.parse(path.read_text(encoding="utf-8"))
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
-            includes, fingerprint, dependencies = hashes[name]
+            fingerprint, dependencies = hashes[name]
             declaration["content_hash"] = fingerprint
-            declaration["includes"] = includes
-            if dependencies is not None:
-                declaration["requires"] = dependencies
+            if dependencies:
+                declaration["depends_on"] = dependencies
+            else:
+                declaration.pop("depends_on", None)
             typer.echo(f"{name}: {fingerprint}")
     path.write_text(tomlkit.dumps(manifest), encoding="utf-8")

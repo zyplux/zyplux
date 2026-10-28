@@ -1,11 +1,5 @@
 # zyplux-setup-pm
 
-## 1.0.3
-
-### Patch Changes
-
-- Clarify package-manager setup usage and locked workspace installation.
-
 ## 1.0.2
 
 ### Patch Changes

@@ -37,3 +37,9 @@
 ### 24.4.2 uses prepared packing hook metadata to break apparent source cycles
 
 ### 24.4.3 rejects invalid prepared peer dependencies without packing them
+
+### 24.4.4 accepts omitted or empty dependencies and omits them during preparation
+
+### 24.4.5 rejects omitting a real dependency before publication
+
+### 24.4.6 resolves exact dependency versions from target version sources

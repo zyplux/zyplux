@@ -37,6 +37,7 @@ def test_20_1_2_propagates_publication_failure_and_permits_a_successful_retry(re
 def test_20_1_3_rejects_mismatched_or_private_workspace_targets_before_publishing(
     release: ReleaseFixture, override: dict[str, object], reason: str
 ) -> None:
+    release.configure("npm", 'package_name = "@zyplux/util"')
     release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.3", **override})
     release.publish("util-v1.2.3", error=reason)
     assert not release.matching("pnpm publish|gh release")

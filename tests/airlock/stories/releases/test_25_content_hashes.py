@@ -5,7 +5,7 @@ import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
-from archive_fixture import hash_archives, stage_git, stage_packagers, write_tar, write_wheel
+from archive_fixture import configure_python_package, hash_archives, stage_git, stage_packagers, write_tar, write_wheel
 from cli_fixture import Reply
 
 if TYPE_CHECKING:
@@ -72,18 +72,58 @@ def test_25_1_3_covers_both_python_distributions_and_ignores_their_listing_order
     assert fingerprint != hash_archives(release, [wheel, source])
 
 
+@pytest.mark.parametrize("includes", [None, ["**/*"], ["**/*.js", "!**/internal/**"]])
+def test_25_1_4_filters_archive_files_with_configured_includes(
+    release: ReleaseFixture, tmp_path: Path, includes: list[str] | None
+) -> None:
+    archive = tmp_path / "package.tgz"
+    files = {"package/index.js": b"code", "package/docs/README.md": b"original", "package/internal/cache.txt": b"one"}
+    write_tar(archive, files)
+    before = hash_archives(release, [archive], includes)
+    files["package/docs/README.md"] = b"updated"
+    files["package/internal/cache.txt"] = b"two" if includes is not None else b"one"
+    write_tar(archive, files)
+    after = hash_archives(release, [archive], includes)
+    assert (before != after) == (includes == ["**/*"])
+
+
+@pytest.mark.parametrize("includes", [None, ["**/*"]])
+def test_25_1_5_filters_readme_descriptions_and_derived_wheel_checksums(
+    release: ReleaseFixture, tmp_path: Path, includes: list[str] | None
+) -> None:
+    wheel = tmp_path / "package.whl"
+    fingerprints = []
+    for readme in ("Original README", "Updated README"):
+        metadata = (
+            "Metadata-Version: 2.4\nName: zyplux-util\nVersion: 1.2.3\n"
+            f"Description-Content-Type: text/markdown\n\n{readme}\n"
+        ).encode()
+        write_wheel(
+            wheel,
+            {
+                "package/__init__.py": b"code",
+                "README.md": readme.encode(),
+                "package.dist-info/METADATA": metadata,
+                "package.dist-info/RECORD": readme.encode(),
+            },
+        )
+        fingerprints.append(hash_archives(release, [wheel], includes))
+    assert (fingerprints[0] != fingerprints[1]) == (includes == ["**/*"])
+
+
 def test_25_2_1_initializes_all_target_hashes_and_preserves_manifest_comments(release: ReleaseFixture) -> None:
     stage_packagers(release)
-    release.write("airlock-targets.toml", "# Release configuration\n" + release.read("airlock-targets.toml"))
+    release.write("airlock_targets.toml", "# Release configuration\n" + release.read("airlock_targets.toml"))
     release.run("prepare")
-    manifest = tomllib.loads(release.read("airlock-targets.toml"))
+    manifest = tomllib.loads(release.read("airlock_targets.toml"))
     for name in ("util", "cerberus", "ci-image"):
         assert manifest[name]["content_hash"].startswith("sha256:")
-    assert release.read("airlock-targets.toml").startswith("# Release configuration\n")
+        assert "includes" not in manifest[name]
+    assert release.read("airlock_targets.toml").startswith("# Release configuration\n")
     assert not release.matching(r"^gh\b|^(pnpm|uv) publish\b")
-    prepared = release.read("airlock-targets.toml")
+    prepared = release.read("airlock_targets.toml")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") == prepared
+    assert release.read("airlock_targets.toml") == prepared
 
 
 @pytest.mark.parametrize("kind", ["npm", "pypi"])
@@ -98,10 +138,10 @@ def test_25_2_2_rejects_stale_hashes_before_publishing(release: ReleaseFixture, 
 
 def test_25_2_3_leaves_the_manifest_unchanged_when_packaging_fails(release: ReleaseFixture) -> None:
     stage_packagers(release)
-    manifest = release.read("airlock-targets.toml")
+    manifest = release.read("airlock_targets.toml")
     release.on("uv build", Reply(stderr="Build failed", exit_code=1))
     release.run("prepare", error="Build failed")
-    assert release.read("airlock-targets.toml") == manifest
+    assert release.read("airlock_targets.toml") == manifest
 
 
 def test_25_2_4_rejects_invalid_hash_formats(release: ReleaseFixture) -> None:
@@ -111,7 +151,7 @@ def test_25_2_4_rejects_invalid_hash_formats(release: ReleaseFixture) -> None:
 
 def test_25_2_5_rejects_empty_package_builds(release: ReleaseFixture) -> None:
     release.use_package()
-    release.configure("npm", 'kind = "pypi"')
+    configure_python_package(release)
     release.on("uv build")
     release.run("prepare", error="produced no archives")
 
@@ -121,23 +161,23 @@ def test_25_2_6_refreshes_hashes_after_versioning_and_keeps_repeated_preparation
 ) -> None:
     stage_packagers(release)
     release.run("prepare")
-    previous = tomllib.loads(release.read("airlock-targets.toml"))
+    previous = tomllib.loads(release.read("airlock_targets.toml"))
     release.prepare_workspace()
     stage_packagers(release)
     release.run("prepare")
-    prepared = tomllib.loads(release.read("airlock-targets.toml"))
+    prepared = tomllib.loads(release.read("airlock_targets.toml"))
     assert all(prepared[name]["content_hash"] != previous[name]["content_hash"] for name in ("util", "cerberus"))
     release.run("prepare")
-    assert tomllib.loads(release.read("airlock-targets.toml")) == prepared
+    assert tomllib.loads(release.read("airlock_targets.toml")) == prepared
 
 
 @pytest.mark.parametrize("kind", ["npm", "pypi", "action", "ghcr"])
 def test_25_2_7_rejects_missing_fingerprints_before_publication(release: ReleaseFixture, kind: str) -> None:
     if kind == "action":
         release.action()
-        manifest = release.read("airlock-targets.toml")
+        manifest = release.read("airlock_targets.toml")
         release.write(
-            "airlock-targets.toml",
+            "airlock_targets.toml",
             "\n".join(line for line in manifest.splitlines() if not line.startswith("content_hash")),
         )
         tag = "setup-pm-v1.0.0"
@@ -158,10 +198,10 @@ def test_25_2_8_validates_package_fingerprints_before_repairing_github_releases(
     target = release.target("util" if kind == "npm" else "cerberus")
     if problem == "missing":
         release.write(
-            "airlock-targets.toml",
+            "airlock_targets.toml",
             "\n".join(
                 line
-                for line in release.read("airlock-targets.toml").splitlines()
+                for line in release.read("airlock_targets.toml").splitlines()
                 if not line.startswith("content_hash")
             ),
         )
@@ -184,18 +224,9 @@ def test_25_2_9_builds_each_package_once_when_repairing_a_github_release(release
 
 
 @pytest.mark.parametrize("kind", ["npm", "pypi"])
-@pytest.mark.parametrize("problem", ["missing", "stale"])
-def test_25_2_10_rejects_missing_or_stale_prepared_dependencies_before_upload(
-    release: ReleaseFixture, kind: str, problem: str
-) -> None:
+def test_25_2_10_rejects_stale_prepared_dependencies_before_upload(release: ReleaseFixture, kind: str) -> None:
     release.run("prepare")
-    manifest = release.read("airlock-targets.toml")
-    if problem == "missing":
-        release.write(
-            "airlock-targets.toml", "\n".join(line for line in manifest.splitlines() if "requires =" not in line)
-        )
-    else:
-        release.configure(kind, 'requires = ["unknown-v1.0.0"]')
+    release.configure(kind, 'depends_on = ["unknown"]')
     release.publish(
         release.target("util" if kind == "npm" else "cerberus").tag,
         error="prepared dependencies differ from package contents",
@@ -210,13 +241,11 @@ def test_25_2_11_rejects_root_package_archives_that_include_the_release_manifest
     release.use_package()
     release.write_json("package.json", {"name": "zyplux-util", "version": "1.2.3"})
     release.write("CHANGELOG.md", "## 1.2.3\n\n- Publish utility.\n")
-    release.configure(
-        "npm", f'kind = "{kind}"\nlabel = "zyplux-util"\nversion = {{ file = "package.json", json = "version" }}'
-    )
+    release.configure("npm", f'kind = "{kind}"\nmanifest = "package.json"')
     release.write("pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
-    manifest = release.read("airlock-targets.toml")
-    execution = release.run("prepare", error="package archives must exclude airlock-targets.toml")
-    assert release.read("airlock-targets.toml") == manifest
+    manifest = release.read("airlock_targets.toml")
+    execution = release.run("prepare", error="package archives must exclude airlock_targets.toml")
+    assert release.read("airlock_targets.toml") == manifest
     assert "Traceback" not in execution.stderr
     assert not release.matching("pnpm publish|uv publish|gh release create")
 
@@ -236,13 +265,13 @@ def test_25_3_1_detects_bundled_shared_changes_and_ignores_unpacked_files(releas
     release.write("shared/schema.js", "export const required = true;\n")
     release.on("pnpm pack", release.run_real)
     release.run("prepare")
-    baseline = tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"]
+    baseline = tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"]
     release.write("packages/util/tests/example.js", "development-only file")
     release.run("prepare")
-    assert tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"] == baseline
+    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"] == baseline
     release.write("shared/schema.js", "export const required = false;\n")
     release.run("prepare")
-    assert tomllib.loads(release.read("airlock-targets.toml"))["util"]["content_hash"] != baseline
+    assert tomllib.loads(release.read("airlock_targets.toml"))["util"]["content_hash"] != baseline
 
 
 def test_25_4_1_covers_the_action_directory_and_versioned_implementation(release: ReleaseFixture) -> None:
@@ -253,18 +282,37 @@ def test_25_4_1_covers_the_action_directory_and_versioned_implementation(release
     release.write(".gitignore", "**/__pycache__/\n")
     stage_git(release)
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     release.write("apps/action-setup-pm/__pycache__/setup.pyc", "generated")
     release.write("docs/unrelated.md", "unrelated")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") == baseline
+    assert release.read("airlock_targets.toml") == baseline
     release.write("actions/setup/action.yml", "name: Changed setup\n")
     release.run("prepare")
-    metadata = release.read("airlock-targets.toml")
+    metadata = release.read("airlock_targets.toml")
     assert metadata != baseline
     release.write("apps/action-setup-pm/src/setup.py", "print('changed setup')\n")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != metadata
+    assert release.read("airlock_targets.toml") != metadata
+
+
+@pytest.mark.parametrize("kind", ["action", "ghcr"])
+@pytest.mark.parametrize("has_markdown", [False, True])
+def test_25_4_16_applies_markdown_selection_to_action_and_container_inputs(
+    release: ReleaseFixture, kind: str, *, has_markdown: bool
+) -> None:
+    if kind == "action":
+        release.action()
+    if has_markdown:
+        release.configure(kind, 'includes = ["**/*"]')
+    directory = "apps/action-setup-pm" if kind == "action" else "containers/ci"
+    release.write(f"{directory}/README.md", "Original documentation")
+    stage_git(release)
+    release.run("prepare")
+    manifest = release.read("airlock_targets.toml")
+    release.write(f"{directory}/README.md", "Updated documentation")
+    release.run("prepare")
+    assert (release.read("airlock_targets.toml") != manifest) == has_markdown
 
 
 @pytest.mark.parametrize("ignorefile", [".dockerignore", ".containerignore"])
@@ -278,23 +326,23 @@ def test_25_4_2_covers_container_inputs_using_build_ignore_rules(release: Releas
     release.write("src/app.js", "source")
     release.write("docs/include.txt", "included")
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     release.write("docs/ignored.md", "documentation")
     release.write("scratch/local.txt", "local cache")
     release.write("unused.tmp", "temporary file")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") == baseline
+    assert release.read("airlock_targets.toml") == baseline
     release.write("docs/include.txt", "changed included content")
     release.run("prepare")
-    included = release.read("airlock-targets.toml")
+    included = release.read("airlock_targets.toml")
     assert included != baseline
     release.write("src/app.js", "changed source")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != included
-    source = release.read("airlock-targets.toml")
+    assert release.read("airlock_targets.toml") != included
+    source = release.read("airlock_targets.toml")
     release.write("containers/ci/Containerfile", release.read("containers/ci/Containerfile") + "# Changed recipe\n")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != source
+    assert release.read("airlock_targets.toml") != source
 
 
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
@@ -346,11 +394,11 @@ def test_25_4_6_hashes_symlink_identity_including_directory_and_broken_links(
     link.symlink_to("../../shared/first", target_is_directory=link_kind == "directory")
     stage_git(release)
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     link.unlink()
     link.symlink_to("../../shared/second", target_is_directory=link_kind == "directory")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != baseline
+    assert release.read("airlock_targets.toml") != baseline
 
 
 @pytest.mark.parametrize("file", ["pyproject.toml", "uv.lock"])
@@ -388,14 +436,14 @@ def test_25_4_9_covers_container_build_configuration_with_identical_input_files(
     release.write("containers/ci/Alternative", "FROM scratch\n")
     release.configure("ghcr", 'build_context = "containers"\ndockerfile = "containers/ci/Containerfile"')
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     declaration = (
         'dockerfile = "containers/ci/Alternative"' if selection == "dockerfile" else 'build_context = "containers/ci"'
     )
     release.configure("ghcr", declaration)
     release.publish("ci-image-v3.4.5", error="build-input fingerprint")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != baseline
+    assert release.read("airlock_targets.toml") != baseline
     assert not release.matching("podman build|gh release create")
 
 
@@ -422,17 +470,17 @@ def test_25_4_10_fingerprints_declared_runtime_file_symlinks_and_their_contents(
 
 @pytest.mark.parametrize("selection", ["default", "explicit", "directory"])
 def test_25_4_11_rejects_missing_container_dockerfiles_while_preparing(release: ReleaseFixture, selection: str) -> None:
-    release.write_json("containers/ci/package.json", {"version": "3.4.5"})
-    release.configure("ghcr", 'version = { file = "containers/ci/package.json", json = "version" }')
+    release.write_json("containers/ci/package.json", {"name": "ci-image", "version": "3.4.5"})
+    release.configure("ghcr", 'manifest = "containers/ci/package.json"')
     if selection == "default":
         (release.target("ci").dir / "Containerfile").unlink()
     else:
         release.configure("ghcr", 'dockerfile = "containers/ci/recipe"')
         if selection == "directory":
             (release.target("ci").dir / "recipe").mkdir()
-    manifest = release.read("airlock-targets.toml")
+    manifest = release.read("airlock_targets.toml")
     release.run("prepare", error="Dockerfile must exist as a regular file")
-    assert release.read("airlock-targets.toml") == manifest
+    assert release.read("airlock_targets.toml") == manifest
     assert not release.matching("podman build|gh release create")
 
 
@@ -460,17 +508,17 @@ def test_25_4_13_prefers_dockerfile_adjacent_ignore_rules_and_fingerprints_the_r
     release.write(selected, rules)
     release.write("src/app.js", "source")
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     release.write("docs/ignored.txt", "documentation")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") == baseline
+    assert release.read("airlock_targets.toml") == baseline
     release.write("src/app.js", "changed source")
     release.run("prepare")
-    source = release.read("airlock-targets.toml")
+    source = release.read("airlock_targets.toml")
     assert source != baseline
     release.write(selected, rules + "*.cache\n")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") != source
+    assert release.read("airlock_targets.toml") != source
 
 
 @pytest.mark.parametrize("has_ignorefile", [True, False])
@@ -495,12 +543,12 @@ def test_25_4_15_requires_container_ignore_rules_to_exclude_git_metadata(
 ) -> None:
     release.configure("ghcr", 'build_context = "."\ndockerfile = "containers/ci/Containerfile"')
     release.write(metadata_path, "initial Git metadata\n")
-    manifest = release.read("airlock-targets.toml")
+    manifest = release.read("airlock_targets.toml")
     release.run("prepare", error="container build context includes Git metadata; exclude .git")
-    assert release.read("airlock-targets.toml") == manifest
+    assert release.read("airlock_targets.toml") == manifest
     release.write("containers/ci/.dockerignore", ".git\n")
     release.run("prepare")
-    baseline = release.read("airlock-targets.toml")
+    baseline = release.read("airlock_targets.toml")
     release.write(metadata_path, "changed Git metadata\n")
     release.run("prepare")
-    assert release.read("airlock-targets.toml") == baseline
+    assert release.read("airlock_targets.toml") == baseline

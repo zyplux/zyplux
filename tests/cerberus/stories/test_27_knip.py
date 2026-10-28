@@ -62,19 +62,8 @@ _ENTRY_EXPORTS_WITH_ALLOWANCES = (
     '"ignoreBinaries": ["podman", "uv"], "ignoreDependencies": ["cloudflare"]}'
 )
 
-_RELEASE_TARGETS_ONE_NPM = (
-    'scope = "@demo"\n[lib]\n'
-    'kind = "npm"\n'
-    'label = "@demo/lib"\n'
-    'version = { file = "packages/lib/package.json", json = "version" }\n'
-)
-_RELEASE_TARGETS_MIXED_KINDS = (
-    _RELEASE_TARGETS_ONE_NPM + "\n"
-    "[tool]\n"
-    'kind = "pypi"\n'
-    'label = "demo-tool"\n'
-    'version = { file = "tool/pyproject.toml", regex = \'^version = "([^"]+)"\' }\n'
-)
+_RELEASE_TARGETS_ONE_NPM = '[lib]\nmanifest = "packages/lib/package.json"\n'
+_RELEASE_TARGETS_MIXED_KINDS = _RELEASE_TARGETS_ONE_NPM + '\n[tool]\nmanifest = "tool/pyproject.toml"\n'
 
 _OK = "knip.json (if any) stays within the shared allowances; knip.prod.json exactly exempts every published npm target"
 
@@ -125,7 +114,7 @@ def run_knip_config(run_check_with_files: RunCheckWithFiles) -> RunKnipConfig:
             **(layout or {}),
             "knip.json": knip,
             "knip.prod.json": prod,
-            "airlock-targets.toml": release_targets,
+            "airlock_targets.toml": release_targets,
         }
         present = {path: content for path, content in files.items() if content is not None}
         return run_check_with_files(CHECK_ID, present, config_toml)
@@ -294,7 +283,7 @@ def test_27_4_11_ignores_a_malformed_airlock_targets_toml_as_no_published_target
 def test_27_4_12_ignores_an_airlock_targets_toml_with_a_non_table_entry(
     run_knip_config: RunKnipConfig, ok: MakeFinding
 ) -> None:
-    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='scope = "@demo"\nlib = "not-a-table"\n')
+    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, release_targets='lib = "not-a-table"\n')
     assert result.findings == [ok(_OK)]
 
 

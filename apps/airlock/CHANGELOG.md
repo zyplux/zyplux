@@ -4,6 +4,8 @@
 
 ### Minor Changes
 
+- Use airlock_targets.toml with parsed package manifests, inferred npm and PyPI kinds, optional package_name and release_tag overrides, dependency target references and configurable fingerprints that omit Markdown by default.
+
 - Consolidate repeated release preparation into one pending release and restore release metadata after preparation failures.
 
 ### Patch Changes

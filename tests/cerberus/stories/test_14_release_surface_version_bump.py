@@ -4,7 +4,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from archive_fixture import stage_packagers
+from archive_fixture import configure_python_package, stage_packagers
 from cli_fixture import Reply, Response
 from release_fixture import build_release
 from release_surface_fixture import check_surface
@@ -21,19 +21,19 @@ def release(release: ReleaseFixture) -> ReleaseFixture:
     release.use_package()
     stage_packagers(release)
     release.run("prepare")
-    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock-targets.toml", "airlock-targets.toml")
-    release.on(f"git -C {release.root} show util-v1.2.3:airlock-targets.toml", release.read("airlock-targets.toml"))
+    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml", "airlock_targets.toml")
+    release.on(f"git -C {release.root} show util-v1.2.3:airlock_targets.toml", release.read("airlock_targets.toml"))
     return release
 
 
-@pytest.mark.parametrize("manifest", ["not = valid = toml", "", 'scope = ""', "scope = 1", 'scope = "@demo"\nutil = 1'])
+@pytest.mark.parametrize("manifest", ["not = valid = toml", 'scope = ""', "scope = 1", "util = 1"])
 def test_14_1_1_rejects_malformed_manifests(release: ReleaseFixture, manifest: str) -> None:
-    release.write("airlock-targets.toml", manifest)
+    release.write("airlock_targets.toml", manifest)
     assert [finding["status"] for finding in check_surface(release)] == ["error"]
 
 
-def test_14_1_2_accepts_a_scope_with_no_targets(release: ReleaseFixture) -> None:
-    release.write("airlock-targets.toml", 'scope = "@zyplux"')
+def test_14_1_2_accepts_an_empty_manifest(release: ReleaseFixture) -> None:
+    release.write("airlock_targets.toml", "")
     assert check_surface(release) == [DONE]
 
 
@@ -46,18 +46,18 @@ def test_14_1_3_rejects_missing_or_invalid_versions(release: ReleaseFixture, man
 
 
 def test_14_1_4_reports_missing_version_files(release: ReleaseFixture) -> None:
-    release.configure("npm", 'version = { file = "missing.json", json = "version" }')
+    release.configure("npm", 'manifest = "missing.json"')
     findings = check_surface(release)
     assert findings[0]["status"] == "fail"
     assert "missing.json" in findings[0]["message"]
 
 
-def test_14_1_5_reads_native_python_versions_with_the_configured_regex(release: ReleaseFixture) -> None:
+def test_14_1_5_reads_native_python_versions_from_toml(release: ReleaseFixture) -> None:
     release.configure(
         "npm",
         """kind = "pypi"
-label = "zyplux-cerberus"
-version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }""",
+manifest = "apps/cerberus/pyproject.toml"
+""",
     )
     release.published_version("2.3.3")
     assert {
@@ -67,23 +67,23 @@ version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"
 
 
 def test_14_1_6_validates_every_target_when_one_version_is_invalid(release: ReleaseFixture) -> None:
-    release.write_json("packages/util/package.json", {"version": "1.2.4"})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.4"})
     release.write(
-        "airlock-targets.toml",
-        release.read("airlock-targets.toml")
-        + '\n[broken]\nkind = "npm"\nversion = { file = "missing.json", json = "version" }\n',
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + '\n[broken]\nkind = "npm"\nmanifest = "missing.json"\n',
     )
     findings = check_surface(release)
     assert findings[0] == {"message": "@zyplux/util: 1.2.4 is ahead of published 1.2.3", "status": "pass"}
     assert findings[1]["status"] == "fail"
-    assert "@zyplux/broken" in findings[1]["message"]
+    assert "broken:" in findings[1]["message"]
 
 
-def test_14_1_7_reports_invalid_version_regexes(release: ReleaseFixture) -> None:
-    release.configure("npm", 'version = { file = "packages/util/package.json", regex = "[" }')
+def test_14_1_7_reports_unsupported_manifest_formats(release: ReleaseFixture) -> None:
+    release.configure("npm", 'manifest = "packages/util/VERSION"')
+    release.write("packages/util/VERSION", "1.2.3")
     findings = check_surface(release)
     assert findings[0]["status"] == "fail"
-    assert "packages/util/package.json: invalid version regex" in findings[0]["message"]
+    assert "packages/util/VERSION: manifest must be JSON or TOML" in findings[0]["message"]
 
 
 @pytest.mark.parametrize("location", ["absolute", "parent", "symlink"])
@@ -94,7 +94,7 @@ def test_14_1_8_rejects_version_sources_outside_the_selected_repository(release:
     if location == "symlink":
         (release.root / "external.json").symlink_to(external)
         relative = "external.json"
-    release.configure("npm", f'version = {{ file = {json.dumps(relative)}, json = "version" }}')
+    release.configure("npm", f"manifest = {json.dumps(relative)}")
     findings = check_surface(release)
     assert findings[0]["status"] == "fail"
     assert "release paths must be repository-relative" in findings[0]["message"]
@@ -102,7 +102,7 @@ def test_14_1_8_rejects_version_sources_outside_the_selected_repository(release:
 
 @pytest.mark.parametrize("version", ["1.2.4", "1.3.0", "2.0.0"])
 def test_14_2_1_accepts_a_single_patch_minor_or_major_bump(release: ReleaseFixture, version: str) -> None:
-    release.write_json("packages/util/package.json", {"version": version})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": version})
     assert check_surface(release) == [
         {"message": f"@zyplux/util: {version} is ahead of published 1.2.3", "status": "pass"},
         DONE,
@@ -111,7 +111,7 @@ def test_14_2_1_accepts_a_single_patch_minor_or_major_bump(release: ReleaseFixtu
 
 @pytest.mark.parametrize("version", ["1.2.5", "1.4.0", "3.0.0", "1.3.1"])
 def test_14_2_2_rejects_skipped_bumps(release: ReleaseFixture, version: str) -> None:
-    release.write_json("packages/util/package.json", {"version": version})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": version})
     assert check_surface(release) == [
         {
             "message": f"@zyplux/util: version {version} skips ahead of published 1.2.3 — "
@@ -174,7 +174,7 @@ def test_14_3_1_compares_current_versions_against_the_latest_baseline(
     release.base_version(base)
     release.published_version(published)
     release.published()
-    release.write_json("packages/util/package.json", {"version": current})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": current})
     expected: list[dict[str, str]] = (
         []
         if baseline is None
@@ -195,7 +195,7 @@ def test_14_3_3_rejects_regressions_against_an_unpublished_target_branch_version
 def test_14_3_4_rejects_skipped_bumps_before_first_publication(release: ReleaseFixture) -> None:
     release.base_version("1.2.3")
     release.published_version()
-    release.write_json("packages/util/package.json", {"version": "9.0.0"})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "9.0.0"})
     assert check_surface(release, "origin/main") == [
         {
             "message": "@zyplux/util: version 9.0.0 skips ahead of origin/main (1.2.3) — "
@@ -228,10 +228,10 @@ def test_14_3_7_rejects_unavailable_target_branch_history(release: ReleaseFixtur
     assert check_surface(release, "origin/main")[0]["status"] == "error"
 
 
-def test_14_3_8_reads_the_base_version_with_its_own_extractor_and_path(release: ReleaseFixture) -> None:
+def test_14_3_8_reads_the_base_version_with_its_own_manifest_format_and_path(release: ReleaseFixture) -> None:
     release.base_version("1.2.3")
-    release.configure("npm", 'version = { file = "packages/moved/package.json", json = "metadata.version" }')
-    release.write_json("packages/moved/package.json", {"metadata": {"version": "1.2.4"}})
+    release.configure("npm", 'manifest = "packages/moved/pyproject.toml"')
+    release.write("packages/moved/pyproject.toml", '[project]\nname = "@zyplux/util"\nversion = "1.2.4"\n')
     assert check_surface(release, "origin/main") == [
         {"message": "@zyplux/util: 1.2.4 is ahead of published 1.2.3", "status": "pass"},
         DONE,
@@ -243,14 +243,14 @@ def test_14_3_9_reports_missing_base_version_files(release: ReleaseFixture) -> N
     release.on(f"git -C {release.root} ls-tree --name-only origin/main -- packages/util/package.json")
     findings = check_surface(release, "origin/main")
     assert findings[0]["status"] == "error"
-    assert "version file packages/util/package.json is missing" in findings[0]["message"]
+    assert "manifest packages/util/package.json is missing" in findings[0]["message"]
 
 
 def test_14_3_10_distinguishes_targets_sharing_a_version_file(release: ReleaseFixture) -> None:
     release.base_version("9.0.0")
     release.on(
-        f"git -C {release.root} show origin/main:airlock-targets.toml",
-        release.read("airlock-targets.toml").replace("[util]", "[other]"),
+        f"git -C {release.root} show origin/main:airlock_targets.toml",
+        release.read("airlock_targets.toml").replace("[util]", "[other]"),
     )
     release.published_version()
     assert check_surface(release, "origin/main") == [
@@ -269,12 +269,11 @@ def test_14_3_11_uses_the_github_target_branch_by_default(release: ReleaseFixtur
 
 def test_14_3_12_reads_a_shared_baseline_version_file_once(release: ReleaseFixture) -> None:
     release.write(
-        "airlock-targets.toml",
-        release.read("airlock-targets.toml") + '\n[other]\nkind = "npm"\n'
-        'version = { file = "packages/util/package.json", json = "version" }\n',
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + '\n[other]\nkind = "npm"\nmanifest = "packages/util/package.json"\n',
     )
     release.base_version("1.2.3")
-    release.write_json("packages/util/package.json", {"version": "1.2.4"})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.4"})
 
     assert [finding["status"] for finding in check_surface(release, "origin/main")] == ["pass", "pass", "pass"]
     assert len(release.matching("git -C .* show origin/main:packages/util/package.json$")) == 1
@@ -290,7 +289,7 @@ def test_14_4_4_reports_release_history_failures_as_errors(release: ReleaseFixtu
 
 def test_14_4_5_compares_stable_action_releases_across_all_pages(release: ReleaseFixture) -> None:
     release.configure("npm", 'kind = "action"\nrepository = "zyplux/zyplux"')
-    release.write_json("packages/util/package.json", {"version": "1.10.1"})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.10.1"})
     release.action_releases(
         [build_release("other-v99.0.0"), build_release("util-v1.9.0")],
         [
@@ -309,7 +308,7 @@ def test_14_4_5_compares_stable_action_releases_across_all_pages(release: Releas
 
 
 def test_14_4_6_uses_successful_container_releases(release: ReleaseFixture) -> None:
-    release.configure("npm", 'kind = "ghcr"\nlabel = "ghcr.io/zyplux/ci"')
+    release.configure("npm", 'kind = "ghcr"\npackage_name = "ghcr.io/zyplux/ci"')
     release.action_releases([build_release("util-v1.2.2"), build_release("util-v1.2.3", draft=True)])
     assert check_surface(release) == [
         {"message": "ghcr.io/zyplux/ci: 1.2.3 is ahead of published 1.2.2", "status": "pass"},
@@ -320,12 +319,11 @@ def test_14_4_6_uses_successful_container_releases(release: ReleaseFixture) -> N
 
 def test_14_4_7_reads_release_history_once_for_all_targets(release: ReleaseFixture) -> None:
     release.write(
-        "airlock-targets.toml",
-        release.read("airlock-targets.toml") + '\n[other]\nkind = "npm"\n'
-        'version = { file = "packages/other/package.json", json = "version" }\n',
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + '\n[other]\nkind = "npm"\nmanifest = "packages/other/package.json"\n',
     )
-    release.write_json("packages/util/package.json", {"version": "1.2.4"})
-    release.write_json("packages/other/package.json", {"version": "1.2.4"})
+    release.write_json("packages/util/package.json", {"name": "@zyplux/util", "version": "1.2.4"})
+    release.write_json("packages/other/package.json", {"name": "@zyplux/other", "version": "1.2.4"})
     release.action_releases([build_release("util-v1.2.3"), build_release("other-v1.2.3")])
     findings = check_surface(release)
     assert [finding["status"] for finding in findings] == ["pass", "pass", "pass"]
@@ -350,21 +348,21 @@ def test_14_6_1_skips_repos_that_publish_nothing(
     run_check_with_files: RunCheckWithFiles, fake_proc: FakeProc, skip: MakeFinding
 ) -> None:
     result = run_check_with_files(CHECK_ID, {})
-    assert result.findings == [skip("no airlock-targets.toml — repo publishes nothing")]
+    assert result.findings == [skip("no airlock_targets.toml — repo publishes nothing")]
     assert fake_proc.calls == []
 
 
 def test_14_6_2_checks_the_repository_without_an_npm_cli(
     run_check_on_disk: RunCheckOnDisk, fake_proc: FakeProc, ok: MakeFinding
 ) -> None:
-    result = run_check_on_disk(CHECK_ID, {"airlock-targets.toml": 'scope = "@zyplux"'})
+    result = run_check_on_disk(CHECK_ID, {"airlock_targets.toml": ""})
     assert result.findings == [ok(DONE["message"])]
     assert fake_proc.calls == []
 
 
-@pytest.mark.parametrize("manifest", ["invalid = toml = text", "", 'scope = ""'])
+@pytest.mark.parametrize("manifest", ["invalid = toml = text", 'scope = ""'])
 def test_14_6_3_reports_manifest_errors(run_check_on_disk: RunCheckOnDisk, manifest: str) -> None:
-    result = run_check_on_disk(CHECK_ID, {"airlock-targets.toml": manifest})
+    result = run_check_on_disk(CHECK_ID, {"airlock_targets.toml": manifest})
     assert len(result.problems) == 1
     assert result.problems[0].status.name == "ERROR"
     assert result.problems[0].message.startswith("cannot check release contents:")
@@ -372,15 +370,13 @@ def test_14_6_3_reports_manifest_errors(run_check_on_disk: RunCheckOnDisk, manif
 
 def test_14_6_4_preserves_findings_from_multiple_targets(release: ReleaseFixture) -> None:
     release.write(
-        "airlock-targets.toml",
-        'scope = "@zyplux"\n'
-        '[first]\nkind = "npm"\nversion = { file = "first.json", json = "version" }\n'
-        '[second]\nkind = "npm"\nversion = { file = "second.json", json = "version" }\n',
+        "airlock_targets.toml",
+        '[first]\nkind = "npm"\nmanifest = "first.json"\n[second]\nkind = "npm"\nmanifest = "second.json"\n',
     )
     findings = check_surface(release)
     assert [finding["status"] for finding in findings] == ["fail", "fail"]
-    assert "@zyplux/first" in findings[0]["message"]
-    assert "@zyplux/second" in findings[1]["message"]
+    assert "first:" in findings[0]["message"]
+    assert "second:" in findings[1]["message"]
 
 
 def test_14_7_1_accepts_package_contents_matching_the_successful_release_tag(release: ReleaseFixture) -> None:
@@ -399,6 +395,28 @@ def test_14_7_2_detects_changes_even_after_the_pr_fingerprint_is_refreshed(relea
     assert not release.requests
 
 
+def test_14_7_7_reads_fingerprints_from_the_manifest_in_published_tags(release: ReleaseFixture) -> None:
+    release.configure("npm", 'includes = ["**/*"]')
+    release.run("prepare")
+    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml")
+    release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock-targets.toml", "airlock-targets.toml")
+    release.on(
+        f"git -C {release.root} show util-v1.2.3:airlock-targets.toml",
+        release
+        .read("airlock_targets.toml")
+        .replace('includes = ["**/*"]\n', "")
+        .replace(
+            'manifest = "packages/util/package.json"',
+            'version = { file = "packages/util/package.json", json = "version" }',
+        ),
+    )
+    release.write("packages/util/src/index.js", "changed contents")
+    release.run("prepare")
+    findings = check_surface(release)
+    assert findings[0]["status"] == "fail"
+    assert "changed since util-v1.2.3" in findings[0]["message"]
+
+
 def test_14_7_3_uses_finalized_stable_releases_instead_of_registry_versions(release: ReleaseFixture) -> None:
     release.published_version("1.2.4")
     release.action_releases(
@@ -415,23 +433,26 @@ def test_14_7_4_accepts_the_first_fingerprint_before_a_release_baseline_exists(
 ) -> None:
     if has_manifest:
         release.on(
-            f"git -C {release.root} show util-v1.2.3:airlock-targets.toml",
-            'scope = "@zyplux"\n[util]\nkind = "npm"\nsurface = ["packages/util/src"]\n'
-            'version = { file = "packages/util/package.json", json = "version" }\n',
+            f"git -C {release.root} show util-v1.2.3:airlock_targets.toml",
+            '[util]\nkind = "npm"\nsurface = ["packages/util/src"]\nmanifest = "packages/util/package.json"\n',
         )
     else:
-        release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock-targets.toml")
+        release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml")
     assert check_surface(release) == [DONE]
     assert not release.matching("git -C .* diff")
 
 
 @pytest.mark.parametrize("kind", ["action", "ghcr"])
 def test_14_7_6_requires_bumps_for_changed_action_and_container_inputs(release: ReleaseFixture, kind: str) -> None:
-    fields = 'kind = "action"\nrepository = "zyplux/zyplux"' if kind == "action" else 'kind = "ghcr"'
+    fields = (
+        'kind = "action"\nrepository = "zyplux/zyplux"'
+        if kind == "action"
+        else 'kind = "ghcr"\npackage_name = "ghcr.io/zyplux/util"'
+    )
     release.configure("npm", fields)
     release.write("packages/util/Containerfile", "FROM scratch\n")
     release.run("prepare")
-    release.on(f"git -C {release.root} show util-v1.2.3:airlock-targets.toml", release.read("airlock-targets.toml"))
+    release.on(f"git -C {release.root} show util-v1.2.3:airlock_targets.toml", release.read("airlock_targets.toml"))
     release.write("packages/util/src/index.js", "changed source")
     release.run("prepare")
     findings = check_surface(release)
@@ -442,8 +463,7 @@ def test_14_7_6_requires_bumps_for_changed_action_and_container_inputs(release: 
 @pytest.fixture(params=["npm", "pypi"])
 def registry_repair(release: ReleaseFixture, request: pytest.FixtureRequest) -> ReleaseFixture:
     if request.param == "pypi":
-        release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
-        release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nversion = "1.2.3"\n')
+        configure_python_package(release)
     release.run("prepare")
     release.published_version()
     release.base_version("1.2.3")

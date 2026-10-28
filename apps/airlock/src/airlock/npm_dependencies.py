@@ -34,8 +34,8 @@ def matches_dependency(version: str | None, specifier: str) -> bool:
 
 def load_dependencies(target: ReleaseTarget, archive: Path) -> list[ReleaseTarget]:
     manifest = NpmArchive.model_validate_json(proc.run("tar", "-xOf", str(archive), "package/package.json"))
-    if manifest.name != target.spec.label or manifest.version != target.version:
-        msg = f"{target.spec.label}: packed package identity must match {target.spec.label}@{target.version}"
+    if manifest.name != target.package_name or manifest.version != target.version:
+        msg = f"{target.package_name}: packed package identity must match {target.package_name}@{target.version}"
         raise ValueError(msg)
     bundled = (
         manifest.bundled_dependencies if manifest.bundled_dependencies is not None else manifest.bundle_dependencies
@@ -62,13 +62,16 @@ def load_dependencies(target: ReleaseTarget, archive: Path) -> list[ReleaseTarge
             continue
         dependency = configured.get(Path(workspace.path).resolve())
         if dependency is None:
-            msg = f"{target.spec.label}: declare an npm target for dependency {workspace.path}"
+            msg = f"{target.package_name}: declare an npm target for dependency {workspace.path}"
             raise ValueError(msg)
         if workspace.private:
-            msg = f"{target.spec.label}: workspace dependency {workspace.name} is private"
+            msg = f"{target.package_name}: workspace dependency {workspace.name} is private"
             raise ValueError(msg)
-        if workspace.name != dependency.spec.label or workspace.version != dependency.version:
-            msg = f"{target.spec.label}: dependency {dependency.spec.label} must match its configured name and version"
+        if workspace.name != dependency.package_name or workspace.version != dependency.version:
+            msg = (
+                f"{target.package_name}: dependency {dependency.package_name} "
+                "must match its configured name and version"
+            )
             raise ValueError(msg)
         dependencies.append(dependency)
     return dependencies

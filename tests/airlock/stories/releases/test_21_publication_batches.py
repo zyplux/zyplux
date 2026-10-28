@@ -65,9 +65,9 @@ def test_21_2_1_publishes_only_the_selected_npm_target_and_writes_its_summary(re
 
 def test_21_2_2_honors_a_single_tag_plan_when_several_npm_targets_exist(release: ReleaseFixture) -> None:
     release.write(
-        "airlock-targets.toml",
-        release.read("airlock-targets.toml") + '\n[extra]\nkind = "npm"\nenvironment = "npm-extra"\n'
-        'version = { file = "packages/extra/package.json", json = "version" }\n',
+        "airlock_targets.toml",
+        release.read("airlock_targets.toml") + '\n[extra]\nkind = "npm"\nenvironment = "npm-extra"\n'
+        'manifest = "packages/extra/package.json"\n',
     )
     release.write_json("packages/extra/package.json", {"name": "@zyplux/extra", "version": "1.2.3"})
     release.write("packages/extra/CHANGELOG.md", "# Extra\n\n## 1.2.3\n\n- Publish extra.\n")
@@ -135,7 +135,7 @@ def test_21_3_4_rejects_a_tag_that_does_not_match_a_configured_version(release: 
 
 
 def test_21_3_5_plans_no_batches_for_a_repository_with_no_release_targets(release: ReleaseFixture) -> None:
-    release.write("airlock-targets.toml", 'scope = "@zyplux"\n')
+    release.write("airlock_targets.toml", "")
     assert release.plan() == []
 
 
