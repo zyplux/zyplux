@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.0
+
+### Minor Changes
+
+- Consolidate repeated release preparation into one pending release and restore release metadata after preparation failures.
+
 ## 2.1.1
 
 ### Patch Changes

@@ -1308,7 +1308,7 @@ type = [
 
 [[package]]
 name = "zyplux-airlock"
-version = "2.1.1"
+version = "2.2.0"
 source = { editable = "apps/airlock" }
 dependencies = [
     { name = "docker" },

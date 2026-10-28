@@ -26,12 +26,12 @@ flowchart TD
 
 1. Run `uv run cerberus --check release_surface_version_bump` to identify changed published targets.
 2. Run `pnpm change`, select those targets and choose patch for fixes, minor for compatible features or major for breaking changes. Write a concise consumer-facing summary, including migration steps for breaking changes; pnpm adds the list marker. Use separate fragments when targets need different descriptions.
-3. Run the commands below. Review the versions, dependency changes, changelog entries, `.changeset/ledger.yaml` and both lockfiles, then include those edits with the feature.
+3. Run the commands below. Review the versions, dependency changes, changelog entries, `.changeset/ledger.yaml`, `.changeset/preparation.json` and both lockfiles, then include those edits with the feature. CI runs the full test suite and Cerberus.
 4. Submit the PR through the repository's normal review process. After merge, check the automatic release run and its per-batch summaries; each GitHub release should contain the prepared entry for that version.
 
 ```sh
 pnpm release:prepare
-./just c
+./just lint typecheck
 ```
 
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
@@ -40,7 +40,11 @@ For GitHub Packages, preparation preserves configured pnpm credentials and falls
 
 Python targets have a private pnpm tracking `package.json` beside `pyproject.toml`; preparation synchronizes the native Python version through uv. Preparation initializes or refreshes every target's fingerprint after versioning. Cerberus's `release_readiness` bite rejects unconsumed fragments, mismatched versions, stale fingerprints and missing or empty changelog entries.
 
-If preparation needs regeneration, preserve the code and note text, restore generated release files to the current `main` baseline, recreate the fragments and rerun `pnpm release:prepare` after any preceding release publishes.
+Add further change intents and rerun preparation while a release is pending. Airlock saves the original metadata and consumed intents in `.changeset/preparation.json`, then replays pnpm's planner from that baseline. Two patch intents produce one patch release; a patch and a minor produce one minor release. Both notes appear once, dependency versions are replanned, and source edits are preserved. Commit the preparation record so the same baseline survives checkout and review.
+
+Once all recorded releases have GitHub releases or uploaded artifacts, preparation starts a new baseline. A partial PyPI upload or an existing Action version tag also freezes that version. Finish or retry a partially published preparation before adding more release intents. If a newer version has published elsewhere, merge the latest target branch first. Prepared releases without a preparation record must publish before adoption, or have their original baseline and intents restored; the ledger records intent IDs, not their deleted text. Overlapping manual edits to generated metadata require resolution before replay; write additional release notes as intents.
+
+On a reported preparation failure, Airlock restores the release metadata present at invocation: manifests, versions, changelogs, intents, ledger, lockfiles, fingerprints and the preparation record. Existing staged, unstaged and untracked edits remain; the Git index is untouched. Run preparation without concurrent edits. Build-hook outputs outside release metadata are retained. This recovery handles raised errors and interrupts, not an abrupt process kill or filesystem failure.
 
 ## Release content validation
 

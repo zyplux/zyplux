@@ -443,6 +443,7 @@ def test_25_4_12_fingerprints_git_ignored_container_inputs(release: ReleaseFixtu
     release.write(".gitignore", "scratch/\n")
     release.write("scratch/settings.json", '{"enabled":true}')
     release.run("prepare")
+    release.calls.clear()
     release.write("scratch/settings.json", '{"enabled":false}')
     release.publish("ci-image-v3.4.5", error="build-input fingerprint")
     assert not release.matching("git ls-files|podman build|gh release create")

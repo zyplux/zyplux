@@ -37,6 +37,10 @@ zyplux-airlock@2.1.1:
   dir: apps/airlock
   intents:
     - big-wombats-compete
+zyplux-airlock@2.2.0:
+  dir: apps/airlock
+  intents:
+    - tiny-ants-chew
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:

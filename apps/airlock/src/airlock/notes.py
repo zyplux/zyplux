@@ -9,11 +9,12 @@ from markdown_it.tree import SyntaxTreeNode
 from airlock import proc
 from airlock.content_hash import update_content_hashes
 from airlock.contracts import PythonTracking
+from airlock.preparation import prepare_metadata, save_preparation
 from airlock.registries import load_npm_registry, load_pnpm_auth
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget
+    from airlock.contracts import PnpmAuth, ReleaseTarget
 
 
 def load_release_notes(directory: Path, version: str) -> str:
@@ -80,6 +81,16 @@ def prepare_release() -> None:
     root = proc.find_root()
     targets = load_targets(root)
     validate_python_versions(targets)
+    registries = load_publication_registries(targets)
+    with prepare_metadata(root, targets) as baseline:
+        pnpm_auth = load_pnpm_auth(registries, root)
+        prepare_versions(root, load_targets(root), registries, pnpm_auth)
+        prepared = load_prepared_targets()
+        save_preparation(root, baseline, [target for target, _ in prepared])
+        update_content_hashes([target for target, _ in prepared])
+
+
+def load_publication_registries(targets: list[ReleaseTarget]) -> dict[str, str]:
     registries: dict[str, str] = {}
     for target in targets:
         if target.spec.kind != "npm":
@@ -90,7 +101,10 @@ def prepare_release() -> None:
             msg = f"native pnpm preparation requires one publication registry per scope ({key})"
             raise ValueError(msg)
         registries[key] = registry
-    pnpm_auth = load_pnpm_auth(registries, root)
+    return registries
+
+
+def prepare_versions(root: Path, targets: list[ReleaseTarget], registries: dict[str, str], pnpm_auth: PnpmAuth) -> None:
     proc.run(
         "pnpm",
         "version",
@@ -113,5 +127,3 @@ def prepare_release() -> None:
     )
     if python_targets:
         proc.run("uv", "lock", cwd=root)
-    prepared = load_prepared_targets()
-    update_content_hashes([target for target, _ in prepared])

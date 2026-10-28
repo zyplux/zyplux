@@ -27,3 +27,29 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.1.11 adds only missing scope credentials and honors lowercase environment precedence
 
 ### 18.1.12 adds authentication without changing dependency registry routes
+
+## 18.2 repeatable preparation
+
+### 18.2.1 consolidates sequential and batched intents from one baseline
+
+### 18.2.2 replans dependency bumps and preserves manifest source edits
+
+### 18.2.3 restores release metadata and preserves user changes after failure
+
+### 18.2.4 preserves metadata when a real prepack hook fails
+
+### 18.2.5 starts a new baseline after publication
+
+### 18.2.6 refuses to rewind a partially published preparation
+
+### 18.2.7 requires the latest baseline when a newer version was published
+
+### 18.2.8 requires legacy pending releases to publish before adoption
+
+### 18.2.9 preserves overlapping manual release edits when replay conflicts
+
+### 18.2.10 removes new release metadata on reported failure
+
+### 18.2.11 freezes an action version tag before release finalization
+
+### 18.2.12 preserves preparation inputs when authentication bootstrap fails
