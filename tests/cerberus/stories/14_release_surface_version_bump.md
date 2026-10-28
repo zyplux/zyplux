@@ -103,3 +103,5 @@
 ### 14.8.3 allows same version repairs before any registry artifact exists
 
 ### 14.8.4 reports registry errors during repair validation
+
+### 14.8.5 checks registry artifacts when fingerprint selection changes
