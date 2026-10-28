@@ -80,7 +80,9 @@ alias d := dump-rules
 
 # Prepare release metadata, the workspace graph and code statistics.
 fingerprint:
-    pnpm run --silent cz fingerprint
+    pnpm run --silent cz workspace-graph
+    uv run clipy stats
+    pnpm release:prepare
 
 # Write tracked code statistics for a directory.
 stats dir='.' *args='':

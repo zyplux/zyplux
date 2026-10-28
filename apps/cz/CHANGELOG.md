@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- Add workspace dependency diagrams, balanced file chunking and commands that delegate repository statistics and release preparation to Clipy.
+- Add workspace dependency diagrams, balanced file chunking and repository statistics through Clipy.
 
 ## 0.15.0
 

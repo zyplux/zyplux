@@ -13,6 +13,6 @@ The action requires root `package.json`, `pyproject.toml`, `pnpm-lock.yaml` and 
 
 Executable cache keys include the version, operating system and architecture. Node.js and uv use their upstream setup actions. A cold pnpm install uses the official standalone installer with `PNPM_VERSION` set to the workspace pin; pnpm 12 downloads are verified against npm registry signatures and checksums. Shell configuration is written to runner temporary storage. pnpm's store and metadata cache share a lockfile key with a version-specific fallback. uv hashes the exact root lockfile and Python version file. GitHub scopes caches to the consuming repository and permitted branches.
 
-Every call runs `pnpm install --frozen-lockfile --no-runtime` and `uv sync --locked --all-packages --all-groups`. Cerberus requires checkout and the shared action before checks in the unconditional CI job, and rejects standalone toolchain setup actions in workflows.
+Every call runs `pnpm install --frozen-lockfile --no-runtime` and `uv sync --locked --all-packages --all-groups`.
 
 Publication jobs populate the main-branch caches that subsequent PRs can restore. PR caches are isolated to their merge ref.

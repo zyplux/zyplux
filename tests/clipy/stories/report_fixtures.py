@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-import json
 import subprocess
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest
-from airlock import notes
-from cerberus.cli import app as guard_app
-from clipy import code_metrics, fingerprint
+from clipy import code_metrics
 from clipy.cli import app
 from tiktoken import Encoding
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from pathlib import Path
 
     from typer.testing import Result
 
@@ -30,15 +26,6 @@ class ReportRepo:
         destination.write_text(content)
         return destination
 
-    def write_package(self, directory: str, **manifest: object) -> None:
-        self.write(f"{directory}/package.json".lstrip("/"), json.dumps(manifest))
-
-    def seed_workspaces(self) -> None:
-        self.write_package("", name="fixture", version="1.0.0", private=True)
-        self.write("pnpm-workspace.yaml", "packages: ['apps/*', 'packages/*', 'infra/*', 'doubles', 'tests/*']\n")
-        for name in ("one", "two", "three"):
-            self.write_package(f"packages/{name}", name=f"@acme/{name}", version="1.0.0")
-
     def git(self, *args: str) -> str:
         return subprocess.run(["git", *args], cwd=self.root, check=True, text=True, capture_output=True).stdout
 
@@ -48,10 +35,6 @@ class ReportRepo:
     @staticmethod
     def invoke(*args: str) -> Result:
         return CliRunner().invoke(app, list(args))
-
-    @staticmethod
-    def check_readiness() -> Result:
-        return CliRunner().invoke(guard_app, ["--check", "release_readiness"])
 
     def read(self, path: str) -> str:
         return (self.root / path).read_text()
@@ -63,13 +46,6 @@ def report_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> ReportRepo:
     repo.git("init", "-q")
     monkeypatch.chdir(tmp_path)
 
-    def write_graph(*args: str, cwd: Path) -> str:
-        assert args == ("pnpm", "exec", "cz", "workspace-graph", str(repo.root))
-        assert cwd == repo.root
-        repo.write("WORKSPACE_GRAPH.md", "# Workspace Dependency Graph\n\n```mermaid\nflowchart LR\n    A --> B\n```\n")
-        return ""
-
-    monkeypatch.setattr(fingerprint, "run", write_graph)
     return repo
 
 
@@ -82,36 +58,6 @@ def metrics_encoding(monkeypatch: pytest.MonkeyPatch) -> None:
         special_tokens={},
     )
     monkeypatch.setattr(code_metrics, "load_encoding", lambda: encoding)
-
-
-@dataclass
-class ReleasePreparation:
-    calls: list[Path] = field(default_factory=list)
-    should_fail: bool = False
-
-    def prepare(self, *, before_fingerprints: Callable[[], None] | None = None) -> None:
-        self.calls.append(Path.cwd())
-        if self.should_fail:
-            message = "release preparation failed"
-            raise ValueError(message)
-        (Path.cwd() / "package.json").write_text('{"name": "fixture", "version": "1.0.1"}\n')
-        if before_fingerprints is not None:
-            before_fingerprints()
-
-
-@pytest.fixture
-def release_preparation(monkeypatch: pytest.MonkeyPatch) -> ReleasePreparation:
-    preparation = ReleasePreparation()
-    monkeypatch.setattr(fingerprint, "prepare_release", preparation.prepare)
-    return preparation
-
-
-@pytest.fixture
-def unchanged_versions(monkeypatch: pytest.MonkeyPatch) -> None:
-    def preserve_versions(*_args: object) -> None:
-        pass
-
-    monkeypatch.setattr(notes, "prepare_versions", preserve_versions)
 
 
 def read_row(report: str, heading: str, label: str) -> dict[str, str]:

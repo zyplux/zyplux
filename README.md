@@ -26,7 +26,7 @@ Apps provide commands and actions; packages provide reusable libraries and confi
 | [setup-pm](apps/action-setup-pm) | GitHub | Cached pnpm and uv setup for dual workspaces |
 | [Airlock](apps/action-airlock) | GitHub | GitHub Actions entry point for the Airlock release CLI |
 
-Local app: [token-stats](apps/token_stats) compares Python tokenizers. [zyplux-util](packages/util_py) is deprecated; it contained no utility functions.
+Local app: [token-stats](apps/token_stats) compares Python tokenizers. Deprecated package: [zyplux-util](packages/util_py).
 
 Each app or package's README covers usage. Follow the [Airlock release workflow](apps/airlock/README.md) to prepare reviewed versions and automatically publish the targets in [airlock-targets.toml](airlock-targets.toml).
 

@@ -38,8 +38,6 @@ Runs every bite and exits non-zero on any failure or error, so it drops into CI 
 
 A repo switches a bite off with `off = true` in that bite's `cerberus.toml` table (see Config below); naming an off bite with `--check` still runs it.
 
-Repository reports and workspace diagrams belong to [CZ](../cz/README.md).
-
 ## Bites
 
 | ID                             | Scope       | Verifies                                                                            |
@@ -55,8 +53,8 @@ Repository reports and workspace diagrams belong to [CZ](../cz/README.md).
 | `line_length`                  | content     | ruff `line-length` and prettier `printWidth` both match the configured width (120)   |
 | `rumdl`                        | content     | `.rumdl.toml` carries the org-canonical rule config (per-repo `exclude` allowed)    |
 | `knip`                         | content     | knip config is standalone, never inline in `package.json`; `knip.prod.json` runs the entry-exports pass and exempts exactly the repo's published npm targets |
-| `vitest`                       | content     | TypeScript tests use Vitest rather than Bun's test runner |
-| `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`), not a per-package fan-out |
+| `vitest`                       | content     | TypeScript tests use Vitest |
+| `tsc`                          | content     | TypeScript typecheck runs via project references (`tsc -b`) |
 | `catalog_pinned_deps`          | content     | Every workspace `package.json` dependency pins via `catalog:` or `workspace:`        |
 | `vitest_coverage` | content | Root Vitest coverage thresholds meet the configured floor |
 | `consistent_package_export_entries` | content | Workspace packages use index roots or named modules, with matching source/publication keys; application router roots match their TanStack Vite entry |
@@ -117,7 +115,7 @@ roots = ["demo", "examples", "infra/demo"]
 
 Root globs are repository-relative paths. Deeper matches win; equally deep matches use the most literal pattern. Equally specific conflicting categories fail. `allowed_child_types` names the categories permitted **inside** a category. Demo and docs roots are terminal; their contents retain that category. Unmatched paths are infra. Colocated tests retain their enclosing category and have an independent `is_test` flag, derived from `[source_oracle].test_files`.
 
-`needs_tests` only informs existing test-presence checks. It does not configure test discovery, runners or coverage. `[source_oracle].test_exempt_files` records explicit repository policy exceptions. Linting and strict typechecking still cover every category.
+Existing test-presence checks use `needs_tests`. Repositories configure test discovery, runners and coverage. `[source_oracle].test_exempt_files` records explicit repository policy exceptions. Linting and strict typechecking cover every category.
 
 Knip uses prod classification and registered TypeScript workspaces; `uv run cerberus --check knip --fix` regenerates `ignoreWorkspaces`. Pyrefly requires `min-severity = "warn"`; `extends` and command-line severity overrides are rejected.
 
@@ -129,7 +127,7 @@ Python callers use `load_source_oracle(repo_root).classify(relative_path)` from 
 
 ## Package and source checks
 
-TypeScript seam checks use ESLint's resolved imports. The retired `cli_ts_test_seam`, `lib_ts_test_seam`, and `fixture_roles_ts` IDs report migration guidance when encountered in overlays. Their package policies are covered by the focused export, ownership, and reference checks.
+TypeScript seam checks use ESLint's resolved imports. Focused export, ownership and reference checks enforce package policies.
 
 Worker traversal covers first-party static imports and literal dynamic imports. Normal output summarizes static coverage limits; `--verbose` lists computed imports, third-party modules, and framework-provided entries that require production bundle validation.
 

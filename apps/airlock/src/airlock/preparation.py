@@ -118,6 +118,13 @@ def rewind_json(current: dict[str, object], before: dict[str, object], after: di
 def merge_metadata(current: str | None, edit: MetadataEdit, relative: str) -> str | None:
     if current in {edit.after, edit.before}:
         return edit.before
+    if (
+        relative == ".changeset/ledger.yaml"
+        and current is not None
+        and edit.after is not None
+        and yaml.safe_load(current) == yaml.safe_load(edit.after)
+    ):
+        return edit.before
     if current is None or edit.before is None or edit.after is None:
         msg = f"{relative}: prepared metadata was edited; move release-note edits into a new pnpm change intent"
         raise ValueError(msg)

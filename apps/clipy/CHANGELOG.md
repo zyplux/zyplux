@@ -4,4 +4,4 @@
 
 ### Minor Changes
 
-- Publish shared Python repository statistics and fingerprint preparation alongside the terminal helpers. Use Cerberus source classifications and Airlock release preparation.
+- Publish shared Python repository statistics alongside the terminal helpers, using Cerberus source classifications.

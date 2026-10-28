@@ -53,3 +53,5 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.2.11 freezes an action version tag before release finalization
 
 ### 18.2.12 preserves preparation inputs when authentication bootstrap fails
+
+### 18.2.13 replays preparation after ledger formatting

@@ -34,8 +34,6 @@ pnpm release:prepare
 ./just lint typecheck
 ```
 
-With CZ and Clipy installed, `cz fingerprint` prepares versions, generates repository reports, then calculates release fingerprints. See [repository reports](../cz/README.md#repository-reports).
-
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
 
 For GitHub Packages, preparation preserves configured pnpm credentials and falls back to `NODE_AUTH_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` or `gh auth token`. Fallback credentials are scoped to the declared GitHub package scopes in the pnpm child environment; lockfile refresh retains the configured dependency registries. No authentication files are written.

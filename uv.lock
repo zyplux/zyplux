@@ -1512,5 +1512,5 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-setup-pm"
-version = "1.0.2"
+version = "1.0.3"
 source = { editable = "apps/action-setup-pm" }

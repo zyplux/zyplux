@@ -4,6 +4,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+import yaml
 from archive_fixture import stage_git
 from cli_fixture import Command, Reply, Response
 from release_fixture import build_release
@@ -379,6 +380,18 @@ def test_18_2_12_preserves_preparation_inputs_when_authentication_bootstrap_fail
     release.on("pnpm config list", fail)
     release.run("prepare", error="Bootstrap failed.")
     assert capture_metadata(release) == before
+
+
+def test_18_2_13_replays_preparation_after_ledger_formatting(release: ReleaseFixture) -> None:
+    release.prepare_workspace()
+    release.run("prepare")
+    ledger = yaml.safe_load(release.read(".changeset/ledger.yaml"))
+    release.write(".changeset/ledger.yaml", yaml.safe_dump(ledger, default_style='"'))
+    release.write(".changeset/next.md", '---\n"@zyplux/util": patch\n---\n\nAdditional note.\n')
+    release.run("prepare")
+    assert json.loads(release.read("packages/util/package.json"))["version"] == "1.3.0"
+    changelog = release.read("packages/util/CHANGELOG.md")
+    assert changelog.count("Expose reviewed target release notes.") == changelog.count("Additional note.") == 1
 
 
 def capture_metadata(release: ReleaseFixture) -> dict[str, bytes]:

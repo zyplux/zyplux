@@ -6,6 +6,10 @@
 
 - Consolidate repeated release preparation into one pending release and restore release metadata after preparation failures.
 
+### Patch Changes
+
+- Allow release preparation to replay after formatting the intent ledger.
+
 ## 2.1.1
 
 ### Patch Changes

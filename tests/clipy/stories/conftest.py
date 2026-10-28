@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from report_fixtures import metrics_encoding, release_preparation, report_repo, unchanged_versions
+from report_fixtures import metrics_encoding, report_repo
 from typer.testing import CliRunner
 
 
@@ -10,4 +10,4 @@ def cli() -> CliRunner:
     return CliRunner()
 
 
-__all__ = ["cli", "metrics_encoding", "release_preparation", "report_repo", "unchanged_versions"]
+__all__ = ["cli", "metrics_encoding", "report_repo"]

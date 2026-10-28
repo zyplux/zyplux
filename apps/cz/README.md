@@ -28,7 +28,6 @@ cz lint-mermaid                       Check Mermaid diagrams in tracked and unig
 cz upgrade [--interactive] [PACKAGE...] Upgrade the pinned toolchain plus JavaScript and Python workspace dependencies.
 cz workspace-graph [PATH]              Write WORKSPACE_GRAPH.md for pnpm and uv workspaces.
 cz stats [PATH] [--out FILE] [--title TITLE] Write line_and_token_stats.md through Clipy.
-cz fingerprint [PATH]                  Prepare releases and both repository reports before release hashes.
 cz chunk-files [FILE_LIST|-] [--json]   Balance files into word-count chunks; isolate large files.
 ```
 
@@ -36,7 +35,7 @@ cz chunk-files [FILE_LIST|-] [--json]   Balance files into word-count chunks; is
 
 The workspace graph and stats use Cerberus's `source_oracle` classifications. Graph nodes combine pnpm and uv membership, group by category and exclude test workspaces. TypeScript imports distinguish type-only edges; frequently imported foundations are listed separately.
 
-Python reporting and release orchestration live in [Clipy](../clipy/README.md). Install `zyplux-clipy` in the repository's uv workspace; CZ delegates `stats` and `fingerprint` to `uv run clipy`. Airlock owns versioning and release hashes.
+Install [`zyplux-clipy`](../clipy/README.md) in the repository's uv workspace for `stats`; it invokes `uv run clipy stats`.
 
 Stats read tracked working-tree files, leaving the index untouched. Stage new files to include them. Lockfiles, the report itself and binary files stay outside the tables. Production tables follow the oracle; the first o200k tokenizer use may download its encoding.
 

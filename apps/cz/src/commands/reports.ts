@@ -20,11 +20,6 @@ export const statsCommand = command(
   object({ command: constant('stats' as const), out: outOption, path: pathArgument, title: titleOption }),
   { brief: message`Write tracked repository metrics using Clipy.` },
 );
-export const fingerprintCommand = command(
-  'fingerprint',
-  object({ command: constant('fingerprint' as const), path: pathArgument }),
-  { brief: message`Prepare releases, workspace diagram and statistics before release fingerprints.` },
-);
 
 export const runWorkspaceGraph = async ({ path }: InferValue<typeof workspaceGraphCommand>) => {
   console.log(`wrote ${await writeWorkspaceGraph(path)}`);
@@ -39,7 +34,4 @@ export const runStats = async ({ out, path, title }: InferValue<typeof statsComm
     ...(out === undefined ? [] : ['--out', out]),
     ...(title === undefined ? [] : ['--title', title]),
   ]);
-};
-export const runFingerprint = async ({ path }: InferValue<typeof fingerprintCommand>) => {
-  await runPassthrough(['uv', 'run', 'clipy', 'fingerprint', path]);
 };

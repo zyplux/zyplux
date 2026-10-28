@@ -8,7 +8,6 @@ import typer
 from airlock.errors import RELEASE_ERRORS
 
 from clipy import code_metrics
-from clipy.fingerprint import prepare_fingerprint
 
 app = typer.Typer(help="Python repository and terminal helpers.", no_args_is_help=True)
 
@@ -34,13 +33,6 @@ def stats(
     title: Annotated[str | None, typer.Option(help="Measured scope name in the report heading.")] = None,
 ) -> None:
     typer.echo(f"wrote {code_metrics.write_report(directory, title=title, out=out)}")
-
-
-@app.command(help="Prepare releases, the workspace diagram and code statistics before release fingerprints.")
-def fingerprint(
-    path: Annotated[Path, typer.Argument(help="Path inside the repository.")] = Path(),
-) -> None:
-    prepare_fingerprint(path)
 
 
 def main() -> None:
