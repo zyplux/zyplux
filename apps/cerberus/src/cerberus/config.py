@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from importlib import resources
 from typing import TYPE_CHECKING, Any
 
+from cerberus.config_schema import CONFIG_SCHEMA
 from cerberus.source_oracle import SourceKind, SourceOracle, SourceType
 
 if TYPE_CHECKING:
@@ -79,13 +80,6 @@ def _from_dict(data: dict[str, Any]) -> Config:
     ruff = _table(data, "ruff")
     knip = _table(data, "knip")
     jscpd = _table(data, "jscpd")
-    for section in ("knip", "pyrefly"):
-        if "prod_workspaces" in _table(data, section):
-            msg = f"Move [{section}].prod_workspaces to [source_oracle.types.prod].roots in cerberus.toml"
-            raise ValueError(msg)
-    if "min_coverage" in _table(data, "vitest"):
-        message = "Move [vitest].min_coverage to [vitest_coverage].min_coverage in cerberus.toml"
-        raise ValueError(message)
     source_oracle = _table(data, "source_oracle")
     return Config(
         source_oracle=SourceOracle(
@@ -142,6 +136,10 @@ def _overlay(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+def parse_overlay(text: str) -> dict[str, Any]:
+    return CONFIG_SCHEMA.model_validate(tomllib.loads(text)).model_dump(exclude_unset=True)
+
+
 def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     """The bundled defaults with exactly one overlay applied on top.
 
@@ -151,12 +149,7 @@ def load(path: Path | None = None, repo_root: Path | None = None) -> Config:
     data = tomllib.loads(resources.files("cerberus").joinpath("cerberus.toml").read_text())
     repo_toml = path if path is not None else repo_root / "cerberus.toml" if repo_root is not None else None
     if repo_toml is not None and (path is not None or repo_toml.is_file()):
-        overlay = tomllib.loads(repo_toml.read_text())
-        for kind, settings in _table(_table(overlay, "source_oracle"), "types").items():
-            if kind not in data["source_oracle"]["types"] or set(settings) - {"roots"}:
-                message = f"[source_oracle.types.{kind}] overrides may change only roots; policies are shared defaults"
-                raise ValueError(message)
-        data = _overlay(data, overlay)
+        data = _overlay(data, parse_overlay(repo_toml.read_text()))
     return _from_dict(data)
 
 

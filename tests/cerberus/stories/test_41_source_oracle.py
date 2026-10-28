@@ -90,7 +90,7 @@ def test_41_2_2_rejects_equally_specific_conflicting_categories(run_check_with_f
 @pytest.mark.parametrize("policy", ["needs_tests = false", 'allowed_child_types = ["prod"]'])
 def test_41_2_3_rejects_consumer_policy_overrides(tmp_path: Path, policy: str) -> None:
     (tmp_path / "cerberus.toml").write_text(f"[source_oracle.types.infra]\n{policy}\n")
-    with pytest.raises(ValueError, match="overrides may change only roots"):
+    with pytest.raises(ValueError, match="Extra inputs are not permitted"):
         load_source_oracle(tmp_path)
 
 

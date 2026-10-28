@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from cerberus.bites import (
     catalog_pinned_deps_bite,
+    cerberus_schema_bite,
     ci_cerberus_step_bite,
     ci_check_sequence_bite,
     ci_workflow_gate_bite,
@@ -81,6 +82,7 @@ def _list_languages(check_id: str) -> tuple[Language, ...]:
 ALL: tuple[Check, ...] = tuple(
     Check(module.ID, module.SUMMARY, module.SCOPE, module.run, _list_languages(module.ID))
     for module in (
+        cerberus_schema_bite,
         source_oracle_bite,
         justfile_bite,
         ci_workflow_gate_bite,

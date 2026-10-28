@@ -63,15 +63,6 @@ def test_33_1_3_overrides_test_file_patterns_without_replacing_production_defaul
     assert scope.is_test_file("apps/widget/checks/deploy.py") is True
 
 
-@pytest.mark.parametrize("section", ["knip", "pyrefly"])
-def test_33_1_4_explains_how_to_replace_tool_specific_production_settings(tmp_path: Path, section: str) -> None:
-    (tmp_path / "cerberus.toml").write_text(f'[{section}]\nprod_workspaces = ["tools/*"]\n')
-
-    message = rf"Move \[{section}\]\.prod_workspaces to \[source_oracle.types.prod\]\.roots"
-    with pytest.raises(ValueError, match=message):
-        load_source_oracle(tmp_path)
-
-
 @pytest.mark.parametrize(
     ("path", "kind", "root", "flags"),
     [

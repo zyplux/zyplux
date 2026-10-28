@@ -102,7 +102,7 @@ _TOOLS_LAYOUT = {
     "tools/lint/package.json": '{"name": "@demo/lint"}',
 }
 
-_TOOLS_ARE_PRODUCTION = '[source_oracle.types.prod]\nroots = ["apps/*", "packages/*", "tools/*"]\n'
+_TOOLS_ARE_INFRA = '[source_oracle.types.prod]\nroots = ["apps/*", "packages/*"]\n'
 
 
 @pytest.fixture
@@ -428,7 +428,7 @@ def test_27_4_24_fails_when_a_nested_non_production_workspace_stays_in_the_graph
 def test_27_4_25_fails_when_a_workspace_outside_the_production_roots_stays_in_the_graph(
     run_knip_config: RunKnipConfig, fail: MakeFinding
 ) -> None:
-    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=_TOOLS_LAYOUT)
+    result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=_TOOLS_LAYOUT, config_toml=_TOOLS_ARE_INFRA)
 
     assert (
         fail('knip.prod.json "ignoreWorkspaces" leaves non-production workspace(s) in the graph: tools/lint')
@@ -442,7 +442,7 @@ def test_27_4_26_takes_the_production_workspaces_from_cerberus_configuration(
     result = run_knip_config(
         prod=_ENTRY_EXPORTS_OK,
         layout=_TOOLS_LAYOUT,
-        config_toml=_TOOLS_ARE_PRODUCTION,
+        config_toml=_TOOLS_ARE_INFRA.replace('"packages/*"', '"packages/*", "tools/*"'),
     )
 
     assert result.findings == [ok(_OK)]
@@ -461,9 +461,14 @@ def test_27_4_27_ignores_workspace_members_the_pnpm_manifest_excludes(
     assert result.findings == [ok(_OK)]
 
 
-def test_27_5_1_regenerates_workspace_selection_from_shared_ownership(
+def test_27_5_1_regenerates_workspace_selection_from_source_categories(
     run_check_on_disk: RunCheckOnDisk, tmp_path: Path
 ) -> None:
-    files = {**_REPO_LAYOUT, **_TOOLS_LAYOUT, "knip.prod.json": _ENTRY_EXPORTS_IGNORE_PRODUCTION}
+    files = {
+        **_REPO_LAYOUT,
+        **_TOOLS_LAYOUT,
+        "knip.prod.json": _ENTRY_EXPORTS_IGNORE_PRODUCTION,
+        "cerberus.toml": _TOOLS_ARE_INFRA,
+    }
     assert not run_check_on_disk(CHECK_ID, files, fix=True).problems
     assert json.loads((tmp_path / "knip.prod.json").read_text())["ignoreWorkspaces"] == ["tests/lib", "tools/lint"]

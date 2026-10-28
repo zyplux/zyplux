@@ -34,11 +34,23 @@ typecheck:
 
 # Lint and format both workspaces with autofix.
 lint:
+    @just lint-ts
+    @just lint-md
+    @just lint-py
+
+# Lint TypeScript and format Prettier-supported files with autofix.
+lint-ts:
     pnpm run lint:fix
     pnpm run format
+
+# Lint and format Markdown, including Mermaid validation.
+lint-md:
     pnpm run lint:mermaid
-    uv run rumdl check --fix
+    uv run rumdl check --fix --no-cache
     uv run rumdl fmt
+
+# Lint and format Python with autofix.
+lint-py:
     uv run ruff check --fix
     uv run ruff format
 

@@ -6,6 +6,8 @@
 
 - Add shared source classification for production, infrastructure, demo, test and docs. Existing test-presence checks respect category testability, and repository helpers use the same classifications.
 
+- Validate repository configuration with a mandatory schema bite before applying overrides. Invalid settings produce normal bite failures with their configuration paths.
+
 ## 0.26.1
 
 ### Patch Changes

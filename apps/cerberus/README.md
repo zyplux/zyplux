@@ -42,6 +42,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 | ID                             | Scope       | Verifies                                                                            |
 | ------------------------------ | ----------- | ----------------------------------------------------------------------------------- |
+| `cerberus_schema` | content | Repository configuration matches the schema; always runs before loading overrides |
 | `source_oracle`             | content     | Category globs and shared policies enforce unambiguous classification and allowed nesting |
 | `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
@@ -89,7 +90,9 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 Every default lives in [`cerberus.toml`](src/cerberus/cerberus.toml), under its bite's table (`[source_oracle]`, `[justfile]`, `[pytest]`, …). The bundled file is the single home of the defaults; missing required keys are errors. A repo adjusts them with a root `cerberus.toml`, overlaid key by key. An explicit `--config PATH` stands in for that repository file. Lists replace the corresponding default list.
 
-Every bite table also takes a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
+The mandatory `cerberus_schema` bite validates repository overrides against the [configuration schema](src/cerberus/config_schema.py) before other bites run. Unknown settings, invalid types and malformed TOML produce failure findings. It has no configuration table and cannot be disabled.
+
+Configurable bite tables also take a common `off` key, handled by the runner: `off = true` removes the bite from the run entirely — no output line — and an overlay's `off = false` re-enables a bite the bundled defaults ship off. `tool_pins_latest` ships off for exactly that reason: only the repo carrying the pin source can act on it, and that repo's overlay switches it on.
 
 ### Shared source classification
 

@@ -88,6 +88,6 @@
 
 ## 27.5 deriving configuration
 
-### 27.5.1 regenerates workspace selection from shared ownership
+### 27.5.1 regenerates workspace selection from source categories
 
 `--fix` writes exact non-production workspace directories from the shared classification into `knip.prod.json`.

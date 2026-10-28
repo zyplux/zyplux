@@ -10,8 +10,6 @@ The public API classifies repository-relative paths without requiring files on d
 
 ### 33.1.3 overrides test file patterns without replacing production defaults
 
-### 33.1.4 explains how to replace tool specific production settings
-
 ## 33.2 sharing testing eligibility
 
 ### 33.2.1 separates categories from colocated tests and testing eligibility

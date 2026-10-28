@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "networkx>=3.7",
+    "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
     "rust-just>=1.59.0",
     "semantic-version>=2.10.0",
