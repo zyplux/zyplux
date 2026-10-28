@@ -8,6 +8,8 @@ Product, infrastructure, and tooling modules enter coverage. Demo source and tes
 
 ### 40.1.2 excludes explicit testing exemptions and empty source sets
 
+### 40.1.3 excludes examples nested inside workspace packages
+
 ## 40.2 integrating with pytest and coverage
 
 ### 40.2.1 skips demo suites and counts unexecuted modules and subprocesses

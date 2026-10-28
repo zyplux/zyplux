@@ -16,7 +16,7 @@ zyplux-airlock = { workspace = true }
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
 addopts = "-n auto -p cerberus --cov --cov-report=term-missing --durations=20"
-testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
+testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/diagnostics", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
 
 [tool.coverage.run]
 data_file = "coverage/.coverage"
@@ -38,6 +38,7 @@ paths = [
     "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
+    "tests/diagnostics",
     "tests/release_fixtures",
     "tests/setup_pm",
     "tests/totchef",

@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     [
         ("apps/widget/src/widget.tsx", True),
         ("apps/widget/vite.config.ts", True),
+        ("apps/widget/examples/demo.py", False),
+        ("packages/store/examples/demo.py", False),
         ("packages/store/src/schema.sql", True),
         ("infra/deploy.py", False),
         ("infra/hosts/server/configuration.nix", False),

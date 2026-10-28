@@ -66,6 +66,23 @@ def test_40_1_2_excludes_explicit_testing_exemptions_and_empty_source_sets(
     assert coverage.get_option("run:omit") == ["*"]
 
 
+def test_40_1_3_excludes_examples_nested_inside_workspace_packages(
+    report_repo: ReportRepo, configure_coverage: ConfigureCoverage
+) -> None:
+    report_repo.write("apps/api/src/api.py", "message = 'product'\n")
+    report_repo.write("apps/api/examples/demo.py", "message = 'example'\n")
+    report_repo.write("packages/client/examples/demo.py", "message = 'example'\n")
+    coverage = Coverage(config_file=False)
+    configure_coverage(coverage)
+    assert coverage.get_option("run:source") == [str(report_repo.root / "apps/api/src")]
+    omitted = coverage.get_option("run:omit")
+    assert isinstance(omitted, list)
+    assert set(omitted) == {
+        str(report_repo.root / "apps/api/examples/demo.py"),
+        str(report_repo.root / "packages/client/examples/demo.py"),
+    }
+
+
 def test_40_2_1_skips_demo_suites_and_counts_unexecuted_modules_and_subprocesses(report_repo: ReportRepo) -> None:
     report_repo.write("cerberus.toml", SOURCE)
     report_repo.write("pyproject.toml", PYTEST_CONFIG)
