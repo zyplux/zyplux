@@ -18,7 +18,7 @@
     "lint": "eslint . --cache",
     "lint:fix": "pnpm run lint --fix",
     "test": "vitest run",
-    "cz": "cz",
+    "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
     "release:prepare": "uv run airlock prepare"
   },
@@ -32,7 +32,6 @@
     "knip": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "@zyplux/cz": "workspace:*"
+    "vitest": "catalog:"
   }
 }

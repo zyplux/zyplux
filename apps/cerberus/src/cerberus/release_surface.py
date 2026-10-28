@@ -60,6 +60,7 @@ def has_content_changes(repo: Repo, ctx: Context, target: TargetSpec, tag: str) 
     )
     return (
         previous is not None
+        and previous.includes == target.includes
         and previous.content_hash is not None
         and target.content_hash is not None
         and target.content_hash != previous.content_hash
@@ -111,7 +112,11 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
 
 
 def validate_registry_repair(root: Path, target: TargetSpec, previous: TargetSpec, version: Version) -> list[Finding]:
-    if previous.content_hash is None or target.content_hash == previous.content_hash:
+    if (
+        previous.includes != target.includes
+        or previous.content_hash is None
+        or target.content_hash == previous.content_hash
+    ):
         return []
     try:
         release = build_release_target(root, target, str(version))

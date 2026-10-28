@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import shutil
 import tarfile
 import tomllib
@@ -70,10 +71,13 @@ def stage_packagers(release: ReleaseFixture) -> None:
     release.on("uv build", build)
 
 
-def hash_archives(release: ReleaseFixture, archives: list[Path]) -> str:
+def hash_archives(release: ReleaseFixture, archives: list[Path], includes: list[str] | None = None) -> str:
     release.use_package()
     if archives[0].suffix != ".tgz":
         release.configure("npm", 'kind = "pypi"\nlabel = "zyplux-util"')
+        release.write("packages/util/pyproject.toml", '[project]\nname = "zyplux-util"\nreadme = "README.md"\n')
+    if includes is not None:
+        release.configure("pypi" if archives[0].suffix != ".tgz" else "npm", f"includes = {json.dumps(includes)}")
 
     def build(call: Command) -> str:
         if "--out" in call.argv:

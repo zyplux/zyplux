@@ -259,9 +259,6 @@ importers:
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
         version: 5.0.5(vitest@5.0.5)
-      '@zyplux/cz':
-        specifier: workspace:*
-        version: link:apps/cz
       '@zyplux/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config

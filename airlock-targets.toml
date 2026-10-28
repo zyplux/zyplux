@@ -28,7 +28,7 @@ content_hash = "sha256:42168166c3cd32af030b4e4a31877cdb83558f88d336f389cdb711379
 [eslint-config]
 kind = "npm"
 version = { file = "packages/eslint-config/package.json", json = "version" }
-content_hash = "sha256:b59a7c6170bef9d616ad61ccbb783bf07d14b714698fba6d253d17228c48e28a"
+content_hash = "sha256:dc30ae582f1fb8729a4c6ea0cb231bd3762eb029618d2602dc0eeab00f1aebfc"
 requires = ["util-v0.9.3"]
 
 [tsconfig]

@@ -5,7 +5,9 @@ import json
 import os
 import stat
 import tarfile
+import tomllib
 import zipfile
+from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -24,17 +26,17 @@ from airlock.targets import resolve_container_paths, resolve_repo_path
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget
 
-type ContentEntry = tuple[str, bool, str]
+type ArchiveEntry = tuple[str, bool, bytes]
 
 
-def read_archive(archive: Path) -> list[ContentEntry]:
+def read_archive(archive: Path) -> list[ArchiveEntry]:
     if archive.suffix == ".whl":
         with zipfile.ZipFile(archive) as wheel:
             return [
                 (
                     member.filename,
                     bool(member.external_attr >> 16 & stat.S_IXUSR),
-                    hashlib.sha256(wheel.read(member)).hexdigest(),
+                    wheel.read(member),
                 )
                 for member in wheel.infolist()
                 if not member.is_dir()
@@ -49,18 +51,51 @@ def read_archive(archive: Path) -> list[ContentEntry]:
                 msg = f"{archive.name}: unsupported package entry {member.name}"
                 raise ValueError(msg)
             path = "/".join(PurePosixPath(member.name).parts[1:])
-            entries.append((path, bool(member.mode & stat.S_IXUSR), hashlib.sha256(stream.read()).hexdigest()))
+            entries.append((path, bool(member.mode & stat.S_IXUSR), stream.read()))
     return entries
 
 
-def calc_content_hash(archives: list[Path]) -> str:
+def is_included(path: str, includes: list[str]) -> bool:
+    relative = PurePosixPath(path)
+    return any(relative.full_match(glob) for glob in includes if not glob.startswith("!")) and not any(
+        relative.full_match(glob[1:]) for glob in includes if glob.startswith("!")
+    )
+
+
+def has_excluded_readme(target: ReleaseTarget) -> bool:
+    if target.spec.kind != "pypi":
+        return False
+    project = tomllib.loads((target.directory / "pyproject.toml").read_text(encoding="utf-8")).get("project", {})
+    readme = project.get("readme")
+    filename = readme.get("file") if isinstance(readme, dict) else readme
+    return isinstance(filename, str) and not is_included(filename, target.spec.includes)
+
+
+def normalize_metadata(path: str, contents: bytes, *, exclude_readme: bool) -> bytes:
+    if exclude_readme and (path.endswith(".dist-info/METADATA") or PurePosixPath(path).name == "PKG-INFO"):
+        metadata = BytesParser().parsebytes(contents)
+        del metadata["Description"]
+        del metadata["Description-Content-Type"]
+        metadata.set_payload("")
+        return metadata.as_bytes()
+    return contents
+
+
+def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
+    exclude_readme = has_excluded_readme(target)
     entries = [
-        (archive.suffix, path, executable, digest)
+        (
+            archive.suffix,
+            path,
+            executable,
+            hashlib.sha256(normalize_metadata(path, contents, exclude_readme=exclude_readme)).hexdigest(),
+        )
         for archive in archives
-        for path, executable, digest in read_archive(archive)
+        for path, executable, contents in read_archive(archive)
+        if is_included(path, target.spec.includes) and not path.endswith(".dist-info/RECORD")
     ]
     if any(path == "airlock-targets.toml" for _, path, _, _ in entries):
         msg = "package archives must exclude airlock-targets.toml to avoid a self-referential fingerprint"
@@ -137,6 +172,8 @@ def calc_source_hash(target: ReleaseTarget) -> str:
     # The manifest stores this fingerprint, so including it would make the hash depend on itself.
     files.discard(root / "airlock-targets.toml")
     for path in files:
+        if not is_included(path.relative_to(target.directory, walk_up=True).as_posix(), target.spec.includes):
+            continue
         if path.is_symlink():
             kind, contents = "symlinks", os.fsencode(path.readlink())
         elif path.is_file():
@@ -159,7 +196,7 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
     if isinstance(target.spec, PackageSpec) and archives is None:
         with TemporaryDirectory(prefix="airlock-validate-") as directory:
             return validate_contents(target, build_archives(target, Path(directory)))
-    fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives)
+    fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives, target)
     if fingerprint != target.spec.content_hash:
         msg = f"{target.spec.label}: release contents differ from content_hash; run airlock prepare"
         if target.spec.kind == "ghcr":
@@ -185,20 +222,26 @@ def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None]:
         return calc_source_hash(target), None
     with TemporaryDirectory(prefix="airlock-prepare-") as directory:
         archives = build_archives(target, Path(directory))
-        return calc_content_hash(archives), sorted(dependency.tag for dependency in load_dependencies(target, archives))
+        return calc_content_hash(archives, target), sorted(
+            dependency.tag for dependency in load_dependencies(target, archives)
+        )
 
 
 def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     root = proc.find_root()
-    hashes = {target.spec.tag_prefix.removesuffix("-v"): prepare_contents(target) for target in targets}
+    hashes = {
+        target.spec.tag_prefix.removesuffix("-v"): (target.spec.includes, *prepare_contents(target))
+        for target in targets
+    }
     if not hashes:
         return
     path = root / "airlock-targets.toml"
     manifest = tomlkit.parse(path.read_text(encoding="utf-8"))
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
-            fingerprint, dependencies = hashes[name]
+            includes, fingerprint, dependencies = hashes[name]
             declaration["content_hash"] = fingerprint
+            declaration["includes"] = includes
             if dependencies is not None:
                 declaration["requires"] = dependencies
             typer.echo(f"{name}: {fingerprint}")

@@ -53,6 +53,7 @@ def parse_manifest(text: str, *, is_historical: bool = False) -> list[TargetSpec
                 update={
                     "label": spec.label if "label" in spec.model_fields_set else f"{scope}/{name}",
                     "tag_prefix": f"{name}-v",
+                    "includes": ["**/*"] if is_historical and "includes" not in declaration else spec.includes,
                 }
             )
         )

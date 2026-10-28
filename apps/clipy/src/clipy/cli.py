@@ -12,18 +12,14 @@ from clipy import code_metrics
 app = typer.Typer(help="Python repository and terminal helpers.", no_args_is_help=True)
 
 
-def print_version(*, is_requested: bool) -> None:
-    if is_requested:
-        typer.echo(version("zyplux-clipy"))
-        raise typer.Exit
-
-
-@app.callback()
+@app.callback(invoke_without_command=True)
 def configure_cli(
     *,
-    _show_version: Annotated[bool, typer.Option("--version", callback=print_version, is_eager=True)] = False,
+    show_version: Annotated[bool, typer.Option("--version", is_eager=True)] = False,
 ) -> None:
-    pass
+    if show_version:
+        typer.echo(version("zyplux-clipy"))
+        raise typer.Exit
 
 
 @app.command(help="Write tracked code metrics, production scope and BPE token counts as Markdown.")

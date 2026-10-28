@@ -48,8 +48,24 @@ const listMembers = (files: SourceFiles, manifest: string, globs: readonly strin
     return directory === '.' || isWorkspaceMember(directory, globs) ? directory : [];
   });
 
+type ImportGraph = Map<Workspace, Map<string, Set<boolean>>>;
+
+const recordTypeImport = (imports: ImportGraph, owner: Workspace, dependency: string, isType: boolean) => {
+  let edges = imports.get(owner);
+  if (edges === undefined) {
+    edges = new Map();
+    imports.set(owner, edges);
+  }
+  let bindings = edges.get(dependency);
+  if (bindings === undefined) {
+    bindings = new Set();
+    edges.set(dependency, bindings);
+  }
+  bindings.add(isType);
+};
+
 const loadTypeDependencies = async (root: string, files: SourceFiles, npm: Map<string, Workspace>) => {
-  const imports = new Map<Workspace, Map<string, Set<boolean>>>();
+  const imports: ImportGraph = new Map();
   const owners = new Set(npm.values())
     .values()
     .toArray()
@@ -65,23 +81,44 @@ const loadTypeDependencies = async (root: string, files: SourceFiles, npm: Map<s
         ([name]) => reference.specifier === name || reference.specifier.startsWith(`${name}/`),
       )?.[1];
       if (provider === undefined) continue;
-      let edges = imports.get(owner);
-      if (edges === undefined) {
-        edges = new Map();
-        imports.set(owner, edges);
-      }
-      let bindings = edges.get(provider.directory);
-      if (bindings === undefined) {
-        bindings = new Set();
-        edges.set(provider.directory, bindings);
-      }
-      bindings.add(reference.hasTypeBindings && !reference.hasValueBindings);
+      recordTypeImport(imports, owner, provider.directory, reference.hasTypeBindings && !reference.hasValueBindings);
     }
   }
   for (const [workspace, edges] of imports) {
     workspace.typeDependencies = new Set(
       [...edges].filter(([, kinds]) => kinds.size === 1 && kinds.has(true)).map(([directory]) => directory),
     );
+  }
+};
+
+const getMember = (
+  members: Map<string, Workspace>,
+  files: SourceFiles,
+  directory: string,
+  label: string,
+  manifest: string,
+) => {
+  let member = members.get(directory);
+  if (member === undefined) {
+    const key = directory === '.' ? manifest : `${directory}/${manifest}`;
+    const classification = files[key];
+    ensure(classification !== undefined, `missing source classification for ${key}`);
+    member = {
+      dependencies: new Set<string>(),
+      directory,
+      kind: classification.kind,
+      label,
+      typeDependencies: new Set<string>(),
+    };
+    members.set(directory, member);
+  }
+  return member;
+};
+
+const addDependencies = (member: Workspace, names: string[], registry: Map<string, Workspace>) => {
+  for (const name of names) {
+    const dependency = registry.get(name);
+    if (dependency !== undefined && dependency !== member) member.dependencies.add(dependency.directory);
   }
 };
 
@@ -95,28 +132,15 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
   const pnpm = existsSync(pnpmPath)
     ? WorkspaceConfigSchema.parse(parseYaml(await readFile(pnpmPath, 'utf8')))
     : { packages: [] };
-  const getMember = (directory: string, label: string, manifest: string) => {
-    let member = members.get(directory);
-    if (member === undefined) {
-      const key = directory === '.' ? manifest : `${directory}/${manifest}`;
-      const classification = files[key];
-      ensure(classification !== undefined, `missing source classification for ${key}`);
-      member = {
-        dependencies: new Set<string>(),
-        directory,
-        kind: classification.kind,
-        label,
-        typeDependencies: new Set<string>(),
-      };
-      members.set(directory, member);
-    }
-    return member;
-  };
+
   for (const directory of listMembers(files, 'package.json', pnpm.packages)) {
     const manifest = parseJson(await readFile(path.join(root, directory, 'package.json'), 'utf8'), PackageJsonSchema);
     if (manifest.name === undefined) continue;
     npmManifests.set(directory, manifest);
-    npm.set(manifest.name, getMember(directory, manifest.name.split('/').at(-1) ?? manifest.name, 'package.json'));
+    npm.set(
+      manifest.name,
+      getMember(members, files, directory, manifest.name.split('/').at(-1) ?? manifest.name, 'package.json'),
+    );
   }
   const pythonPath = path.join(root, 'pyproject.toml');
   const pyproject = existsSync(pythonPath)
@@ -133,7 +157,7 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
     pythonManifests.set(directory, manifest);
     python.set(
       normalizePythonName(manifest.project.name) ?? manifest.project.name,
-      getMember(directory, manifest.project.name, 'pyproject.toml'),
+      getMember(members, files, directory, manifest.project.name, 'pyproject.toml'),
     );
   }
   for (const [directory, manifest] of npmManifests) {
@@ -144,22 +168,17 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
       manifest.optionalDependencies,
       manifest.peerDependencies,
     ];
-    for (const dependencies of dependencyGroups) {
-      const names = Object.keys(dependencies ?? {});
-      for (const name of names) {
-        const dependency = npm.get(name);
-        if (member !== undefined && dependency !== undefined && member !== dependency)
-          member.dependencies.add(dependency.directory);
-      }
-    }
+    ensure(member !== undefined, `missing npm workspace ${directory}`);
+    addDependencies(
+      member,
+      dependencyGroups.flatMap(dependencies => Object.keys(dependencies ?? {})),
+      npm,
+    );
   }
   for (const [directory, manifest] of pythonManifests) {
     const member = members.get(directory);
-    for (const name of pythonRequirementNames(manifest)) {
-      const dependency = python.get(name);
-      if (member !== undefined && dependency !== undefined && member !== dependency)
-        member.dependencies.add(dependency.directory);
-    }
+    ensure(member !== undefined, `missing Python workspace ${directory}`);
+    addDependencies(member, pythonRequirementNames(manifest), python);
   }
   await loadTypeDependencies(root, files, npm);
   return members
@@ -170,6 +189,28 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
 
 const quoteLabel = (label: string) =>
   label.replaceAll('&', '&amp;').replaceAll('"', '#quot;').replaceAll('<', '&lt;').replaceAll(']', '#93;');
+
+const formatEdges = (member: Workspace, ids: Map<string, string>, foundations: Set<string>, products: Workspace[]) => {
+  const lines: string[] = [];
+  const edgeIds: string[] = [];
+  const dependencies = [...member.dependencies]
+    .filter(directory => !foundations.has(directory))
+    .toSorted((a, b) => a.localeCompare(b));
+  for (const dependency of dependencies) {
+    const end = ids.get(dependency),
+      start = ids.get(member.directory);
+    const edgeId = `${start}__${end}`;
+    lines.push(`    ${start} ${edgeId}@${member.typeDependencies.has(dependency) ? '-.->' : '-->'} ${end}`);
+    edgeIds.push(edgeId);
+  }
+  if (edgeIds.length === 0 || member.kind !== 'prod') return lines;
+  const style = `${ids.get(member.directory)}_edges`;
+  lines.push(
+    `    classDef ${style} stroke:${calcEdgeColor(products.indexOf(member), products.length)},stroke-width:2px`,
+    `    class ${edgeIds.join(',')} ${style}`,
+  );
+  return lines;
+};
 
 const buildReport = (members: Workspace[]) => {
   if (members.length === 0) return '# Workspace Dependency Graph\n\nNo workspace projects are declared.\n';
@@ -208,25 +249,7 @@ const buildReport = (members: Workspace[]) => {
     lines.push('    end');
   }
   const products = members.filter(member => member.kind === 'prod');
-  for (const member of members) {
-    const edgeIds: string[] = [];
-    const dependencies = [...member.dependencies]
-      .filter(directory => !foundations.has(directory))
-      .toSorted((a, b) => a.localeCompare(b));
-    for (const dependency of dependencies) {
-      const end = ids.get(dependency),
-        start = ids.get(member.directory);
-      const edgeId = `${start}__${end}`;
-      lines.push(`    ${start} ${edgeId}@${member.typeDependencies.has(dependency) ? '-.->' : '-->'} ${end}`);
-      edgeIds.push(edgeId);
-    }
-    if (edgeIds.length === 0 || member.kind !== 'prod') continue;
-    const style = `${ids.get(member.directory)}_edges`;
-    lines.push(
-      `    classDef ${style} stroke:${calcEdgeColor(products.indexOf(member), products.length)},stroke-width:2px`,
-      `    class ${edgeIds.join(',')} ${style}`,
-    );
-  }
+  for (const member of members) lines.push(...formatEdges(member, ids, foundations, products));
   lines.push(
     '    classDef foundation fill:#2b2b2b,stroke:#888,stroke-dasharray:5 5',
     '```',

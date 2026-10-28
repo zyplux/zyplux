@@ -30,6 +30,7 @@ class TargetBase(BaseModel):
     tag_prefix: str = ""
     environment: Nonempty | None = None
     content_hash: ContentHash | None = None
+    includes: list[Nonempty] = Field(default_factory=lambda: ["**/*", "!**/*.md", "!**/*.markdown"])
     version: JsonVersion | RegexVersion
 
 
