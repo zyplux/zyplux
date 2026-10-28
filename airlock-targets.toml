@@ -59,7 +59,7 @@ requires = ["util-v0.9.3"]
 kind = "pypi"
 label = "zyplux-cerberus"
 version = { file = "apps/cerberus/pyproject.toml", regex = '^version = "([^"]+)"' }
-content_hash = "sha256:691c7a305942b63079d5fd036fe88136c33e07e6e247a7105767a296441b9518"
+content_hash = "sha256:8f2fa868d5518f729b1044256e749aa96bc2b62a38242587dbc75c4dfa1f5dd0"
 requires = ["airlock-v2.2.0"]
 
 [util-py]

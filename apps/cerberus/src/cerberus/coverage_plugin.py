@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from airlock.proc import find_root
+from coverage import CoveragePlugin
 
 from cerberus import config as cerberus_config
 from cerberus import context
-from coverage import CoveragePlugin
 
 if TYPE_CHECKING:
     from coverage.plugin_support import Plugins

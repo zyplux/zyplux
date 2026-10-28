@@ -45,7 +45,6 @@ if TYPE_CHECKING:
     from types import ModuleType
 
     from cerberus.context import Context
-
     from coverage import Coverage
 
 type RunCheck = Callable[[str, Repo, Context], CheckResult]
