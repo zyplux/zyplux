@@ -16,6 +16,12 @@ Product, infrastructure, and tooling modules enter coverage. Demo source and tes
 
 The real runners exercise a product test using demo fixtures, ignore the demo-owned suite, include an unexecuted namespace module, and retain subprocess coverage after changing directories. The unchanged 90% floor fails when maintained modules remain untested.
 
+### 40.2.2 excludes ignored python files below coverage source directories
+
+Coverage reports retain the Git-visible eligible file boundary even when a root module makes the measured directory span the repository.
+
+### 40.2.3 allows collection outside the configuration root
+
 ## 40.3 applying ownership consistently
 
 ### 40.3.1 requires stories for infrastructure and tools but not demo or harnesses

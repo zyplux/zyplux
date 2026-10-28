@@ -112,6 +112,23 @@ def test_38_1_5_includes_optional_and_development_python_dependencies(
     assert_edge(report_repo.read("WORKSPACE_GRAPH.md"), "service", "acme-util")
 
 
+def test_38_1_6_includes_the_root_python_project_with_workspace_members(report_repo: ReportRepo) -> None:
+    report_repo.write(
+        "pyproject.toml",
+        '[project]\nname = "root-project"\nversion = "1"\ndependencies = ["child"]\n'
+        '[tool.uv.workspace]\nmembers = ["packages/*"]\n',
+    )
+    report_repo.write(
+        "packages/child/pyproject.toml",
+        '[project]\nname = "child"\nversion = "1"\ndependencies = ["root-project"]\n',
+    )
+    report_repo.write("packages/unrelated/pyproject.toml", '[project]\nname = "unrelated"\nversion = "1"\n')
+    assert report_repo.invoke("workspace-graph").exit_code == 0
+    report = report_repo.read("WORKSPACE_GRAPH.md")
+    assert_edge(report, "root-project", "child")
+    assert_edge(report, "child", "root-project")
+
+
 def test_38_2_1_lists_frequent_foundations_and_keeps_reruns_deterministic(report_repo: ReportRepo) -> None:
     report_repo.seed_workspaces()
     for name in ("alpha", "beta", "gamma"):

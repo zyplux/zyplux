@@ -7,12 +7,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from airlock import notes
 from cerberus import code_metrics, fingerprint
 from cerberus.cli import app
 from tiktoken import Encoding
 from typer.testing import CliRunner
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typer.testing import Result
 
 
@@ -73,12 +76,14 @@ class ReleasePreparation:
     calls: list[Path] = field(default_factory=list)
     should_fail: bool = False
 
-    def prepare(self) -> None:
+    def prepare(self, *, before_fingerprints: Callable[[], None] | None = None) -> None:
         self.calls.append(Path.cwd())
         if self.should_fail:
             message = "release preparation failed"
             raise ValueError(message)
         (Path.cwd() / "package.json").write_text('{"name": "fixture", "version": "1.0.1"}\n')
+        if before_fingerprints is not None:
+            before_fingerprints()
 
 
 @pytest.fixture
@@ -86,6 +91,14 @@ def release_preparation(monkeypatch: pytest.MonkeyPatch) -> ReleasePreparation:
     preparation = ReleasePreparation()
     monkeypatch.setattr(fingerprint, "prepare_release", preparation.prepare)
     return preparation
+
+
+@pytest.fixture
+def unchanged_versions(monkeypatch: pytest.MonkeyPatch) -> None:
+    def preserve_versions(*_args: object) -> None:
+        pass
+
+    monkeypatch.setattr(notes, "prepare_versions", preserve_versions)
 
 
 def read_row(report: str, heading: str, label: str) -> dict[str, str]:

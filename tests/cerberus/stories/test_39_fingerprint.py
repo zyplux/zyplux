@@ -65,6 +65,29 @@ def test_39_1_3_resolves_explicit_and_nested_paths_to_the_repository_root(
     assert not (nested / "line_and_token_stats.md").exists()
 
 
+@pytest.mark.usefixtures("unchanged_versions")
+@pytest.mark.parametrize(
+    "declaration",
+    ['kind = "action"\nrepository = "fixture/repository"\n', 'kind = "ghcr"\nlabel = "ghcr.io/fixture/app"\n'],
+)
+def test_39_1_4_fingerprints_release_contents_after_generating_reports(
+    report_repo: ReportRepo, declaration: str
+) -> None:
+    report_repo.write_package("", name="fixture", version="1.0.0")
+    report_repo.write("airlock-targets.toml", TARGET.replace('kind = "npm"\n', declaration))
+    report_repo.write("CHANGELOG.md", "# Releases\n\n## 1.0.0\n\n- Publish the action.\n")
+    report_repo.write("Containerfile", "FROM scratch\nCOPY . /app\n")
+    report_repo.write(".containerignore", ".git\n")
+    report_repo.write("action.yml", "name: Fixture\nruns:\n  using: composite\n  steps: []\n")
+    report_repo.stage()
+    result = report_repo.invoke("fingerprint")
+    assert result.exit_code == 0, result.output
+    assert (report_repo.root / "WORKSPACE_GRAPH.md").exists()
+    assert (report_repo.root / "line_and_token_stats.md").exists()
+    readiness = report_repo.invoke("--check", "release_readiness")
+    assert readiness.exit_code == 0, readiness.output
+
+
 def test_39_2_1_stops_before_generating_reports_when_preparation_fails(
     report_repo: ReportRepo, release_preparation: ReleasePreparation
 ) -> None:

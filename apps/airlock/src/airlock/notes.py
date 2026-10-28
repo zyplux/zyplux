@@ -14,6 +14,8 @@ from airlock.registries import load_npm_registry, load_pnpm_auth
 from airlock.targets import load_targets
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from airlock.contracts import PnpmAuth, ReleaseTarget
 
 
@@ -77,7 +79,7 @@ def load_prepared_targets(
     return [(target, load_release_notes(target.directory, target.version)) for target in targets]
 
 
-def prepare_release() -> None:
+def prepare_release(*, before_fingerprints: Callable[[], None] | None = None) -> None:
     root = proc.find_root()
     targets = load_targets(root)
     validate_python_versions(targets)
@@ -87,6 +89,8 @@ def prepare_release() -> None:
         prepare_versions(root, load_targets(root), registries, pnpm_auth)
         prepared = load_prepared_targets()
         save_preparation(root, baseline, [target for target, _ in prepared])
+        if before_fingerprints is not None:
+            before_fingerprints()
         update_content_hashes([target for target, _ in prepared])
 
 

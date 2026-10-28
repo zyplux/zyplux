@@ -16,10 +16,14 @@ if TYPE_CHECKING:
 
 def prepare_fingerprint(path: Path) -> None:
     root = find_root(path)
+
+    def write_reports() -> None:
+        typer.echo(f"wrote {workspace_graph.write_report(root)}")
+        typer.echo(f"wrote {code_metrics.write_report(root)}")
+
     if (root / "airlock-targets.toml").is_file() and load_targets(root):
         with chdir(root):
-            prepare_release()
+            prepare_release(before_fingerprints=write_reports)
     else:
         typer.echo("No release targets; preparing repository reports.")
-    typer.echo(f"wrote {workspace_graph.write_report(root)}")
-    typer.echo(f"wrote {code_metrics.write_report(root)}")
+        write_reports()

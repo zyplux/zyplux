@@ -34,7 +34,7 @@ pnpm release:prepare
 ./just lint typecheck
 ```
 
-With Cerberus installed, `uv run cerberus fingerprint` prepares releases, generates the workspace diagram and writes tracked code statistics in sequence. See [repository reports](../cerberus/README.md#repository-reports).
+With Cerberus installed, `uv run cerberus fingerprint` prepares versions, generates repository reports, then calculates release fingerprints. See [repository reports](../cerberus/README.md#repository-reports).
 
 Preparation invokes `pnpm version -r`, consumes change intents and propagates dependency versions. Set `versioning.changelog.storage: repository` in `pnpm-workspace.yaml` so generated changelogs are reviewed in the PR. Only declared release targets publish; private dependent workspaces can also receive version bumps.
 

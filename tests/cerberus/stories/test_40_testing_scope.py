@@ -26,6 +26,18 @@ fail_under = 90
 """
 
 
+def run_pytest(report_repo: ReportRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    env = {name: value for name, value in os.environ.items() if not name.startswith("COVERAGE_")}
+    return subprocess.run(
+        [sys.executable, "-m", "pytest", "-p", "pytest_cov", "-q", *args],
+        cwd=report_repo.root,
+        env={**env, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
 def test_40_1_1_derives_coverage_from_all_eligible_kinds(
     report_repo: ReportRepo, configure_coverage: ConfigureCoverage
 ) -> None:
@@ -109,15 +121,7 @@ def test_product_with_demo_fixtures():
     subprocess.run([sys.executable, str(root / "tools/lint/child.py")], cwd={str(outside)!r}, check=True)
 """,
     )
-    env = {name: value for name, value in os.environ.items() if not name.startswith("COVERAGE_")}
-    execution = subprocess.run(
-        [sys.executable, "-m", "pytest", "-p", "pytest_cov", "-q"],
-        cwd=report_repo.root,
-        env={**env, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
-        check=False,
-        text=True,
-        capture_output=True,
-    )
+    execution = run_pytest(report_repo)
     assert execution.returncode == 1, execution.stdout + execution.stderr
     assert "1 passed" in execution.stdout
     report = json.loads(report_repo.read("coverage.json"))
@@ -125,6 +129,39 @@ def test_product_with_demo_fixtures():
     assert report["files"][cold]["summary"]["covered_lines"] == 0
     assert report["files"]["tools/lint/child.py"]["summary"]["covered_lines"] == 1
     assert report["totals"]["percent_covered"] < COVERAGE_FLOOR
+
+
+def test_40_2_2_excludes_ignored_python_files_below_coverage_source_directories(report_repo: ReportRepo) -> None:
+    report_repo.write("pyproject.toml", PYTEST_CONFIG)
+    report_repo.write(".gitignore", "build/\n")
+    report_repo.write("product.py", "answer = 42\n")
+    report_repo.write("build/generated.py", "answer = 'generated'\n")
+    report_repo.write("build/cold.py", "def unused():\n    return 0\n")
+    report_repo.write(
+        "tests/test_product.py",
+        "import runpy\nfrom pathlib import Path\n\n"
+        "def test_product():\n    root = Path(__file__).parents[1]\n"
+        "    runpy.run_path(str(root / 'product.py'))\n"
+        "    runpy.run_path(str(root / 'build/generated.py'))\n",
+    )
+    execution = run_pytest(report_repo)
+    assert execution.returncode == 0, execution.stdout + execution.stderr
+    report = json.loads(report_repo.read("coverage.json"))
+    assert set(report["files"]) == {"product.py"}
+    assert report["files"]["product.py"]["summary"]["missing_lines"] == 0
+
+
+def test_40_2_3_allows_collection_outside_the_configuration_root(report_repo: ReportRepo) -> None:
+    config = report_repo.write("pyproject.toml", PYTEST_CONFIG)
+    product = report_repo.write("product.py", "answer = 42\n")
+    outside = report_repo.root.parent / "external-tests"
+    outside.mkdir()
+    (outside / "test_external.py").write_text(
+        f"import runpy\n\ndef test_external():\n    assert runpy.run_path({str(product)!r})['answer'] == 42\n"
+    )
+    execution = run_pytest(report_repo, "-c", str(config), str(outside))
+    assert execution.returncode == 0, execution.stdout + execution.stderr
+    assert "1 passed" in execution.stdout
 
 
 def test_40_3_1_requires_stories_for_infrastructure_and_tools_but_not_demo_or_harnesses(

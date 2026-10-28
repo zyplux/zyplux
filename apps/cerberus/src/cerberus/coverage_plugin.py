@@ -40,6 +40,7 @@ class SourceCoverage(CoveragePlugin):
             else ["*"],
         )
         config.set_option("report:include_namespace_packages", value=True)
+        config.set_option("report:include", [str(path) for path in eligible])
         # Children inherit resolved selections; their startup can precede editable package setup.
         plugins = config.get_option("run:plugins")
         if isinstance(plugins, list):

@@ -41,13 +41,13 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 ## Repository reports
 
 ```sh
-uv run cerberus fingerprint        # prepare releases, workspace graph, then stats
+uv run cerberus fingerprint        # prepare versions, reports, then release hashes
 uv run cerberus workspace-graph    # WORKSPACE_GRAPH.md
 uv run cerberus stats              # line_and_token_stats.md
 uv run cerberus stats apps/cerberus --title "Cerberus" --out reports/cerberus.md
 ```
 
-`fingerprint [PATH]` resolves the Git root, runs Airlock preparation when `airlock-targets.toml` declares targets, then writes both reports. It stops on failure. The root justfile exposes `./just fingerprint`, `./just stats` and `./just dep-graph`; consumers can call the CLI directly.
+`fingerprint [PATH]` resolves the Git root and prepares configured release versions, both reports, then release hashes. Without release targets it writes the reports alone. It stops on failure. The root justfile exposes `./just fingerprint`, `./just stats` and `./just dep-graph`; consumers can call the CLI directly.
 
 Stats read tracked files from the current working tree without changing the index. Stage new files before generating a report that includes them. Lockfiles, the stats report and binary content stay outside the tables. Line, syntax and o200k_base token counts use the same source classification as the governance checks. The first tokenizer use may download its encoding. The separate `token_stats` application compares tokenizer performance.
 

@@ -8,6 +8,10 @@
 
 ### 39.1.3 resolves explicit and nested paths to the repository root
 
+### 39.1.4 fingerprints release contents after generating reports
+
+Reports admitted by a root Action or container context are written before Airlock calculates release fingerprints. Package archives are built once.
+
 ## 39.2 stopping on failures
 
 ### 39.2.1 stops before generating reports when preparation fails

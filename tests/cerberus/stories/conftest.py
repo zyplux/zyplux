@@ -1,7 +1,7 @@
 """Registers `seam_fixtures` (the trusted seam to cerberus internals) with pytest."""
 
 from release_fixture import release
-from repository_fixture import metrics_encoding, release_preparation, report_repo
+from repository_fixture import metrics_encoding, release_preparation, report_repo, unchanged_versions
 from seam_fixtures import (
     bite_module_names,
     check_result,
@@ -64,4 +64,5 @@ __all__ = [
     "scope",
     "skip",
     "status",
+    "unchanged_versions",
 ]

@@ -127,7 +127,7 @@ def load_workspaces(repo: Repo, ctx: Context) -> list[Workspace]:
         members[directory] = npm[manifest.name] = workspace
         npm_manifests[directory] = manifest
     globs = workspaces.uv_member_globs(repo, ctx)
-    directories = workspaces.member_dirs(paths, globs, "pyproject.toml") if globs else [""]
+    directories = ["", *workspaces.member_dirs(paths, globs, "pyproject.toml")]
     for directory in workspaces.list_source_members(directories, ctx.config.source):
         manifest = PythonManifest.model_validate(
             tomllib.loads(ctx.file(repo, f"{directory}/pyproject.toml".lstrip("/")) or "")
