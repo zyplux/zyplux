@@ -1,31 +1,31 @@
-'@zyplux/airlock@1.0.0':
+"@zyplux/airlock@1.0.0":
   dir: apps/airlock
   intents:
     - native-releases
     - shared-release-action
-'@zyplux/airlock@1.1.0':
+"@zyplux/airlock@1.1.0":
   dir: apps/airlock
   intents:
     - container-releases
     - dependency-publications
     - independent-publications
-'@zyplux/airlock@1.1.1':
+"@zyplux/airlock@1.1.1":
   dir: apps/airlock
   intents:
     - mighty-rocks-dream
-'@zyplux/cz@0.15.0':
+"@zyplux/cz@0.15.0":
   dir: apps/cz
   intents:
     - shared-release-commands
-'@zyplux/cz@0.16.0':
+"@zyplux/cz@0.16.0":
   dir: apps/cz
   intents:
     - gentle-owls-report
-'@zyplux/eslint-config@0.12.2':
+"@zyplux/eslint-config@0.12.2":
   dir: packages/eslint-config
   intents:
     - funny-cows-retire
-'@zyplux/spectra@0.4.0':
+"@zyplux/spectra@0.4.0":
   dir: packages/spectra
   intents:
     - repository-fixtures
