@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from cerberus import load_source_scope
+from cerberus import SourceClassification, SourceKind, load_source_scope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -15,8 +15,8 @@ if TYPE_CHECKING:
         ("apps/widget/src/widget.tsx", True),
         ("apps/widget/vite.config.ts", True),
         ("packages/store/src/schema.sql", True),
-        ("infra/deploy.py", True),
-        ("infra/hosts/server/configuration.nix", True),
+        ("infra/deploy.py", False),
+        ("infra/hosts/server/configuration.nix", False),
         ("infra-old/deploy.py", False),
         ("dev/server.ts", False),
         ("doubles/server.ts", False),
@@ -56,9 +56,9 @@ def test_33_1_3_overrides_test_file_patterns_without_replacing_production_defaul
 
     scope = load_source_scope(tmp_path)
 
-    assert scope.is_production_file("infra/deploy.py") is True
-    assert scope.is_production_file("infra/checks/deploy.py") is False
-    assert scope.is_test_file("infra/checks/deploy.py") is True
+    assert scope.is_production_file("apps/widget/deploy.py") is True
+    assert scope.is_production_file("apps/widget/checks/deploy.py") is False
+    assert scope.is_test_file("apps/widget/checks/deploy.py") is True
 
 
 @pytest.mark.parametrize("section", ["knip", "pyrefly"])
@@ -67,3 +67,51 @@ def test_33_1_4_explains_how_to_replace_tool_specific_production_settings(tmp_pa
 
     with pytest.raises(ValueError, match=rf"Move \[{section}\]\.prod_workspaces to \[source\]\.production_roots"):
         load_source_scope(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("path", "kind", "root", "flags"),
+    [
+        ("apps/api/src/demo_client.py", SourceKind.PRODUCT, "apps/api", (False, True)),
+        ("infra/cloudflare/src/deploy.py", SourceKind.INFRASTRUCTURE, "infra", (False, True)),
+        ("tools/lint/src/cli.py", SourceKind.TOOLING, "tools", (False, True)),
+        ("infra/demo/src/deploy.py", SourceKind.DEMO, "infra/demo", (False, False)),
+        ("tests/demo/test_deploy.py", SourceKind.DEMO, "tests/demo", (True, False)),
+        ("tests/api/test_demo_fixture.py", SourceKind.TESTS, "tests", (True, False)),
+        ("doubles/server/src/server.ts", SourceKind.TESTS, "doubles", (True, False)),
+        ("apps/api/src/api.test.ts", SourceKind.PRODUCT, "apps/api", (True, False)),
+        ("apps/api/tests/fixture.py", SourceKind.PRODUCT, "apps/api", (True, False)),
+        ("custom/tool.py", SourceKind.TOOLING, ".", (False, True)),
+    ],
+)
+def test_33_2_1_separates_ownership_from_colocated_tests_and_testing_eligibility(
+    tmp_path: Path, path: str, kind: SourceKind, root: str, flags: tuple[bool, bool]
+) -> None:
+    (tmp_path / "cerberus.toml").write_text('[source]\ndemo_roots = ["infra/demo", "tests/demo"]\n')
+    classification = load_source_scope(tmp_path).classify(path)
+    assert classification == SourceClassification(kind, root, *flags)
+
+
+def test_33_2_2_prefers_deeper_and_more_specific_owners(tmp_path: Path) -> None:
+    (tmp_path / "cerberus.toml").write_text(
+        '[source]\ndemo_roots = ["apps/demo"]\nproduction_roots = ["apps/*", "apps/demo/runtime"]\n'
+    )
+    scope = load_source_scope(tmp_path)
+    assert scope.classify("apps/demo/cli.py").kind is SourceKind.DEMO
+    assert scope.classify("apps/demo/runtime/service.py").kind is SourceKind.PRODUCT
+    assert scope.classify_directory("apps/demo/runtime").kind is SourceKind.PRODUCT
+    assert scope.classify_directory("apps/demo").kind is SourceKind.DEMO
+
+
+def test_33_2_3_rejects_ambiguous_ownership(tmp_path: Path) -> None:
+    (tmp_path / "cerberus.toml").write_text('[source]\nproduction_roots = ["apps/*"]\ndemo_roots = ["apps/?"]\n')
+    with pytest.raises(ValueError, match="conflicting owners"):
+        load_source_scope(tmp_path).classify("apps/a/cli.py")
+
+
+def test_33_2_4_keeps_testing_exceptions_in_the_shared_declaration(tmp_path: Path) -> None:
+    (tmp_path / "cerberus.toml").write_text('[source]\ntest_exempt_files = ["apps/clipy/src/clipy/justpty.py"]\n')
+    classification = load_source_scope(tmp_path).classify("apps/clipy/src/clipy/justpty.py")
+    assert classification.kind is SourceKind.PRODUCT
+    assert classification.requires_tests is False
+    assert classification.is_test is False

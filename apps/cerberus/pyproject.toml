@@ -1,24 +1,39 @@
 [project]
 name = "zyplux-cerberus"
-version = "0.26.1"
+version = "0.27.0"
 description = "Cross-repo invariant verifier for the zyplux organization"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "coverage>=7.17.0",
     "networkx>=3.7",
+    "packaging>=26.3",
+    "pydantic>=2.14.1",
     "pyyaml>=6.0.3",
     "rust-just>=1.59.0",
     "semantic-version>=2.10.0",
+    "tiktoken>=0.14.0",
     "tree-sitter>=0.26.0",
     "tree-sitter-bash>=0.25.1",
+    "tree-sitter-css>=0.25.0",
+    "tree-sitter-dockerfile>=0.2.0",
+    "tree-sitter-html>=0.23.2",
+    "tree-sitter-json>=0.24.8",
+    "tree-sitter-nix>=0.1.0",
     "tree-sitter-python>=0.25.0",
+    "tree-sitter-sql>=0.3.11",
+    "tree-sitter-toml>=0.7.0",
     "tree-sitter-typescript>=0.23.2",
+    "tree-sitter-yaml>=0.7.2",
     "typer>=0.27.3",
-    "zyplux-airlock>=2.1.0",
+    "zyplux-airlock>=2.2.0",
 ]
 
 [project.scripts]
 cerberus = "cerberus.cli:app"
+
+[project.entry-points.pytest11]
+cerberus = "cerberus.pytest_plugin"
 
 [build-system]
 requires = ["uv_build==0.13.5"]
@@ -27,3 +42,6 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "cerberus"
 module-root = "src"
+
+[tool.uv.sources]
+zyplux-airlock = { workspace = true }

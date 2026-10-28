@@ -37,8 +37,9 @@ The [setup-pm action](apps/action-setup-pm/README.md) provides cached pnpm and u
 Dual workspace: pnpm (TS) + uv (Python), orchestrated by [just](https://github.com/casey/just).
 
 ```sh
-just install   # both workspaces
-just check     # full gate: install, knip, typecheck, lint, test, cerberus
+./just install      # both workspaces
+./just check        # full gate: install, knip, typecheck, lint, test, cerberus
+./just fingerprint  # prepare releases, workspace diagram and code statistics
 ```
 
 Run `just` for the full recipe list. This repo is the org's quality reference — it dogfoods every new strict check first (see [cerberus.toml](cerberus.toml)), and `just check` must pass clean.

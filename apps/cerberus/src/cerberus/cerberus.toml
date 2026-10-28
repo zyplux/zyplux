@@ -62,7 +62,12 @@ allowed_setup_actions = [
 ]
 
 [source]
-production_roots = ["apps/*", "packages/*", "infra"]
+production_roots = ["apps/*", "packages/*", "src"]
+infrastructure_roots = ["infra"]
+tooling_roots = ["tools", "scripts"]
+demo_roots = ["demo", "examples"]
+test_roots = ["tests", "doubles"]
+test_exempt_files = []
 test_files = [
     "**/tests/**",
     "**/__tests__/**",

@@ -15,14 +15,13 @@ zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
-addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
+addopts = "-n auto -p cerberus --cov --cov-report=term-missing --durations=20"
 testpaths = ["tests/airlock", "tests/cerberus", "tests/clipy", "tests/setup_pm", "tests/totchef", "tests/token_stats"]
 
 [tool.coverage.run]
 data_file = "coverage/.coverage"
 patch = ["subprocess"]
-# Local convenience tool, maintained through linting and typechecking.
-omit = ["apps/clipy/src/clipy/justpty.py"]
+plugins = ["cerberus.coverage_plugin"]
 
 [tool.coverage.report]
 fail_under = 90

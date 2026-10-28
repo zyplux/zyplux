@@ -38,6 +38,21 @@ Runs every bite and exits non-zero on any failure or error, so it drops into CI 
 
 A repo switches a bite off with `off = true` in that bite's `cerberus.toml` table (see Config below); naming an off bite with `--check` still runs it.
 
+## Repository reports
+
+```sh
+uv run cerberus fingerprint        # prepare releases, workspace graph, then stats
+uv run cerberus workspace-graph    # WORKSPACE_GRAPH.md
+uv run cerberus stats              # line_and_token_stats.md
+uv run cerberus stats apps/cerberus --title "Cerberus" --out reports/cerberus.md
+```
+
+`fingerprint [PATH]` resolves the Git root, runs Airlock preparation when `airlock-targets.toml` declares targets, then writes both reports. It stops on failure. The root justfile exposes `./just fingerprint`, `./just stats` and `./just dep-graph`; consumers can call the CLI directly.
+
+Stats read tracked files from the current working tree without changing the index. Stage new files before generating a report that includes them. Lockfiles, the stats report and binary content stay outside the tables. Line, syntax and o200k_base token counts use the same source classification as the governance checks. The first tokenizer use may download its encoding. The separate `token_stats` application compares tokenizer performance.
+
+The workspace diagram reads pnpm and uv membership and declared dependencies. Python and TypeScript manifests in one directory form one node. Test harness workspaces are omitted. TypeScript imports determine type-only arrows; frequently imported foundations appear in a separate list. This workspace overview complements the source-level `graph` commands.
+
 ## Bites
 
 | ID                             | Scope       | Verifies                                                                            |
@@ -68,7 +83,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `release_readiness` | content | Change intents are consumed, Python versions match, release notes exist and fingerprints match current contents |
 | `release_surface_version_bump` | git-history | A published target's version is bumped by exactly one step whenever its release contents change |
 | `codeowners_coverage`          | content     | `CODEOWNERS` present and covers `/.github/`                                          |
-| `pytest`                       | content     | `pyproject.toml` `[tool.coverage.report] fail_under` meets the floor (90%)           |
+| `pytest` | content | Shared source ownership controls discovery and coverage; the coverage floor remains at least 90% |
 | `jscpd`                        | content     | Copy-paste duplication per language stays under the configured jscpd threshold      |
 | `fallow`                       | content     | fallow finds no unused code, circular imports, or functions above its complexity thresholds |
 | `zyplux_deps_latest`           | content     | Every `@zyplux/*` npm package, `zyplux-*` PyPI distribution, and `ghcr.io/zyplux` image is used at its latest release |
@@ -94,7 +109,12 @@ Every bite table also takes a common `off` key, handled by the runner: `off = tr
 
 ```toml
 [source]
-production_roots = ["apps/*", "packages/*", "infra"]
+production_roots = ["apps/*", "packages/*", "src"]
+infrastructure_roots = ["infra"]
+tooling_roots = ["tools", "scripts"]
+demo_roots = ["infra/demo", "tests/demo"]
+test_roots = ["tests", "doubles"]
+test_exempt_files = []
 test_files = [
     "**/tests/**",
     "**/__tests__/**",
@@ -106,9 +126,11 @@ test_files = [
 ]
 ```
 
-Production roots are repository-relative directory globs; their descendants belong to production, including source assets, build configuration, and deployment infrastructure. Test-file globs take precedence even inside a production root. `*` matches one path segment and `**` spans directories. Files outside both selections are other maintained files, such as development tooling. These conventions apply independently of which bites are enabled.
+Root patterns are repository-relative directory globs. A deeper matching root wins; at the same depth, the pattern with more literal characters wins. Equally specific conflicting owners are errors. `*` matches one segment and `**` spans directories. Unclassified files are maintained tooling. Test-file patterns identify colocated tests independently of their owner's kind.
 
-Knip intersects this ownership with registered TypeScript workspaces; a standalone root package remains production. Pyrefly requires coverage of production and test Python source, including flat `infra/deploy.py` and deeply nested roots. It reports a production root's `src` subtree when the file lives there. Both checks consume the same classification; `[knip].prod_workspaces` and `[pyrefly].prod_workspaces` must be replaced by `[source].production_roots`, with conflicting lists reconciled by the repository owner.
+Product, infrastructure and tooling source require tests and coverage. Demo source and test support do not. Declare demo suites by their actual directory ownership, as in `tests/demo`; a product test using a demo fixture retains its ownership. `test_exempt_files` records explicit repository policy exceptions, such as Zyplux's local logging wrapper.
+
+Knip intersects product ownership with registered TypeScript workspaces; a standalone root package remains production. `uv run cerberus --check knip --fix` regenerates `ignoreWorkspaces` from this declaration. Pyrefly requires strict typechecking of every Python kind, including demos and test harnesses. Story checks require public-interface stories only for eligible packages. Ordinary linting still covers all code.
 
 Pyrefly requires `min-severity = "warn"` so warnings are displayed and fail the quality gate. Settings must be declared directly in `pyrefly.toml`; `extends` and command-line `--min-severity` overrides are rejected.
 
@@ -119,12 +141,31 @@ from pathlib import Path
 from cerberus import load_source_scope
 
 scope = load_source_scope(Path("/path/to/repository"))
-scope.is_production_file("infra/deploy.py")  # True with bundled defaults
+scope.classify("infra/deploy.py").kind  # SourceKind.INFRASTRUCTURE
+scope.classify("infra/deploy.py").requires_tests  # True
+scope.classify_directory("infra").kind  # SourceKind.INFRASTRUCTURE
 scope.is_test_file("apps/widget/tests/widget.test.tsx")  # True
 scope.find_production_root("apps/widget/src/widget.tsx")  # "apps/widget"
 ```
 
 `load_source_scope` reads the defaults and repository overlay. The returned `SourceScope` classifies repository-relative POSIX paths without filesystem access; the caller owns file discovery and any generated-file filtering.
+
+### Python testing
+
+```toml
+[tool.pytest.ini_options]
+addopts = "-p cerberus --cov --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+plugins = ["cerberus.coverage_plugin"]
+patch = ["subprocess"]
+
+[tool.coverage.report]
+fail_under = 90
+```
+
+The pytest plugin skips demo-owned test files. The coverage configurer derives absolute source directories and omissions from the shared declaration and includes unexecuted namespace modules. Children inherit the prepared selection, including subprocesses that change directories. Package selectors such as `--cov=module` and handwritten coverage source/include/omit lists conflict with this ownership; the pytest bite reports them. It also checks that `testpaths` reaches every eligible conventional test file. This is configuration validation, not proof that every behavior has a test.
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cerberus.bites import story_docs
+from cerberus.source_scope import SourceKind
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -305,7 +306,7 @@ LIBRARIES = SeamGroup(
 
 
 def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup) -> None:
-    paths = ctx.paths(repo)
+    paths = [path for path in ctx.paths(repo) if ctx.config.source.classify(path).kind is not SourceKind.DEMO]
     packages = story_docs.PY.package_dirs(repo, ctx, paths)
     if not packages:
         res.skip("no Python packages")

@@ -7,9 +7,10 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from cerberus.model import CheckResult, Status
-    from seam_fixtures import MakeFinding, RunCheckWithFiles
+    from seam_fixtures import MakeFinding, RunCheckOnDisk, RunCheckWithFiles
 
 type RunKnipConfig = Callable[..., CheckResult]
 
@@ -458,3 +459,11 @@ def test_27_4_27_ignores_workspace_members_the_pnpm_manifest_excludes(
     result = run_knip_config(prod=_ENTRY_EXPORTS_OK, layout=layout)
 
     assert result.findings == [ok(_OK)]
+
+
+def test_27_5_1_regenerates_workspace_selection_from_shared_ownership(
+    run_check_on_disk: RunCheckOnDisk, tmp_path: Path
+) -> None:
+    files = {**_REPO_LAYOUT, **_TOOLS_LAYOUT, "knip.prod.json": _ENTRY_EXPORTS_IGNORE_PRODUCTION}
+    assert not run_check_on_disk(CHECK_ID, files, fix=True).problems
+    assert json.loads((tmp_path / "knip.prod.json").read_text())["ignoreWorkspaces"] == ["tests/lib", "tools/lint"]

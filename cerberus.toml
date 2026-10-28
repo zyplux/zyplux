@@ -1,5 +1,11 @@
 # Overlays the bundled cerberus defaults for this repo only (key by key; everything else stays org-default).
 
+[source]
+# Diagnostic capture code is maintained tooling.
+tooling_roots = ["tools", "scripts", "docs/issues/egpu-freeze"]
+# Local logging convenience; linting and typechecking maintain this file.
+test_exempt_files = ["apps/clipy/src/clipy/justpty.py"]
+
 [jscpd]
 # This reference repository requires zero duplication.
 threshold = 0

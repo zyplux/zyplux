@@ -36,7 +36,8 @@ def _python_roots(paths: list[str], source: SourceScope) -> tuple[set[str], set[
                 if seg[0] == _TESTS_TOP and len(seg) > _NAMESPACE_DEPTH
                 else str(PurePosixPath(path).parent)
             )
-        elif (root := source.find_production_root(path)) is not None:
+        else:
+            root = source.classify(path).root
             src = PurePosixPath(root) / "src"
             production.add(str(src) if PurePosixPath(path).is_relative_to(src) else root)
     return production, tests

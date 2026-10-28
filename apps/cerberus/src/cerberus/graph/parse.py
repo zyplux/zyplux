@@ -211,10 +211,14 @@ def parse_typescript(path: str, content: str) -> Tree:
     return (_tsx_parser() if path.endswith((".tsx", ".jsx")) else _ts_parser()).parse(content.encode("utf-8"))
 
 
+def parse_python(content: str) -> Tree:
+    return _py_parser().parse(content.encode("utf-8"))
+
+
 def extract(path: str, content: str) -> Extracted:
     source = content.encode("utf-8")
     if path.endswith(".py"):
-        tree = _py_parser().parse(source)
+        tree = parse_python(content)
         return Extracted(
             symbols=_python_symbols(tree.root_node, source),
             py_imports=_python_import_refs(tree.root_node, source),

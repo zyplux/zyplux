@@ -9,6 +9,7 @@ project-includes = [
     "apps/totchef",
     "apps/token_stats/src",
     "packages/util_py/src",
+    "docs/issues/egpu-freeze",
     "tests",
 ]
 # gitignored .claude/worktrees/ makes pyrefly's exclude-heuristics treat an agent worktree as fully excluded — trust project-includes literally instead.

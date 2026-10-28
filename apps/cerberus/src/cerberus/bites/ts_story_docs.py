@@ -6,6 +6,7 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from cerberus.graph.parse import parse_typescript
+from cerberus.source_scope import SourceKind
 from cerberus.ts_syntax import node_text, string_literal, walk_nodes
 
 if TYPE_CHECKING:
@@ -174,6 +175,8 @@ def _check_group(repo: Repo, ctx: Context, res: CheckResult, directory: str, pat
 def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     groups: dict[str, list[str]] = {}
     for path in ctx.paths(repo):
+        if ctx.config.source.classify(path).kind is SourceKind.DEMO:
+            continue
         parts = PurePosixPath(path).parts
         if "stories" not in parts[:-1] or "node_modules" in parts:
             continue

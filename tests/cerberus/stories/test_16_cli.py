@@ -484,7 +484,7 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
     assert "○ ruff: no Python source or ruff.toml" in result.output
     assert "○ knip: no TypeScript source or knip.prod.json" in result.output
     assert "○ pyrefly: no Python source or pyrefly.toml" in result.output
-    assert "○ pytest: no Python source or coverage configuration" in result.output
+    assert "○ pytest: no Python source requiring tests or coverage configuration" in result.output
     assert "○ jscpd: no python or typescript source files" in result.output
     assert "🐾 ci_check_sequence" in result.output
 

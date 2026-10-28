@@ -85,3 +85,9 @@
 ### 27.4.26 takes the production workspaces from cerberus configuration
 
 ### 27.4.27 ignores workspace members the pnpm manifest excludes
+
+## 27.5 deriving configuration
+
+### 27.5.1 regenerates workspace selection from shared ownership
+
+`--fix` writes exact non-production workspace directories from the shared classification into `knip.prod.json`.

@@ -159,9 +159,13 @@ def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], r
     production = {m for m in members if not m or ctx.config.source.is_production_file(f"{m}/{PACKAGE_JSON}")}
     dropped = {member for member in members if workspaces.matches_globs(member, globs)}
     kept = sorted(set(members) - dropped - production)
+    dropped_production = sorted(dropped & production)
+    if ctx.fix and (kept or dropped_production):
+        parsed["ignoreWorkspaces"] = sorted(set(members) - production)
+        ctx.write_file(repo, PROD_CONFIG, json.dumps(parsed, indent=2) + "\n")
+        return
     if kept:
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" leaves non-production workspace(s) in the graph: {", ".join(kept)}')
-    dropped_production = sorted(dropped & production)
     if dropped_production:
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" drops production workspace(s): {", ".join(dropped_production)}')
 

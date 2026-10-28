@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.0
+
+### Minor Changes
+
+- Add shared fingerprint, workspace graph and code metrics commands. Derive Python testing and coverage from source ownership; demo and test harness code stay linted and typechecked without requiring their own tests. Configure pytest with -p cerberus and bare --cov, and enable cerberus.coverage_plugin instead of handwritten coverage selections.
+
 ## 0.26.1
 
 ### Patch Changes

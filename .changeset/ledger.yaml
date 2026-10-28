@@ -58,6 +58,10 @@ zyplux-cerberus@0.26.1:
   dir: apps/cerberus
   intents:
     - fair-trains-obey
+zyplux-cerberus@0.27.0:
+  dir: apps/cerberus
+  intents:
+    - loud-rabbits-enjoy
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

@@ -88,7 +88,18 @@ def _from_dict(data: dict[str, Any]) -> Config:
         raise ValueError(message)
     source = _table(data, "source")
     return Config(
-        source=SourceScope(tuple(source["production_roots"]), tuple(source["test_files"])),
+        source=SourceScope(**{
+            name: tuple(source[name])
+            for name in (
+                "production_roots",
+                "test_files",
+                "infrastructure_roots",
+                "tooling_roots",
+                "demo_roots",
+                "test_roots",
+                "test_exempt_files",
+            )
+        }),
         default_recipe_marker=justfile["default_recipe_marker"],
         required_aliases=_aliases(required),
         recommended_aliases=_aliases(recommended),
