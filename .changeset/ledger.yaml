@@ -76,6 +76,10 @@ zyplux-cerberus@0.27.0:
     - loud-rabbits-enjoy
     - plain-target-dependencies
     - schema-validation
+zyplux-cerberus@0.27.1:
+  dir: apps/cerberus
+  intents:
+    - proud-boxes-cough
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
