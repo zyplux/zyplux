@@ -46,7 +46,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `source_oracle`             | content     | Category globs and shared policies enforce unambiguous classification and allowed nesting |
 | `justfile`                     | content     | Recipe names, aliases, ordered `check` dependencies and body calls, local cerberus run, wrapped tool calls, no trailing whitespace |
 | `ci_workflow_gate`             | content     | `ci.yml` exists, exposes a `ci` check, runs on PRs (push to `main` recommended)      |
-| `ci_check_sequence`            | content     | `ci.yml` uses shared package-manager setup before the canonical checks             |
+| `ci_check_sequence`            | content     | `ci.yml` skips drafts, cancels superseded runs and uses shared setup before canonical checks             |
 | `ci_cerberus_step`             | content     | A CI workflow runs cerberus to self-verify org invariants                           |
 | `workflow_toolchain_only`      | content     | Workflows use shared package-manager setup and install no extra tools              |
 | `pyrefly`                      | content     | All code, tests included, type-checks under strict pyrefly with no relaxations       |
@@ -79,6 +79,10 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 ## Justfile recipes
 
 [`baseline.just`](src/cerberus/baseline.just) is the starting template. Cerberus checks names, aliases, ordered gate steps and their actual tool calls, managed-tool runners, cleanup, and whitespace. Required calls run as standalone foreground commands that preserve failures; local shell helpers start with `set -euo pipefail` and contain no other `set` commands. Local Cerberus commands start with `uv run cerberus`. The test recipe may guard runners by their workspace manifests and accept pytest's empty-suite exit code. Application recipes may add parameters, modules, and commands; `--fix` removes trailing whitespace.
+
+## CI draft policy
+
+The `ci` job uses `if: github.event_name != 'pull_request' || !github.event.pull_request.draft`, optionally wrapped in `${{ }}`. Pull-request activity types include `opened`, `synchronize`, `reopened` and `ready_for_review`. The guarded job’s concurrency uses `group: ci-${{ github.ref }}` and `cancel-in-progress: true`. Ready PRs and non-PR events run the complete canonical sequence; jobs have no prerequisites or failure tolerance, and individual checks are unconditional.
 
 ## Fallow inputs
 
