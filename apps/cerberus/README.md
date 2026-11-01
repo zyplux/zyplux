@@ -82,7 +82,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 
 ## CI draft policy
 
-The `ci` job uses `if: github.event_name != 'pull_request' || !github.event.pull_request.draft`, optionally wrapped in `${{ }}`. Pull-request activity types include `opened`, `synchronize`, `reopened`, `ready_for_review` and `converted_to_draft`. Workflow concurrency uses `group: ci-${{ github.ref }}` and `cancel-in-progress: true`. Ready PRs and non-PR events run the complete canonical sequence; jobs have no prerequisites or failure tolerance, and individual checks are unconditional.
+The `ci` job uses `if: github.event_name != 'pull_request' || !github.event.pull_request.draft`, optionally wrapped in `${{ }}`. Pull-request activity types include `opened`, `synchronize`, `reopened` and `ready_for_review`. The guarded job’s concurrency uses `group: ci-${{ github.ref }}` and `cancel-in-progress: true`. Ready PRs and non-PR events run the complete canonical sequence; jobs have no prerequisites or failure tolerance, and individual checks are unconditional.
 
 ## Fallow inputs
 

@@ -18,15 +18,15 @@ _JOB_FAILURE = f"ci.yml must guard ci with `{_DRAFT_GUARD}`, without prerequisit
 _CI_HEADER = (
     "on:\n  workflow_dispatch:\n  pull_request:\n"
     "    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]\n"
-    "concurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\n"
 )
 
+_JOB_CONCURRENCY = "    concurrency:\n      group: ci-${{ github.ref }}\n      cancel-in-progress: true\n"
 
 _PY_CI = (
     "jobs:\n"
     "  gate:\n"
     "    uses: zyplux/.github/.github/workflows/gate.yml@main\n"
-    f"  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+    f"  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
     "      - uses: actions/checkout@v7\n"
     "      - uses: ./apps/action-setup-pm\n"
     "      - run: uv run --no-sync vulture\n"
@@ -37,7 +37,7 @@ _PY_CI = (
     "      - run: uv run --no-sync pytest\n"
 )
 _TS_CI = (
-    f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+    f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
     "      - uses: actions/checkout@v7\n"
     "      - uses: ./apps/action-setup-pm\n"
     "      - run: pnpm run knip\n"
@@ -116,7 +116,7 @@ def test_8_3_3_fails_when_the_required_python_steps_run_out_of_canonical_order(
     run_ci_sequence: RunCiSequence, fail: MakeFinding
 ) -> None:
     ci = (
-        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n"
         "      - uses: ./apps/action-setup-pm\n"
         "      - run: uv run --no-sync pyrefly check\n"
@@ -160,7 +160,7 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
     run_ci_sequence: RunCiSequence, fail: MakeFinding
 ) -> None:
     ci = (
-        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n"
         "      - uses: ./apps/action-setup-pm\n"
         "      - run: pnpm run typecheck\n"
@@ -256,7 +256,7 @@ def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
 ) -> None:
     ci = (
-        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+        f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
     )
     if not missing:
@@ -298,7 +298,8 @@ def test_8_6_3_requires_typescript_quality_steps_for_executable_tool_configurati
             "package.json": "{}",
             ".github/workflows/ci.yml": _CI_HEADER
             + (
-                f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n      - uses: actions/checkout@v7\n"
+                f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
+                "      - uses: actions/checkout@v7\n"
                 "      - uses: ./apps/action-setup-pm\n      - run: pnpm exec prettier --check .\n"
             ),
         },
@@ -318,7 +319,7 @@ def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
             "package.json": "{}",
             ".github/workflows/ci.yml": _CI_HEADER
             + (
-                f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n"
+                f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
                 "      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
             ),
         },
@@ -419,7 +420,7 @@ def test_8_7_4_requires_unconditional_successful_setup(
     [
         (
             _TS_CI.replace("  ci:\n", "  prepare:\n")
-            + f"  ci:\n    if: {_DRAFT_GUARD}\n    steps:\n      - run: pnpm run test\n",
+            + f"  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n      - run: pnpm run test\n",
             (
                 "ci.yml must use zyplux/zyplux/apps/action-setup-pm@<ref> "
                 "or ./apps/action-setup-pm unconditionally before checks"
@@ -516,16 +517,14 @@ def test_8_8_3_rejects_failure_tolerance_in_the_guarded_ci_job(
     assert run_ci_sequence(ts=True, ci=ci).findings == [fail(_JOB_FAILURE)]
 
 
-@pytest.mark.parametrize("event", ["opened", "synchronize", "reopened", "ready_for_review", "converted_to_draft"])
+@pytest.mark.parametrize("event", ["opened", "synchronize", "reopened", "ready_for_review"])
 def test_8_8_4_requires_pull_request_events_for_draft_transitions(
     run_check_with_files: RunCheckWithFiles, fail: MakeFinding, event: str
 ) -> None:
     ci = _CI_HEADER.replace(event, "edited") + _TS_CI
     result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
     assert result.findings == [
-        fail(
-            "ci.yml pull_request.types must include converted_to_draft, opened, ready_for_review, reopened, synchronize"
-        )
+        fail("ci.yml pull_request.types must include opened, ready_for_review, reopened, synchronize")
     ]
 
 
@@ -541,11 +540,11 @@ def test_8_8_4_requires_pull_request_events_for_draft_transitions(
 def test_8_8_5_requires_workflow_cancellation_for_the_same_pull_request(
     run_check_with_files: RunCheckWithFiles, fail: MakeFinding, concurrency: str
 ) -> None:
-    triggers = _CI_HEADER.split("concurrency:", 1)[0]
-    ci = triggers + concurrency + _TS_CI
+    job_concurrency = "".join(f"    {line}\n" for line in concurrency.splitlines())
+    ci = _CI_HEADER + _TS_CI.replace(_JOB_CONCURRENCY, job_concurrency)
     result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
     assert result.findings == [
-        fail("ci.yml must use concurrency group ci-${{ github.ref }} with cancel-in-progress: true")
+        fail("ci job must use concurrency group ci-${{ github.ref }} with cancel-in-progress: true")
     ]
 
 
@@ -563,3 +562,11 @@ def test_8_8_7_rejects_pull_request_target_alongside_pull_request(
     ci = _CI_HEADER.replace("  workflow_dispatch:", "  pull_request_target:\n  workflow_dispatch:") + _TS_CI
     result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
     assert result.findings == [fail("ci.yml must use pull_request instead of pull_request_target for draft-aware CI")]
+
+
+def test_8_8_8_rejects_workflow_concurrency_even_with_guarded_job_concurrency(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    ci = _CI_HEADER + "concurrency: ci-${{ github.ref }}\n" + _TS_CI
+    result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
+    assert result.findings == [fail("ci.yml must put concurrency on the guarded ci job, not the workflow")]

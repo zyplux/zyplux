@@ -18,7 +18,7 @@ SCOPE = Scope.CONTENT
 
 _CI_PATHS = (".github/workflows/ci.yml", ".github/workflows/ci.yaml")
 _DRAFT_GUARD = "github.event_name != 'pull_request' || !github.event.pull_request.draft"
-_PR_EVENTS = {"opened", "synchronize", "reopened", "ready_for_review", "converted_to_draft"}
+_PR_EVENTS = {"opened", "synchronize", "reopened", "ready_for_review"}
 
 
 def _ci_content(repo: Repo, ctx: Context) -> str | None:
@@ -61,7 +61,7 @@ def _has_draft_guard(job: dict[str, Any]) -> bool:
     return condition == _DRAFT_GUARD
 
 
-def _validate_draft_events(doc: dict[str | bool, Any], res: CheckResult) -> None:
+def _validate_draft_events(doc: dict[str | bool, Any], job: dict[str, Any], res: CheckResult) -> None:
     triggers = doc.get("on", doc.get(True))
     if isinstance(triggers, dict) and "pull_request_target" in triggers:
         res.fail("ci.yml must use pull_request instead of pull_request_target for draft-aware CI")
@@ -73,13 +73,15 @@ def _validate_draft_events(doc: dict[str | bool, Any], res: CheckResult) -> None
         or not _PR_EVENTS.issubset(events)
     ):
         res.fail(f"ci.yml pull_request.types must include {', '.join(sorted(_PR_EVENTS))}")
-    concurrency = doc.get("concurrency")
+    if "concurrency" in doc:
+        res.fail("ci.yml must put concurrency on the guarded ci job, not the workflow")
+    concurrency = job.get("concurrency")
     if (
         not isinstance(concurrency, dict)
         or concurrency.get("group") != "ci-${{ github.ref }}"
         or concurrency.get("cancel-in-progress") is not True
     ):
-        res.fail("ci.yml must use concurrency group ci-${{ github.ref }} with cancel-in-progress: true")
+        res.fail("ci job must use concurrency group ci-${{ github.ref }} with cancel-in-progress: true")
 
 
 def _is_shared_setup(step: dict[str, Any]) -> bool:
@@ -193,7 +195,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if job is None or not _has_draft_guard(job) or job.get("continue-on-error", False) is not False or job.get("needs"):
         res.fail(f"ci.yml must guard ci with `{_DRAFT_GUARD}`, without prerequisites or continue-on-error")
     else:
-        _validate_draft_events(doc, res)
+        _validate_draft_events(doc, job, res)
     if job is None or res.problems:
         return res
     steps = workflow.job_steps({"jobs": {"ci": job}})
