@@ -83,3 +83,5 @@
 ### 8.8.5 requires workflow cancellation for the same pull request
 
 ### 8.8.6 requires successful unconditional checks inside the guarded job
+
+### 8.8.7 rejects pull request target alongside pull request

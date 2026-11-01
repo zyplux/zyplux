@@ -555,3 +555,11 @@ def test_8_8_6_requires_successful_unconditional_checks_inside_the_guarded_job(
 ) -> None:
     ci = _TS_CI.replace("run: pnpm run lint", f"run: pnpm run lint\n        {setting}")
     assert run_ci_sequence(ts=True, ci=ci).findings == [fail("ts ci is missing `pnpm run lint`")]
+
+
+def test_8_8_7_rejects_pull_request_target_alongside_pull_request(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    ci = _CI_HEADER.replace("  workflow_dispatch:", "  pull_request_target:\n  workflow_dispatch:") + _TS_CI
+    result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
+    assert result.findings == [fail("ci.yml must use pull_request instead of pull_request_target for draft-aware CI")]

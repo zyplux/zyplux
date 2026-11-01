@@ -63,6 +63,8 @@ def _has_draft_guard(job: dict[str, Any]) -> bool:
 
 def _validate_draft_events(doc: dict[str | bool, Any], res: CheckResult) -> None:
     triggers = doc.get("on", doc.get(True))
+    if isinstance(triggers, dict) and "pull_request_target" in triggers:
+        res.fail("ci.yml must use pull_request instead of pull_request_target for draft-aware CI")
     pull_request = triggers.get("pull_request") if isinstance(triggers, dict) else None
     events = pull_request.get("types") if isinstance(pull_request, dict) else None
     if (
