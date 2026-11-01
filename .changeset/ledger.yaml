@@ -84,6 +84,7 @@ zyplux-cerberus@0.27.2:
   dir: apps/cerberus
   intents:
     - wicked-dragons-enjoy
+    - wise-moles-greet
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
