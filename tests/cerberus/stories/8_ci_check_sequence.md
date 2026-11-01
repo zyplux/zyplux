@@ -60,7 +60,7 @@
 
 ### 8.7.4 requires unconditional successful setup
 
-### 8.7.5 requires setup and checks in the unconditional ci job
+### 8.7.5 requires setup and checks in the guarded ci job
 
 ### 8.7.6 requires root checkout before shared setup
 
@@ -69,3 +69,17 @@
 ### 8.7.8 accepts explicit root checkout paths
 
 ### 8.7.9 rejects ci job prerequisites
+
+## 8.8 Skipping draft pull requests
+
+### 8.8.1 accepts the exact draft guard with optional expression delimiters
+
+### 8.8.2 rejects missing or unrelated ci job conditions
+
+### 8.8.3 rejects failure tolerance in the guarded ci job
+
+### 8.8.4 requires pull request events for draft transitions
+
+### 8.8.5 requires workflow cancellation for the same pull request
+
+### 8.8.6 requires successful unconditional checks inside the guarded job

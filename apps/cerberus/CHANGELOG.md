@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.2
+
+### Patch Changes
+
+- Require CI to skip draft pull requests, run when they become ready, and cancel active runs when they return to draft. Keep the complete gate mandatory for ready PRs and manual runs, including unconditional checks without failure tolerance. Update consumer ci.yml job guards, pull-request activity types and concurrency before upgrading.
+
 ## 0.27.1
 
 ### Patch Changes

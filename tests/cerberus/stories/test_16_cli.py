@@ -40,10 +40,15 @@ JUSTFILE_WITH_TRAILING_WS = CONFORMING_JUSTFILE.replace(
 CONFORMING_CI = """\
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   ci:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - run: echo ci

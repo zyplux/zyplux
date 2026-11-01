@@ -13,10 +13,12 @@ if TYPE_CHECKING:
     from cerberus.context import Context
 
 ID = "ci_check_sequence"
-SUMMARY = "ci.yml uses shared package-manager setup before the canonical check sequence"
+SUMMARY = "ci.yml skips draft PRs and uses shared setup before the canonical check sequence"
 SCOPE = Scope.CONTENT
 
 _CI_PATHS = (".github/workflows/ci.yml", ".github/workflows/ci.yaml")
+_DRAFT_GUARD = "github.event_name != 'pull_request' || !github.event.pull_request.draft"
+_PR_EVENTS = {"opened", "synchronize", "reopened", "ready_for_review", "converted_to_draft"}
 
 
 def _ci_content(repo: Repo, ctx: Context) -> str | None:
@@ -27,7 +29,7 @@ def _ci_content(repo: Repo, ctx: Context) -> str | None:
     return None
 
 
-def _parse_workflow(content: str) -> dict[str, Any] | None:
+def _parse_workflow(content: str) -> dict[str | bool, Any] | None:
     try:
         doc = yaml.safe_load(content)
     except yaml.YAMLError:
@@ -49,6 +51,35 @@ def _is_required(step: dict[str, Any]) -> bool:
     return step.get("if", True) is True and step.get("continue-on-error", False) is False
 
 
+def _has_draft_guard(job: dict[str, Any]) -> bool:
+    condition = job.get("if")
+    if not isinstance(condition, str):
+        return False
+    condition = condition.strip()
+    if condition.startswith("${{") and condition.endswith("}}"):
+        condition = condition[3:-2].strip()
+    return condition == _DRAFT_GUARD
+
+
+def _validate_draft_events(doc: dict[str | bool, Any], res: CheckResult) -> None:
+    triggers = doc.get("on", doc.get(True))
+    pull_request = triggers.get("pull_request") if isinstance(triggers, dict) else None
+    events = pull_request.get("types") if isinstance(pull_request, dict) else None
+    if (
+        not isinstance(events, list)
+        or not all(isinstance(event, str) for event in events)
+        or not _PR_EVENTS.issubset(events)
+    ):
+        res.fail(f"ci.yml pull_request.types must include {', '.join(sorted(_PR_EVENTS))}")
+    concurrency = doc.get("concurrency")
+    if (
+        not isinstance(concurrency, dict)
+        or concurrency.get("group") != "ci-${{ github.ref }}"
+        or concurrency.get("cancel-in-progress") is not True
+    ):
+        res.fail("ci.yml must use concurrency group ci-${{ github.ref }} with cancel-in-progress: true")
+
+
 def _is_shared_setup(step: dict[str, Any]) -> bool:
     uses = step.get("uses", "")
     inputs = step.get("with", {})
@@ -61,7 +92,7 @@ def _is_shared_setup(step: dict[str, Any]) -> bool:
     )
 
 
-def _find_ci_job(doc: dict[str, Any]) -> dict[str, Any] | None:
+def _find_ci_job(doc: dict[str | bool, Any]) -> dict[str, Any] | None:
     jobs = doc.get("jobs")
     if not isinstance(jobs, dict):
         return None
@@ -116,6 +147,8 @@ def _parse_shell_command(script: str) -> tuple[str, ...]:
 
 
 def _parse_step_commands(step: dict[str, Any]) -> list[tuple[str, ...]]:
+    if not _is_required(step):
+        return []
     if _is_shared_setup(step):
         return [("pnpm", "install", "--frozen-lockfile"), ("uv", "sync", "--locked")]
     script = step.get("run")
@@ -155,8 +188,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     job = _find_ci_job(doc)
-    if job is None or not _is_required(job) or job.get("needs"):
-        res.fail("ci.yml must run an unconditional ci job without prerequisites")
+    if job is None or not _has_draft_guard(job) or job.get("continue-on-error", False) is not False or job.get("needs"):
+        res.fail(f"ci.yml must guard ci with `{_DRAFT_GUARD}`, without prerequisites or continue-on-error")
+    else:
+        _validate_draft_events(doc, res)
+    if job is None or res.problems:
         return res
     steps = workflow.job_steps({"jobs": {"ci": job}})
     setup_index = _validate_setup(steps, res)
