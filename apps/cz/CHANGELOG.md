@@ -1,5 +1,14 @@
 # @zyplux/cz
 
+## 0.16.1
+
+### Patch Changes
+
+- Refresh packaged dependency metadata for the updated workspace toolchain.
+
+- Updated dependencies:
+  - @zyplux/util@0.9.4
+
 ## 0.16.0
 
 ### Minor Changes

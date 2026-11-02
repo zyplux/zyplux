@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.3
+
+### Patch Changes
+
+- Run Fallow 3.38.1 for source and coverage analysis.
+
 ## 0.27.2
 
 ### Patch Changes

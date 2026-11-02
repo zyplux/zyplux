@@ -6,11 +6,11 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "26.12.1",
+      "version": "26.13.0",
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "knip": "knip",
     "format": "prettier --write --cache --log-level warn .",
@@ -20,7 +20,8 @@
     "test": "vitest run",
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
-    "release:prepare": "uv run airlock prepare"
+    "release:prepare": "uv run airlock prepare",
+    "skills:refresh": "skills experimental_install"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -31,6 +32,7 @@
     "eslint": "catalog:",
     "knip": "catalog:",
     "prettier": "catalog:",
+    "skills": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

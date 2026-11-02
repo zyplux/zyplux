@@ -1,12 +1,12 @@
 [project]
 name = "zyplux-cerberus"
-version = "0.27.2"
+version = "0.27.3"
 description = "Cross-repo invariant verifier for the zyplux organization"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "networkx>=3.7",
-    "pydantic>=2.14.1",
+    "pydantic>=2.14.2",
     "pyyaml>=6.0.3",
     "rust-just>=1.59.0",
     "semantic-version>=2.10.0",

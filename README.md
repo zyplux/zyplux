@@ -16,6 +16,7 @@ Apps provide commands and actions; packages provide reusable libraries and confi
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
 | [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Repository guard: source classification and quality/release checks |
 | [@zyplux/cz](apps/cz)                            | npm      | Repository helper CLI: PRs, maintenance, reports and file chunking                  |
+| [zyplux-worker-deploy](apps/worker-deploy) | PyPI | Cloudflare Worker deployment and verified upload receipts |
 | [zyplux-airlock](apps/airlock) | PyPI | Release CLI: versions, changelogs and publication |
 | [zyplux-clipy](apps/clipy) | PyPI | Python CLI helpers: repository metrics and terminal tools |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |
@@ -47,3 +48,7 @@ Dual workspace: pnpm (TS) + uv (Python), orchestrated by [just](https://github.c
 ```
 
 Run `just` for the full recipe list. This repo is the org's quality reference — it dogfoods every new strict check first (see [cerberus.toml](cerberus.toml)), and `just check` must pass clean.
+
+## Agent skills
+
+`./just bump-skills` installs or refreshes the upstream skills in `skills-lock.json`: Wrangler deployment and Workers best practices. Commit the updated lockfile; downloaded skill directories are local. The repository's Cerberus graph skill is version controlled.

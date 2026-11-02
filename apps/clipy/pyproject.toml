@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-clipy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Shared Python CLI helpers for repository reports and terminal tools."
 readme = "README.md"
 requires-python = ">=3.14"
@@ -18,12 +18,12 @@ dependencies = [
     "tree-sitter>=0.26.0",
     "tree-sitter-python>=0.25.0",
     "tree-sitter-typescript>=0.23.2",
-    "zyplux-cerberus>=0.27.0",
+    "zyplux-cerberus>=0.27.3",
     "zyplux-airlock>=2.2.0",
     "psutil>=7.2.2",
     "rich>=15.0.0",
     "typer>=0.27.3",
-    "websockets>=17.3",
+    "websockets>=17.4",
 ]
 
 [project.scripts]

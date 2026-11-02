@@ -1,0 +1,20 @@
+[project]
+name = "zyplux-worker-deploy"
+version = "0.1.0"
+description = "Synchronous Cloudflare Worker deployment with verified upload receipts."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+worker-deploy = "worker_deploy.cli:main"
+
+[build-system]
+requires = ["uv_build==0.13.5"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "worker_deploy"
+module-root = "src"

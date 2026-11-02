@@ -115,3 +115,7 @@ dump-rules:
 # Apply totchef's own dogfood recipe to this machine.
 totchef:
     uv run totchef up --recipe apps/totchef/examples/totchef_recipe.toml
+
+# Refresh every skill in skills-lock.json from its upstream source.
+bump-skills:
+    pnpm run skills:refresh
