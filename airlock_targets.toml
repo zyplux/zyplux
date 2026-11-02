@@ -40,7 +40,7 @@ depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:88836698905cbaea8b5c5dec697881e63443e546f00c35807a42e46d866e1815"
+hash = "sha256:3dfe24d4be858d7a34b418e7381f6842c73cfc8521fd8fcf9d9cdcd0c8da2bda"
 depends_on = ["airlock"]
 
 [totchef]

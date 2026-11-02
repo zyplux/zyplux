@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from seam_fixtures import RunCheckWithFiles
+    from seam_fixtures import RunCheckOnDisk, RunCheckWithFiles
 
 
 def _workspace(manifests: dict[str, dict[str, object]]) -> dict[str, str]:
@@ -347,21 +347,53 @@ def test_34_6_2_workers_resolve_local_aliases_and_package_import_maps(run_check_
     assert run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
+@pytest.mark.parametrize("loader", ["import", "require"])
 def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_external_gaps(
     run_check_with_files: RunCheckWithFiles,
+    loader: str,
 ) -> None:
     files = {
         "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
-        "apps/worker/src/index.ts": 'import "third-party"; const load = (name: string) => import(name);',
+        "apps/worker/src/index.ts": f'import "third-party"; const load = (name: string) => {loader}(name);',
     }
     result = run_check_with_files("no_worker_filesystem_imports", files)
     assert not result.problems
     assert result.verbose_lines == [
-        "apps/worker/src/index.ts:1: computed dynamic import cannot be resolved statically",
+        "apps/worker/src/index.ts:1: computed runtime dependency cannot be resolved statically",
         "third-party runtime third-party is outside the first-party graph",
     ]
     files["apps/worker/src/index.ts"] = 'import "./missing.ts";'
     assert run_check_with_files("no_worker_filesystem_imports", files).problems
+
+
+@pytest.mark.parametrize(
+    ("source", "has_failure"),
+    [
+        ('export { default } from "./auth_bg.wasm";', False),
+        ('import "node:fs";', True),
+        ('require("node:fs");', True),
+        ('import "./chunk.js";', True),
+        ('require("./auth_bg.wasm");', False),
+        ('import "./missing.js";', True),
+    ],
+)
+def test_34_6_9_workers_trace_generated_javascript_and_report_wasm_bundle_limits(
+    run_check_on_disk: RunCheckOnDisk, source: str, *, has_failure: bool
+) -> None:
+    files = {
+        "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
+        "apps/worker/src/index.ts": 'import "../dist/auth.js";',
+        "apps/worker/dist/auth.js": source,
+        "apps/worker/dist/chunk.js": 'import "node:fs";',
+        "apps/worker/dist/chunk.ts": "export const ready = true;",
+        "apps/worker/dist/auth_bg.wasm": "\0asm\x01\0\0\0",
+    }
+    result = run_check_on_disk("no_worker_filesystem_imports", files)
+    assert bool(result.problems) is has_failure
+    if not has_failure:
+        assert result.verbose_lines == [
+            "apps/worker/dist/auth_bg.wasm: compiled WebAssembly requires bundle validation"
+        ]
 
 
 def test_34_4_3_project_references_check_projects_with_external_compiler_settings(
@@ -465,3 +497,25 @@ def test_34_6_8_workers_replace_parent_path_maps_instead_of_merging_aliases(
         "src/entry.ts": 'import "node:fs";',
     })
     assert not run_check_with_files("no_worker_filesystem_imports", files).problems
+
+
+@pytest.mark.parametrize("specifier", ["shared/api", "./chunk"])
+def test_34_6_10_workers_report_unsupported_commonjs_resolution_as_a_bundle_limit(
+    run_check_on_disk: RunCheckOnDisk,
+    specifier: str,
+) -> None:
+    files = _workspace({"shared": {"exports": {"./api": {"import": "./src/safe.ts", "require": "./src/fs.ts"}}}})
+    files.update({
+        "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
+        "apps/worker/src/index.ts": 'import "../dist/auth.js";',
+        "apps/worker/dist/auth.js": f'require("{specifier}");',
+        "apps/worker/dist/chunk.js": 'require("node:fs");',
+        "apps/worker/dist/chunk.ts": "export const ready = true;",
+        "packages/shared/src/safe.ts": "export const ready = true;",
+        "packages/shared/src/fs.ts": 'import "node:fs";',
+    })
+    result = run_check_on_disk("no_worker_filesystem_imports", files)
+    assert not result.problems
+    assert result.verbose_lines == [
+        f"apps/worker/dist/auth.js:1: CommonJS dependency {specifier} requires bundle validation"
+    ]
