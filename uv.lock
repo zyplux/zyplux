@@ -11,7 +11,6 @@ members = [
     "zyplux-cerberus",
     "zyplux-clipy",
     "zyplux-setup-pm",
-    "zyplux-worker-deploy",
 ]
 
 [[package]]
@@ -1519,14 +1518,3 @@ requires-dist = [
 name = "zyplux-setup-pm"
 version = "1.1.0"
 source = { editable = "apps/action-setup-pm" }
-
-[[package]]
-name = "zyplux-worker-deploy"
-version = "0.1.0"
-source = { editable = "apps/worker-deploy" }
-dependencies = [
-    { name = "httpx" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "httpx", specifier = ">=0.28.1" }]

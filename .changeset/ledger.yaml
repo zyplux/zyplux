@@ -133,7 +133,3 @@ zyplux-setup-pm@1.1.0:
   dir: apps/action-setup-pm
   intents:
     - cached-release-tools
-zyplux-worker-deploy@0.1.0:
-  dir: apps/worker-deploy
-  intents:
-    - quiet-tigers-compete

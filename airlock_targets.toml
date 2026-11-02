@@ -51,7 +51,3 @@ hash = "sha256:3b87b9509796d00373d6bfa8debc7a658e72d327f24f4c559a74093ab3224a5e"
 manifest = "apps/clipy/pyproject.toml"
 hash = "sha256:bc33f8312bdade3c1dcb0bd48c30c50561dfe38b220b7ae5229a003cfd7872ce"
 depends_on = ["airlock", "cerberus"]
-
-[worker-deploy]
-manifest = "apps/worker-deploy/pyproject.toml"
-hash = "sha256:86339ff769fb96ef244566e22ca5917c5383e3f20e19186e55b3637203dae035"
