@@ -499,19 +499,23 @@ def test_34_6_8_workers_replace_parent_path_maps_instead_of_merging_aliases(
     assert not run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
-def test_34_6_10_workers_report_commonjs_package_resolution_as_a_bundle_limit(
+@pytest.mark.parametrize("specifier", ["shared/api", "./chunk"])
+def test_34_6_10_workers_report_unsupported_commonjs_resolution_as_a_bundle_limit(
     run_check_on_disk: RunCheckOnDisk,
+    specifier: str,
 ) -> None:
     files = _workspace({"shared": {"exports": {"./api": {"import": "./src/safe.ts", "require": "./src/fs.ts"}}}})
     files.update({
         "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
         "apps/worker/src/index.ts": 'import "../dist/auth.js";',
-        "apps/worker/dist/auth.js": 'require("shared/api");',
+        "apps/worker/dist/auth.js": f'require("{specifier}");',
+        "apps/worker/dist/chunk.js": 'require("node:fs");',
+        "apps/worker/dist/chunk.ts": "export const ready = true;",
         "packages/shared/src/safe.ts": "export const ready = true;",
         "packages/shared/src/fs.ts": 'import "node:fs";',
     })
     result = run_check_on_disk("no_worker_filesystem_imports", files)
     assert not result.problems
     assert result.verbose_lines == [
-        "apps/worker/dist/auth.js:1: CommonJS dependency shared/api requires bundle validation"
+        f"apps/worker/dist/auth.js:1: CommonJS dependency {specifier} requires bundle validation"
     ]

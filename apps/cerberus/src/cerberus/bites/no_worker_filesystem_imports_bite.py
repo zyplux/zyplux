@@ -60,7 +60,17 @@ def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]],
                 )
         specifier = string_literal(source)
         if specifier is not None:
-            if is_require and specifier not in _FILESYSTEM and not specifier.startswith((".", "node:")):
+            can_trace_require = specifier.startswith(".") and PurePosixPath(specifier).suffix in {
+                ".js",
+                ".mjs",
+                ".wasm",
+            }
+            if (
+                is_require
+                and not specifier.startswith("node:")
+                and specifier not in _FILESYSTEM
+                and not can_trace_require
+            ):
                 gaps.append(
                     f"{path}:{node.start_point.row + 1}: CommonJS dependency {specifier} requires bundle validation"
                 )

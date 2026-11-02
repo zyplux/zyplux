@@ -60,4 +60,4 @@
 
 ### 34.6.9 workers trace generated javascript and report wasm bundle limits
 
-### 34.6.10 workers report commonjs package resolution as a bundle limit
+### 34.6.10 workers report unsupported commonjs resolution as a bundle limit
