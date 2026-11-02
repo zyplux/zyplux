@@ -372,6 +372,7 @@ def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_exte
         ('export { default } from "./auth_bg.wasm";', False),
         ('import "node:fs";', True),
         ('require("node:fs");', True),
+        ('import "./chunk.js";', True),
         ('require("./auth_bg.wasm");', False),
         ('import "./missing.js";', True),
     ],
@@ -383,6 +384,8 @@ def test_34_6_9_workers_trace_generated_javascript_and_report_wasm_bundle_limits
         "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
         "apps/worker/src/index.ts": 'import "../dist/auth.js";',
         "apps/worker/dist/auth.js": source,
+        "apps/worker/dist/chunk.js": 'import "node:fs";',
+        "apps/worker/dist/chunk.ts": "export const ready = true;",
         "apps/worker/dist/auth_bg.wasm": "\0asm\x01\0\0\0",
     }
     result = run_check_on_disk("no_worker_filesystem_imports", files)

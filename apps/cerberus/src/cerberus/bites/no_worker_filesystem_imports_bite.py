@@ -150,9 +150,9 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
                 res.fail(f"{path}:{line}: Worker runtime reaches {specifier}")
                 continue
             target = (
-                resolve(path, specifier, paths, packages)
+                _resolve_artifact(path, specifier, ctx)
+                or resolve(path, specifier, paths, packages)
                 or _resolve_paths(path, specifier, repo, ctx, gaps)
-                or _resolve_artifact(path, specifier, ctx)
             )
             if target is not None:
                 pending.append(target)
