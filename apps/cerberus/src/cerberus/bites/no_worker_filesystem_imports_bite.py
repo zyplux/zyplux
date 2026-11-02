@@ -32,11 +32,12 @@ def _is_type_edge(node: Node) -> bool:
     return False
 
 
-def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]], list[int]]:
+def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]], list[str]]:
     refs = []
-    computed = []
+    gaps = []
     for node in walk_nodes(parse_typescript(path, content).root_node):
         source = None
+        is_require = False
         if _is_type_edge(node):
             continue
         if node.type in {"import_statement", "export_statement"}:
@@ -50,14 +51,22 @@ def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]],
             "import",
             "require",
         }:
+            is_require = node_text(node.child_by_field_name("function") or node) == "require"
             arguments = node.child_by_field_name("arguments")
             source = arguments.named_children[0] if arguments is not None and arguments.named_children else None
             if string_literal(source) is None:
-                computed.append(node.start_point.row + 1)
+                gaps.append(
+                    f"{path}:{node.start_point.row + 1}: computed runtime dependency cannot be resolved statically"
+                )
         specifier = string_literal(source)
         if specifier is not None:
+            if is_require and specifier not in _FILESYSTEM and not specifier.startswith((".", "node:")):
+                gaps.append(
+                    f"{path}:{node.start_point.row + 1}: CommonJS dependency {specifier} requires bundle validation"
+                )
+                continue
             refs.append((specifier, node.start_point.row + 1))
-    return refs, computed
+    return refs, gaps
 
 
 def _resolve_paths(path: str, specifier: str, repo: Repo, ctx: Context, gaps: set[str]) -> str | None:
@@ -134,8 +143,8 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
         if content is None:
             res.error(f"cannot read Worker runtime module {path}")
             continue
-        refs, computed = _runtime_specifiers(path, content)
-        gaps.update(f"{path}:{line}: computed runtime dependency cannot be resolved statically" for line in computed)
+        refs, limits = _runtime_specifiers(path, content)
+        gaps.update(limits)
         for specifier, line in refs:
             if specifier in _FILESYSTEM:
                 res.fail(f"{path}:{line}: Worker runtime reaches {specifier}")
