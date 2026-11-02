@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 if TYPE_CHECKING:
-    from seam_fixtures import RunCheckWithFiles
+    from seam_fixtures import RunCheckOnDisk, RunCheckWithFiles
 
 
 def _workspace(manifests: dict[str, dict[str, object]]) -> dict[str, str]:
@@ -362,6 +362,31 @@ def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_exte
     ]
     files["apps/worker/src/index.ts"] = 'import "./missing.ts";'
     assert run_check_with_files("no_worker_filesystem_imports", files).problems
+
+
+@pytest.mark.parametrize(
+    ("source", "has_failure"),
+    [
+        ('export { default } from "./auth_bg.wasm";', False),
+        ('import "node:fs";', True),
+        ('import "./missing.js";', True),
+    ],
+)
+def test_34_6_9_workers_trace_generated_javascript_and_report_wasm_bundle_limits(
+    run_check_on_disk: RunCheckOnDisk, source: str, *, has_failure: bool
+) -> None:
+    files = {
+        "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
+        "apps/worker/src/index.ts": 'import "../dist/auth.js";',
+        "apps/worker/dist/auth.js": source,
+        "apps/worker/dist/auth_bg.wasm": "\0asm\x01\0\0\0",
+    }
+    result = run_check_on_disk("no_worker_filesystem_imports", files)
+    assert bool(result.problems) is has_failure
+    if not has_failure:
+        assert result.verbose_lines == [
+            "apps/worker/dist/auth_bg.wasm: compiled WebAssembly requires bundle validation"
+        ]
 
 
 def test_34_4_3_project_references_check_projects_with_external_compiler_settings(

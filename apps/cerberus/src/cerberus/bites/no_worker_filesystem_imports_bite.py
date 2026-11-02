@@ -77,6 +77,16 @@ def _resolve_paths(path: str, specifier: str, repo: Repo, ctx: Context, gaps: se
     return None
 
 
+def _resolve_artifact(path: str, specifier: str, ctx: Context) -> str | None:
+    if not specifier.startswith("."):
+        return None
+    root = ctx.source.root.resolve()
+    target = (root / PurePosixPath(path).parent / specifier).resolve()
+    if target.suffix in {".js", ".mjs", ".wasm"} and target.is_relative_to(root) and target.is_file():
+        return target.relative_to(root).as_posix()
+    return None
+
+
 def _list_entries(repo: Repo, ctx: Context, res: CheckResult, gaps: set[str]) -> list[str]:
     packages = list_packages(repo, ctx)
     paths = frozenset(ctx.paths(repo))
@@ -114,6 +124,9 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
         if path in visited:
             continue
         visited.add(path)
+        if path.endswith(".wasm"):
+            gaps.add(f"{path}: compiled WebAssembly requires bundle validation")
+            continue
         content = ctx.file(repo, path)
         if content is None:
             res.error(f"cannot read Worker runtime module {path}")
@@ -124,7 +137,11 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
             if specifier in _FILESYSTEM:
                 res.fail(f"{path}:{line}: Worker runtime reaches {specifier}")
                 continue
-            target = resolve(path, specifier, paths, packages) or _resolve_paths(path, specifier, repo, ctx, gaps)
+            target = (
+                resolve(path, specifier, paths, packages)
+                or _resolve_paths(path, specifier, repo, ctx, gaps)
+                or _resolve_artifact(path, specifier, ctx)
+            )
             if target is not None:
                 pending.append(target)
             elif specifier.startswith((".", "#", "@/")) or any(

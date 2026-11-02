@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.3
+
+### Patch Changes
+
+- Trace generated JavaScript in Worker filesystem checks and report compiled WebAssembly as a bundle-validation boundary.
+
 ## 0.27.2
 
 ### Patch Changes
