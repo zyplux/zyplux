@@ -88,6 +88,7 @@ zyplux-cerberus@0.27.2:
 zyplux-cerberus@0.27.3:
   dir: apps/cerberus
   intents:
+    - fallow-patch
     - worker-build-imports
 zyplux-clipy@0.1.0:
   dir: apps/clipy
