@@ -11,6 +11,7 @@ members = [
     "zyplux-cerberus",
     "zyplux-clipy",
     "zyplux-setup-pm",
+    "zyplux-worker-deploy",
 ]
 
 [[package]]
@@ -951,7 +952,7 @@ wheels = [
 
 [[package]]
 name = "totchef"
-version = "0.0.9"
+version = "0.0.10"
 source = { editable = "apps/totchef" }
 dependencies = [
     { name = "loguru" },
@@ -1405,7 +1406,7 @@ type = [
 
 [[package]]
 name = "zyplux-airlock"
-version = "2.2.0"
+version = "2.2.1"
 source = { editable = "apps/airlock" }
 dependencies = [
     { name = "docker" },
@@ -1467,7 +1468,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-clipy"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "apps/clipy" }
 dependencies = [
     { name = "psutil" },
@@ -1518,3 +1519,14 @@ requires-dist = [
 name = "zyplux-setup-pm"
 version = "1.1.0"
 source = { editable = "apps/action-setup-pm" }
+
+[[package]]
+name = "zyplux-worker-deploy"
+version = "0.1.0"
+source = { editable = "apps/worker-deploy" }
+dependencies = [
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "httpx", specifier = ">=0.28.1" }]

@@ -1,5 +1,11 @@
 # @zyplux/util
 
+## 0.9.4
+
+### Patch Changes
+
+- Refresh packaged dependency metadata for the updated workspace toolchain.
+
 ## 0.9.3
 
 ### Patch Changes

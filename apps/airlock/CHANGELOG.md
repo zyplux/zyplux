@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.1
+
+### Patch Changes
+
+- Refresh runtime dependency requirements to the updated workspace versions.
+
 ## 2.2.0
 
 ### Minor Changes

@@ -9,6 +9,7 @@ package = false
 
 [tool.uv.workspace]
 members = [
+    "apps/worker-deploy",
     "apps/airlock",
     "apps/cerberus",
     "apps/clipy",
@@ -22,8 +23,9 @@ zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
-addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
+addopts = "-n auto --cov=worker_deploy --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
 testpaths = [
+    "tests/worker_deploy",
     "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
@@ -43,12 +45,14 @@ fail_under = 90
 
 [tool.vulture]
 paths = [
+    "apps/worker-deploy/src",
     "apps/airlock/src",
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/action-setup-pm/src",
     "apps/totchef/src",
     "apps/token_stats/src",
+    "tests/worker_deploy",
     "tests/airlock",
     "tests/cerberus",
     "tests/clipy",

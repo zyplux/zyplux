@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/spectra",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Shared Vitest fixtures, matchers, polling, and journal reporting.",
   "keywords": [
     "test",

@@ -16,6 +16,7 @@ Apps provide commands and actions; packages provide reusable libraries and confi
 | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------- |
 | [zyplux-cerberus](apps/cerberus)                 | PyPI     | 🐺 Repository guard: source classification and quality/release checks |
 | [@zyplux/cz](apps/cz)                            | npm      | Repository helper CLI: PRs, maintenance, reports and file chunking                  |
+| [zyplux-worker-deploy](apps/worker-deploy) | PyPI | Cloudflare Worker deployment and verified upload receipts |
 | [zyplux-airlock](apps/airlock) | PyPI | Release CLI: versions, changelogs and publication |
 | [zyplux-clipy](apps/clipy) | PyPI | Python CLI helpers: repository metrics and terminal tools |
 | [totchef](apps/totchef)                          | PyPI     | 🧑‍🍳 Declarative machine setup: write a recipe, run one command                    |

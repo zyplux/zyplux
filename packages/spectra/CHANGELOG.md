@@ -1,5 +1,11 @@
 # @zyplux/spectra
 
+## 0.4.1
+
+### Patch Changes
+
+- Refresh packaged dependency metadata for the updated workspace toolchain.
+
 ## 0.4.0
 
 ### Minor Changes

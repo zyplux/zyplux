@@ -2,7 +2,7 @@
 
 [airlock]
 manifest = "apps/airlock/pyproject.toml"
-hash = "sha256:be0474cbeb8aeb3b3d3d63b0b9b22e6cb39e3e93e79022893587012187ca35d7"
+hash = "sha256:fd79cf0e32713e8e4745678a1753e868cf4a5363d3dca9b12793e49e0ac5dd4c"
 
 [action-airlock]
 kind = "action"
@@ -18,7 +18,7 @@ hash = "sha256:38be8854b903badddafe4a49a842a448a921d3e7c5aad61065ddb0189db87b95"
 
 [eslint-config]
 manifest = "packages/eslint-config/package.json"
-hash = "sha256:3c9a363ff930e9cad05957bf517aff11e7cd5a28d7a1fcf09db3336e41007487"
+hash = "sha256:5ee228f6cd48a102a0004409aa77876b387d5bcedefc23bbd1677d947849dfa8"
 depends_on = ["util"]
 
 [tsconfig]
@@ -27,27 +27,31 @@ hash = "sha256:af8aa4ecaf8d1bd2fa16a88f36ec45b7f80b82c635dc77e55c4dad8c0f73a7f5"
 
 [util]
 manifest = "packages/util-ts/package.json"
-hash = "sha256:90aa22ea897c7b9da12daaf7b6c091cbafb4e097021c32c97e51211997dea9c9"
+hash = "sha256:4d6efcb0eb756c13ec63bf67767f1a3dad9b95c129ae5fae2dd09e94770a6318"
 
 [spectra]
 manifest = "packages/spectra/package.json"
-hash = "sha256:a094534928caa4fe04ddc83e95eef9a206af50ad3a92bedb243505c860f967cb"
+hash = "sha256:30e1171e2bdb12518805b6b84f64a285575903a057da94f69932f31d703863ad"
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:0bdde0a353e08883894a74bcf5fc88f558f1d4b5b891def1432548fb8b136e38"
+hash = "sha256:22e2854c28e992a20ee91f20be39ca36830897a3fb5dc051876d5337637c790b"
 depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:6010cf64d0e718d233bc5588669d64ed28f142d6fbc6ef4de5833f8d1964af47"
+hash = "sha256:fe9472b470c5b200ccef10c41fc12129114b1f7496900d4df5cd7d4b49e786ac"
 depends_on = ["airlock"]
 
 [totchef]
 manifest = "apps/totchef/pyproject.toml"
-hash = "sha256:ac5fbc79721f9c47ca571c8ce1451a87089325d01306d1995e304f7b1bbad479"
+hash = "sha256:3b87b9509796d00373d6bfa8debc7a658e72d327f24f4c559a74093ab3224a5e"
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:83ff3a58135d9f7ecb584b9698655a503ee985769aa513a8473a4a49b2031f19"
+hash = "sha256:bc33f8312bdade3c1dcb0bd48c30c50561dfe38b220b7ae5229a003cfd7872ce"
 depends_on = ["airlock", "cerberus"]
+
+[worker-deploy]
+manifest = "apps/worker-deploy/pyproject.toml"
+hash = "sha256:86339ff769fb96ef244566e22ca5917c5383e3f20e19186e55b3637203dae035"
