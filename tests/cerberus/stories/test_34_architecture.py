@@ -347,17 +347,19 @@ def test_34_6_2_workers_resolve_local_aliases_and_package_import_maps(run_check_
     assert run_check_with_files("no_worker_filesystem_imports", files).problems
 
 
+@pytest.mark.parametrize("loader", ["import", "require"])
 def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_external_gaps(
     run_check_with_files: RunCheckWithFiles,
+    loader: str,
 ) -> None:
     files = {
         "apps/worker/wrangler.jsonc": '{"main":"src/index.ts"}',
-        "apps/worker/src/index.ts": 'import "third-party"; const load = (name: string) => import(name);',
+        "apps/worker/src/index.ts": f'import "third-party"; const load = (name: string) => {loader}(name);',
     }
     result = run_check_with_files("no_worker_filesystem_imports", files)
     assert not result.problems
     assert result.verbose_lines == [
-        "apps/worker/src/index.ts:1: computed dynamic import cannot be resolved statically",
+        "apps/worker/src/index.ts:1: computed runtime dependency cannot be resolved statically",
         "third-party runtime third-party is outside the first-party graph",
     ]
     files["apps/worker/src/index.ts"] = 'import "./missing.ts";'
@@ -369,6 +371,8 @@ def test_34_6_3_worker_scan_reports_missing_first_party_entries_and_visible_exte
     [
         ('export { default } from "./auth_bg.wasm";', False),
         ('import "node:fs";', True),
+        ('require("node:fs");', True),
+        ('require("./auth_bg.wasm");', False),
         ('import "./missing.js";', True),
     ],
 )

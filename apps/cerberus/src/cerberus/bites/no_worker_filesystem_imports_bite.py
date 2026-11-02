@@ -46,7 +46,10 @@ def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]],
             if bindings and all(any(child.type == "type" for child in binding.children) for binding in bindings):
                 continue
             source = node.child_by_field_name("source")
-        elif node.type == "call_expression" and node_text(node.child_by_field_name("function") or node) == "import":
+        elif node.type == "call_expression" and node_text(node.child_by_field_name("function") or node) in {
+            "import",
+            "require",
+        }:
             arguments = node.child_by_field_name("arguments")
             source = arguments.named_children[0] if arguments is not None and arguments.named_children else None
             if string_literal(source) is None:
@@ -132,7 +135,7 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
             res.error(f"cannot read Worker runtime module {path}")
             continue
         refs, computed = _runtime_specifiers(path, content)
-        gaps.update(f"{path}:{line}: computed dynamic import cannot be resolved statically" for line in computed)
+        gaps.update(f"{path}:{line}: computed runtime dependency cannot be resolved statically" for line in computed)
         for specifier, line in refs:
             if specifier in _FILESYSTEM:
                 res.fail(f"{path}:{line}: Worker runtime reaches {specifier}")
