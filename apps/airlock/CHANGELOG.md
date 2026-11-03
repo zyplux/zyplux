@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Ignore npm development dependencies and JSON formatting in release fingerprints while preserving runtime metadata and built-output checks.
+- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.
 
 ## 2.2.1
 

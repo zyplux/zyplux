@@ -52,7 +52,7 @@ Cerberus's `release_surface_version_bump` bite enforces single-step version bump
 
 `airlock prepare` records each target's `hash` in `airlock_targets.toml` after preparing versions, changelogs and lockfiles. npm fingerprints use `sha256:v2:<digest>`; other targets use `sha256:<digest>`. Hashes cover sorted paths, file contents and executable permissions; source fingerprints also cover entry kinds and symlink destinations. Timestamps, ordering and compression are ignored. TOML comments and layout are preserved.
 
-The npm hash ignores the root `package.json`'s `devDependencies` and JSON formatting; runtime, peer and optional dependencies, other metadata and built output still count. Bump detection, readiness and publication use this same hash. Existing unversioned npm hashes retain their original validation rules until preparation refreshes them.
+The npm hash ignores the root `package.json`'s `devDependencies` and JSON whitespace; runtime, peer and optional dependencies, other metadata and built output still count. Bump detection, readiness and publication use this same hash. Existing unversioned npm hashes retain their original validation rules until preparation refreshes them.
 
 Package archives must exclude `airlock_targets.toml` to avoid self-referential fingerprints.
 

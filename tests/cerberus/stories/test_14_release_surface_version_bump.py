@@ -527,7 +527,15 @@ def test_14_8_5_checks_registry_artifacts_when_fingerprint_selection_changes(
 
 @pytest.mark.parametrize(
     "change",
-    ["devDependencies", "dependencies", "peerDependencies", "optionalDependencies", "peerDependenciesMeta", "output"],
+    [
+        "devDependencies",
+        "dependencies",
+        "peerDependencies",
+        "optionalDependencies",
+        "peerDependenciesMeta",
+        "output",
+        "conditions",
+    ],
 )
 def test_14_7_8_ignores_development_metadata_but_requires_bumps_for_consumer_changes(
     release: ReleaseFixture,
@@ -535,6 +543,8 @@ def test_14_7_8_ignores_development_metadata_but_requires_bumps_for_consumer_cha
 ) -> None:
     manifest = json.loads(release.read("packages/util/package.json"))
     manifest.update({"devDependencies": {"builder": "1.0.0"}, "dependencies": {"runtime": "1.0.0"}})
+    if change == "conditions":
+        manifest["exports"] = {"node": "./node.cjs", "default": "./fallback.cjs"}
     release.write_json("packages/util/package.json", manifest)
     release.run("prepare")
     baseline = release.read("airlock_targets.toml")
@@ -544,6 +554,8 @@ def test_14_7_8_ignores_development_metadata_but_requires_bumps_for_consumer_cha
     elif change == "output":
         manifest["devDependencies"]["builder"] = "2.0.0"
         release.write("packages/util/index.js", "changed generated output\n")
+    elif change == "conditions":
+        manifest["exports"] = {"default": "./fallback.cjs", "node": "./node.cjs"}
     else:
         manifest.setdefault(change, {})["runtime"] = "2.0.0"
     release.write_json("packages/util/package.json", manifest)

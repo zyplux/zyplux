@@ -2,7 +2,7 @@
   "format": 2,
   "tags": ["action-airlock-v2.2.2", "airlock-v2.2.2", "cerberus-v0.27.5"],
   "intents": {
-    ".changeset/npm-bump-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore npm development dependencies and JSON formatting in release fingerprints while preserving runtime metadata and built-output checks.\n",
+    ".changeset/npm-bump-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n",
     ".changeset/npm-development-bumps.md": "---\n\"zyplux-cerberus\": patch\n---\n\nAvoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n"
   },
   "files": {
@@ -23,7 +23,7 @@
     "apps/airlock/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 2.2.2": "## 2.2.2\n\n### Patch Changes\n\n- Ignore npm development dependencies and JSON formatting in release fingerprints while preserving runtime metadata and built-output checks.\n\n"
+        "## 2.2.2": "## 2.2.2\n\n### Patch Changes\n\n- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n\n"
       },
       "created": false
     },

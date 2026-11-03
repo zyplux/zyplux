@@ -81,7 +81,7 @@ def normalize_metadata(
     if path == "package.json" and exclude_dev_dependencies:
         manifest = VERSION_OBJECT.validate_json(contents)
         manifest.pop("devDependencies", None)
-        return json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+        return json.dumps(manifest, separators=(",", ":")).encode()
     if exclude_readme and (path.endswith(".dist-info/METADATA") or PurePosixPath(path).name == "PKG-INFO"):
         metadata = BytesParser().parsebytes(contents)
         del metadata["Description"]
