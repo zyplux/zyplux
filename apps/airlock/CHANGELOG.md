@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Prepare npm bump fingerprints that ignore development dependencies while preserving archive validation and runtime metadata checks.
+- Ignore npm development dependencies and JSON formatting in release fingerprints while preserving runtime metadata and built-output checks.
 
 ## 2.2.1
 

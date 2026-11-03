@@ -96,10 +96,6 @@
 
 ### 14.7.8 ignores development metadata but requires bumps for consumer changes
 
-### 14.7.9 establishes npm comparison baselines without forcing migration releases
-
-### 14.7.10 requires the comparison fingerprint after its published baseline exists
-
 ## 14.8 preserving partially published versions
 
 ### 14.8.1 preserves target branch fingerprints after any registry artifact is uploaded

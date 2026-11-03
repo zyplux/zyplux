@@ -91,11 +91,12 @@ def normalize_metadata(
     return contents
 
 
-def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, for_bump: bool = False) -> str:
+def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy_npm: bool = False) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
     exclude_readme = has_excluded_readme(target)
+    is_npm_v2 = target.spec.kind == "npm" and not is_legacy_npm
     entries = [
         (
             archive.suffix,
@@ -106,7 +107,7 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, for_bump: 
                     path,
                     contents,
                     exclude_readme=exclude_readme,
-                    exclude_dev_dependencies=for_bump and target.spec.kind == "npm",
+                    exclude_dev_dependencies=is_npm_v2,
                 )
             ).hexdigest(),
         )
@@ -117,7 +118,8 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, for_bump: 
     if any(path == "airlock_targets.toml" for _, path, _, _ in entries):
         msg = "package archives must exclude airlock_targets.toml to avoid a self-referential fingerprint"
         raise ValueError(msg)
-    return calc_entries_hash(entries)
+    fingerprint = calc_entries_hash(entries)
+    return fingerprint.replace("sha256:", "sha256:v2:", 1) if is_npm_v2 else fingerprint
 
 
 def calc_entries_hash(entries: list[tuple[str, str, bool, str]]) -> str:
@@ -225,7 +227,11 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
     if isinstance(target.spec, PackageSpec) and archives is None:
         with TemporaryDirectory(prefix="airlock-validate-") as directory:
             return validate_contents(target, build_archives(target, Path(directory)))
-    fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives, target)
+    fingerprint = (
+        calc_source_hash(target)
+        if archives is None
+        else calc_content_hash(archives, target, is_legacy_npm=not target.spec.hash.startswith("sha256:v2:"))
+    )
     if fingerprint != target.spec.hash:
         msg = f"{target.package_name}: release contents differ from hash; run airlock prepare"
         if target.spec.kind == "ghcr":
@@ -240,31 +246,19 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
         raise ValueError(msg)
     if archives is None:
         return []
-    validate_bump_hash(target, archives)
     dependencies = load_dependencies(target, archives)
     validate_prepared_dependencies(target, dependencies)
     validate_dependency_cycles(target, dependencies)
     return dependencies
 
 
-def validate_bump_hash(target: ReleaseTarget, archives: list[Path]) -> None:
-    spec = target.spec
-    if not isinstance(spec, PackageSpec) or spec.kind != "npm" or spec.bump_hash is None:
-        return
-    if calc_content_hash(archives, target, for_bump=True) != spec.bump_hash:
-        msg = f"{target.package_name}: release contents differ from bump_hash; run airlock prepare"
-        raise ValueError(msg)
-
-
-def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None, str | None]:
+def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None]:
     if not isinstance(target.spec, PackageSpec):
-        return calc_source_hash(target), None, None
+        return calc_source_hash(target), None
     with TemporaryDirectory(prefix="airlock-prepare-") as directory:
         archives = build_archives(target, Path(directory))
-        return (
-            calc_content_hash(archives, target),
-            sorted(dependency.spec.name for dependency in load_dependencies(target, archives)),
-            calc_content_hash(archives, target, for_bump=True) if target.spec.kind == "npm" else None,
+        return calc_content_hash(archives, target), sorted(
+            dependency.spec.name for dependency in load_dependencies(target, archives)
         )
 
 
@@ -277,10 +271,8 @@ def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     manifest = tomlkit.parse(path.read_text(encoding="utf-8"))
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
-            fingerprint, dependencies, bump_hash = hashes[name]
+            fingerprint, dependencies = hashes[name]
             declaration["hash"] = fingerprint
-            if bump_hash is not None:
-                declaration["bump_hash"] = bump_hash
             if dependencies:
                 declaration["depends_on"] = dependencies
             else:

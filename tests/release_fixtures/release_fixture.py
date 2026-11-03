@@ -160,7 +160,7 @@ class ReleaseFixture(CliFixture):
         for declaration in fields.splitlines():
             key = declaration.split("=", 1)[0].strip()
             if key == "kind" and declaration in {'kind = "action"', 'kind = "ghcr"'}:
-                lines = [line for line in lines if not line.startswith(("depends_on =", "bump_hash ="))]
+                lines = [line for line in lines if not line.startswith("depends_on =")]
             found = next((index for index, line in enumerate(lines) if line.lstrip().startswith(f"{key} =")), None)
             if found is None:
                 lines.append(declaration)

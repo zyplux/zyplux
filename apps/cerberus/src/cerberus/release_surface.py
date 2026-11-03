@@ -56,19 +56,20 @@ def load_specs_at_ref(repo: Repo, ctx: Context, ref: str) -> list[TargetSpec]:
     ]
 
 
-def get_bump_hash(target: TargetSpec) -> str | None:
-    return target.bump_hash if isinstance(target, PackageSpec) and target.kind == "npm" else target.hash
-
-
 def has_content_changes(repo: Repo, ctx: Context, target: TargetSpec, tag: str) -> bool:
     previous = next(
         (spec for spec in load_specs_at_ref(repo, ctx, tag) if spec.tag_prefix == target.tag_prefix),
         None,
     )
-    if previous is None or previous.kind != target.kind or previous.includes != target.includes:
-        return False
-    previous_hash, current_hash = get_bump_hash(previous), get_bump_hash(target)
-    return previous_hash is not None and previous_hash != current_hash
+    return (
+        previous is not None
+        and previous.kind == target.kind
+        and previous.includes == target.includes
+        and previous.hash is not None
+        and target.hash is not None
+        and previous.hash.rpartition(":")[0] == target.hash.rpartition(":")[0]
+        and previous.hash != target.hash
+    )
 
 
 def validate_published(

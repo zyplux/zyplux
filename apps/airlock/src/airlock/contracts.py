@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 type ReleaseKind = Literal["npm", "pypi", "ghcr", "action"]
 type Nonempty = Annotated[str, Field(min_length=1)]
 type Digest = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
-type ContentHash = Annotated[str, Field(pattern=r"^sha256:[\da-f]{64}$")]
+type ContentHash = Annotated[str, Field(pattern=r"^sha256:(?:v2:)?[\da-f]{64}$")]
 
 
 class TargetBase(BaseModel):
@@ -30,7 +30,6 @@ class TargetBase(BaseModel):
 
 class PackageSpec(TargetBase):
     kind: Literal["npm", "pypi"]
-    bump_hash: ContentHash | None = None
     package_name: Nonempty | None = None
     depends_on: list[Nonempty] = Field(default_factory=list)
 
