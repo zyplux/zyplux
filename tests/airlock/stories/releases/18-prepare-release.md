@@ -67,3 +67,5 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.2.18 removes the record when no pending metadata work remains
 
 ### 18.2.19 rewinds only prepared dependency fields and rejects conflicting ranges
+
+### 18.2.20 prepares first releases with missing empty or title only changelogs

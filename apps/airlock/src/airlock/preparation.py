@@ -6,6 +6,7 @@ import stat
 import tomllib
 from collections.abc import MutableMapping
 from contextlib import contextmanager
+from itertools import pairwise
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -120,7 +121,7 @@ def parse_changelog(text: str) -> dict[str, object]:
     sections: dict[str, object] = {}
     if lines[: headings[0] if headings else len(lines)]:
         sections[""] = "".join(lines[: headings[0] if headings else len(lines)])
-    for start, end in zip(headings, [*headings[1:], len(lines)], strict=True):
+    for start, end in pairwise([*headings, len(lines)]):
         heading = lines[start].strip()
         if heading in sections:
             msg = f"{heading}: duplicate changelog section"

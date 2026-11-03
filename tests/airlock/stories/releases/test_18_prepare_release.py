@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 import yaml
-from airlock.preparation import FileSnapshot, build_preparation, merge_metadata
 from archive_fixture import stage_git
 from cli_fixture import Command, Reply, Response
 from release_fixture import build_release
@@ -511,31 +510,63 @@ def test_18_2_18_removes_the_record_when_no_pending_metadata_work_remains(
     assert not (release.root / ".changeset/preparation.json").exists()
 
 
-def test_18_2_19_rewinds_only_prepared_dependency_fields_and_rejects_conflicting_ranges() -> None:
-    before = {"dependencies": {"changed": "1.0.0", "removed": "1.0.0"}, "description": "Baseline description"}
-    after = {
-        "dependencies": {"changed": "1.1.0", "added": "1.0.0"},
-        "peerDependencies": {"new-peer": "^1"},
-        "description": "Baseline description",
+def test_18_2_19_rewinds_only_prepared_dependency_fields_and_rejects_conflicting_ranges(
+    release: ReleaseFixture,
+) -> None:
+    manifest = {
+        "name": "@zyplux/util",
+        "version": "1.2.3",
+        "dependencies": {"changed": "1.0.0", "removed": "1.0.0"},
     }
-    saved = build_preparation([], {"package.json": FileSnapshot(before=json.dumps(before), after=json.dumps(after))})
-    current = {
-        **after,
-        "description": "User description",
-        "dependencies": {**after["dependencies"], "user-dep": "2.0.0"},
-        "peerDependencies": {**after["peerDependencies"], "user-peer": "^2"},
-    }
-    restored = merge_metadata(json.dumps(current), saved.files["package.json"], "package.json")
-    assert restored is not None
-    assert json.loads(restored) == {
-        **before,
-        "description": "User description",
-        "dependencies": {**before["dependencies"], "user-dep": "2.0.0"},
-        "peerDependencies": {"user-peer": "^2"},
-    }
+    release.write_json("packages/util/package.json", manifest)
+    changelog = release.read("packages/util/CHANGELOG.md")
+
+    def version(_: Command) -> Reply:
+        current = json.loads(release.read("packages/util/package.json"))
+        assert current["version"] == "1.2.3"
+        assert current["dependencies"]["changed"] == "1.0.0"
+        assert current["dependencies"].pop("removed") == "1.0.0"
+        current["version"] = "1.2.4"
+        current["dependencies"].update(changed="1.1.0", added="1.0.0")
+        current.setdefault("peerDependencies", {})["new-peer"] = "^1"
+        release.write_json("packages/util/package.json", current)
+        release.write(
+            "packages/util/CHANGELOG.md",
+            changelog.replace("# Releases\n\n", "# Releases\n\n## 1.2.4\n\n- Dependency changes.\n\n", 1),
+        )
+        return Reply()
+
+    release.on("pnpm version", version)
+    release.run("prepare")
+    current = json.loads(release.read("packages/util/package.json"))
+    current["description"] = "User description"
+    current["dependencies"]["user-dep"] = "2.0.0"
+    current["peerDependencies"]["user-peer"] = "^2"
+    release.write_json("packages/util/package.json", current)
+    release.run("prepare")
+    assert json.loads(release.read("packages/util/package.json")) == current
     current["dependencies"]["changed"] = "1.2.0"
-    with pytest.raises(ValueError, match="edits overlap prepared metadata"):
-        merge_metadata(json.dumps(current), saved.files["package.json"], "package.json")
+    release.write_json("packages/util/package.json", current)
+    before = capture_metadata(release)
+    release.run("prepare", error="edits overlap prepared metadata")
+    assert capture_metadata(release) == before
+
+
+@pytest.mark.parametrize("changelog", [None, "", "# Releases\n"])
+def test_18_2_20_prepares_first_releases_with_missing_empty_or_title_only_changelogs(
+    release: ReleaseFixture,
+    changelog: str | None,
+) -> None:
+    release.prepare_workspace()
+    if changelog is None:
+        (release.root / "packages/util/CHANGELOG.md").unlink()
+    else:
+        release.write("packages/util/CHANGELOG.md", changelog)
+    release.run("prepare")
+    assert "## 1.3.0\n" in release.read("packages/util/CHANGELOG.md")
+    prepared = capture_metadata(release)
+    release.run("prepare")
+    assert capture_metadata(release) == prepared
 
 
 def capture_metadata(release: ReleaseFixture) -> dict[str, bytes]:
