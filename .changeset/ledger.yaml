@@ -136,6 +136,10 @@ zyplux-clipy@0.1.1:
   dir: apps/clipy
   intents:
     - neat-waves-jam
+zyplux-clipy@0.1.2:
+  dir: apps/clipy
+  intents:
+    - stats-summary
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

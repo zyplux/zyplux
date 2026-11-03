@@ -49,5 +49,5 @@ hash = "sha256:v2:5e4e21046de7459e0267e7911b79f330eb5c0e21c0f1be792c697ce3eff02e
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:v2:75cd5c37c2ff06816ee0e6fc25bff420eb72fe8ee3acc98c2246a5d6ed628687"
+hash = "sha256:v2:795e150e89fc26e9d0a9413646a44641de84fe9a02d6a70202899d5d6553a075"
 depends_on = ["airlock", "cerberus"]
