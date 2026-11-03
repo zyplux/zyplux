@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.4
+
+### Patch Changes
+
+- Refresh runtime dependency requirements to the updated workspace versions.
+
 ## 0.27.3
 
 ### Patch Changes

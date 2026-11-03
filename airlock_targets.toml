@@ -2,7 +2,7 @@
 
 [airlock]
 manifest = "apps/airlock/pyproject.toml"
-hash = "sha256:fd79cf0e32713e8e4745678a1753e868cf4a5363d3dca9b12793e49e0ac5dd4c"
+hash = "sha256:2559a98f76d9fdb230ae9e5efc88dc5cd8a551c3163e8c132ce69a560e85413f"
 
 [action-airlock]
 kind = "action"
@@ -40,7 +40,7 @@ depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:3dfe24d4be858d7a34b418e7381f6842c73cfc8521fd8fcf9d9cdcd0c8da2bda"
+hash = "sha256:33ffd9bd69f0794829d3436e27577c65fda3236516365ff5070a1c9a30a4a0e9"
 depends_on = ["airlock"]
 
 [totchef]

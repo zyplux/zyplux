@@ -1,136 +1,141 @@
 '@zyplux/airlock@1.0.0':
   dir: apps/airlock
   intents:
-  - native-releases
-  - shared-release-action
+    - native-releases
+    - shared-release-action
 '@zyplux/airlock@1.1.0':
   dir: apps/airlock
   intents:
-  - container-releases
-  - dependency-publications
-  - independent-publications
+    - container-releases
+    - dependency-publications
+    - independent-publications
 '@zyplux/airlock@1.1.1':
   dir: apps/airlock
   intents:
-  - mighty-rocks-dream
+    - mighty-rocks-dream
 '@zyplux/cz@0.15.0':
   dir: apps/cz
   intents:
-  - shared-release-commands
+    - shared-release-commands
 '@zyplux/cz@0.16.0':
   dir: apps/cz
   intents:
-  - gentle-owls-report
+    - gentle-owls-report
 '@zyplux/cz@0.16.1':
   dir: apps/cz
   intents:
-  - purple-insects-deliver
+    - purple-insects-deliver
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
-  - funny-cows-retire
+    - funny-cows-retire
 '@zyplux/eslint-config@0.12.3':
   dir: packages/eslint-config
   intents:
-  - eslint-typescript-patch
+    - eslint-typescript-patch
 '@zyplux/eslint-config@0.12.4':
   dir: packages/eslint-config
   intents:
-  - purple-insects-deliver
+    - purple-insects-deliver
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
-  - repository-fixtures
+    - repository-fixtures
 '@zyplux/spectra@0.4.1':
   dir: packages/spectra
   intents:
-  - purple-insects-deliver
+    - purple-insects-deliver
 '@zyplux/util@0.9.4':
   dir: packages/util-ts
   intents:
-  - purple-insects-deliver
+    - purple-insects-deliver
 totchef@0.0.10:
   dir: apps/totchef
   intents:
-  - neat-waves-jam
+    - neat-waves-jam
 zyplux-airlock@2.0.0:
   dir: apps/airlock
   intents:
-  - airlock-python
+    - airlock-python
 zyplux-airlock@2.1.0:
   dir: apps/airlock
   intents:
-  - little-horses-cross
+    - little-horses-cross
 zyplux-airlock@2.1.1:
   dir: apps/airlock
   intents:
-  - big-wombats-compete
+    - big-wombats-compete
 zyplux-airlock@2.2.0:
   dir: apps/airlock
   intents:
-  - action-runtime-fingerprints
-  - plain-target-dependencies
-  - smooth-hawks-return
-  - tiny-ants-chew
+    - action-runtime-fingerprints
+    - plain-target-dependencies
+    - smooth-hawks-return
+    - tiny-ants-chew
 zyplux-airlock@2.2.1:
   dir: apps/airlock
   intents:
-  - neat-waves-jam
+    - compact-preparation-records
+    - neat-waves-jam
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
-  - quarantine-eligible-tools
+    - quarantine-eligible-tools
 zyplux-cerberus@0.25.2:
   dir: apps/cerberus
   intents:
-  - mighty-rocks-dream
+    - mighty-rocks-dream
 zyplux-cerberus@0.26.0:
   dir: apps/cerberus
   intents:
-  - cerberus-fallow
-  - cerberus-python-airlock
+    - cerberus-fallow
+    - cerberus-python-airlock
 zyplux-cerberus@0.26.1:
   dir: apps/cerberus
   intents:
-  - fair-trains-obey
+    - fair-trains-obey
 zyplux-cerberus@0.27.0:
   dir: apps/cerberus
   intents:
-  - cached-release-tools
-  - loud-rabbits-enjoy
-  - plain-target-dependencies
-  - schema-validation
+    - cached-release-tools
+    - loud-rabbits-enjoy
+    - plain-target-dependencies
+    - schema-validation
 zyplux-cerberus@0.27.1:
   dir: apps/cerberus
   intents:
-  - proud-boxes-cough
+    - proud-boxes-cough
 zyplux-cerberus@0.27.2:
   dir: apps/cerberus
   intents:
-  - wicked-dragons-enjoy
-  - wise-moles-greet
+    - wicked-dragons-enjoy
+    - wise-moles-greet
 zyplux-cerberus@0.27.3:
   dir: apps/cerberus
   intents:
-  - fallow-patch
-  - worker-build-imports
+    - fallow-patch
+    - worker-build-imports
+zyplux-cerberus@0.27.4:
+  dir: apps/cerberus
+  intents:
+    - cerberus-runtime-dependencies
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
-  - bright-foxes-measure
+    - bright-foxes-measure
 zyplux-clipy@0.1.1:
   dir: apps/clipy
   intents:
-  - neat-waves-jam
+    - neat-waves-jam
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:
-  - native-action-notes
+    - native-action-notes
 zyplux-setup-pm@1.0.2:
   dir: apps/action-setup-pm
   intents:
-  - release-cache-guidance
+    - release-cache-guidance
 zyplux-setup-pm@1.1.0:
   dir: apps/action-setup-pm
   intents:
-  - cached-release-tools
+    - cached-release-tools

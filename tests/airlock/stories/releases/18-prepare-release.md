@@ -55,3 +55,15 @@ Preparation consumes each fragment once. A repeated preparation without new frag
 ### 18.2.12 preserves preparation inputs when authentication bootstrap fails
 
 ### 18.2.13 replays preparation after ledger formatting
+
+### 18.2.14 keeps the record independent of published history and unchanged manifest fields
+
+### 18.2.15 preserves unrelated python fields comments and historical notes
+
+### 18.2.16 rejects overlapping fields entries and consumed intent names
+
+### 18.2.17 converts full snapshot records without losing pending intents
+
+### 18.2.18 removes the record when no pending metadata work remains
+
+### 18.2.19 rewinds only prepared dependency fields and rejects conflicting ranges
