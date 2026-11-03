@@ -32,11 +32,12 @@ def _is_type_edge(node: Node) -> bool:
     return False
 
 
-def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]], list[int]]:
+def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]], list[str]]:
     refs = []
-    computed = []
+    gaps = []
     for node in walk_nodes(parse_typescript(path, content).root_node):
         source = None
+        is_require = False
         if _is_type_edge(node):
             continue
         if node.type in {"import_statement", "export_statement"}:
@@ -46,15 +47,36 @@ def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]],
             if bindings and all(any(child.type == "type" for child in binding.children) for binding in bindings):
                 continue
             source = node.child_by_field_name("source")
-        elif node.type == "call_expression" and node_text(node.child_by_field_name("function") or node) == "import":
+        elif node.type == "call_expression" and node_text(node.child_by_field_name("function") or node) in {
+            "import",
+            "require",
+        }:
+            is_require = node_text(node.child_by_field_name("function") or node) == "require"
             arguments = node.child_by_field_name("arguments")
             source = arguments.named_children[0] if arguments is not None and arguments.named_children else None
             if string_literal(source) is None:
-                computed.append(node.start_point.row + 1)
+                gaps.append(
+                    f"{path}:{node.start_point.row + 1}: computed runtime dependency cannot be resolved statically"
+                )
         specifier = string_literal(source)
         if specifier is not None:
+            can_trace_require = specifier.startswith(".") and PurePosixPath(specifier).suffix in {
+                ".js",
+                ".mjs",
+                ".wasm",
+            }
+            if (
+                is_require
+                and not specifier.startswith("node:")
+                and specifier not in _FILESYSTEM
+                and not can_trace_require
+            ):
+                gaps.append(
+                    f"{path}:{node.start_point.row + 1}: CommonJS dependency {specifier} requires bundle validation"
+                )
+                continue
             refs.append((specifier, node.start_point.row + 1))
-    return refs, computed
+    return refs, gaps
 
 
 def _resolve_paths(path: str, specifier: str, repo: Repo, ctx: Context, gaps: set[str]) -> str | None:
@@ -74,6 +96,16 @@ def _resolve_paths(path: str, specifier: str, repo: Repo, ctx: Context, gaps: se
                 if found is not None:
                     return found
         break
+    return None
+
+
+def _resolve_artifact(path: str, specifier: str, ctx: Context) -> str | None:
+    if not specifier.startswith("."):
+        return None
+    root = ctx.source.root.resolve()
+    target = (root / PurePosixPath(path).parent / specifier).resolve()
+    if target.suffix in {".js", ".mjs", ".wasm"} and target.is_relative_to(root) and target.is_file():
+        return target.relative_to(root).as_posix()
     return None
 
 
@@ -114,17 +146,24 @@ def _trace_runtime(repo: Repo, ctx: Context, res: CheckResult, entries: list[str
         if path in visited:
             continue
         visited.add(path)
+        if path.endswith(".wasm"):
+            gaps.add(f"{path}: compiled WebAssembly requires bundle validation")
+            continue
         content = ctx.file(repo, path)
         if content is None:
             res.error(f"cannot read Worker runtime module {path}")
             continue
-        refs, computed = _runtime_specifiers(path, content)
-        gaps.update(f"{path}:{line}: computed dynamic import cannot be resolved statically" for line in computed)
+        refs, limits = _runtime_specifiers(path, content)
+        gaps.update(limits)
         for specifier, line in refs:
             if specifier in _FILESYSTEM:
                 res.fail(f"{path}:{line}: Worker runtime reaches {specifier}")
                 continue
-            target = resolve(path, specifier, paths, packages) or _resolve_paths(path, specifier, repo, ctx, gaps)
+            target = (
+                _resolve_artifact(path, specifier, ctx)
+                or resolve(path, specifier, paths, packages)
+                or _resolve_paths(path, specifier, repo, ctx, gaps)
+            )
             if target is not None:
                 pending.append(target)
             elif specifier.startswith((".", "#", "@/")) or any(

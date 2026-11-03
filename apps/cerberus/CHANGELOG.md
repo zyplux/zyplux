@@ -4,7 +4,9 @@
 
 ### Patch Changes
 
-- Run Fallow 3.38.1 for source and coverage analysis.
+- Run Fallow 3.38.1 for dependency and maintainability analysis.
+
+- Trace generated JavaScript in Worker filesystem checks and report compiled WebAssembly as a bundle-validation boundary.
 
 ## 0.27.2
 
