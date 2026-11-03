@@ -1,5 +1,13 @@
 # zyplux-airlock
 
+## 2.2.1
+
+### Patch Changes
+
+- Keep preparation records scoped to pending release edits, preserving unrelated metadata and published history during replay.
+
+- Refresh runtime dependency requirements to the updated workspace versions.
+
 ## 2.2.0
 
 ### Minor Changes

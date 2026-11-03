@@ -1,5 +1,14 @@
 # @zyplux/eslint-config
 
+## 0.12.4
+
+### Patch Changes
+
+- Refresh packaged dependency metadata for the updated workspace toolchain.
+
+- Updated dependencies:
+  - @zyplux/util@0.9.4
+
 ## 0.12.3
 
 ### Patch Changes

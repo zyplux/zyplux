@@ -21,6 +21,10 @@
   dir: apps/cz
   intents:
     - gentle-owls-report
+'@zyplux/cz@0.16.1':
+  dir: apps/cz
+  intents:
+    - purple-insects-deliver
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
@@ -29,10 +33,26 @@
   dir: packages/eslint-config
   intents:
     - eslint-typescript-patch
+'@zyplux/eslint-config@0.12.4':
+  dir: packages/eslint-config
+  intents:
+    - purple-insects-deliver
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
     - repository-fixtures
+'@zyplux/spectra@0.4.1':
+  dir: packages/spectra
+  intents:
+    - purple-insects-deliver
+'@zyplux/util@0.9.4':
+  dir: packages/util-ts
+  intents:
+    - purple-insects-deliver
+totchef@0.0.10:
+  dir: apps/totchef
+  intents:
+    - neat-waves-jam
 zyplux-airlock@2.0.0:
   dir: apps/airlock
   intents:
@@ -52,6 +72,11 @@ zyplux-airlock@2.2.0:
     - plain-target-dependencies
     - smooth-hawks-return
     - tiny-ants-chew
+zyplux-airlock@2.2.1:
+  dir: apps/airlock
+  intents:
+    - compact-preparation-records
+    - neat-waves-jam
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -90,10 +115,18 @@ zyplux-cerberus@0.27.3:
   intents:
     - fallow-patch
     - worker-build-imports
+zyplux-cerberus@0.27.4:
+  dir: apps/cerberus
+  intents:
+    - cerberus-runtime-dependencies
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
     - bright-foxes-measure
+zyplux-clipy@0.1.1:
+  dir: apps/clipy
+  intents:
+    - neat-waves-jam
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import json
+import re
 import stat
+import tomllib
+from collections.abc import MutableMapping
 from contextlib import contextmanager
+from itertools import pairwise
 from pathlib import Path
-from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+import tomlkit
 import yaml
-from pydantic import BaseModel
+from markdown_it import MarkdownIt
+from pydantic import BaseModel, Field
 
 from airlock import github, proc
 from airlock.contracts import VERSION_OBJECT, PackageIdentity
@@ -20,19 +25,33 @@ if TYPE_CHECKING:
 
     from airlock.contracts import ReleaseTarget
 
+PREPARATION_FORMAT = 2
 PREPARATION_FILE = ".changeset/preparation.json"
 REGENERATED_FILES = {PREPARATION_FILE, "airlock_targets.toml", "pnpm-lock.yaml", "pnpm-workspace.yaml", "uv.lock"}
 type MetadataSnapshot = dict[Path, tuple[bytes, int] | None]
 
 
 class MetadataEdit(BaseModel):
+    before: dict[str, object]
+    after: dict[str, object]
+    created: bool = False
+
+
+class PreparedRelease(BaseModel):
+    format: int = PREPARATION_FORMAT
+    tags: list[str]
+    intents: dict[str, str] = Field(default_factory=dict)
+    files: dict[str, MetadataEdit] = Field(default_factory=dict)
+
+
+class FileSnapshot(BaseModel):
     before: str | None
     after: str | None
 
 
-class PreparedRelease(BaseModel):
+class LegacyPreparation(BaseModel):
     tags: list[str]
-    files: dict[str, MetadataEdit]
+    files: dict[str, FileSnapshot]
 
 
 def list_metadata(root: Path, targets: list[ReleaseTarget]) -> set[Path]:
@@ -92,62 +111,135 @@ def validate_legacy_preparation(root: Path, targets: list[ReleaseTarget]) -> Non
             raise ValueError(msg)
 
 
-def rewind_json(current: dict[str, object], before: dict[str, object], after: dict[str, object]) -> dict[str, object]:
+def parse_changelog(text: str) -> dict[str, object]:
+    lines = text.splitlines(keepends=True)
+    headings = [
+        token.map[0]
+        for token in MarkdownIt().parse(text)
+        if token.type == "heading_open" and token.tag == "h2" and token.level == 0 and token.map
+    ]
+    sections: dict[str, object] = {}
+    if lines[: headings[0] if headings else len(lines)]:
+        sections[""] = "".join(lines[: headings[0] if headings else len(lines)])
+    for start, end in pairwise([*headings, len(lines)]):
+        heading = lines[start].strip()
+        if heading in sections:
+            msg = f"{heading}: duplicate changelog section"
+            raise ValueError(msg)
+        sections[heading] = "".join(lines[start:end])
+    return sections
+
+
+def parse_metadata(text: str | None, relative: str) -> dict[str, object]:
+    if text is None:
+        return {}
+    if relative.endswith(".json"):
+        return VERSION_OBJECT.validate_json(text)
+    if relative.endswith(".toml"):
+        return tomllib.loads(text)
+    if relative == ".changeset/ledger.yaml":
+        return VERSION_OBJECT.validate_python(yaml.safe_load(text) or {})
+    if relative.endswith("/CHANGELOG.md") or relative == "CHANGELOG.md":
+        return parse_changelog(text)
+    msg = f"{relative}: unsupported prepared metadata"
+    raise ValueError(msg)
+
+
+def select_edits(before: dict[str, object], after: dict[str, object]) -> MetadataEdit:
+    previous: dict[str, object] = {}
+    prepared: dict[str, object] = {}
+    for key in sorted(before.keys() | after.keys()):
+        if key in before and key in after and before[key] == after[key]:
+            continue
+        if isinstance(before.get(key), dict) and isinstance(after.get(key), dict):
+            nested = select_edits(
+                VERSION_OBJECT.validate_python(before[key]), VERSION_OBJECT.validate_python(after[key])
+            )
+            previous[key], prepared[key] = nested.before, nested.after
+        else:
+            if key in before:
+                previous[key] = before[key]
+            if key in after:
+                prepared[key] = after[key]
+    return MetadataEdit(before=previous, after=prepared)
+
+
+def build_preparation(tags: list[str], files: dict[str, FileSnapshot]) -> PreparedRelease:
+    saved = PreparedRelease(tags=tags)
+    for relative, edit in sorted(files.items()):
+        if (
+            relative.startswith(".changeset/")
+            and relative.endswith(".md")
+            and edit.before is not None
+            and edit.after is None
+        ):
+            saved.intents[relative] = edit.before
+            continue
+        selected = select_edits(parse_metadata(edit.before, relative), parse_metadata(edit.after, relative))
+        if selected.before or selected.after:
+            selected.created = edit.before is None
+            saved.files[relative] = selected
+    return saved
+
+
+def load_preparation(path: Path) -> PreparedRelease:
+    record = VERSION_OBJECT.validate_json(path.read_bytes())
+    if "format" not in record:
+        legacy = LegacyPreparation.model_validate(record)
+        return build_preparation(legacy.tags, legacy.files)
+    if record["format"] != PREPARATION_FORMAT:
+        msg = f"{path}: unsupported preparation format {record['format']}"
+        raise ValueError(msg)
+    return PreparedRelease.model_validate(record)
+
+
+def rewind_fields(current: MutableMapping[str, object], before: dict[str, object], after: dict[str, object]) -> None:
     missing = object()
     for key in before.keys() | after.keys():
         previous, prepared, observed = before.get(key, missing), after.get(key, missing), current.get(key, missing)
-        if previous == prepared:
-            continue
-        if observed == prepared:
+        if (
+            isinstance(prepared, dict)
+            and (isinstance(previous, dict) or previous is missing)
+            and isinstance(observed, MutableMapping)
+        ):
+            rewind_fields(
+                observed, VERSION_OBJECT.validate_python(previous) if previous is not missing else {}, prepared
+            )
+            if previous is missing and not observed:
+                del current[key]
+        elif observed == prepared:
             if previous is missing:
                 current.pop(key, None)
             else:
                 current[key] = previous
-        elif all(isinstance(item, dict) for item in (observed, previous, prepared)):
-            current[key] = rewind_json(
-                VERSION_OBJECT.validate_python(observed),
-                VERSION_OBJECT.validate_python(previous),
-                VERSION_OBJECT.validate_python(prepared),
-            )
         else:
             msg = f"{key}: edits overlap prepared metadata"
             raise ValueError(msg)
-    return current
 
 
 def merge_metadata(current: str | None, edit: MetadataEdit, relative: str) -> str | None:
-    if current in {edit.after, edit.before}:
-        return edit.before
-    if (
-        relative == ".changeset/ledger.yaml"
-        and current is not None
-        and edit.after is not None
-        and yaml.safe_load(current) == yaml.safe_load(edit.after)
-    ):
-        return edit.before
-    if current is None or edit.before is None or edit.after is None:
-        msg = f"{relative}: prepared metadata was edited; move release-note edits into a new pnpm change intent"
+    if current is None:
+        msg = f"{relative}: prepared metadata is missing"
         raise ValueError(msg)
+    if relative.endswith(".toml"):
+        document = tomlkit.parse(current)
+        rewind_fields(cast("MutableMapping[str, object]", document), edit.before, edit.after)
+        return None if edit.created and not document else tomlkit.dumps(document)
+    fields = parse_metadata(current, relative)
+    rewind_fields(fields, edit.before, edit.after)
+    if edit.created and not fields:
+        return None
     if relative.endswith(".json"):
-        return (
-            json.dumps(
-                rewind_json(*(VERSION_OBJECT.validate_json(text) for text in (current, edit.before, edit.after))),
-                indent=2,
-            )
-            + "\n"
-        )
-    with TemporaryDirectory(prefix="airlock-merge-") as directory:
-        paths = [Path(directory) / name for name in ("current", "prepared", "baseline")]
-        for path, text in zip(paths, (current, edit.after, edit.before), strict=True):
-            path.write_text(text, encoding="utf-8")
-        try:
-            return proc.run("git", "merge-file", "--stdout", *(str(path) for path in paths)) + "\n"
-        except proc.CommandError as exc:
-            msg = f"{relative}: edits overlap prepared metadata; preserve the edits as change intents before retrying"
-            raise ValueError(msg) from exc
+        indentation = re.search(r'^([ \t]+)"', current, re.MULTILINE)
+        indent = indentation[1] if indentation else None
+        separators = None if indent else ((", ", ": ") if '": ' in current else (",", ":"))
+        return json.dumps(fields, indent=indent, separators=separators) + ("\n" if current.endswith("\n") else "")
+    if relative == ".changeset/ledger.yaml":
+        return yaml.safe_dump(fields, sort_keys=True)
+    return "".join(str(section) for section in fields.values())
 
 
-def rewind_preparation(root: Path, saved: PreparedRelease, targets: list[ReleaseTarget]) -> None:
+def is_preparation_published(root: Path, saved: PreparedRelease, targets: list[ReleaseTarget]) -> bool:
     history = github.fetch_release_history(directory=root)
     tags = {release.tag_name for release in history}
     published = []
@@ -167,30 +259,44 @@ def rewind_preparation(root: Path, saved: PreparedRelease, targets: list[Release
             raise ValueError(msg)
         published.append(has_publication(release, tags, root))
     if published and all(published):
-        return
+        return True
     if any(published):
         msg = "Preparation has partially published releases; finish or retry publication before preparing more changes"
         raise ValueError(msg)
+    return False
+
+
+def rewind_preparation(root: Path, saved: PreparedRelease, targets: list[ReleaseTarget]) -> None:
+    if is_preparation_published(root, saved, targets):
+        (root / PREPARATION_FILE).unlink(missing_ok=True)
+        return
     restored = {}
     for relative, edit in saved.files.items():
         path = resolve_repo_path(root, relative)
         current = path.read_bytes().decode("utf-8") if path.is_file() else None
         restored[path] = merge_metadata(current, edit, relative)
+    for relative, text in saved.intents.items():
+        path = resolve_repo_path(root, relative)
+        if path.exists() and path.read_text(encoding="utf-8") != text:
+            msg = f"{relative}: edits overlap prepared metadata"
+            raise ValueError(msg)
+        restored[path] = text
     for path, text in restored.items():
         if text is None:
             path.unlink(missing_ok=True)
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(text.encode("utf-8"))
+    (root / PREPARATION_FILE).unlink(missing_ok=True)
 
 
 @contextmanager
 def prepare_metadata(root: Path, targets: list[ReleaseTarget]) -> Generator[MetadataSnapshot]:
     path = root / PREPARATION_FILE
-    saved = PreparedRelease.model_validate_json(path.read_bytes()) if path.is_file() else None
+    saved = load_preparation(path) if path.is_file() else None
     paths = list_metadata(root, targets)
     if saved is not None:
-        paths.update(resolve_repo_path(root, relative) for relative in saved.files)
+        paths.update(resolve_repo_path(root, relative) for relative in saved.files.keys() | saved.intents.keys())
     original = snapshot_metadata(paths)
     try:
         if saved is not None:
@@ -215,15 +321,17 @@ def save_preparation(root: Path, baseline: MetadataSnapshot, targets: list[Relea
         before = original[0].decode("utf-8") if original is not None else None
         after = path.read_bytes().decode("utf-8") if path.is_file() else None
         if before != after:
-            files[relative] = MetadataEdit(before=before, after=after)
-    if not files:
-        return
-    tags = sorted(
+            files[relative] = FileSnapshot(before=before, after=after)
+    saved = build_preparation([], files)
+    saved.tags = sorted(
         target.tag
         for target in targets
-        if target.spec.manifest in files or (target.directory / "CHANGELOG.md").relative_to(root).as_posix() in files
+        if target.spec.manifest in saved.files
+        or (target.directory / "CHANGELOG.md").relative_to(root).as_posix() in saved.files
     )
-    saved = PreparedRelease(tags=tags, files=dict(sorted(files.items())))
     path = root / PREPARATION_FILE
+    if not saved.files and not saved.intents:
+        path.unlink(missing_ok=True)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(saved.model_dump_json(indent=2) + "\n", encoding="utf-8")

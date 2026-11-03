@@ -34,3 +34,6 @@ graphify-out
 tmp
 logs
 out/
+# Upstream skills restored from skills-lock.json.
+/.agents/skills/workers-best-practices/
+/.agents/skills/wrangler/

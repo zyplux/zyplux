@@ -394,6 +394,181 @@ def test_18_2_13_replays_preparation_after_ledger_formatting(release: ReleaseFix
     assert changelog.count("Expose reviewed target release notes.") == changelog.count("Additional note.") == 1
 
 
+def test_18_2_14_keeps_the_record_independent_of_published_history_and_unchanged_manifest_fields(
+    release: ReleaseFixture,
+) -> None:
+    release.prepare_workspace()
+    history = "".join(f"\n## 0.0.{idx}\n\n- Historical release {idx}.\n" for idx in range(500))
+    changelog = release.read("packages/util/CHANGELOG.md") + history
+    release.write("packages/util/CHANGELOG.md", changelog)
+    ledger = {f"old-package@0.0.{idx}": {"dir": "old", "intents": [f"historical-{idx}"]} for idx in range(500)}
+    release.write(".changeset/ledger.yaml", yaml.safe_dump(ledger))
+    manifest = json.loads(release.read("packages/util/package.json"))
+    manifest["description"] = "Unchanged manifest prose. " * 2000
+    release.write_json("packages/util/package.json", manifest)
+    release.run("prepare")
+    record = release.read(".changeset/preparation.json")
+    max_record_bytes = 5000
+    assert len(record) < max_record_bytes
+    assert "Historical release" not in record
+    assert "historical-" not in record
+    assert "Unchanged manifest prose" not in record
+    release.write(
+        "packages/util/CHANGELOG.md", release.read("packages/util/CHANGELOG.md") + "\n## 0.0.999\n\n- Older notes.\n"
+    )
+    ledger.update(yaml.safe_load(release.read(".changeset/ledger.yaml")))
+    ledger["another@1.0.0"] = {"dir": "another", "intents": ["unrelated"]}
+    release.write(".changeset/ledger.yaml", yaml.safe_dump(ledger))
+    release.run("prepare")
+    assert release.read(".changeset/preparation.json") == record
+    assert "Older notes." in release.read("packages/util/CHANGELOG.md")
+    assert "another@1.0.0" in release.read(".changeset/ledger.yaml")
+
+
+def test_18_2_15_preserves_unrelated_python_fields_comments_and_historical_notes(release: ReleaseFixture) -> None:
+    release.prepare_workspace()
+    release.run("prepare")
+    release.write(
+        "apps/cerberus/pyproject.toml",
+        release.read("apps/cerberus/pyproject.toml") + "\n# User documentation\n[tool.example]\nenabled = true\n",
+    )
+    release.write(
+        "packages/util/CHANGELOG.md",
+        release.read("packages/util/CHANGELOG.md").replace(
+            "Publish the reviewed utility changes.", "Clarified historical notes."
+        ),
+    )
+    release.write(".changeset/extra.md", '---\n"zyplux-cerberus": patch\n---\n\nAdditional checks.\n')
+    release.run("prepare")
+    assert "# User documentation\n[tool.example]\nenabled = true" in release.read("apps/cerberus/pyproject.toml")
+    assert 'version = "2.3.5"' in release.read("apps/cerberus/pyproject.toml")
+    assert "Clarified historical notes." in release.read("packages/util/CHANGELOG.md")
+    assert "Additional checks." in release.read("apps/cerberus/CHANGELOG.md")
+
+
+@pytest.mark.parametrize("overlap", ["manifest", "ledger", "intent"])
+def test_18_2_16_rejects_overlapping_fields_entries_and_consumed_intent_names(
+    release: ReleaseFixture,
+    overlap: str,
+) -> None:
+    release.prepare_workspace()
+    release.run("prepare")
+    if overlap == "manifest":
+        manifest = json.loads(release.read("packages/util/package.json"))
+        manifest["version"] = "1.3.1"
+        release.write_json("packages/util/package.json", manifest)
+    elif overlap == "ledger":
+        ledger = yaml.safe_load(release.read(".changeset/ledger.yaml"))
+        ledger["@zyplux/util@1.3.0"]["intents"].append("manual-edit")
+        release.write(".changeset/ledger.yaml", yaml.safe_dump(ledger))
+    else:
+        release.write(".changeset/feature.md", '---\n"@zyplux/util": minor\n---\n\nDifferent intent.\n')
+    before = capture_metadata(release)
+    release.run("prepare", error="edits overlap prepared metadata")
+    assert capture_metadata(release) == before
+
+
+def test_18_2_17_converts_full_snapshot_records_without_losing_pending_intents(release: ReleaseFixture) -> None:
+    release.prepare_workspace()
+    before = capture_metadata(release)
+    release.run("prepare")
+    record = json.loads(release.read(".changeset/preparation.json"))
+    names = record["files"].keys() | record["intents"].keys()
+    legacy = {
+        "tags": record["tags"],
+        "files": {
+            name: {
+                "before": before[name].decode() if name in before else None,
+                "after": release.read(name) if (release.root / name).exists() else None,
+            }
+            for name in names
+        },
+    }
+    release.write_json(".changeset/preparation.json", legacy)
+    release.write(".changeset/extra.md", '---\n"@zyplux/util": patch\n---\n\nExtra pending note.\n')
+    release.run("prepare")
+    assert json.loads(release.read("packages/util/package.json"))["version"] == "1.3.0"
+    changelog = release.read("packages/util/CHANGELOG.md")
+    assert changelog.count("Expose reviewed target release notes.") == changelog.count("Extra pending note.") == 1
+    assert ".changeset/feature.md" in json.loads(release.read(".changeset/preparation.json"))["intents"]
+
+
+@pytest.mark.parametrize("record_kind", ["published", "empty"])
+def test_18_2_18_removes_the_record_when_no_pending_metadata_work_remains(
+    release: ReleaseFixture,
+    record_kind: str,
+) -> None:
+    release.prepare_workspace()
+    release.run("prepare")
+    if record_kind == "published":
+        release.action_releases([build_release("util-v1.3.0"), build_release("cerberus-v2.3.5")])
+    else:
+        release.write_json(".changeset/preparation.json", {"format": 2, "tags": []})
+    release.run("prepare")
+    assert not (release.root / ".changeset/preparation.json").exists()
+    release.run("prepare")
+    assert not (release.root / ".changeset/preparation.json").exists()
+
+
+def test_18_2_19_rewinds_only_prepared_dependency_fields_and_rejects_conflicting_ranges(
+    release: ReleaseFixture,
+) -> None:
+    manifest = {
+        "name": "@zyplux/util",
+        "version": "1.2.3",
+        "dependencies": {"changed": "1.0.0", "removed": "1.0.0"},
+    }
+    release.write_json("packages/util/package.json", manifest)
+    changelog = release.read("packages/util/CHANGELOG.md")
+
+    def version(_: Command) -> Reply:
+        current = json.loads(release.read("packages/util/package.json"))
+        assert current["version"] == "1.2.3"
+        assert current["dependencies"]["changed"] == "1.0.0"
+        assert current["dependencies"].pop("removed") == "1.0.0"
+        current["version"] = "1.2.4"
+        current["dependencies"].update(changed="1.1.0", added="1.0.0")
+        current.setdefault("peerDependencies", {})["new-peer"] = "^1"
+        release.write_json("packages/util/package.json", current)
+        release.write(
+            "packages/util/CHANGELOG.md",
+            changelog.replace("# Releases\n\n", "# Releases\n\n## 1.2.4\n\n- Dependency changes.\n\n", 1),
+        )
+        return Reply()
+
+    release.on("pnpm version", version)
+    release.run("prepare")
+    current = json.loads(release.read("packages/util/package.json"))
+    current["description"] = "User description"
+    current["dependencies"]["user-dep"] = "2.0.0"
+    current["peerDependencies"]["user-peer"] = "^2"
+    release.write_json("packages/util/package.json", current)
+    release.run("prepare")
+    assert json.loads(release.read("packages/util/package.json")) == current
+    current["dependencies"]["changed"] = "1.2.0"
+    release.write_json("packages/util/package.json", current)
+    before = capture_metadata(release)
+    release.run("prepare", error="edits overlap prepared metadata")
+    assert capture_metadata(release) == before
+
+
+@pytest.mark.parametrize("changelog", [None, "", "# Releases\n"])
+def test_18_2_20_prepares_first_releases_with_missing_empty_or_title_only_changelogs(
+    release: ReleaseFixture,
+    changelog: str | None,
+) -> None:
+    release.prepare_workspace()
+    if changelog is None:
+        (release.root / "packages/util/CHANGELOG.md").unlink()
+    else:
+        release.write("packages/util/CHANGELOG.md", changelog)
+    release.run("prepare")
+    assert "## 1.3.0\n" in release.read("packages/util/CHANGELOG.md")
+    prepared = capture_metadata(release)
+    release.run("prepare")
+    assert capture_metadata(release) == prepared
+
+
 def capture_metadata(release: ReleaseFixture) -> dict[str, bytes]:
     names = {
         "package.json",

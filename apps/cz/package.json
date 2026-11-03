@@ -1,6 +1,6 @@
 {
   "name": "@zyplux/cz",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "Repository helper CLI: PRs, workspace maintenance, reports and file chunking.",
   "keywords": [
     "cli",
