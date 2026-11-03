@@ -19,7 +19,7 @@ from docker.utils import exclude_paths
 from tomlkit.items import Table
 
 from airlock import proc
-from airlock.contracts import ActionSpec, PackageSpec
+from airlock.contracts import VERSION_OBJECT, ActionSpec, PackageSpec
 from airlock.dependencies import load_dependencies, validate_dependency_cycles, validate_prepared_dependencies
 from airlock.targets import load_targets, parse_stable_version, resolve_container_paths
 
@@ -71,7 +71,17 @@ def has_excluded_readme(target: ReleaseTarget) -> bool:
     return isinstance(filename, str) and not is_included(filename, target.spec.includes)
 
 
-def normalize_metadata(path: str, contents: bytes, *, exclude_readme: bool) -> bytes:
+def normalize_metadata(
+    path: str,
+    contents: bytes,
+    *,
+    exclude_readme: bool,
+    exclude_dev_dependencies: bool = False,
+) -> bytes:
+    if path == "package.json" and exclude_dev_dependencies:
+        manifest = VERSION_OBJECT.validate_json(contents)
+        manifest.pop("devDependencies", None)
+        return json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
     if exclude_readme and (path.endswith(".dist-info/METADATA") or PurePosixPath(path).name == "PKG-INFO"):
         metadata = BytesParser().parsebytes(contents)
         del metadata["Description"]
@@ -81,7 +91,7 @@ def normalize_metadata(path: str, contents: bytes, *, exclude_readme: bool) -> b
     return contents
 
 
-def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
+def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, for_bump: bool = False) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
@@ -91,7 +101,14 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
             archive.suffix,
             path,
             executable,
-            hashlib.sha256(normalize_metadata(path, contents, exclude_readme=exclude_readme)).hexdigest(),
+            hashlib.sha256(
+                normalize_metadata(
+                    path,
+                    contents,
+                    exclude_readme=exclude_readme,
+                    exclude_dev_dependencies=for_bump and target.spec.kind == "npm",
+                )
+            ).hexdigest(),
         )
         for archive in archives
         for path, executable, contents in read_archive(archive)
@@ -223,19 +240,31 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
         raise ValueError(msg)
     if archives is None:
         return []
+    validate_bump_hash(target, archives)
     dependencies = load_dependencies(target, archives)
     validate_prepared_dependencies(target, dependencies)
     validate_dependency_cycles(target, dependencies)
     return dependencies
 
 
-def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None]:
+def validate_bump_hash(target: ReleaseTarget, archives: list[Path]) -> None:
+    spec = target.spec
+    if not isinstance(spec, PackageSpec) or spec.kind != "npm" or spec.bump_hash is None:
+        return
+    if calc_content_hash(archives, target, for_bump=True) != spec.bump_hash:
+        msg = f"{target.package_name}: release contents differ from bump_hash; run airlock prepare"
+        raise ValueError(msg)
+
+
+def prepare_contents(target: ReleaseTarget) -> tuple[str, list[str] | None, str | None]:
     if not isinstance(target.spec, PackageSpec):
-        return calc_source_hash(target), None
+        return calc_source_hash(target), None, None
     with TemporaryDirectory(prefix="airlock-prepare-") as directory:
         archives = build_archives(target, Path(directory))
-        return calc_content_hash(archives, target), sorted(
-            dependency.spec.name for dependency in load_dependencies(target, archives)
+        return (
+            calc_content_hash(archives, target),
+            sorted(dependency.spec.name for dependency in load_dependencies(target, archives)),
+            calc_content_hash(archives, target, for_bump=True) if target.spec.kind == "npm" else None,
         )
 
 
@@ -248,8 +277,10 @@ def update_content_hashes(targets: list[ReleaseTarget]) -> None:
     manifest = tomlkit.parse(path.read_text(encoding="utf-8"))
     for name, declaration in manifest.items():
         if isinstance(declaration, Table) and name in hashes:
-            fingerprint, dependencies = hashes[name]
+            fingerprint, dependencies, bump_hash = hashes[name]
             declaration["hash"] = fingerprint
+            if bump_hash is not None:
+                declaration["bump_hash"] = bump_hash
             if dependencies:
                 declaration["depends_on"] = dependencies
             else:

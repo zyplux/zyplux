@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tomllib
 import zipfile
 from typing import TYPE_CHECKING
@@ -585,3 +586,51 @@ def test_25_4_15_requires_container_ignore_rules_to_exclude_git_metadata(
     release.write(metadata_path, "changed Git metadata\n")
     release.run("prepare")
     assert release.read("airlock_targets.toml") == baseline
+
+
+@pytest.mark.parametrize("change", ["add", "remove", "update", "format"])
+def test_25_2_12_separates_development_metadata_from_archive_validation(
+    release: ReleaseFixture,
+    change: str,
+) -> None:
+    release.use_package()
+    release.published()
+    manifest = {"name": "@zyplux/util", "version": "1.2.3", "devDependencies": {"builder": "1.0.0"}}
+    if change == "add":
+        manifest.pop("devDependencies")
+    release.write_json("packages/util/package.json", manifest)
+    release.run("prepare")
+    before = tomllib.loads(release.read("airlock_targets.toml"))["util"]
+    if change == "remove":
+        manifest.pop("devDependencies")
+    elif change != "format":
+        manifest["devDependencies"] = {"builder": "2.0.0"}
+    release.write("packages/util/package.json", json.dumps(manifest, indent=2))
+    release.publish("util-v1.2.3", error="release contents differ from hash")
+    assert not release.matching("pnpm publish|gh release create")
+    release.calls.clear()
+    release.run("prepare")
+    after = tomllib.loads(release.read("airlock_targets.toml"))["util"]
+    assert before["hash"] != after["hash"]
+    assert before["bump_hash"] == after["bump_hash"]
+    assert len(release.matching("pnpm pack")) == 1
+
+
+def test_25_2_13_rejects_stale_npm_comparison_fingerprints(release: ReleaseFixture) -> None:
+    release.use_package()
+    release.published()
+    release.run("prepare")
+    release.configure("npm", f'bump_hash = "sha256:{"0" * 64}"')
+    release.publish("util-v1.2.3", error="differ from bump_hash")
+    assert not release.matching("pnpm publish|gh release create")
+
+
+def test_25_2_14_accepts_archive_fingerprints_from_before_npm_comparison_hashes(release: ReleaseFixture) -> None:
+    release.use_package()
+    release.published()
+    release.run("prepare")
+    manifest = "\n".join(
+        line for line in release.read("airlock_targets.toml").splitlines() if not line.startswith("bump_hash =")
+    )
+    release.write("airlock_targets.toml", manifest)
+    release.plan()

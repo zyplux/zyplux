@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.2
+
+### Patch Changes
+
+- Prepare npm bump fingerprints that ignore development dependencies while preserving archive validation and runtime metadata checks.
+
 ## 2.2.1
 
 ### Patch Changes

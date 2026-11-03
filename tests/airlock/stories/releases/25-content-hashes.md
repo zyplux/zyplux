@@ -36,6 +36,12 @@
 
 ### 25.2.11 rejects root package archives that include the release manifest
 
+### 25.2.12 separates development metadata from archive validation
+
+### 25.2.13 rejects stale npm comparison fingerprints
+
+### 25.2.14 accepts archive fingerprints from before npm comparison hashes
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files

@@ -400,7 +400,7 @@ def test_14_7_7_reads_fingerprints_from_the_manifest_in_published_tags(
 ) -> None:
     release.configure("npm", 'includes = ["**/*"]')
     release.run("prepare")
-    manifest = release.read("airlock_targets.toml").replace("hash =", "content_hash =")
+    manifest = release.read("airlock_targets.toml").replace("\nhash =", "\ncontent_hash =")
     if manifest_name == "airlock-targets.toml":
         release.on(f"git -C {release.root} ls-tree --name-only util-v1.2.3 -- airlock_targets.toml")
         manifest = manifest.replace('includes = ["**/*"]\n', "").replace(
@@ -523,3 +523,57 @@ def test_14_8_5_checks_registry_artifacts_when_fingerprint_selection_changes(
         assert "already has registry artifacts" in findings[0]["message"]
     else:
         assert findings == [DONE]
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["devDependencies", "dependencies", "peerDependencies", "optionalDependencies", "peerDependenciesMeta", "output"],
+)
+def test_14_7_8_ignores_development_metadata_but_requires_bumps_for_consumer_changes(
+    release: ReleaseFixture,
+    change: str,
+) -> None:
+    manifest = json.loads(release.read("packages/util/package.json"))
+    manifest.update({"devDependencies": {"builder": "1.0.0"}, "dependencies": {"runtime": "1.0.0"}})
+    release.write_json("packages/util/package.json", manifest)
+    release.run("prepare")
+    baseline = release.read("airlock_targets.toml")
+    release.on(f"git -C {release.root} show util-v1.2.3:airlock_targets.toml", baseline)
+    if change == "peerDependenciesMeta":
+        manifest[change] = {"runtime": {"optional": True}}
+    elif change == "output":
+        manifest["devDependencies"]["builder"] = "2.0.0"
+        release.write("packages/util/index.js", "changed generated output\n")
+    else:
+        manifest.setdefault(change, {})["runtime"] = "2.0.0"
+    release.write_json("packages/util/package.json", manifest)
+    release.run("prepare")
+    findings = check_surface(release)
+    if change == "devDependencies":
+        assert findings == [DONE]
+    else:
+        assert findings[0]["status"] == "fail"
+        assert "changed since util-v1.2.3" in findings[0]["message"]
+    assert not release.requests
+
+
+def test_14_7_9_establishes_npm_comparison_baselines_without_forcing_migration_releases(
+    release: ReleaseFixture,
+) -> None:
+    baseline = "\n".join(
+        line for line in release.read("airlock_targets.toml").splitlines() if not line.startswith("bump_hash =")
+    )
+    release.on(f"git -C {release.root} show util-v1.2.3:airlock_targets.toml", baseline)
+    release.write("packages/util/index.js", "first comparison baseline\n")
+    release.run("prepare")
+    assert check_surface(release) == [DONE]
+
+
+def test_14_7_10_requires_the_comparison_fingerprint_after_its_published_baseline_exists(
+    release: ReleaseFixture,
+) -> None:
+    manifest = "\n".join(
+        line for line in release.read("airlock_targets.toml").splitlines() if not line.startswith("bump_hash =")
+    )
+    release.write("airlock_targets.toml", manifest)
+    assert check_surface(release)[0]["status"] == "fail"

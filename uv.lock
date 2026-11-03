@@ -1405,7 +1405,7 @@ type = [
 
 [[package]]
 name = "zyplux-airlock"
-version = "2.2.1"
+version = "2.2.2"
 source = { editable = "apps/airlock" }
 dependencies = [
     { name = "docker" },
@@ -1434,7 +1434,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-cerberus"
-version = "0.27.4"
+version = "0.27.5"
 source = { editable = "apps/cerberus" }
 dependencies = [
     { name = "networkx" },

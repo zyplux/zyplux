@@ -30,6 +30,7 @@ class TargetBase(BaseModel):
 
 class PackageSpec(TargetBase):
     kind: Literal["npm", "pypi"]
+    bump_hash: ContentHash | None = None
     package_name: Nonempty | None = None
     depends_on: list[Nonempty] = Field(default_factory=list)
 
