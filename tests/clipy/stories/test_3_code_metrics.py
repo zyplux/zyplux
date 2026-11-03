@@ -93,8 +93,10 @@ def test_3_2_1_reads_tracked_worktree_content_without_changing_the_index(report_
     report_repo.write("readme.md", "# Current\n\nChanged prose.\n")
     report_repo.write("untracked.ts", TS_SOURCE)
     assert report_repo.invoke("stats").exit_code == 0
-    assert read_row(report_repo.read("line_and_token_stats.md"), "Line Counts", "**Total**")["Files"] == "1"
-    assert read_row(report_repo.read("line_and_token_stats.md"), "Line Counts", "Markdown")["Total"] == "2"
+    report = report_repo.read("line_and_token_stats.md")
+    assert "TLDR: prod 0/0 · infra 0/0 · tests 0/0" in report
+    assert read_row(report, "Line Counts", "**Total**")["Files"] == "1"
+    assert read_row(report, "Line Counts", "Markdown")["Total"] == "2"
     assert report_repo.git("ls-files", "--stage") == before
 
 
@@ -102,6 +104,7 @@ def test_3_2_2_excludes_lockfiles_deleted_files_and_custom_report_destinations(r
     report_repo.write("readme.md", "# Title\n")
     report_repo.write("pnpm-lock.yaml", "lockfileVersion: 9\n")
     report_repo.write("uv.lock", "version = 1\n")
+    report_repo.write("line_and_token_stats.md", "# Tracked stats report\n")
     report_repo.write("report.md", "# Previous report\n")
     removed = report_repo.write("deleted.ts", TS_SOURCE)
     report_repo.stage()
@@ -110,20 +113,28 @@ def test_3_2_2_excludes_lockfiles_deleted_files_and_custom_report_destinations(r
     assert read_row(report_repo.read("report.md"), "Line Counts", "**Total**")["Files"] == "1"
 
 
-def test_3_2_3_uses_shared_production_ownership_in_scoped_reports(report_repo: ReportRepo) -> None:
+def test_3_2_3_uses_shared_source_categories_in_scoped_reports(report_repo: ReportRepo) -> None:
     report_repo.write(
         "cerberus.toml",
-        '[source_oracle.types.prod]\nroots = ["services/*"]\n[source_oracle.types.demo]\nroots = ["services/demo"]\n',
+        '[source_oracle.types.prod]\nroots = ["services/*"]\n'
+        '[source_oracle.types.infra]\nroots = ["services/ops"]\n'
+        '[source_oracle.types.test]\nroots = ["services/checks"]\n'
+        '[source_oracle.types.demo]\nroots = ["services/demo"]\n'
+        '[source_oracle.types.docs]\nroots = ["services/docs"]\n',
     )
     report_repo.write("services/api/server.ts", TS_SOURCE)
     report_repo.write("services/api/server.test.ts", TS_SOURCE)
     report_repo.write("services/demo/server.ts", TS_SOURCE)
+    report_repo.write("services/ops/setup.ts", "// port configuration\nconst port = 80;\n")
+    report_repo.write("services/ops/setup.test.ts", TS_SOURCE)
+    report_repo.write("services/checks/cases.ts", TS_SOURCE)
+    report_repo.write("services/docs/example.test.ts", TS_SOURCE)
     report_repo.stage()
     result = report_repo.invoke("stats", "services", "--title", "service corpus", "-o", "reports/services.md")
     assert result.exit_code == 0, result.output
     report = report_repo.read("reports/services.md")
-    assert report.startswith("# Stats - service corpus\n")
-    assert read_row(report, "Line Counts", ".ts")["Files"] == "3"
+    assert report.startswith("# Stats - service corpus\n\nTLDR: prod 2/48 · infra 1/13 · tests 6/144\n")
+    assert read_row(report, "Line Counts", ".ts")["Files"] == "7"
     assert read_row(report, "Production Line Counts", ".ts")["Files"] == "1"
 
 

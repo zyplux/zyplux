@@ -3,7 +3,8 @@
   "tags": ["action-airlock-v2.2.2", "airlock-v2.2.2", "cerberus-v0.27.5"],
   "intents": {
     ".changeset/npm-bump-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n",
-    ".changeset/npm-development-bumps.md": "---\n\"zyplux-cerberus\": patch\n---\n\nAvoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n"
+    ".changeset/npm-development-bumps.md": "---\n\"zyplux-cerberus\": patch\n---\n\nAvoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n",
+    ".changeset/python-development-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.\n"
   },
   "files": {
     ".changeset/ledger.yaml": {
@@ -11,7 +12,7 @@
       "after": {
         "zyplux-airlock@2.2.2": {
           "dir": "apps/airlock",
-          "intents": ["npm-bump-fingerprints"]
+          "intents": ["npm-bump-fingerprints", "python-development-fingerprints"]
         },
         "zyplux-cerberus@0.27.5": {
           "dir": "apps/cerberus",
@@ -23,7 +24,7 @@
     "apps/airlock/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 2.2.2": "## 2.2.2\n\n### Patch Changes\n\n- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n\n"
+        "## 2.2.2": "## 2.2.2\n\n### Patch Changes\n\n- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n\n- Ignore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.\n\n"
       },
       "created": false
     },

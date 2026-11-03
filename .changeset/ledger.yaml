@@ -81,6 +81,7 @@ zyplux-airlock@2.2.2:
   dir: apps/airlock
   intents:
     - npm-bump-fingerprints
+    - python-development-fingerprints
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:

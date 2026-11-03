@@ -24,7 +24,7 @@ from airlock.dependencies import load_dependencies, validate_dependency_cycles, 
 from airlock.targets import load_targets, parse_stable_version, resolve_container_paths
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget
+    from airlock.contracts import ReleaseKind, ReleaseTarget
 
 type ArchiveEntry = tuple[str, bool, bytes]
 
@@ -76,12 +76,16 @@ def normalize_metadata(
     contents: bytes,
     *,
     exclude_readme: bool,
-    exclude_dev_dependencies: bool = False,
+    kind: ReleaseKind | None,
 ) -> bytes:
-    if path == "package.json" and exclude_dev_dependencies:
+    if path == "package.json" and kind == "npm":
         manifest = VERSION_OBJECT.validate_json(contents)
         manifest.pop("devDependencies", None)
         return json.dumps(manifest, separators=(",", ":")).encode()
+    if path == "pyproject.toml" and kind == "pypi":
+        manifest = tomllib.loads(contents.decode())
+        manifest.pop("dependency-groups", None)
+        return tomlkit.dumps(manifest).encode()
     if exclude_readme and (path.endswith(".dist-info/METADATA") or PurePosixPath(path).name == "PKG-INFO"):
         metadata = BytesParser().parsebytes(contents)
         del metadata["Description"]
@@ -91,12 +95,11 @@ def normalize_metadata(
     return contents
 
 
-def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy_npm: bool = False) -> str:
+def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy: bool = False) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
     exclude_readme = has_excluded_readme(target)
-    is_npm_v2 = target.spec.kind == "npm" and not is_legacy_npm
     entries = [
         (
             archive.suffix,
@@ -107,7 +110,7 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy_
                     path,
                     contents,
                     exclude_readme=exclude_readme,
-                    exclude_dev_dependencies=is_npm_v2,
+                    kind=None if is_legacy else target.spec.kind,
                 )
             ).hexdigest(),
         )
@@ -119,7 +122,7 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy_
         msg = "package archives must exclude airlock_targets.toml to avoid a self-referential fingerprint"
         raise ValueError(msg)
     fingerprint = calc_entries_hash(entries)
-    return fingerprint.replace("sha256:", "sha256:v2:", 1) if is_npm_v2 else fingerprint
+    return fingerprint.replace("sha256:", "sha256:v2:", 1) if not is_legacy else fingerprint
 
 
 def calc_entries_hash(entries: list[tuple[str, str, bool, str]]) -> str:
@@ -230,7 +233,7 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
     fingerprint = (
         calc_source_hash(target)
         if archives is None
-        else calc_content_hash(archives, target, is_legacy_npm=not target.spec.hash.startswith("sha256:v2:"))
+        else calc_content_hash(archives, target, is_legacy=not target.spec.hash.startswith("sha256:v2:"))
     )
     if fingerprint != target.spec.hash:
         msg = f"{target.package_name}: release contents differ from hash; run airlock prepare"

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from airlock.proc import CommandError, find_root, run
-from cerberus import load_source_oracle
+from cerberus import SourceKind, load_source_oracle
 from tree_sitter import Language, Parser
 
 if TYPE_CHECKING:
@@ -419,10 +419,13 @@ def is_binary(source: bytes) -> bool:
 
 
 def measure_files(
-    paths: list[Path], production_paths: set[Path] | None
-) -> tuple[dict[str, Counter[str]], dict[str, Counter[str]], list[Path]]:
+    paths: list[Path], root: Path
+) -> tuple[dict[str, Counter[str]], dict[SourceKind, dict[str, Counter[str]]], list[Path]]:
+    oracle = load_source_oracle(root)
     languages: dict[str, Counter[str]] = {}
-    production: dict[str, Counter[str]] = {}
+    source_counts: dict[SourceKind, dict[str, Counter[str]]] = {
+        kind: {} for kind in (SourceKind.PROD, SourceKind.INFRA, SourceKind.TEST)
+    }
     binaries: list[Path] = []
     for path in paths:
         if not path.is_file():
@@ -439,9 +442,11 @@ def measure_files(
         else:
             language, counts = grammar_key, measure_unparsed(source)
         languages.setdefault(language, Counter()).update(counts)
-        if production_paths and path in production_paths:
-            production.setdefault(language, Counter()).update(counts)
-    return languages, production, binaries
+        classification = oracle.classify(path.relative_to(root).as_posix())
+        if classification.kind in source_counts:
+            kind = SourceKind.TEST if classification.is_test else classification.kind
+            source_counts[kind].setdefault(language, Counter()).update(counts)
+    return languages, source_counts, binaries
 
 
 def build_rollups(languages: dict[str, Counter[str]]) -> dict[str, Counter[str]]:
@@ -548,9 +553,7 @@ def write_report(directory: Path, *, title: str | None = None, out: Path | None 
         message = f"no tracked files under {directory}"
         raise ValueError(message)
 
-    oracle = load_source_oracle(root)
-    production_paths = {path for path in paths if oracle.is_production_file(path.relative_to(root).as_posix())}
-    report = build_report(paths, title or name_scope(directory, root), root, production_paths)
+    report = build_report(paths, title or name_scope(directory, root), root)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
     return report_path
@@ -595,12 +598,16 @@ BPE_LEGEND = (
 )
 
 
-def build_report(paths: list[Path], title: str, root: Path, production_paths: set[Path] | None = None) -> str:
-    languages, production, binaries = measure_files(paths, production_paths)
-    sections = [f"# Stats - {title}"]
-    scopes = {"": languages}
-    if production_paths is not None:
-        scopes["Production "] = production
+def build_report(paths: list[Path], title: str, root: Path) -> str:
+    languages, source_counts, binaries = measure_files(paths, root)
+    summary = []
+    for kind, counts in source_counts.items():
+        code_lines = sum(language["code"] for language in counts.values())
+        code_bpe = sum(language["bpe_code"] for language in counts.values())
+        label = "tests" if kind is SourceKind.TEST else kind
+        summary.append(f"{label} {code_lines:,}/{code_bpe:,}")
+    sections = [f"# Stats - {title}", "", f"TLDR: {' · '.join(summary)}"]
+    scopes = {"": languages, "Production ": source_counts[SourceKind.PROD]}
     for prefix, counts in scopes.items():
         if prefix:
             sections += [

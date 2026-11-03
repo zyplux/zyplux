@@ -6,6 +6,7 @@ import zipfile
 from typing import TYPE_CHECKING
 
 import pytest
+import tomlkit
 from archive_fixture import configure_python_package, hash_archives, stage_git, stage_packagers, write_tar, write_wheel
 from cli_fixture import Reply
 
@@ -61,15 +62,24 @@ def test_25_1_2_detects_packaged_files_permissions_and_metadata_changes(
     assert hash_archives(release, [first]) != hash_archives(release, [second])
 
 
+@pytest.mark.parametrize(
+    "manifest",
+    [
+        '[project]\nversion = "1.2.3"\n',
+        '[project]\ndependencies = ["runtime==1.2.3"]\n',
+        '[project.optional-dependencies]\nfeature = ["extra==1.2.3"]\n',
+        '[build-system]\nrequires = ["uv_build==1.2.3"]\n',
+    ],
+)
 def test_25_1_3_covers_both_python_distributions_and_ignores_their_listing_order(
-    release: ReleaseFixture, tmp_path: Path
+    release: ReleaseFixture, tmp_path: Path, manifest: str
 ) -> None:
     wheel, source = tmp_path / "package.whl", tmp_path / "package.tar.gz"
     write_wheel(wheel, {"package/__init__.py": b"code"})
-    write_tar(source, {"package/pyproject.toml": b"metadata"})
+    write_tar(source, {"package/pyproject.toml": manifest.encode()})
     fingerprint = hash_archives(release, [wheel, source])
     assert fingerprint == hash_archives(release, [source, wheel])
-    write_tar(source, {"package/pyproject.toml": b"changed metadata"})
+    write_tar(source, {"package/pyproject.toml": manifest.replace("1.2.3", "1.2.4").encode()})
     assert fingerprint != hash_archives(release, [wheel, source])
 
 
@@ -589,22 +599,31 @@ def test_25_4_15_requires_container_ignore_rules_to_exclude_git_metadata(
 
 
 @pytest.mark.parametrize("change", ["add", "remove", "update", "format"])
+@pytest.mark.parametrize("kind", ["npm", "pypi"])
 def test_25_2_12_accepts_development_only_metadata_changes(
     release: ReleaseFixture,
     change: str,
+    kind: str,
 ) -> None:
     release.use_package()
     release.published()
-    manifest = {"name": "@zyplux/util", "version": "1.2.3", "devDependencies": {"builder": "1.0.0"}}
+    if kind == "pypi":
+        configure_python_package(release)
+    project: dict[str, object] = {"name": "zyplux-util" if kind == "pypi" else "@zyplux/util", "version": "1.2.3"}
+    manifest: dict[str, object] = {"project": project} if kind == "pypi" else project
+    dependency_field = "dependency-groups" if kind == "pypi" else "devDependencies"
+    manifest[dependency_field] = {"test": ["pytest>=9"]} if kind == "pypi" else {"builder": "1.0.0"}
+    manifest_path = f"packages/util/{'pyproject.toml' if kind == 'pypi' else 'package.json'}"
     if change == "add":
-        manifest.pop("devDependencies")
-    release.write_json("packages/util/package.json", manifest)
+        manifest.pop(dependency_field)
+    release.write(manifest_path, tomlkit.dumps(manifest) if kind == "pypi" else json.dumps(manifest))
     release.run("prepare")
     if change == "remove":
-        manifest.pop("devDependencies")
+        manifest.pop(dependency_field)
     elif change != "format":
-        manifest["devDependencies"] = {"builder": "2.0.0"}
-    release.write("packages/util/package.json", json.dumps(manifest, indent=2))
-    release.published(npm=True)
+        manifest[dependency_field] = {"test": ["pytest>=10"]} if kind == "pypi" else {"builder": "2.0.0"}
+    contents = tomlkit.dumps(manifest).replace(" = ", "=") if kind == "pypi" else json.dumps(manifest, indent=2)
+    release.write(manifest_path, contents)
+    release.published(npm=True, pypi=True)
     release.publish("util-v1.2.3")
     assert release.matching("gh release create")

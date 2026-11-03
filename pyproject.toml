@@ -79,8 +79,8 @@ test = [
 type = [
     "pyrefly>=1.4.0",
     "types-networkx>=3.6.1.20261031",
-    "types-pyyaml>=6.0.12.20261030",
+    "types-pyyaml>=6.0.12.20261103",
     # psutil ships no type stubs of its own; apps/clipy's ctop.py needs this to resolve them.
     "types-psutil>=7.2.2.20260906",
-    "types-docker>=7.2.0.20261006",
+    "types-docker>=7.2.0.20261102",
 ]
