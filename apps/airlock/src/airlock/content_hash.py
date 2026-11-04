@@ -19,12 +19,12 @@ from docker.utils import exclude_paths
 from tomlkit.items import Table
 
 from airlock import proc
-from airlock.contracts import ActionSpec, PackageSpec
+from airlock.contracts import VERSION_OBJECT, ActionSpec, PackageSpec
 from airlock.dependencies import load_dependencies, validate_dependency_cycles, validate_prepared_dependencies
 from airlock.targets import load_targets, parse_stable_version, resolve_container_paths
 
 if TYPE_CHECKING:
-    from airlock.contracts import ReleaseTarget
+    from airlock.contracts import ReleaseKind, ReleaseTarget
 
 type ArchiveEntry = tuple[str, bool, bytes]
 
@@ -71,7 +71,21 @@ def has_excluded_readme(target: ReleaseTarget) -> bool:
     return isinstance(filename, str) and not is_included(filename, target.spec.includes)
 
 
-def normalize_metadata(path: str, contents: bytes, *, exclude_readme: bool) -> bytes:
+def normalize_metadata(
+    path: str,
+    contents: bytes,
+    *,
+    exclude_readme: bool,
+    kind: ReleaseKind | None,
+) -> bytes:
+    if path == "package.json" and kind == "npm":
+        manifest = VERSION_OBJECT.validate_json(contents)
+        manifest.pop("devDependencies", None)
+        return json.dumps(manifest, separators=(",", ":")).encode()
+    if path == "pyproject.toml" and kind == "pypi":
+        manifest = tomllib.loads(contents.decode())
+        manifest.pop("dependency-groups", None)
+        return tomlkit.dumps(manifest).encode()
     if exclude_readme and (path.endswith(".dist-info/METADATA") or PurePosixPath(path).name == "PKG-INFO"):
         metadata = BytesParser().parsebytes(contents)
         del metadata["Description"]
@@ -81,7 +95,7 @@ def normalize_metadata(path: str, contents: bytes, *, exclude_readme: bool) -> b
     return contents
 
 
-def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
+def calc_content_hash(archives: list[Path], target: ReleaseTarget, *, is_legacy: bool = False) -> str:
     if not archives:
         msg = "package build produced no archives"
         raise ValueError(msg)
@@ -91,7 +105,14 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
             archive.suffix,
             path,
             executable,
-            hashlib.sha256(normalize_metadata(path, contents, exclude_readme=exclude_readme)).hexdigest(),
+            hashlib.sha256(
+                normalize_metadata(
+                    path,
+                    contents,
+                    exclude_readme=exclude_readme,
+                    kind=None if is_legacy else target.spec.kind,
+                )
+            ).hexdigest(),
         )
         for archive in archives
         for path, executable, contents in read_archive(archive)
@@ -100,7 +121,8 @@ def calc_content_hash(archives: list[Path], target: ReleaseTarget) -> str:
     if any(path == "airlock_targets.toml" for _, path, _, _ in entries):
         msg = "package archives must exclude airlock_targets.toml to avoid a self-referential fingerprint"
         raise ValueError(msg)
-    return calc_entries_hash(entries)
+    fingerprint = calc_entries_hash(entries)
+    return fingerprint.replace("sha256:", "sha256:v2:", 1) if not is_legacy else fingerprint
 
 
 def calc_entries_hash(entries: list[tuple[str, str, bool, str]]) -> str:
@@ -208,7 +230,11 @@ def validate_contents(target: ReleaseTarget, archives: list[Path] | None = None)
     if isinstance(target.spec, PackageSpec) and archives is None:
         with TemporaryDirectory(prefix="airlock-validate-") as directory:
             return validate_contents(target, build_archives(target, Path(directory)))
-    fingerprint = calc_source_hash(target) if archives is None else calc_content_hash(archives, target)
+    fingerprint = (
+        calc_source_hash(target)
+        if archives is None
+        else calc_content_hash(archives, target, is_legacy=not target.spec.hash.startswith("sha256:v2:"))
+    )
     if fingerprint != target.spec.hash:
         msg = f"{target.package_name}: release contents differ from hash; run airlock prepare"
         if target.spec.kind == "ghcr":

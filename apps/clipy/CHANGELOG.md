@@ -1,5 +1,11 @@
 # zyplux-clipy
 
+## 0.1.2
+
+### Patch Changes
+
+- Show a compact code line and BPE token summary for production, infrastructure and tests at the top of repository statistics reports.
+
 ## 0.1.1
 
 ### Patch Changes

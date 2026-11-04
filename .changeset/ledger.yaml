@@ -77,6 +77,11 @@ zyplux-airlock@2.2.1:
   intents:
     - compact-preparation-records
     - neat-waves-jam
+zyplux-airlock@2.2.2:
+  dir: apps/airlock
+  intents:
+    - npm-bump-fingerprints
+    - python-development-fingerprints
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -119,6 +124,11 @@ zyplux-cerberus@0.27.4:
   dir: apps/cerberus
   intents:
     - cerberus-runtime-dependencies
+zyplux-cerberus@0.27.5:
+  dir: apps/cerberus
+  intents:
+    - npm-development-bumps
+    - partial-release-migrations
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -127,6 +137,10 @@ zyplux-clipy@0.1.1:
   dir: apps/clipy
   intents:
     - neat-waves-jam
+zyplux-clipy@0.1.2:
+  dir: apps/clipy
+  intents:
+    - stats-summary
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

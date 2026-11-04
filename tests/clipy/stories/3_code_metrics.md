@@ -18,7 +18,7 @@ Tests use a deterministic byte tokenizer while exercising real grammar parsers. 
 
 ### 3.2.2 excludes lockfiles deleted files and custom report destinations
 
-### 3.2.3 uses shared production ownership in scoped reports
+### 3.2.3 uses shared source categories in scoped reports
 
 ## 3.3 reporting errors
 

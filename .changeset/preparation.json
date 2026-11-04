@@ -1,57 +1,28 @@
 {
   "format": 2,
-  "tags": [
-    "action-airlock-v2.2.1",
-    "airlock-v2.2.1",
-    "cerberus-v0.27.4",
-    "clipy-v0.1.1",
-    "cz-v0.16.1",
-    "eslint-config-v0.12.4",
-    "spectra-v0.4.1",
-    "totchef-v0.0.10",
-    "util-v0.9.4"
-  ],
+  "tags": ["action-airlock-v2.2.2", "airlock-v2.2.2", "cerberus-v0.27.5", "clipy-v0.1.2"],
   "intents": {
-    ".changeset/cerberus-runtime-dependencies.md": "---\n\"zyplux-cerberus\": patch\n---\n\nRefresh runtime dependency requirements to the updated workspace versions.\n",
-    ".changeset/compact-preparation-records.md": "---\n\"zyplux-airlock\": patch\n---\n\nKeep preparation records scoped to pending release edits, preserving unrelated metadata and published history during replay.\n",
-    ".changeset/neat-waves-jam.md": "---\n\"zyplux-airlock\": patch\n\"zyplux-clipy\": patch\n\"totchef\": patch\n---\n\nRefresh runtime dependency requirements to the updated workspace versions.\n",
-    ".changeset/purple-insects-deliver.md": "---\n\"@zyplux/eslint-config\": patch\n\"@zyplux/util\": patch\n\"@zyplux/spectra\": patch\n\"@zyplux/cz\": patch\n---\n\nRefresh packaged dependency metadata for the updated workspace toolchain.\n"
+    ".changeset/npm-bump-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n",
+    ".changeset/npm-development-bumps.md": "---\n\"zyplux-cerberus\": patch\n---\n\nAvoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n",
+    ".changeset/partial-release-migrations.md": "---\n\"zyplux-cerberus\": patch\n---\n\nRequire partially uploaded packages to finish publication before changing their release fingerprint at the same version.\n",
+    ".changeset/python-development-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.\n",
+    ".changeset/stats-summary.md": "---\n\"zyplux-clipy\": patch\n---\n\nShow a compact code line and BPE token summary for production, infrastructure and tests at the top of repository statistics reports.\n"
   },
   "files": {
     ".changeset/ledger.yaml": {
       "before": {},
       "after": {
-        "@zyplux/cz@0.16.1": {
-          "dir": "apps/cz",
-          "intents": ["purple-insects-deliver"]
-        },
-        "@zyplux/eslint-config@0.12.4": {
-          "dir": "packages/eslint-config",
-          "intents": ["purple-insects-deliver"]
-        },
-        "@zyplux/spectra@0.4.1": {
-          "dir": "packages/spectra",
-          "intents": ["purple-insects-deliver"]
-        },
-        "@zyplux/util@0.9.4": {
-          "dir": "packages/util-ts",
-          "intents": ["purple-insects-deliver"]
-        },
-        "totchef@0.0.10": {
-          "dir": "apps/totchef",
-          "intents": ["neat-waves-jam"]
-        },
-        "zyplux-airlock@2.2.1": {
+        "zyplux-airlock@2.2.2": {
           "dir": "apps/airlock",
-          "intents": ["compact-preparation-records", "neat-waves-jam"]
+          "intents": ["npm-bump-fingerprints", "python-development-fingerprints"]
         },
-        "zyplux-cerberus@0.27.4": {
+        "zyplux-cerberus@0.27.5": {
           "dir": "apps/cerberus",
-          "intents": ["cerberus-runtime-dependencies"]
+          "intents": ["npm-development-bumps", "partial-release-migrations"]
         },
-        "zyplux-clipy@0.1.1": {
+        "zyplux-clipy@0.1.2": {
           "dir": "apps/clipy",
-          "intents": ["neat-waves-jam"]
+          "intents": ["stats-summary"]
         }
       },
       "created": false
@@ -59,28 +30,28 @@
     "apps/airlock/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 2.2.1": "## 2.2.1\n\n### Patch Changes\n\n- Keep preparation records scoped to pending release edits, preserving unrelated metadata and published history during replay.\n\n- Refresh runtime dependency requirements to the updated workspace versions.\n\n"
+        "## 2.2.2": "## 2.2.2\n\n### Patch Changes\n\n- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n\n- Ignore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.\n\n"
       },
       "created": false
     },
     "apps/airlock/package.json": {
       "before": {
-        "version": "2.2.0"
+        "version": "2.2.1"
       },
       "after": {
-        "version": "2.2.1"
+        "version": "2.2.2"
       },
       "created": false
     },
     "apps/airlock/pyproject.toml": {
       "before": {
         "project": {
-          "version": "2.2.0"
+          "version": "2.2.1"
         }
       },
       "after": {
         "project": {
-          "version": "2.2.1"
+          "version": "2.2.2"
         }
       },
       "created": false
@@ -88,28 +59,28 @@
     "apps/cerberus/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 0.27.4": "## 0.27.4\n\n### Patch Changes\n\n- Refresh runtime dependency requirements to the updated workspace versions.\n\n"
+        "## 0.27.5": "## 0.27.5\n\n### Patch Changes\n\n- Avoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n\n- Require partially uploaded packages to finish publication before changing their release fingerprint at the same version.\n\n"
       },
       "created": false
     },
     "apps/cerberus/package.json": {
       "before": {
-        "version": "0.27.3"
+        "version": "0.27.4"
       },
       "after": {
-        "version": "0.27.4"
+        "version": "0.27.5"
       },
       "created": false
     },
     "apps/cerberus/pyproject.toml": {
       "before": {
         "project": {
-          "version": "0.27.3"
+          "version": "0.27.4"
         }
       },
       "after": {
         "project": {
-          "version": "0.27.4"
+          "version": "0.27.5"
         }
       },
       "created": false
@@ -117,122 +88,29 @@
     "apps/clipy/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 0.1.1": "## 0.1.1\n\n### Patch Changes\n\n- Refresh runtime dependency requirements to the updated workspace versions.\n\n"
+        "## 0.1.2": "## 0.1.2\n\n### Patch Changes\n\n- Show a compact code line and BPE token summary for production, infrastructure and tests at the top of repository statistics reports.\n\n"
       },
       "created": false
     },
     "apps/clipy/package.json": {
       "before": {
-        "version": "0.1.0"
+        "version": "0.1.1"
       },
       "after": {
-        "version": "0.1.1"
+        "version": "0.1.2"
       },
       "created": false
     },
     "apps/clipy/pyproject.toml": {
       "before": {
         "project": {
-          "version": "0.1.0"
-        }
-      },
-      "after": {
-        "project": {
           "version": "0.1.1"
         }
       },
-      "created": false
-    },
-    "apps/cz/CHANGELOG.md": {
-      "before": {},
-      "after": {
-        "## 0.16.1": "## 0.16.1\n\n### Patch Changes\n\n- Refresh packaged dependency metadata for the updated workspace toolchain.\n\n- Updated dependencies:\n  - @zyplux/util@0.9.4\n\n"
-      },
-      "created": false
-    },
-    "apps/cz/package.json": {
-      "before": {
-        "version": "0.16.0"
-      },
-      "after": {
-        "version": "0.16.1"
-      },
-      "created": false
-    },
-    "apps/totchef/CHANGELOG.md": {
-      "before": {},
-      "after": {
-        "## 0.0.10": "## 0.0.10\n\n### Patch Changes\n\n- Refresh runtime dependency requirements to the updated workspace versions.\n\n"
-      },
-      "created": false
-    },
-    "apps/totchef/package.json": {
-      "before": {
-        "version": "0.0.9"
-      },
-      "after": {
-        "version": "0.0.10"
-      },
-      "created": false
-    },
-    "apps/totchef/pyproject.toml": {
-      "before": {
-        "project": {
-          "version": "0.0.9"
-        }
-      },
       "after": {
         "project": {
-          "version": "0.0.10"
+          "version": "0.1.2"
         }
-      },
-      "created": false
-    },
-    "packages/eslint-config/CHANGELOG.md": {
-      "before": {},
-      "after": {
-        "## 0.12.4": "## 0.12.4\n\n### Patch Changes\n\n- Refresh packaged dependency metadata for the updated workspace toolchain.\n\n- Updated dependencies:\n  - @zyplux/util@0.9.4\n\n"
-      },
-      "created": false
-    },
-    "packages/eslint-config/package.json": {
-      "before": {
-        "version": "0.12.3"
-      },
-      "after": {
-        "version": "0.12.4"
-      },
-      "created": false
-    },
-    "packages/spectra/CHANGELOG.md": {
-      "before": {},
-      "after": {
-        "## 0.4.1": "## 0.4.1\n\n### Patch Changes\n\n- Refresh packaged dependency metadata for the updated workspace toolchain.\n\n"
-      },
-      "created": false
-    },
-    "packages/spectra/package.json": {
-      "before": {
-        "version": "0.4.0"
-      },
-      "after": {
-        "version": "0.4.1"
-      },
-      "created": false
-    },
-    "packages/util-ts/CHANGELOG.md": {
-      "before": {},
-      "after": {
-        "## 0.9.4": "## 0.9.4\n\n### Patch Changes\n\n- Refresh packaged dependency metadata for the updated workspace toolchain.\n\n"
-      },
-      "created": false
-    },
-    "packages/util-ts/package.json": {
-      "before": {
-        "version": "0.9.3"
-      },
-      "after": {
-        "version": "0.9.4"
       },
       "created": false
     }

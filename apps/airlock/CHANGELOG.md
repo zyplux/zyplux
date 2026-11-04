@@ -1,5 +1,13 @@
 # zyplux-airlock
 
+## 2.2.2
+
+### Patch Changes
+
+- Ignore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.
+
+- Ignore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.
+
 ## 2.2.1
 
 ### Patch Changes

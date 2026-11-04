@@ -36,6 +36,8 @@
 
 ### 25.2.11 rejects root package archives that include the release manifest
 
+### 25.2.12 accepts development only metadata changes
+
 ## 25.3 discovering package impact through real builds
 
 ### 25.3.1 detects bundled shared changes and ignores unpacked files

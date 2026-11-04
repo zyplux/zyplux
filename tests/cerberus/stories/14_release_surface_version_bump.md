@@ -94,6 +94,8 @@
 
 ### 14.7.7 reads fingerprints from the manifest in published tags
 
+### 14.7.8 ignores development metadata but requires bumps for consumer changes
+
 ## 14.8 preserving partially published versions
 
 ### 14.8.1 preserves target branch fingerprints after any registry artifact is uploaded
@@ -105,3 +107,5 @@
 ### 14.8.4 reports registry errors during repair validation
 
 ### 14.8.5 checks registry artifacts when fingerprint selection changes
+
+### 14.8.6 requires complete publication before migrating a released fingerprint
