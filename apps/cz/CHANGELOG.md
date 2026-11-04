@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 0.16.2
+
+### Patch Changes
+
+- Exclude demo code and development dependencies from workspace graphs while retaining runtime, optional and peer dependencies.
+
 ## 0.16.1
 
 ### Patch Changes

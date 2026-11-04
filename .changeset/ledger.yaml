@@ -25,6 +25,10 @@
   dir: apps/cz
   intents:
     - purple-insects-deliver
+'@zyplux/cz@0.16.2':
+  dir: apps/cz
+  intents:
+    - workspace-runtime-graph
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:

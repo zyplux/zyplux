@@ -5,7 +5,7 @@
 ```mermaid
 ---
 config:
-  theme: dark
+  theme: neo-dark
   layout: elk
 ---
 flowchart LR
@@ -22,11 +22,9 @@ flowchart LR
         ws_7["totchef"]
         ws_8["eslint-config"]
         ws_9["spectra"]
-        ws_10["tsconfig"]:::foundation
+        ws_10["tsconfig"]
         ws_11["util"]
     end
-    ws_0 ws_0__ws_8@--> ws_8
-    ws_0 ws_0__ws_9@--> ws_9
     ws_3 ws_3__ws_2@--> ws_2
     classDef ws_3_edges stroke:#b167e4,stroke-width:2px
     class ws_3__ws_2 ws_3_edges
@@ -43,12 +41,6 @@ flowchart LR
     classDef foundation fill:#2b2b2b,stroke:#888,stroke-dasharray:5 5
 ```
 
-Solid arrows are declared workspace dependencies; dashed arrows have only type imports in TypeScript source.
-
-## Foundations
-
-Imported by at least 40% of workspaces (5/12):
-
-- **`tsconfig`** ← `zyplux`, `cz`, `eslint-config`, `spectra`, `util`
+Arrows show runtime, optional and peer dependencies; dashed arrows indicate type-only TypeScript imports.
 
 Generate with `cz workspace-graph`.

@@ -162,12 +162,7 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
   }
   for (const [directory, manifest] of npmManifests) {
     const member = members.get(directory);
-    const dependencyGroups = [
-      manifest.dependencies,
-      manifest.devDependencies,
-      manifest.optionalDependencies,
-      manifest.peerDependencies,
-    ];
+    const dependencyGroups = [manifest.dependencies, manifest.optionalDependencies, manifest.peerDependencies];
     ensure(member !== undefined, `missing npm workspace ${directory}`);
     addDependencies(
       member,
@@ -178,7 +173,7 @@ const loadWorkspaces = async (root: string, files: SourceFiles) => {
   for (const [directory, manifest] of pythonManifests) {
     const member = members.get(directory);
     ensure(member !== undefined, `missing Python workspace ${directory}`);
-    addDependencies(member, pythonRequirementNames(manifest), python);
+    addDependencies(member, pythonRequirementNames({ project: manifest.project }), python);
   }
   await loadTypeDependencies(root, files, npm);
   return members
@@ -232,7 +227,7 @@ const buildReport = (members: Workspace[]) => {
     '```mermaid',
     '---',
     'config:',
-    '  theme: dark',
+    '  theme: neo-dark',
     '  layout: elk',
     '---',
     'flowchart LR',
@@ -253,7 +248,7 @@ const buildReport = (members: Workspace[]) => {
     '    classDef foundation fill:#2b2b2b,stroke:#888,stroke-dasharray:5 5',
     '```',
     '',
-    'Solid arrows are declared workspace dependencies; dashed arrows have only type imports in TypeScript source.',
+    'Arrows show runtime, optional and peer dependencies; dashed arrows indicate type-only TypeScript imports.',
     '',
   );
   if (foundations.size > 0) {
@@ -280,7 +275,10 @@ const buildReport = (members: Workspace[]) => {
 
 export const writeWorkspaceGraph = async (directory: string) => {
   const { files, root } = await loadSourceSnapshot(directory);
-  const members = await loadWorkspaces(root, files);
+  const members = await loadWorkspaces(
+    root,
+    Object.fromEntries(Object.entries(files).filter(([, classification]) => classification.kind !== 'demo')),
+  );
   const destination = path.join(root, REPORT_NAME);
   await writeFile(destination, buildReport(members));
   return destination;

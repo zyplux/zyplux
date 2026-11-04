@@ -22,7 +22,7 @@ const assertEdge = (report: string, source: string, dependency: string, isType =
 
 describe('17.1 reading workspace dependencies', () => {
   test.for(['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'])(
-    '17.1.1 draws declared workspace dependencies (%s)',
+    '17.1.1 excludes development workspace dependencies (%s)',
     async (field, { cz, reports }) => {
       await seedWorkspaces(reports);
       await reports.writePackage('apps/server', '@acme/server', {
@@ -32,7 +32,11 @@ describe('17.1 reading workspace dependencies', () => {
       await reports.writePackage('unregistered', 'unknown');
       await cz.run('workspace-graph');
       const report = await reports.graph();
-      assertEdge(report, 'server', 'one');
+      if (field === 'devDependencies') {
+        const dependency = findNode(report, 'one'),
+          server = findNode(report, 'server');
+        expect(report).not.toContain(`${server} ${server}__${dependency}@`);
+      } else assertEdge(report, 'server', 'one');
       expect(report).not.toContain('["server-tests"]');
       expect(report).not.toContain('["unknown"]');
       expect(report).not.toContain('["external"]');
@@ -54,6 +58,7 @@ describe('17.1 reading workspace dependencies', () => {
       await reports.writePackage('apps/server', '@acme/server', { dependencies: { '@acme/one': 'workspace:*' } });
       await reports.write('apps/server/src/index.ts', source);
       await reports.write('apps/server/src/index.test.ts', 'import "@acme/one";', { is_test: true });
+      await reports.write('apps/server/examples/demo.ts', 'import "@acme/one";', { kind: 'demo' });
       await cz.run('workspace-graph');
       assertEdge(await reports.graph(), 'server', 'one', isType);
     },
@@ -77,7 +82,7 @@ describe('17.1 reading workspace dependencies', () => {
     expect(report).toContain('group_infra["infra"]');
   });
 
-  test('17.1.4 includes root projects and Python optional and development requirements', async ({ cz, reports }) => {
+  test('17.1.4 includes root projects and excludes development requirements', async ({ cz, reports }) => {
     await seedWorkspaces(reports);
     await reports.writePackage(
       '.',
@@ -87,28 +92,30 @@ describe('17.1 reading workspace dependencies', () => {
     );
     await reports.write(
       'pyproject.toml',
-      '[project]\nname = "root-python"\n[project.optional-dependencies]\nextra = ["Acme_Util"]\n[dependency-groups]\ndev = ["other", {include-group = "extra"}]\n[tool.uv.workspace]\nmembers = ["tools/*"]\n',
+      '[project]\nname = "root-python"\n[project.optional-dependencies]\nextra = ["Acme_Util"]\n[dependency-groups]\ndev = ["other", {include-group = "extra"}]\n[tool.uv]\ndev-dependencies = ["other"]\n[tool.uv.workspace]\nmembers = ["tools/*"]\n',
       { kind: 'infra' },
     );
     await reports.write('tools/util/pyproject.toml', '[project]\nname = "acme-util"\n');
     await reports.write('tools/other/pyproject.toml', '[project]\nname = "other"\n');
     await cz.run('workspace-graph');
     const report = await reports.graph();
-    assertEdge(report, 'root-project', 'one');
     assertEdge(report, 'root-project', 'acme-util');
-    assertEdge(report, 'root-project', 'other');
+    const root = findNode(report, 'root-project');
+    for (const dependency of ['one', 'other'])
+      expect(report).not.toContain(`${root} ${root}__${findNode(report, dependency)}@`);
   });
 });
 
 describe('17.2 rendering the shared classification', () => {
-  test('17.2.1 uses oracle categories and excludes test workspaces', async ({ cz, reports }) => {
+  test('17.2.1 uses oracle categories and excludes demo and test workspaces', async ({ cz, reports }) => {
     await reports.write('pnpm-workspace.yaml', 'packages: ["custom/*"]\n');
     for (const kind of ['prod', 'infra', 'demo', 'docs', 'test'] as const) {
       await reports.writePackage(`custom/${kind}`, kind, {}, { is_test: kind === 'test', kind });
     }
     await cz.run('workspace-graph');
     const report = await reports.graph();
-    for (const kind of ['prod', 'infra', 'demo', 'docs']) expect(report).toContain(`group_${kind}["${kind}"]`);
+    for (const kind of ['prod', 'infra', 'docs']) expect(report).toContain(`group_${kind}["${kind}"]`);
+    expect(report).not.toContain('["demo"]');
     expect(report).not.toContain('["test"]');
   });
 
