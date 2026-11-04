@@ -5,7 +5,7 @@
 ```mermaid
 ---
 config:
-  theme: dark
+  theme: neo-dark
   layout: elk
 ---
 flowchart LR

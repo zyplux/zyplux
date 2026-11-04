@@ -35,7 +35,7 @@ hash = "sha256:v2:f9a597731dfbb7259b6d380155a6eb52c4846053e57c20fa8484b204e0a56a
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:v2:f65c5402fc6623fc3cc80508739d53613316ad0eabc24bfba7ee449a5c74ecbd"
+hash = "sha256:v2:762bac030b95d776bf35ab60919b2eb1f0f8082f9a84f672b8c235b05d161a02"
 depends_on = ["util"]
 
 [cerberus]
