@@ -525,6 +525,29 @@ def test_14_8_5_checks_registry_artifacts_when_fingerprint_selection_changes(
         assert findings == [DONE]
 
 
+@pytest.mark.parametrize("is_complete", [True, False])
+def test_14_8_6_requires_complete_publication_before_migrating_a_released_fingerprint(
+    release: ReleaseFixture, *, is_complete: bool
+) -> None:
+    configure_python_package(release)
+    release.run("prepare")
+    baseline = release.read("airlock_targets.toml").replace("sha256:v2:", "sha256:")
+    release.base_version("1.2.3")
+    for ref in ("origin/main", "util-v1.2.3"):
+        release.on(f"git -C {release.root} show {ref}:airlock_targets.toml", baseline)
+    release.published(pypi=True)
+    if not is_complete:
+        release.serve("https://pypi.org/", Response({"urls": [{"packagetype": "bdist_wheel"}]}))
+    release.write("packages/util/src/index.js", "changed after registry upload")
+    release.run("prepare")
+    findings = check_surface(release, "origin/main")
+    if is_complete:
+        assert findings == [DONE]
+    else:
+        assert findings[0]["status"] == "fail"
+        assert "already has registry artifacts" in findings[0]["message"]
+
+
 @pytest.mark.parametrize(
     "change",
     [

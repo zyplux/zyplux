@@ -4,6 +4,7 @@
   "intents": {
     ".changeset/npm-bump-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore npm development dependencies and JSON whitespace in release fingerprints while preserving runtime metadata and built-output checks.\n",
     ".changeset/npm-development-bumps.md": "---\n\"zyplux-cerberus\": patch\n---\n\nAvoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n",
+    ".changeset/partial-release-migrations.md": "---\n\"zyplux-cerberus\": patch\n---\n\nRequire partially uploaded packages to finish publication before changing their release fingerprint at the same version.\n",
     ".changeset/python-development-fingerprints.md": "---\n\"zyplux-airlock\": patch\n---\n\nIgnore Python development dependency groups and TOML formatting in release fingerprints while preserving runtime dependencies, extras and build requirements.\n",
     ".changeset/stats-summary.md": "---\n\"zyplux-clipy\": patch\n---\n\nShow a compact code line and BPE token summary for production, infrastructure and tests at the top of repository statistics reports.\n"
   },
@@ -17,7 +18,7 @@
         },
         "zyplux-cerberus@0.27.5": {
           "dir": "apps/cerberus",
-          "intents": ["npm-development-bumps"]
+          "intents": ["npm-development-bumps", "partial-release-migrations"]
         },
         "zyplux-clipy@0.1.2": {
           "dir": "apps/clipy",
@@ -58,7 +59,7 @@
     "apps/cerberus/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 0.27.5": "## 0.27.5\n\n### Patch Changes\n\n- Avoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n\n"
+        "## 0.27.5": "## 0.27.5\n\n### Patch Changes\n\n- Avoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.\n\n- Require partially uploaded packages to finish publication before changing their release fingerprint at the same version.\n\n"
       },
       "created": false
     },

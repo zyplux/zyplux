@@ -128,6 +128,7 @@ zyplux-cerberus@0.27.5:
   dir: apps/cerberus
   intents:
     - npm-development-bumps
+    - partial-release-migrations
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:

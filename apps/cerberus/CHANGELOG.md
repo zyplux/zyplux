@@ -6,6 +6,8 @@
 
 - Avoid version-bump reminders for npm development dependency changes when packaged code and runtime metadata are unchanged.
 
+- Require partially uploaded packages to finish publication before changing their release fingerprint at the same version.
+
 ## 0.27.4
 
 ### Patch Changes

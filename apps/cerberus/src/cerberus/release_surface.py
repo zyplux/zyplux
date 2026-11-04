@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from airlock import github
 from airlock.contracts import PackageSpec
 from airlock.errors import RELEASE_ERRORS
-from airlock.registries import has_package_artifacts
+from airlock.registries import has_package_artifacts, is_published
 from airlock.targets import build_release_target, parse_manifest, parse_package, parse_stable_version, resolve_repo_path
 
 from cerberus.model import Finding, Status
@@ -117,11 +117,11 @@ def load_base_version(repo: Repo, ctx: Context, base: str, previous: TargetSpec)
     return parse_stable_version(parse_package(content, previous.manifest).version)
 
 
-def validate_registry_repair(target: ReleaseTarget, previous: TargetSpec) -> list[Finding]:
+def validate_registry_repair(target: ReleaseTarget, previous: TargetSpec, *, has_release: bool) -> list[Finding]:
     if previous.includes == target.spec.includes and (previous.hash is None or target.spec.hash == previous.hash):
         return []
     try:
-        if not has_package_artifacts(target):
+        if not has_package_artifacts(target) or (has_release and is_published(target)):
             return []
     except RELEASE_ERRORS as exc:
         return [Finding(Status.ERROR, f"{target.package_name}: cannot validate registry artifacts: {exc}")]
@@ -162,12 +162,8 @@ def validate_target(
             return [
                 Finding(Status.FAIL, f"{release.package_name}: version must not decrease from {base} ({base_version})")
             ]
-        if (
-            isinstance(target, PackageSpec)
-            and version == base_version
-            and (lookup.version is None or lookup.version < version)
-        ):
-            findings = validate_registry_repair(release, previous)
+        if isinstance(target, PackageSpec) and version == base_version:
+            findings = validate_registry_repair(release, previous, has_release=lookup.version == version)
             if findings:
                 return findings
         baseline = f"{base} ({base_version})", base_version

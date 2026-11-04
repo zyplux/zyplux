@@ -107,3 +107,5 @@
 ### 14.8.4 reports registry errors during repair validation
 
 ### 14.8.5 checks registry artifacts when fingerprint selection changes
+
+### 14.8.6 requires complete publication before migrating a released fingerprint
