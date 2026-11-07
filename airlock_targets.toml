@@ -35,7 +35,7 @@ hash = "sha256:v2:f9a597731dfbb7259b6d380155a6eb52c4846053e57c20fa8484b204e0a56a
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:v2:762bac030b95d776bf35ab60919b2eb1f0f8082f9a84f672b8c235b05d161a02"
+hash = "sha256:v2:15dc0b8a8fdef97fd6071eb80d5ea5e76cca8f5f64a4f29ea4812a68fae704d9"
 depends_on = ["util"]
 
 [cerberus]
@@ -49,5 +49,10 @@ hash = "sha256:v2:5e4e21046de7459e0267e7911b79f330eb5c0e21c0f1be792c697ce3eff02e
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:v2:795e150e89fc26e9d0a9413646a44641de84fe9a02d6a70202899d5d6553a075"
+hash = "sha256:v2:80e698ffde0ab16789afb9327008b6dff09f46984d5a7f9c0d038d8c58234ea8"
 depends_on = ["airlock", "cerberus"]
+
+[config-to-kv]
+kind = "action"
+manifest = "apps/action-config-to-kv/pyproject.toml"
+hash = "sha256:34a7a131f969c9643eed546a9cf65dff41208c55c3306427c86288c0c53356a7"

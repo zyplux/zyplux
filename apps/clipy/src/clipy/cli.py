@@ -27,8 +27,10 @@ def stats(
     directory: Annotated[Path, typer.Argument(help="Directory to measure.")] = Path(),
     out: Annotated[Path | None, typer.Option("--out", "-o", help="Report destination.")] = None,
     title: Annotated[str | None, typer.Option(help="Measured scope name in the report heading.")] = None,
+    *,
+    staged: Annotated[bool, typer.Option(help="Measure staged file contents instead of working files.")] = False,
 ) -> None:
-    typer.echo(f"wrote {code_metrics.write_report(directory, title=title, out=out)}")
+    typer.echo(f"wrote {code_metrics.write_report(directory, title=title, out=out, staged=staged)}")
 
 
 def main() -> None:

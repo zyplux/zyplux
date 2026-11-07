@@ -18,3 +18,5 @@ uv run justpty [JUST_ARGS...]
 ```
 
 `ctop` and `justpty` also run as self-contained PEP 723 scripts.
+
+Use `uv run clipy stats --staged` to measure the Git index, including its classification settings. Ordinary `uv run clipy stats` measures tracked working files. Lefthook regenerates and stages only `line_and_token_stats.md` before commits; generation failure aborts the commit.

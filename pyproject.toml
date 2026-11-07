@@ -13,6 +13,7 @@ members = [
     "apps/cerberus",
     "apps/clipy",
     "apps/action-setup-pm",
+    "apps/action-config-to-kv",
     "apps/totchef",
     "apps/token_stats",
 ]
@@ -22,12 +23,13 @@ zyplux-airlock = { workspace = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["tests/release_fixtures"]
-addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
+addopts = "-n auto --cov=airlock --cov=cerberus --cov=clipy --cov=setup_pm --cov=config_to_kv --cov=totchef --cov=token_stats --cov-report=term-missing --durations=20"
 testpaths = [
     "tests/airlock",
     "tests/cerberus",
     "tests/clipy",
     "tests/setup_pm",
+    "tests/config_to_kv",
     "tests/totchef",
     "tests/token_stats",
 ]
@@ -47,6 +49,7 @@ paths = [
     "apps/cerberus/src",
     "apps/clipy/src",
     "apps/action-setup-pm/src",
+    "apps/action-config-to-kv/src",
     "apps/totchef/src",
     "apps/token_stats/src",
     "tests/airlock",
@@ -54,6 +57,7 @@ paths = [
     "tests/clipy",
     "tests/release_fixtures",
     "tests/setup_pm",
+    "tests/config_to_kv",
     "tests/totchef",
     "tests/token_stats",
 ]

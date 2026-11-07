@@ -23,3 +23,21 @@ Tests use a deterministic byte tokenizer while exercising real grammar parsers. 
 ## 3.3 reporting errors
 
 ### 3.3.1 reports empty scopes and missing repositories
+
+## 3.4 Staged snapshots
+
+### 3.4.1 Measures staged changes without including unstaged edits
+
+Staged additions, modifications and deletions determine the report; partially staged working files and the index remain untouched.
+
+### 3.4.2 Uses staged classification and excludes the report
+
+Classification uses the staged config, and the report excludes itself.
+
+### 3.4.3 Handles staged deletion of the last file
+
+An empty staged snapshot produces zero totals.
+
+### 3.4.4 Preserves report when staged classification is invalid
+
+Generation fails without overwriting the report or changing the index.

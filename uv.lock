@@ -10,6 +10,7 @@ members = [
     "zyplux-airlock",
     "zyplux-cerberus",
     "zyplux-clipy",
+    "zyplux-config-to-kv",
     "zyplux-setup-pm",
 ]
 
@@ -1455,7 +1456,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-clipy"
-version = "0.1.2"
+version = "0.2.0"
 source = { editable = "apps/clipy" }
 dependencies = [
     { name = "psutil" },
@@ -1501,6 +1502,11 @@ requires-dist = [
     { name = "zyplux-airlock", editable = "apps/airlock" },
     { name = "zyplux-cerberus", editable = "apps/cerberus" },
 ]
+
+[[package]]
+name = "zyplux-config-to-kv"
+version = "1.0.0"
+source = { editable = "apps/action-config-to-kv" }
 
 [[package]]
 name = "zyplux-setup-pm"

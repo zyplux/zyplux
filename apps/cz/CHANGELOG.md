@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 1.0.0
+
+### Major Changes
+
+- Remove the stats command; invoke uv run clipy stats directly and workspace-graph explicitly.
+
 ## 0.16.2
 
 ### Patch Changes

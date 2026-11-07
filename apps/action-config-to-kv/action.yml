@@ -1,0 +1,33 @@
+name: Config to KV
+description: Publish the validated config repository's Worker snapshot to its environment's Cloudflare KV namespace.
+inputs:
+  environment:
+    description: Zyploop environment, staging or production.
+    required: true
+  cloudflare-account-id:
+    description: Account containing the Worker config namespace.
+    required: true
+  cloudflare-api-token:
+    description: Cloudflare token with Workers KV and Scripts access.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+    - uses: zyplux/zyplux/apps/action-setup-pm@setup-pm-v1
+      env:
+        NODE_AUTH_TOKEN: ${{ github.token }}
+        NPM_CONFIG_USERCONFIG: ${{ github.workspace }}/registry.npmrc
+    - shell: bash
+      env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.cloudflare-account-id }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+        if [[ "$GITHUB_SHA" == "$main_sha" ]]; then
+          python3 "$GITHUB_ACTION_PATH/src/config_to_kv/publish.py"
+        fi

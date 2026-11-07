@@ -21,7 +21,8 @@
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
     "release:prepare": "uv run airlock prepare",
-    "skills:refresh": "skills experimental_install"
+    "skills:refresh": "skills experimental_install",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -34,6 +35,7 @@
     "prettier": "catalog:",
     "skills": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "lefthook": "catalog:"
   }
 }

@@ -98,7 +98,7 @@ fingerprint:
 
 # Write tracked code statistics for a directory.
 stats dir='.' *args='':
-    pnpm run --silent cz stats {{ quote(join(invocation_directory(), dir)) }} {{ args }}
+    uv run clipy stats {{ quote(join(invocation_directory(), dir)) }} {{ args }}
 
 # Write the workspace dependency diagram.
 dep-graph:

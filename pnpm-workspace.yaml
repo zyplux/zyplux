@@ -4,6 +4,7 @@ packages:
   - 'tests/*'
 
 catalog:
+  lefthook: 2.2.2
   '@happy-dom/global-registrator': ^21.0.4
   mermaid: ^12.2.0
   '@eslint/js': '^10.0.1'
@@ -49,3 +50,6 @@ versioning:
     storage: repository
 
 publishWaitTimeout: 600000
+
+allowBuilds:
+  lefthook: true
