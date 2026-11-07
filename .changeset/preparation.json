@@ -1,9 +1,11 @@
 {
   "format": 2,
-  "tags": ["clipy-v0.2.0", "cz-v1.0.0"],
+  "tags": ["action-airlock-v2.2.3", "airlock-v2.2.3", "cerberus-v0.27.6", "clipy-v0.2.0", "cz-v1.0.0"],
   "intents": {
+    ".changeset/fast-seas-stay.md": "---\n\"zyplux-airlock\": patch\n---\n\nRefresh supported dependency versions.\n",
     ".changeset/fluffy-boxes-repeat.md": "---\n\"zyplux-config-to-kv\": none\n---\n\nPublish validated Worker snapshots to Cloudflare KV using shared validator secret requirements.\n",
     ".changeset/neat-rivers-smile.md": "---\n\"zyplux-clipy\": minor\n---\n\nMeasure staged Git snapshots without including unstaged edits; support deterministic commit-time stats.\n",
+    ".changeset/old-tools-fail.md": "---\n\"zyplux-cerberus\": patch\n---\n\nUpdate the managed Fallow analyzer to 3.40.0.\n",
     ".changeset/quiet-melons-rush.md": "---\n\"@zyplux/cz\": major\n---\n\nRemove the stats command; invoke uv run clipy stats directly and workspace-graph explicitly.\n"
   },
   "files": {
@@ -14,9 +16,75 @@
           "dir": "apps/cz",
           "intents": ["quiet-melons-rush"]
         },
+        "zyplux-airlock@2.2.3": {
+          "dir": "apps/airlock",
+          "intents": ["fast-seas-stay"]
+        },
+        "zyplux-cerberus@0.27.6": {
+          "dir": "apps/cerberus",
+          "intents": ["old-tools-fail"]
+        },
         "zyplux-clipy@0.2.0": {
           "dir": "apps/clipy",
           "intents": ["neat-rivers-smile"]
+        }
+      },
+      "created": false
+    },
+    "apps/airlock/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 2.2.3": "## 2.2.3\n\n### Patch Changes\n\n- Refresh supported dependency versions.\n\n"
+      },
+      "created": false
+    },
+    "apps/airlock/package.json": {
+      "before": {
+        "version": "2.2.2"
+      },
+      "after": {
+        "version": "2.2.3"
+      },
+      "created": false
+    },
+    "apps/airlock/pyproject.toml": {
+      "before": {
+        "project": {
+          "version": "2.2.2"
+        }
+      },
+      "after": {
+        "project": {
+          "version": "2.2.3"
+        }
+      },
+      "created": false
+    },
+    "apps/cerberus/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 0.27.6": "## 0.27.6\n\n### Patch Changes\n\n- Update the managed Fallow analyzer to 3.40.0.\n\n"
+      },
+      "created": false
+    },
+    "apps/cerberus/package.json": {
+      "before": {
+        "version": "0.27.5"
+      },
+      "after": {
+        "version": "0.27.6"
+      },
+      "created": false
+    },
+    "apps/cerberus/pyproject.toml": {
+      "before": {
+        "project": {
+          "version": "0.27.5"
+        }
+      },
+      "after": {
+        "project": {
+          "version": "0.27.6"
         }
       },
       "created": false

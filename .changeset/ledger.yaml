@@ -90,6 +90,10 @@ zyplux-airlock@2.2.2:
   intents:
     - npm-bump-fingerprints
     - python-development-fingerprints
+zyplux-airlock@2.2.3:
+  dir: apps/airlock
+  intents:
+    - fast-seas-stay
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -137,6 +141,10 @@ zyplux-cerberus@0.27.5:
   intents:
     - npm-development-bumps
     - partial-release-migrations
+zyplux-cerberus@0.27.6:
+  dir: apps/cerberus
+  intents:
+    - old-tools-fail
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:

@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.27.6
+
+### Patch Changes
+
+- Update the managed Fallow analyzer to 3.40.0.
+
 ## 0.27.5
 
 ### Patch Changes
