@@ -10,7 +10,7 @@
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "knip": "knip",
     "format": "prettier --write --cache --log-level warn .",
@@ -32,10 +32,10 @@
     "@zyplux/tsconfig": "workspace:*",
     "eslint": "catalog:",
     "knip": "catalog:",
+    "lefthook": "catalog:",
     "prettier": "catalog:",
     "skills": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:",
-    "lefthook": "catalog:"
+    "vitest": "catalog:"
   }
 }
