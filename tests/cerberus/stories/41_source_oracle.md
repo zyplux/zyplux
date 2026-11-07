@@ -14,7 +14,7 @@ Consumer overlays replace roots under `[source_oracle.types.<category>]` and ret
 
 ### 41.2.1 enforces shared nesting policies
 
-Demo and docs scopes allow only artifacts as child categories. Artifacts scopes are terminal.
+Each parent permits only its declared different child categories. Same-category nesting is implicit, and artifacts scopes are terminal.
 
 ### 41.2.2 rejects equally specific conflicting categories
 

@@ -69,8 +69,8 @@ def test_33_1_3_overrides_test_file_patterns_without_replacing_production_defaul
         ("apps/api/src/demo_client.py", SourceKind.PROD, "apps/api", (False, True)),
         ("infra/cloudflare/src/deploy.py", SourceKind.INFRA, "infra", (False, True)),
         ("tools/lint/src/cli.py", SourceKind.PROD, "tools/lint", (False, True)),
-        ("infra/demo/src/deploy.py", SourceKind.DEMO, "infra/demo", (False, False)),
-        ("tests/demo/test_deploy.py", SourceKind.DEMO, "tests/demo", (True, False)),
+        ("apps/api/examples/deploy.py", SourceKind.DEMO, "apps/api/examples", (False, False)),
+        ("apps/api/examples/test_deploy.py", SourceKind.DEMO, "apps/api/examples", (True, False)),
         ("tests/api/test_demo_fixture.py", SourceKind.TEST, "tests", (True, False)),
         ("doubles/server/src/server.ts", SourceKind.TEST, "doubles", (True, False)),
         ("apps/api/src/api.test.ts", SourceKind.PROD, "apps/api", (True, False)),
@@ -85,32 +85,35 @@ def test_33_1_3_overrides_test_file_patterns_without_replacing_production_defaul
         ("docs/CHANGELOG.md", SourceKind.ARTIFACTS, "docs/CHANGELOG.md", (False, False)),
         ("demo/CHANGELOG.md", SourceKind.ARTIFACTS, "demo/CHANGELOG.md", (False, False)),
         ("tests/CHANGELOG.md", SourceKind.ARTIFACTS, "tests/CHANGELOG.md", (True, False)),
-        (".changeset/preparation.json", SourceKind.ARTIFACTS, ".changeset", (False, False)),
-        (".changeset/ledger.yaml", SourceKind.ARTIFACTS, ".changeset", (False, False)),
+        (".changeset/preparation.json", SourceKind.ARTIFACTS, ".changeset/preparation.json", (False, False)),
+        (".changeset/ledger.yaml", SourceKind.ARTIFACTS, ".changeset/ledger.yaml", (False, False)),
         ("custom/.changeset/ledger.yaml", SourceKind.INFRA, ".", (False, True)),
+        (".changeset/README.md", SourceKind.ARTIFACTS, ".changeset/README.md", (False, False)),
+        ("apps/api/README.md", SourceKind.DOCS, "apps/api/README.md", (False, False)),
+        ("infra/README.md", SourceKind.DOCS, "infra/README.md", (False, False)),
+        ("demo/docs/guide.md", SourceKind.DOCS, "demo/docs", (False, False)),
+        ("tests/README.md", SourceKind.DOCS, "tests/README.md", (True, False)),
         ("custom/tool.py", SourceKind.INFRA, ".", (False, True)),
         ("docs/issues/capture.py", SourceKind.DOCS, "docs", (False, False)),
         ("docs/tests/test_example.py", SourceKind.DOCS, "docs", (True, False)),
-        ("scripts/merge-coverage.ts", SourceKind.TEST, "scripts/merge-coverage.ts", (True, False)),
+        ("tests/merge-coverage.ts", SourceKind.TEST, "tests", (True, False)),
     ],
 )
 def test_33_2_1_separates_categories_from_colocated_tests_and_testing_eligibility(
     tmp_path: Path, path: str, kind: SourceKind, root: str, flags: tuple[bool, bool]
 ) -> None:
-    (tmp_path / "cerberus.toml").write_text('[source_oracle.types.demo]\nroots = ["infra/demo", "tests/demo"]\n')
     classification = load_source_oracle(tmp_path).classify(path)
     assert classification == SourceClassification(kind, root, *flags)
 
 
 def test_33_2_2_prefers_deeper_and_more_specific_categories(tmp_path: Path) -> None:
     (tmp_path / "cerberus.toml").write_text(
-        '[source_oracle.types.infra]\nroots = ["apps/api"]\n'
-        '[source_oracle.types.prod]\nroots = ["apps/*", "apps/api/runtime"]\n'
+        '[source_oracle.types.infra]\nroots = ["apps/api"]\n[source_oracle.types.docs]\nroots = ["apps/api/manual"]\n'
     )
     scope = load_source_oracle(tmp_path)
     assert scope.classify("apps/api/cli.py").kind is SourceKind.INFRA
-    assert scope.classify("apps/api/runtime/service.py").kind is SourceKind.PROD
-    assert scope.classify_directory("apps/api/runtime").kind is SourceKind.PROD
+    assert scope.classify("apps/api/manual/guide.md").kind is SourceKind.DOCS
+    assert scope.classify_directory("apps/api/manual").kind is SourceKind.DOCS
     assert scope.classify_directory("apps/api").kind is SourceKind.INFRA
 
 

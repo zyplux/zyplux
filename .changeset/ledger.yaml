@@ -144,6 +144,7 @@ zyplux-cerberus@0.27.5:
 zyplux-cerberus@0.28.0:
   dir: apps/cerberus
   intents:
+    - gentle-stars-agree
     - great-rivers-deny
     - kind-mice-flow
     - old-tools-fail

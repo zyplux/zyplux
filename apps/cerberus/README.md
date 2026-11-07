@@ -104,10 +104,10 @@ Configurable bite tables also take a common `off` key, handled by the runner: `o
 
 | Category | Purpose | Needs tests | Allowed child categories |
 | --- | --- | --- | --- |
-| `prod` | Shipped applications and libraries | Yes | All |
-| `infra` | Repository, CI and deployment code | Yes | All |
-| `demo` | Examples and demonstrations | No | artifacts |
-| `test` | Tests, fixtures and coverage reporting | No | test, demo, docs, artifacts |
+| `prod` | Shipped applications and libraries | Yes | demo, test, docs, artifacts |
+| `infra` | Repository, CI and deployment code | Yes | docs, artifacts |
+| `demo` | Examples and demonstrations | No | docs, artifacts |
+| `test` | Tests, fixtures and coverage reporting | No | docs, artifacts |
 | `docs` | Documentation, including embedded executable code | No | artifacts |
 | `artifacts` | Generated records: root `.changeset/`, lockfiles and `CHANGELOG.md` | No | None |
 
@@ -121,7 +121,7 @@ roots = ["apps/*", "packages/*", "src", "tools/*"]
 roots = ["demo", "examples", "infra/demo"]
 ```
 
-Root globs are repository-relative paths. Deeper matches win; equally deep matches use the most literal pattern. Equally specific conflicting categories fail. `allowed_child_types` names the categories permitted **inside** a category. Demo and docs roots allow only artifacts as child categories; artifacts roots are terminal. Unmatched paths are infra. Colocated tests retain their enclosing category and have an independent `is_test` flag, derived from `[source_oracle].test_files`.
+Root globs are repository-relative paths. Deeper matches win; equally deep matches use the most literal pattern. Equally specific conflicting categories fail. `allowed_child_types` names the categories permitted **inside** a category. Same-category nesting is implicit; the table lists permitted direct category changes. Artifacts roots are terminal. README files and docs directories are documentation, except within root `.changeset/`, whose contents remain artifacts. Unmatched paths are infra. Colocated tests retain their enclosing category and have an independent `is_test` flag, derived from `[source_oracle].test_files`.
 
 Existing test-presence checks use `needs_tests`. Repositories configure test discovery, runners and coverage. `[source_oracle].test_exempt_files` records explicit repository policy exceptions. Linting and strict typechecking cover every category.
 

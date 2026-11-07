@@ -31,7 +31,7 @@ def test_41_1_1_accepts_bundled_category_defaults(run_check_with_files: RunCheck
                 "doubles/server/main.py",
                 "docs/issues/capture.py",
                 "docs/tests/test_example.py",
-                "scripts/merge-coverage.ts",
+                "tests/merge-coverage.ts",
             ),
             "",
         ),
@@ -60,7 +60,7 @@ def test_41_1_3_overrides_every_category(tmp_path: Path, run_check_with_files: R
     assert [oracle.classify(path).kind for path in paths] == list(SourceKind)
 
 
-@pytest.mark.parametrize("parent", [SourceKind.DEMO, SourceKind.DOCS, SourceKind.ARTIFACTS])
+@pytest.mark.parametrize("parent", list(SourceKind))
 @pytest.mark.parametrize("child", list(SourceKind))
 def test_41_2_1_enforces_shared_nesting_policies(
     run_check_with_files: RunCheckWithFiles, parent: SourceKind, child: SourceKind
@@ -73,7 +73,15 @@ def test_41_2_1_enforces_shared_nesting_policies(
         f'[source_oracle.types.{parent}]\nroots = ["content"]\n'
         f'[source_oracle.types.{child}]\nroots = ["content/runtime"]\n',
     )
-    if child is SourceKind.ARTIFACTS:
+    allowed = {
+        SourceKind.PROD: {SourceKind.DEMO, SourceKind.TEST, SourceKind.DOCS, SourceKind.ARTIFACTS},
+        SourceKind.INFRA: {SourceKind.DOCS, SourceKind.ARTIFACTS},
+        SourceKind.DEMO: {SourceKind.DOCS, SourceKind.ARTIFACTS},
+        SourceKind.TEST: {SourceKind.DOCS, SourceKind.ARTIFACTS},
+        SourceKind.DOCS: {SourceKind.ARTIFACTS},
+        SourceKind.ARTIFACTS: set(),
+    }
+    if child in allowed[parent]:
         assert not result.problems
         return
     assert any(

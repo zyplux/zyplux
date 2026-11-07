@@ -4,6 +4,7 @@
   "intents": {
     ".changeset/fast-seas-stay.md": "---\n\"zyplux-airlock\": patch\n---\n\nRefresh supported dependency versions.\n",
     ".changeset/fluffy-boxes-repeat.md": "---\n\"zyplux-config-to-kv\": none\n---\n\nPublish validated Worker snapshots to Cloudflare KV using shared validator secret requirements.\n",
+    ".changeset/gentle-stars-agree.md": "---\n\"zyplux-cerberus\": minor\n---\n\nRestrict direct category nesting, classify documentation consistently, and remove the coverage-script path exception.\n",
     ".changeset/great-rivers-deny.md": "---\n\"zyplux-cerberus\": minor\n---\n\nClassify root .changeset release records as artifacts rather than infrastructure.\n",
     ".changeset/kind-mice-flow.md": "---\n\"zyplux-cerberus\": minor\n---\n\nClassify lockfiles and CHANGELOG.md records as artifacts across source categories.\n",
     ".changeset/neat-rivers-smile.md": "---\n\"zyplux-clipy\": minor\n---\n\nMeasure staged Git snapshots without including unstaged edits; support deterministic commit-time stats.\n",
@@ -24,7 +25,7 @@
         },
         "zyplux-cerberus@0.28.0": {
           "dir": "apps/cerberus",
-          "intents": ["great-rivers-deny", "kind-mice-flow", "old-tools-fail"]
+          "intents": ["gentle-stars-agree", "great-rivers-deny", "kind-mice-flow", "old-tools-fail"]
         },
         "zyplux-clipy@0.2.0": {
           "dir": "apps/clipy",
@@ -65,7 +66,7 @@
     "apps/cerberus/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 0.28.0": "## 0.28.0\n\n### Minor Changes\n\n- Classify root .changeset release records as artifacts rather than infrastructure.\n\n- Classify lockfiles and CHANGELOG.md records as artifacts across source categories.\n\n### Patch Changes\n\n- Update the managed Fallow analyzer to 3.40.0.\n\n"
+        "## 0.28.0": "## 0.28.0\n\n### Minor Changes\n\n- Restrict direct category nesting, classify documentation consistently, and remove the coverage-script path exception.\n\n- Classify root .changeset release records as artifacts rather than infrastructure.\n\n- Classify lockfiles and CHANGELOG.md records as artifacts across source categories.\n\n### Patch Changes\n\n- Update the managed Fallow analyzer to 3.40.0.\n\n"
       },
       "created": false
     },
