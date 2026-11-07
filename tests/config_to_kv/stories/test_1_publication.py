@@ -63,7 +63,8 @@ def test_1_3_skips_unchanged_snapshots(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_1_4_bootstrap_follows_successful_publication(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DEPLOYMENT_ENVIRONMENT", "staging")
     monkeypatch.setenv("GITHUB_SHA", "commit")
-    snapshot = {"revision": "revision", "requiredSecrets": {"email": []}}
+    secret_names: list[str] = []
+    snapshot = {"revision": "revision", "requiredSecrets": {"email": secret_names}}
     steps: list[str] = []
 
     def request(_path: str, **kwargs: object) -> dict[str, bool] | None:
