@@ -120,7 +120,8 @@ def test_3_2_3_uses_shared_source_categories_in_scoped_reports(report_repo: Repo
         '[source_oracle.types.infra]\nroots = ["services/ops"]\n'
         '[source_oracle.types.test]\nroots = ["services/checks"]\n'
         '[source_oracle.types.demo]\nroots = ["services/demo"]\n'
-        '[source_oracle.types.docs]\nroots = ["services/docs"]\n',
+        '[source_oracle.types.docs]\nroots = ["services/docs"]\n'
+        '[source_oracle.types.artifacts]\nroots = ["services/generated"]\n',
     )
     report_repo.write("services/api/server.ts", TS_SOURCE)
     report_repo.write("services/api/server.test.ts", TS_SOURCE)
@@ -129,12 +130,13 @@ def test_3_2_3_uses_shared_source_categories_in_scoped_reports(report_repo: Repo
     report_repo.write("services/ops/setup.test.ts", TS_SOURCE)
     report_repo.write("services/checks/cases.ts", TS_SOURCE)
     report_repo.write("services/docs/example.test.ts", TS_SOURCE)
+    report_repo.write("services/generated/record.ts", TS_SOURCE)
     report_repo.stage()
     result = report_repo.invoke("stats", "services", "--title", "service corpus", "-o", "reports/services.md")
     assert result.exit_code == 0, result.output
     report = report_repo.read("reports/services.md")
     assert report.startswith("# Stats - service corpus\n\nTLDR: prod 2/48 · infra 1/13 · tests 6/144\n")
-    assert read_row(report, "Line Counts", ".ts")["Files"] == "7"
+    assert read_row(report, "Line Counts", ".ts")["Files"] == "8"
     assert read_row(report, "Production Line Counts", ".ts")["Files"] == "1"
 
 

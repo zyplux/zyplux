@@ -47,7 +47,7 @@ CONFIG_SCHEMA = create_model(
         create_model(
             "OracleSettings",
             __base__=BiteSettings,
-            default_type=(Literal["prod", "infra", "demo", "test", "docs"], None),
+            default_type=(Literal["prod", "infra", "demo", "test", "docs", "artifacts"], None),
             test_files=(list[str], None),
             test_exempt_files=(list[str], None),
             types=(
@@ -59,6 +59,7 @@ CONFIG_SCHEMA = create_model(
                     demo=(SourceRoots, None),
                     test=(SourceRoots, None),
                     docs=(SourceRoots, None),
+                    artifacts=(SourceRoots, None),
                 ),
                 None,
             ),

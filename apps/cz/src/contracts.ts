@@ -28,7 +28,7 @@ export type DepsDevPackage = z.infer<typeof DepsDevPackageSchema>;
 
 const SourceClassificationSchema = z.object({
   is_test: z.boolean(),
-  kind: z.enum(['prod', 'infra', 'demo', 'test', 'docs']),
+  kind: z.enum(['prod', 'infra', 'demo', 'test', 'docs', 'artifacts']),
   needs_tests: z.boolean(),
   root: z.string(),
 });

@@ -1,9 +1,17 @@
 {
   "format": 2,
-  "tags": ["action-airlock-v2.2.3", "airlock-v2.2.3", "cerberus-v0.27.6", "clipy-v0.2.0", "cz-v1.0.0"],
+  "tags": [
+    "action-airlock-v2.2.3",
+    "airlock-v2.2.3",
+    "cerberus-v0.28.0",
+    "clipy-v0.2.0",
+    "cz-v1.0.0"
+  ],
   "intents": {
     ".changeset/fast-seas-stay.md": "---\n\"zyplux-airlock\": patch\n---\n\nRefresh supported dependency versions.\n",
     ".changeset/fluffy-boxes-repeat.md": "---\n\"zyplux-config-to-kv\": none\n---\n\nPublish validated Worker snapshots to Cloudflare KV using shared validator secret requirements.\n",
+    ".changeset/great-rivers-deny.md": "---\n\"zyplux-cerberus\": minor\n---\n\nClassify root .changeset release records as artifacts rather than infrastructure.\n",
+    ".changeset/kind-mice-flow.md": "---\n\"zyplux-cerberus\": minor\n---\n\nClassify lockfiles and CHANGELOG.md records as artifacts across source categories.\n",
     ".changeset/neat-rivers-smile.md": "---\n\"zyplux-clipy\": minor\n---\n\nMeasure staged Git snapshots without including unstaged edits; support deterministic commit-time stats.\n",
     ".changeset/old-tools-fail.md": "---\n\"zyplux-cerberus\": patch\n---\n\nUpdate the managed Fallow analyzer to 3.40.0.\n",
     ".changeset/quiet-melons-rush.md": "---\n\"@zyplux/cz\": major\n---\n\nRemove the stats command; invoke uv run clipy stats directly and workspace-graph explicitly.\n"
@@ -14,19 +22,29 @@
       "after": {
         "@zyplux/cz@1.0.0": {
           "dir": "apps/cz",
-          "intents": ["quiet-melons-rush"]
+          "intents": [
+            "quiet-melons-rush"
+          ]
         },
         "zyplux-airlock@2.2.3": {
           "dir": "apps/airlock",
-          "intents": ["fast-seas-stay"]
+          "intents": [
+            "fast-seas-stay"
+          ]
         },
-        "zyplux-cerberus@0.27.6": {
+        "zyplux-cerberus@0.28.0": {
           "dir": "apps/cerberus",
-          "intents": ["old-tools-fail"]
+          "intents": [
+            "great-rivers-deny",
+            "kind-mice-flow",
+            "old-tools-fail"
+          ]
         },
         "zyplux-clipy@0.2.0": {
           "dir": "apps/clipy",
-          "intents": ["neat-rivers-smile"]
+          "intents": [
+            "neat-rivers-smile"
+          ]
         }
       },
       "created": false
@@ -63,7 +81,7 @@
     "apps/cerberus/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 0.27.6": "## 0.27.6\n\n### Patch Changes\n\n- Update the managed Fallow analyzer to 3.40.0.\n\n"
+        "## 0.28.0": "## 0.28.0\n\n### Minor Changes\n\n- Classify root .changeset release records as artifacts rather than infrastructure.\n\n- Classify lockfiles and CHANGELOG.md records as artifacts across source categories.\n\n### Patch Changes\n\n- Update the managed Fallow analyzer to 3.40.0.\n\n"
       },
       "created": false
     },
@@ -72,7 +90,7 @@
         "version": "0.27.5"
       },
       "after": {
-        "version": "0.27.6"
+        "version": "0.28.0"
       },
       "created": false
     },
@@ -84,7 +102,7 @@
       },
       "after": {
         "project": {
-          "version": "0.27.6"
+          "version": "0.28.0"
         }
       },
       "created": false

@@ -1,6 +1,12 @@
 # zyplux-cerberus
 
-## 0.27.6
+## 0.28.0
+
+### Minor Changes
+
+- Classify root .changeset release records as artifacts rather than infrastructure.
+
+- Classify lockfiles and CHANGELOG.md records as artifacts across source categories.
 
 ### Patch Changes
 

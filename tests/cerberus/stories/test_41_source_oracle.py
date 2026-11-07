@@ -48,7 +48,8 @@ def test_41_1_2_overrides_one_category_and_retains_all_other_defaults(tmp_path: 
 
 
 def test_41_1_3_overrides_every_category(tmp_path: Path, run_check_with_files: RunCheckWithFiles) -> None:
-    directories = dict(zip(SourceKind, ("product", "platform", "showcase", "harness", "manual"), strict=True))
+    names = ("product", "platform", "showcase", "harness", "manual", "generated")
+    directories = dict(zip(SourceKind, names, strict=True))
     overlay = "".join(
         f'[source_oracle.types.{kind}]\nroots = ["{directory}/*"]\n' for kind, directory in directories.items()
     )
@@ -59,7 +60,7 @@ def test_41_1_3_overrides_every_category(tmp_path: Path, run_check_with_files: R
     assert [oracle.classify(path).kind for path in paths] == list(SourceKind)
 
 
-@pytest.mark.parametrize("parent", [SourceKind.DEMO, SourceKind.DOCS])
+@pytest.mark.parametrize("parent", [SourceKind.DEMO, SourceKind.DOCS, SourceKind.ARTIFACTS])
 @pytest.mark.parametrize("child", list(SourceKind))
 def test_41_2_1_enforces_shared_nesting_policies(
     run_check_with_files: RunCheckWithFiles, parent: SourceKind, child: SourceKind
@@ -72,6 +73,9 @@ def test_41_2_1_enforces_shared_nesting_policies(
         f'[source_oracle.types.{parent}]\nroots = ["content"]\n'
         f'[source_oracle.types.{child}]\nroots = ["content/runtime"]\n',
     )
+    if child is SourceKind.ARTIFACTS:
+        assert not result.problems
+        return
     assert any(
         f"{parent} scope content cannot contain {child} scope content/runtime" in finding.message
         for finding in result.problems

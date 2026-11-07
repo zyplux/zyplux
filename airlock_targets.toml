@@ -35,12 +35,12 @@ hash = "sha256:v2:f9a597731dfbb7259b6d380155a6eb52c4846053e57c20fa8484b204e0a56a
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:v2:24e480ea4216c4ef0bc09fd0b25fdbcbb24bab20dae06b02979a8594e24640ee"
+hash = "sha256:v2:be415f04a17f8d6ee32a16513a6a21988c4014411b4bbe654a67da533e6bc9b0"
 depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:v2:7db4e99e06af8d69aa99c1d924e18e27cb74842096b2860a8bb036fc9e739b5f"
+hash = "sha256:v2:04b9355e692d86a8e6f00929989eb29898e97267cbf0e2dfeb1e8b6da2cb118a"
 depends_on = ["airlock"]
 
 [totchef]

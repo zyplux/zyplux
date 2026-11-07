@@ -1423,7 +1423,7 @@ requires-dist = [
 
 [[package]]
 name = "zyplux-cerberus"
-version = "0.27.6"
+version = "0.28.0"
 source = { editable = "apps/cerberus" }
 dependencies = [
     { name = "networkx" },
