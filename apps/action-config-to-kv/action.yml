@@ -29,5 +29,5 @@ runs:
       run: |
         main_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
         if [[ "$GITHUB_SHA" == "$main_sha" ]]; then
-          python3 "$GITHUB_ACTION_PATH/src/config_to_kv/publish.py"
+          PYTHONPATH="$GITHUB_ACTION_PATH/src" python3 -m config_to_kv.publish
         fi

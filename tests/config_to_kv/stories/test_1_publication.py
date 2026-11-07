@@ -10,7 +10,7 @@ def test_1_1_publishes_validator_snapshot_without_reading_secret_values(monkeypa
     monkeypatch.setenv("GITHUB_SHA", "commit")
     snapshot = {
         "revision": "revision",
-        "settings": {"email_maintenance_hours": 6},
+        "settings": {"requires_validator": "^9.0.0"},
         "requiredSecrets": {"identity": ["KEY"]},
     }
     writes: list[object] = []
@@ -24,7 +24,7 @@ def test_1_1_publishes_validator_snapshot_without_reading_secret_values(monkeypa
     with (
         patch("config_to_kv.publish.load_snapshot", return_value=deepcopy(snapshot)),
         patch("config_to_kv.publish.find_namespace", return_value="namespace"),
-        patch("config_to_kv.publish.fetch_result", return_value=None),
+        patch("config_to_kv.publish.list_worker_bindings", return_value=[]),
         patch("config_to_kv.publish.request_cloudflare", side_effect=request),
     ):
         publish_config()
@@ -54,7 +54,40 @@ def test_1_3_skips_unchanged_snapshots(monkeypatch: pytest.MonkeyPatch) -> None:
         patch("config_to_kv.publish.load_snapshot", return_value={"revision": "same", "requiredSecrets": {}}),
         patch("config_to_kv.publish.find_namespace", return_value="namespace"),
         patch("config_to_kv.publish.request_cloudflare", return_value={"revision": "same", "requiredSecrets": {}}),
-        patch("config_to_kv.publish.fetch_result") as fetch,
+        patch("config_to_kv.publish.list_worker_bindings", return_value=[]) as fetch,
     ):
         publish_config()
-    fetch.assert_not_called()
+    fetch.assert_called_once_with("zyploop-staging", [])
+
+
+def test_1_4_bootstrap_follows_successful_publication(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DEPLOYMENT_ENVIRONMENT", "staging")
+    monkeypatch.setenv("GITHUB_SHA", "commit")
+    snapshot = {"revision": "revision", "requiredSecrets": {"email": []}}
+    steps: list[str] = []
+
+    def request(_path: str, **kwargs: object) -> dict[str, bool] | None:
+        if kwargs.get("method") == "PUT":
+            steps.append("publish")
+            return {"success": True}
+        return None
+
+    def notify(urls: list[str], revision: str) -> None:
+        assert urls == ["https://email.test/bootstrap"]
+        assert revision == "revision"
+        steps.append("bootstrap")
+
+    bindings = [
+        {"name": "CONFIG", "namespace_id": "namespace"},
+        {"name": "CONFIG_VALIDATOR_VERSION", "text": "9.0.0"},
+        {"name": "BOOTSTRAP_URL", "text": "https://email.test/bootstrap"},
+    ]
+    with (
+        patch("config_to_kv.publish.load_snapshot", return_value=snapshot),
+        patch("config_to_kv.publish.find_namespace", return_value="namespace"),
+        patch("config_to_kv.publish.list_worker_bindings", return_value=[("email", bindings)]),
+        patch("config_to_kv.publish.request_cloudflare", side_effect=request),
+        patch("config_to_kv.publish.notify_workers", side_effect=notify),
+    ):
+        publish_config()
+    assert steps == ["publish", "bootstrap"]

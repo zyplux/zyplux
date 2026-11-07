@@ -6,65 +6,10 @@ import json
 import os
 import subprocess
 import sys
-from http import HTTPStatus
-from http.client import HTTPSConnection
-from typing import Any, cast
+from typing import Any
 
-HOURS_PER_DAY = 24
-
-
-def request_cloudflare(
-    path: str, *, method: str = "GET", body: object = None, allow_missing: bool = False
-) -> dict[str, Any] | None:
-    account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
-    connection = HTTPSConnection("api.cloudflare.com", timeout=30)
-    try:
-        connection.request(
-            method,
-            f"/client/v4/accounts/{account}/{path}",
-            body=None if body is None else json.dumps(body),
-            headers={
-                "Authorization": f"Bearer {os.environ['CLOUDFLARE_API_TOKEN']}",
-                "Content-Type": "application/json",
-            },
-        )
-        response = connection.getresponse()
-        if allow_missing and response.status == HTTPStatus.NOT_FOUND:
-            return None
-        if not HTTPStatus.OK <= response.status < HTTPStatus.MULTIPLE_CHOICES:
-            message = f"Cloudflare {method} {path} returned HTTP {response.status}"
-            raise RuntimeError(message)
-        return json.loads(response.read())
-    finally:
-        connection.close()
-
-
-def fetch_result(path: str, *, allow_missing: bool = False) -> dict[str, Any] | None:
-    response = request_cloudflare(path, allow_missing=allow_missing)
-    if response is None:
-        return None
-    if response is None or not response["success"]:
-        message = f"Cloudflare could not read {path}"
-        raise RuntimeError(message)
-    return response["result"]
-
-
-def find_namespace(title: str) -> str:
-    page = 1
-    page_size = 50
-    while True:
-        response = request_cloudflare(f"storage/kv/namespaces?per_page={page_size}&page={page}")
-        if response is None or not response["success"]:
-            message = "Cannot list KV namespaces"
-            raise RuntimeError(message)
-        namespaces = cast("list[dict[str, Any]]", response["result"])
-        for namespace in namespaces:
-            if namespace["title"] == title:
-                return namespace["id"]
-        if len(namespaces) < page_size:
-            message = f"Provision the {title} KV namespace before publishing"
-            raise RuntimeError(message)
-        page += 1
+from config_to_kv.bootstrap import notify_workers
+from config_to_kv.cloudflare import find_namespace, list_bootstrap_urls, list_worker_bindings, request_cloudflare
 
 
 def load_snapshot(validator_version: str | None = None) -> dict[str, Any]:
@@ -99,23 +44,11 @@ def verify_bindings(
             raise RuntimeError(message)
 
 
-def verify_workers(snapshot: dict[str, Any], deployment: str, namespace: str, environment: str) -> str | None:
-    email_worker = None
-    for kind, secrets in snapshot["requiredSecrets"].items():
-        worker = f"{deployment}-{kind}"
-        script = f"workers/scripts/{worker}"
-        deployments = fetch_result(f"{script}/deployments", allow_missing=True)
-        versions = deployments["deployments"][0]["versions"] if deployments and deployments["deployments"] else []
-        for version in versions:
-            version_info = fetch_result(f"{script}/versions/{version['version_id']}")
-            if version_info is None:
-                message = "Missing Worker version"
-                raise RuntimeError(message)
-            resources = version_info["resources"]
-            verify_bindings(resources["bindings"], namespace, secrets, environment, worker)
-        if kind == "email" and versions:
-            email_worker = script
-    return email_worker
+def verify_workers(snapshot: dict[str, Any], deployment: str, namespace: str, environment: str) -> list[str]:
+    workers = list_worker_bindings(deployment, list(snapshot["requiredSecrets"]))
+    for kind, bindings in workers:
+        verify_bindings(bindings, namespace, snapshot["requiredSecrets"][kind], environment, f"{deployment}-{kind}")
+    return list_bootstrap_urls(workers)
 
 
 def publish_config() -> None:
@@ -129,27 +62,20 @@ def publish_config() -> None:
     namespace = find_namespace(f"{deployment}-config")
     key = f"storage/kv/namespaces/{namespace}/values/current"
     published = request_cloudflare(key, allow_missing=True)
+    bootstrap_urls = verify_workers(snapshot, deployment, namespace, environment)
     if (
         published
         and published["revision"] == snapshot["revision"]
         and published.get("requiredSecrets") == snapshot["requiredSecrets"]
     ):
         sys.stdout.write(f"Worker config {snapshot['revision']} is already published\n")
+        notify_workers(bootstrap_urls, snapshot["revision"])
         return
-    email_worker = verify_workers(snapshot, deployment, namespace, environment)
-    hours = snapshot["settings"]["email_maintenance_hours"]
-    if email_worker and (not published or published["settings"]["email_maintenance_hours"] != hours):
-        cron_hours = "0" if hours == HOURS_PER_DAY else f"*/{hours}"
-        response = request_cloudflare(
-            f"{email_worker}/schedules", method="PUT", body=[{"cron": f"0 {cron_hours} * * *"}]
-        )
-        if response is None or not response["success"]:
-            message = "Cloudflare refused the Email Worker schedule"
-            raise RuntimeError(message)
     response = request_cloudflare(key, method="PUT", body=snapshot)
     if response is None or not response["success"]:
         message = "Cloudflare refused Worker config publication"
         raise RuntimeError(message)
+    notify_workers(bootstrap_urls, snapshot["revision"])
     sys.stdout.write(
         f"Published Worker config {snapshot['revision']} from {snapshot['commit']} to {deployment}-config\n"
     )

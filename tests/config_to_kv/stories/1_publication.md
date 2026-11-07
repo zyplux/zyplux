@@ -10,4 +10,6 @@ Deployed Workers must have matching environment-specific secret bindings and a c
 
 ## 1.3 Skips unchanged snapshots
 
-An unchanged revision causes no Worker inspection or KV write.
+An unchanged revision skips the KV write and retries declared bootstrap notifications.
+
+## 1.4 Bootstrap follows successful publication

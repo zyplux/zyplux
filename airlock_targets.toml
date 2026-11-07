@@ -55,4 +55,4 @@ depends_on = ["airlock", "cerberus"]
 [config-to-kv]
 kind = "action"
 manifest = "apps/action-config-to-kv/pyproject.toml"
-hash = "sha256:34a7a131f969c9643eed546a9cf65dff41208c55c3306427c86288c0c53356a7"
+hash = "sha256:692ccb1d47c30e300cb32bd36d92c098463caddf7eb8d82764fd5ba243faab62"
