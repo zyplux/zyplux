@@ -19,13 +19,13 @@ TLDR: prod 20,617/198,960 · infra 781/5,597 · tests 21,296/242,024
 | .service | 2 | — | — | — | 27 |
 | Shell | 1 | 12.5% | 4.2% | 95.8% | 24 |
 | LICENSE | 1 | — | — | — | 17 |
-| .containerignore | 1 | — | — | — | 9 |
+| .containerignore | 1 | — | — | — | 10 |
 | CODEOWNERS | 1 | — | — | — | 7 |
 | .prettierignore | 1 | — | — | — | 3 |
 | .svg | 1 | — | — | — | 3 |
 | .nvmrc | 1 | — | — | — | 1 |
 | .python-version | 1 | — | — | — | 1 |
-| **Total** | 664 | 8.6% | 9.3% | 90.7% | 53,820 |
+| **Total** | 664 | 8.6% | 9.3% | 90.7% | 53,821 |
 
 > `Prose` — comment-only lines (no code); or non-blank lines in .md.
 >
@@ -82,11 +82,11 @@ TLDR: prod 20,617/198,960 · infra 781/5,597 · tests 21,296/242,024
 | .svg | — | — | — | — | — | — | 160 |
 | .gitignore | — | — | — | — | — | — | 149 |
 | CODEOWNERS | — | — | — | — | — | — | 92 |
-| .containerignore | — | — | — | — | — | — | 66 |
+| .containerignore | — | — | — | — | — | — | 78 |
 | .prettierignore | — | — | — | — | — | — | 9 |
 | .python-version | — | — | — | — | — | — | 3 |
 | .nvmrc | — | — | — | — | — | — | 1 |
-| **Total** | 1.5% | 15.1% | 27.0% | 33.6% | 36.6% | 84.9% | 591,709 |
+| **Total** | 1.5% | 15.1% | 27.0% | 33.6% | 36.6% | 84.9% | 591,721 |
 
 > `BPE` — Byte Pair Encoding, tiktoken `o200k_base`.
 >
