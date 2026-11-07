@@ -1,5 +1,19 @@
 # zyplux-cerberus
 
+## 0.28.0
+
+### Minor Changes
+
+- Restrict direct category nesting, classify documentation consistently, and remove the coverage-script path exception.
+
+- Classify root .changeset release records as artifacts rather than infrastructure.
+
+- Classify lockfiles and CHANGELOG.md records as artifacts across source categories.
+
+### Patch Changes
+
+- Update the managed Fallow analyzer to 3.40.0.
+
 ## 0.27.5
 
 ### Patch Changes

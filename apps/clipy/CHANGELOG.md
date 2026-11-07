@@ -1,5 +1,11 @@
 # zyplux-clipy
 
+## 0.2.0
+
+### Minor Changes
+
+- Measure staged Git snapshots without including unstaged edits; support deterministic commit-time stats.
+
 ## 0.1.2
 
 ### Patch Changes

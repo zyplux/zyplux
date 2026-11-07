@@ -77,25 +77,30 @@ test_files = [
 [source_oracle.types.prod]
 roots = ["apps/*", "packages/*", "src", "tools/*"]
 needs_tests = true
-allowed_child_types = ["prod", "infra", "demo", "test", "docs"]
+allowed_child_types = ["demo", "test", "docs", "artifacts"]
 
 [source_oracle.types.infra]
 roots = ["infra", "scripts", ".github"]
 needs_tests = true
-allowed_child_types = ["prod", "infra", "demo", "test", "docs"]
+allowed_child_types = ["docs", "artifacts"]
 
 [source_oracle.types.demo]
 roots = ["demo", "examples", "apps/*/examples", "packages/*/examples"]
 needs_tests = false
-allowed_child_types = []
+allowed_child_types = ["docs", "artifacts"]
 
 [source_oracle.types.test]
-roots = ["tests", "doubles", "scripts/merge-coverage.ts"]
+roots = ["tests", "doubles"]
 needs_tests = false
-allowed_child_types = ["test", "demo", "docs"]
+allowed_child_types = ["docs", "artifacts"]
 
 [source_oracle.types.docs]
-roots = ["docs", "apps/*/docs", "packages/*/docs"]
+roots = ["**/docs", "**/README.md"]
+needs_tests = false
+allowed_child_types = ["artifacts"]
+
+[source_oracle.types.artifacts]
+roots = [".changeset", ".changeset/**", "**/*.lock", "**/pnpm-lock.yaml", "**/package-lock.json", "**/yarn.lock", "**/CHANGELOG.md"]
 needs_tests = false
 allowed_child_types = []
 

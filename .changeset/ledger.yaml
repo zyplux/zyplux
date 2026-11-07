@@ -29,6 +29,10 @@
   dir: apps/cz
   intents:
     - workspace-runtime-graph
+'@zyplux/cz@1.0.0':
+  dir: apps/cz
+  intents:
+    - quiet-melons-rush
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
@@ -86,6 +90,10 @@ zyplux-airlock@2.2.2:
   intents:
     - npm-bump-fingerprints
     - python-development-fingerprints
+zyplux-airlock@2.2.3:
+  dir: apps/airlock
+  intents:
+    - fast-seas-stay
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -133,6 +141,13 @@ zyplux-cerberus@0.27.5:
   intents:
     - npm-development-bumps
     - partial-release-migrations
+zyplux-cerberus@0.28.0:
+  dir: apps/cerberus
+  intents:
+    - gentle-stars-agree
+    - great-rivers-deny
+    - kind-mice-flow
+    - old-tools-fail
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -145,6 +160,10 @@ zyplux-clipy@0.1.2:
   dir: apps/clipy
   intents:
     - stats-summary
+zyplux-clipy@0.2.0:
+  dir: apps/clipy
+  intents:
+    - neat-rivers-smile
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

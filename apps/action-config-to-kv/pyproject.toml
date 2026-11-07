@@ -1,0 +1,13 @@
+[project]
+name = "zyplux-config-to-kv"
+version = "1.0.0"
+description = "Publish Worker config snapshots to Cloudflare KV."
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["uv_build==0.13.5"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "config_to_kv"
+module-root = "src"

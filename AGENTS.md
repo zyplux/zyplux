@@ -10,6 +10,8 @@ Follow the [Airlock release workflow][2] when preparing or publishing releases.
 
 Run `./just lint typecheck` locally. Run targeted tests when needed; leave full-suite testing and Cerberus to CI. Use `./just c` locally only when explicitly requested. The full CI gate must pass clean before merging.
 
+If Codex's command session has `NoNewPrivs: 1`, run `./just c` through the normal systemd user service session so container tests can exercise `sudo`.
+
 The local [`./just` logging wrapper][3] is a convenience tool maintained through linting and typechecking. Its [implementation][4] is intentionally outside automated tests and coverage.
 
 Version-bump detection is a best-effort reminder. Fix clear bugs while favoring simple checks over support for unused edge cases.

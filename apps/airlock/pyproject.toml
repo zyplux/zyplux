@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-airlock"
-version = "2.2.2"
+version = "2.2.3"
 description = "Prepare and publish reviewed npm, Python, container and GitHub Action releases"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -9,11 +9,11 @@ dependencies = [
     "httpx>=0.28.1",
     "markdown-it-py>=4.2.0",
     "packaging>=26.3",
-    "pydantic>=2.14.2",
+    "pydantic>=2.14.3",
     "pyyaml>=6.0.3",
     "semantic-version>=2.10.0",
     "tomlkit>=0.15.2",
-    "typer>=0.27.3",
+    "typer>=0.28.0",
 ]
 
 [project.scripts]

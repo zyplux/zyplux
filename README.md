@@ -51,3 +51,5 @@ Run `just` for the full recipe list. This repo is the org's quality reference â€
 ## Agent skills
 
 `./just bump-skills` installs or refreshes the upstream skills in `skills-lock.json`: Wrangler deployment and Workers best practices. Commit the updated lockfile; downloaded skill directories are local. The repository's Cerberus graph skill is version controlled.
+
+Lefthook installs during `pnpm install`. Commits regenerate `line_and_token_stats.md` from staged contents and stage only that report. A generation failure aborts the commit; ordinary `./just stats` measures working files.

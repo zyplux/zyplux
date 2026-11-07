@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import subprocess
 from bisect import bisect_right
 from collections import Counter
 from ctypes import PYFUNCTYPE, c_char_p, c_void_p, py_object, pythonapi
 from functools import cache
 from importlib import import_module
+from io import BytesIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 from airlock.proc import CommandError, find_root, run
@@ -413,6 +416,40 @@ def list_tracked_files(root: Path, directory: Path) -> list[Path]:
     return [path for path in paths if path.is_relative_to(directory)]
 
 
+def export_staged_files(root: Path, destination: Path) -> list[Path]:
+    entries = []
+    for entry in run("git", "ls-files", "--stage", "-z", cwd=root).split("\0"):
+        if not entry:
+            continue
+        metadata, name = entry.split("\t", 1)
+        mode, oid, stage = metadata.split()
+        if stage != "0":
+            message = "Resolve index conflicts before generating staged stats"
+            raise GitError(message)
+        if mode in {"100644", "100755"}:
+            entries.append((oid, name))
+    blobs = subprocess.run(
+        ["git", "cat-file", "--batch"],
+        input="".join(f"{oid}\n" for oid, _ in entries).encode(),
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    stream = BytesIO(blobs.stdout)
+    paths = []
+    for _, name in entries:
+        _, kind, size = stream.readline().split()
+        if kind != b"blob":
+            message = "Expected a staged file blob"
+            raise GitError(message)
+        path = destination / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(stream.read(int(size)))
+        stream.read(1)
+        paths.append(path)
+    return paths
+
+
 def is_binary(source: bytes) -> bool:
     """Treat a NUL byte in the leading block as binary, the same heuristic git uses."""
     return b"\0" in source[:BINARY_SNIFF_BYTES]
@@ -543,17 +580,30 @@ def is_measurable(path: Path, report_path: Path) -> bool:
     return path != report_path and not any(path.match(pattern) for pattern in EXCLUDED_FILES)
 
 
-def write_report(directory: Path, *, title: str | None = None, out: Path | None = None) -> Path:
+def write_report(directory: Path, *, title: str | None = None, out: Path | None = None, staged: bool = False) -> Path:
     directory = directory.resolve()
     report_path = (out or directory / REPORT_NAME).resolve()
     root = find_work_tree(directory)
-    tracked = list_tracked_files(root, directory)
-    paths = [path for path in tracked if is_measurable(path, report_path)]
-    if not paths:
-        message = f"no tracked files under {directory}"
-        raise ValueError(message)
-
-    report = build_report(paths, title or name_scope(directory, root), root)
+    scope = title or name_scope(directory, root)
+    if staged:
+        with TemporaryDirectory(prefix="clipy-staged-") as temporary:
+            snapshot = Path(temporary)
+            tracked = export_staged_files(root, snapshot)
+            relative_scope = directory.relative_to(root)
+            paths = [
+                path
+                for path in tracked
+                if path.is_relative_to(snapshot / relative_scope)
+                and is_measurable(root / path.relative_to(snapshot), report_path)
+            ]
+            report = build_report(paths, scope, snapshot)
+    else:
+        tracked = list_tracked_files(root, directory)
+        paths = [path for path in tracked if is_measurable(path, report_path)]
+        if not paths:
+            message = f"no tracked files under {directory}"
+            raise ValueError(message)
+        report = build_report(paths, scope, root)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(report, encoding="utf-8")
     return report_path

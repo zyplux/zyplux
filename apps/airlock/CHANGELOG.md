@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.3
+
+### Patch Changes
+
+- Refresh supported dependency versions.
+
 ## 2.2.2
 
 ### Patch Changes

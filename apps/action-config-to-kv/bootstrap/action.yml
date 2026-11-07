@@ -1,0 +1,21 @@
+name: Bootstrap Workers
+description: Notify deployed Workers declaring a bootstrap endpoint using GitHub Actions OIDC.
+inputs:
+  environment:
+    description: Deployment environment, staging or production.
+    required: true
+  cloudflare-account-id:
+    description: Cloudflare account containing the Workers.
+    required: true
+  cloudflare-api-token:
+    description: Cloudflare API token with Workers read and KV read access.
+    required: true
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DEPLOYMENT_ENVIRONMENT: ${{ inputs.environment }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.cloudflare-account-id }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+      run: PYTHONPATH="$GITHUB_ACTION_PATH/../src" python3 -m config_to_kv.bootstrap

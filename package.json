@@ -10,7 +10,7 @@
       "onFail": "download"
     }
   },
-  "packageManager": "pnpm@12.16.1",
+  "packageManager": "pnpm@12.18.0",
   "scripts": {
     "knip": "knip",
     "format": "prettier --write --cache --log-level warn .",
@@ -21,7 +21,8 @@
     "cz": "node apps/cz/src/index.ts",
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
     "release:prepare": "uv run airlock prepare",
-    "skills:refresh": "skills experimental_install"
+    "skills:refresh": "skills experimental_install",
+    "prepare": "test ! -e .git || lefthook install"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -31,6 +32,7 @@
     "@zyplux/tsconfig": "workspace:*",
     "eslint": "catalog:",
     "knip": "catalog:",
+    "lefthook": "catalog:",
     "prettier": "catalog:",
     "skills": "catalog:",
     "typescript": "catalog:",

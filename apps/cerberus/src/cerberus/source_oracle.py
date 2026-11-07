@@ -12,6 +12,7 @@ class SourceKind(StrEnum):
     DEMO = "demo"
     TEST = "test"
     DOCS = "docs"
+    ARTIFACTS = "artifacts"
 
 
 @dataclass(frozen=True)

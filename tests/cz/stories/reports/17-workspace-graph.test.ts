@@ -109,12 +109,12 @@ describe('17.1 reading workspace dependencies', () => {
 describe('17.2 rendering the shared classification', () => {
   test('17.2.1 uses oracle categories and excludes demo and test workspaces', async ({ cz, reports }) => {
     await reports.write('pnpm-workspace.yaml', 'packages: ["custom/*"]\n');
-    for (const kind of ['prod', 'infra', 'demo', 'docs', 'test'] as const) {
+    for (const kind of ['prod', 'infra', 'demo', 'docs', 'test', 'artifacts'] as const) {
       await reports.writePackage(`custom/${kind}`, kind, {}, { is_test: kind === 'test', kind });
     }
     await cz.run('workspace-graph');
     const report = await reports.graph();
-    for (const kind of ['prod', 'infra', 'docs']) expect(report).toContain(`group_${kind}["${kind}"]`);
+    for (const kind of ['prod', 'infra', 'docs', 'artifacts']) expect(report).toContain(`group_${kind}["${kind}"]`);
     expect(report).not.toContain('["demo"]');
     expect(report).not.toContain('["test"]');
   });

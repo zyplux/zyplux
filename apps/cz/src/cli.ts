@@ -6,8 +6,8 @@ import { cloneReferenceRepoCommand, runCloneReferenceRepo } from './commands/clo
 import { depsCatalogCommand, runDepsCatalog } from './commands/deps-catalog.ts';
 import { lintMermaidCommand, runLintMermaid } from './commands/lint-mermaid.ts';
 import { pushBranchCommand, runPushBranch } from './commands/push-branch.ts';
-import { runStats, runWorkspaceGraph, statsCommand, workspaceGraphCommand } from './commands/reports.ts';
 import { runUpgrade, upgradeCommand } from './commands/upgrade.ts';
+import { runWorkspaceGraph, workspaceGraphCommand } from './commands/workspace-graph.ts';
 import { defineProgram, message, or, run } from './optique.ts';
 
 const VERSION = loadPackageVersion(import.meta.url);
@@ -20,7 +20,6 @@ const program = defineProgram({
   },
   parser: or(
     chunkFilesCommand,
-    statsCommand,
     workspaceGraphCommand,
     pushBranchCommand,
     cloneReferenceRepoCommand,
@@ -66,9 +65,6 @@ export const runCz = async (args: readonly string[], io: CzIo = {}) => {
     }
     case 'push-branch': {
       return runPushBranch(result);
-    }
-    case 'stats': {
-      return runStats(result);
     }
     case 'upgrade': {
       return runUpgrade(result);

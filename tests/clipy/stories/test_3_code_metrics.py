@@ -120,7 +120,8 @@ def test_3_2_3_uses_shared_source_categories_in_scoped_reports(report_repo: Repo
         '[source_oracle.types.infra]\nroots = ["services/ops"]\n'
         '[source_oracle.types.test]\nroots = ["services/checks"]\n'
         '[source_oracle.types.demo]\nroots = ["services/demo"]\n'
-        '[source_oracle.types.docs]\nroots = ["services/docs"]\n',
+        '[source_oracle.types.docs]\nroots = ["services/docs"]\n'
+        '[source_oracle.types.artifacts]\nroots = ["services/generated"]\n',
     )
     report_repo.write("services/api/server.ts", TS_SOURCE)
     report_repo.write("services/api/server.test.ts", TS_SOURCE)
@@ -129,12 +130,13 @@ def test_3_2_3_uses_shared_source_categories_in_scoped_reports(report_repo: Repo
     report_repo.write("services/ops/setup.test.ts", TS_SOURCE)
     report_repo.write("services/checks/cases.ts", TS_SOURCE)
     report_repo.write("services/docs/example.test.ts", TS_SOURCE)
+    report_repo.write("services/generated/record.ts", TS_SOURCE)
     report_repo.stage()
     result = report_repo.invoke("stats", "services", "--title", "service corpus", "-o", "reports/services.md")
     assert result.exit_code == 0, result.output
     report = report_repo.read("reports/services.md")
     assert report.startswith("# Stats - service corpus\n\nTLDR: prod 2/48 · infra 1/13 · tests 6/144\n")
-    assert read_row(report, "Line Counts", ".ts")["Files"] == "7"
+    assert read_row(report, "Line Counts", ".ts")["Files"] == "8"
     assert read_row(report, "Production Line Counts", ".ts")["Files"] == "1"
 
 
@@ -147,3 +149,59 @@ def test_3_3_1_reports_empty_scopes_and_missing_repositories(report_repo: Report
     missing = report_repo.invoke("stats", str(outside))
     assert missing.exit_code == 1
     assert "not inside a git repository" in str(missing.exception)
+
+
+def test_3_4_1_measures_staged_changes_without_including_unstaged_edits(report_repo: ReportRepo) -> None:
+    report_repo.write("apps/example/main.ts", "const original = 1;\n")
+    report_repo.write("deleted.ts", "const removed = 1;\n")
+    report_repo.stage()
+    report_repo.git("-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-qm", "baseline")
+    report_repo.write("apps/example/main.ts", "const staged = 2;\n")
+    report_repo.write("added.ts", "const added = 3;\n")
+    report_repo.git("rm", "deleted.ts")
+    report_repo.stage()
+    assert report_repo.invoke("stats", "--staged").exit_code == 0
+    expected = report_repo.read("line_and_token_stats.md")
+    report_repo.write("apps/example/main.ts", "const unstaged = 4;\nconst extra = 5;\n")
+    report_repo.write("added.ts", "const unstagedAddition = 6;\nconst extra = 7;\n")
+    report_repo.write("deleted.ts", "const restoredOnlyInWorktree = 8;\n")
+    before_index = report_repo.git("ls-files", "--stage")
+    before_diff = report_repo.git("diff")
+    assert report_repo.invoke("stats", "--staged").exit_code == 0
+    assert report_repo.read("line_and_token_stats.md") == expected
+    assert read_row(expected, "Line Counts", ".ts")["Files"] == "2"
+    assert read_row(expected, "Line Counts", ".ts")["Total"] == "2"
+    assert report_repo.git("ls-files", "--stage") == before_index
+    assert report_repo.git("diff") == before_diff
+
+
+def test_3_4_2_uses_staged_classification_and_excludes_the_report(report_repo: ReportRepo) -> None:
+    report_repo.write("cerberus.toml", '[source_oracle.types.prod]\nroots = ["services"]\n')
+    report_repo.write("services/main.ts", "const example = 1;\n")
+    report_repo.write("line_and_token_stats.md", "# Previous report\n")
+    report_repo.stage()
+    assert report_repo.invoke("stats", "--staged").exit_code == 0
+    expected = report_repo.read("line_and_token_stats.md")
+    report_repo.write("cerberus.toml", '[source_oracle.types.docs]\nroots = ["services"]\n')
+    assert report_repo.invoke("stats", "--staged").exit_code == 0
+    assert report_repo.read("line_and_token_stats.md") == expected
+    assert read_row(expected, "Production Line Counts", ".ts")["Files"] == "1"
+
+
+def test_3_4_3_handles_staged_deletion_of_the_last_file(report_repo: ReportRepo) -> None:
+    report_repo.write("only.ts", "const example = 1;\n")
+    report_repo.stage()
+    report_repo.git("rm", "-f", "only.ts")
+    assert report_repo.invoke("stats", "--staged").exit_code == 0
+    assert "TLDR: prod 0/0 · infra 0/0 · tests 0/0" in report_repo.read("line_and_token_stats.md")
+
+
+def test_3_4_4_preserves_report_when_staged_classification_is_invalid(report_repo: ReportRepo) -> None:
+    report_repo.write("cerberus.toml", "invalid = [")
+    report_repo.write("main.ts", "const example = 1;\n")
+    report_repo.stage()
+    report_repo.write("line_and_token_stats.md", "Previous report\n")
+    before = report_repo.git("ls-files", "--stage")
+    assert report_repo.invoke("stats", "--staged").exit_code != 0
+    assert report_repo.read("line_and_token_stats.md") == "Previous report\n"
+    assert report_repo.git("ls-files", "--stage") == before

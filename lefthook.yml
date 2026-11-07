@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    stats:
+      run: uv run clipy stats --staged && git add -- line_and_token_stats.md

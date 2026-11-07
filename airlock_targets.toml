@@ -2,7 +2,7 @@
 
 [airlock]
 manifest = "apps/airlock/pyproject.toml"
-hash = "sha256:v2:e040a9be4706e3d8d0e6640f4d4105dae7d87ac6c1df9cedaa6e1149bc3335f5"
+hash = "sha256:v2:96ee5f584a383ed71412bdd2604e32ab3550d824c6db72858954f71338b34f28"
 
 [action-airlock]
 kind = "action"
@@ -35,19 +35,24 @@ hash = "sha256:v2:f9a597731dfbb7259b6d380155a6eb52c4846053e57c20fa8484b204e0a56a
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:v2:762bac030b95d776bf35ab60919b2eb1f0f8082f9a84f672b8c235b05d161a02"
+hash = "sha256:v2:be415f04a17f8d6ee32a16513a6a21988c4014411b4bbe654a67da533e6bc9b0"
 depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:v2:24fa53da9ab6eed3e01a9743a613b01954972cb06662c32483d707b529a61767"
+hash = "sha256:v2:75e222b8fb238d5441cc2ec085e60ec68b83429e488412203ad55030dfffeef6"
 depends_on = ["airlock"]
 
 [totchef]
 manifest = "apps/totchef/pyproject.toml"
-hash = "sha256:v2:5e4e21046de7459e0267e7911b79f330eb5c0e21c0f1be792c697ce3eff02e78"
+hash = "sha256:v2:bf325f168145e60a8bdcefd419472861495f574e803c28a6ce89fedfda409078"
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:v2:795e150e89fc26e9d0a9413646a44641de84fe9a02d6a70202899d5d6553a075"
+hash = "sha256:v2:45be5dd01c8cd745ac8d385c6be3addc80d0ee5ef34476c9ce38e229b8ff6716"
 depends_on = ["airlock", "cerberus"]
+
+[config-to-kv]
+kind = "action"
+manifest = "apps/action-config-to-kv/pyproject.toml"
+hash = "sha256:692ccb1d47c30e300cb32bd36d92c098463caddf7eb8d82764fd5ba243faab62"
