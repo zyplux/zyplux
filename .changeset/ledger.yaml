@@ -1,59 +1,59 @@
-"@zyplux/airlock@1.0.0":
+'@zyplux/airlock@1.0.0':
   dir: apps/airlock
   intents:
     - native-releases
     - shared-release-action
-"@zyplux/airlock@1.1.0":
+'@zyplux/airlock@1.1.0':
   dir: apps/airlock
   intents:
     - container-releases
     - dependency-publications
     - independent-publications
-"@zyplux/airlock@1.1.1":
+'@zyplux/airlock@1.1.1':
   dir: apps/airlock
   intents:
     - mighty-rocks-dream
-"@zyplux/cz@0.15.0":
+'@zyplux/cz@0.15.0':
   dir: apps/cz
   intents:
     - shared-release-commands
-"@zyplux/cz@0.16.0":
+'@zyplux/cz@0.16.0':
   dir: apps/cz
   intents:
     - gentle-owls-report
-"@zyplux/cz@0.16.1":
+'@zyplux/cz@0.16.1':
   dir: apps/cz
   intents:
     - purple-insects-deliver
-"@zyplux/cz@0.16.2":
+'@zyplux/cz@0.16.2':
   dir: apps/cz
   intents:
     - workspace-runtime-graph
-"@zyplux/cz@1.0.0":
+'@zyplux/cz@1.0.0':
   dir: apps/cz
   intents:
     - quiet-melons-rush
-"@zyplux/eslint-config@0.12.2":
+'@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
     - funny-cows-retire
-"@zyplux/eslint-config@0.12.3":
+'@zyplux/eslint-config@0.12.3':
   dir: packages/eslint-config
   intents:
     - eslint-typescript-patch
-"@zyplux/eslint-config@0.12.4":
+'@zyplux/eslint-config@0.12.4':
   dir: packages/eslint-config
   intents:
     - purple-insects-deliver
-"@zyplux/spectra@0.4.0":
+'@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
     - repository-fixtures
-"@zyplux/spectra@0.4.1":
+'@zyplux/spectra@0.4.1':
   dir: packages/spectra
   intents:
     - purple-insects-deliver
-"@zyplux/util@0.9.4":
+'@zyplux/util@0.9.4':
   dir: packages/util-ts
   intents:
     - purple-insects-deliver

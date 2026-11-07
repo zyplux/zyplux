@@ -1,12 +1,6 @@
 {
   "format": 2,
-  "tags": [
-    "action-airlock-v2.2.3",
-    "airlock-v2.2.3",
-    "cerberus-v0.28.0",
-    "clipy-v0.2.0",
-    "cz-v1.0.0"
-  ],
+  "tags": ["action-airlock-v2.2.3", "airlock-v2.2.3", "cerberus-v0.28.0", "clipy-v0.2.0", "cz-v1.0.0"],
   "intents": {
     ".changeset/fast-seas-stay.md": "---\n\"zyplux-airlock\": patch\n---\n\nRefresh supported dependency versions.\n",
     ".changeset/fluffy-boxes-repeat.md": "---\n\"zyplux-config-to-kv\": none\n---\n\nPublish validated Worker snapshots to Cloudflare KV using shared validator secret requirements.\n",
@@ -22,29 +16,19 @@
       "after": {
         "@zyplux/cz@1.0.0": {
           "dir": "apps/cz",
-          "intents": [
-            "quiet-melons-rush"
-          ]
+          "intents": ["quiet-melons-rush"]
         },
         "zyplux-airlock@2.2.3": {
           "dir": "apps/airlock",
-          "intents": [
-            "fast-seas-stay"
-          ]
+          "intents": ["fast-seas-stay"]
         },
         "zyplux-cerberus@0.28.0": {
           "dir": "apps/cerberus",
-          "intents": [
-            "great-rivers-deny",
-            "kind-mice-flow",
-            "old-tools-fail"
-          ]
+          "intents": ["great-rivers-deny", "kind-mice-flow", "old-tools-fail"]
         },
         "zyplux-clipy@0.2.0": {
           "dir": "apps/clipy",
-          "intents": [
-            "neat-rivers-smile"
-          ]
+          "intents": ["neat-rivers-smile"]
         }
       },
       "created": false
