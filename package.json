@@ -22,7 +22,7 @@
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
     "release:prepare": "uv run airlock prepare",
     "skills:refresh": "skills experimental_install",
-    "prepare": "lefthook install"
+    "prepare": "if [ -e .git ]; then lefthook install; fi"
   },
   "devDependencies": {
     "@types/node": "catalog:",
