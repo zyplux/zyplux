@@ -76,6 +76,7 @@ def test_1_3_1_writes_github_action_outputs(workspace: Path, monkeypatch: pytest
     monkeypatch.setenv("GITHUB_WORKSPACE", str(workspace))
     monkeypatch.setenv("GITHUB_OUTPUT", str(action_output))
     monkeypatch.setenv("UV_VERSION", "0.13.4")
+    monkeypatch.setenv("PACKAGE_MANAGERS", "pnpm uv")
     runpy.run_path(prepare.__file__, run_name="__main__")
     assert action_output.read_text().splitlines() == [
         "pnpm-version=12.14.0",
@@ -98,3 +99,26 @@ def test_1_1_2_accepts_the_minimum_supported_pnpm(workspace: Path) -> None:
     manifest["packageManager"] = "pnpm@11.1.0"
     (workspace / "package.json").write_text(json.dumps(manifest))
     assert prepare.load_node_versions(workspace) == ("11.1.0", "26.12.1")
+
+
+@pytest.mark.parametrize("manager", ["uv", "pnpm"])
+def test_1_1_3_prepares_only_the_selected_package_manager(workspace: Path, manager: str) -> None:
+    unused = ("package.json", "pnpm-lock.yaml") if manager == "uv" else ("pyproject.toml", "uv.lock")
+    for name in unused:
+        (workspace / name).unlink()
+    plan = prepare.build_setup_plan(workspace, uv_version="0.13.4", package_managers=manager)
+    expected = (
+        {"uv-version": "0.13.4"}
+        if manager == "uv"
+        else {
+            "pnpm-version": "12.14.0",
+            "node-version": "26.12.1",
+        }
+    )
+    assert plan == expected
+
+
+@pytest.mark.parametrize("managers", ["", "npm", "pnpm uv typo"])
+def test_1_2_7_rejects_unknown_or_empty_package_manager_selection(workspace: Path, managers: str) -> None:
+    with pytest.raises(ValueError, match="package-managers must select"):
+        prepare.build_setup_plan(workspace, uv_version="0.13.4", package_managers=managers)

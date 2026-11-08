@@ -1,5 +1,11 @@
 # zyplux-setup-pm
 
+## 1.2.0
+
+### Minor Changes
+
+- Allow callers to select pnpm, uv, or both toolchains while preserving locked dependency installation.
+
 ## 1.1.0
 
 ### Minor Changes

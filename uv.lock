@@ -1510,5 +1510,5 @@ source = { editable = "apps/action-config-to-kv" }
 
 [[package]]
 name = "zyplux-setup-pm"
-version = "1.1.0"
+version = "1.2.0"
 source = { editable = "apps/action-setup-pm" }

@@ -14,7 +14,7 @@ hash = "sha256:7faec8112b5f8819b091ff8fe5e004e4e90e961fde0c5be27fe3fea0e5cb6ca2"
 [setup-pm]
 kind = "action"
 manifest = "apps/action-setup-pm/pyproject.toml"
-hash = "sha256:38be8854b903badddafe4a49a842a448a921d3e7c5aad61065ddb0189db87b95"
+hash = "sha256:7095622604b1adc02db128797f43657e05bb742cb4c33529b9af3e3c87b86857"
 
 [eslint-config]
 manifest = "packages/eslint-config/package.json"
