@@ -20,8 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: 0
       - uses: ./apps/action-setup-pm
+      - run: pnpm run lint:workflows
       - run: pnpm run knip
       - run: uv run --no-sync vulture
       - run: pnpm run typecheck

@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.29.0
+
+### Minor Changes
+
+- Require GitHub Actions workflow linting in CI and local lint gates, including configuration-only repositories.
+
 ## 0.28.0
 
 ### Minor Changes

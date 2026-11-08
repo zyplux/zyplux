@@ -44,6 +44,8 @@
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests
 
+Workflow linting remains required when manifests install tooling without application source.
+
 ### 8.6.2 requires python quality steps for stub only packages
 
 ### 8.6.3 requires typescript quality steps for executable tool configuration

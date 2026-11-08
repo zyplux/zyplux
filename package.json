@@ -22,7 +22,8 @@
     "lint:mermaid": "pnpm run --silent cz lint-mermaid",
     "release:prepare": "uv run airlock prepare",
     "skills:refresh": "skills experimental_install",
-    "prepare": "test ! -e .git || lefthook install"
+    "prepare": "test ! -e .git || lefthook install",
+    "lint:workflows": "actionlint -shellcheck 'uv run --no-sync shellcheck' -pyflakes 'uv run --no-sync pyflakes'"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -36,6 +37,7 @@
     "prettier": "catalog:",
     "skills": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@kjanat/actionlint": "catalog:"
   }
 }

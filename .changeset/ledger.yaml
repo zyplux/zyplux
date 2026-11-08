@@ -148,6 +148,10 @@ zyplux-cerberus@0.28.0:
     - great-rivers-deny
     - kind-mice-flow
     - old-tools-fail
+zyplux-cerberus@0.29.0:
+  dir: apps/cerberus
+  intents:
+    - quick-mails-throw
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -164,6 +168,10 @@ zyplux-clipy@0.2.0:
   dir: apps/clipy
   intents:
     - neat-rivers-smile
+zyplux-config-to-kv@1.0.1:
+  dir: apps/action-config-to-kv
+  intents:
+    - big-pumas-run
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:
