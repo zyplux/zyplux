@@ -1,6 +1,6 @@
 [project]
 name = "zyplux-config-to-kv"
-version = "1.0.0"
+version = "1.0.1"
 description = "Publish Worker config snapshots to Cloudflare KV."
 requires-python = ">=3.12"
 

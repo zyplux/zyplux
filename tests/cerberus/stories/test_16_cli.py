@@ -482,6 +482,7 @@ def test_16_15_1_skips_source_bites_when_manifests_only_install_tools(
             (
                 "      - uses: actions/checkout@v7\n"
                 "      - uses: zyplux/zyplux/apps/action-setup-pm@main\n"
+                "      - run: pnpm run lint:workflows\n"
                 "      - run: uv run --no-sync rumdl check"
             ),
         )

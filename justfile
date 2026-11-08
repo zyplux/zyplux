@@ -34,6 +34,7 @@ typecheck:
 
 # Lint and format both workspaces with autofix.
 lint:
+    pnpm run lint:workflows
     @just lint-ts
     @just lint-md
     @just lint-py

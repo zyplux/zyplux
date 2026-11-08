@@ -37,6 +37,7 @@ wrapped_tools = [
 [ci_check_sequence.required]
 ts = [
     "pnpm install --frozen-lockfile",
+    "pnpm run lint:workflows",
     "pnpm run knip",
     "pnpm run typecheck",
     "pnpm run lint",

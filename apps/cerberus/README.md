@@ -10,6 +10,8 @@ The `justfile` bite shells out to `just`, which ships with the package (via [`ru
 
 Source checks use tracked and unignored files: TypeScript checks require `.ts`, `.tsx`, `.mts` or `.cts` files, and Python checks require `.py` or `.pyi` files. Executable TypeScript tool configuration counts as source. Manifests used only to install tooling do not require application lint, typecheck or test steps. Ruff, Knip, Pyrefly and pytest configuration stays optional without source; supplied configuration must satisfy the same invariants. Package metadata, dependency, CI and Markdown checks still apply.
 
+Every repository with a package manifest runs `pnpm run lint:workflows` in CI and its local lint recipe, including configuration-only repositories. The script runs actionlint with locked ShellCheck and Pyflakes integrations.
+
 CI uses one unquoted canonical command with literal arguments per `run` step. Python tool calls use `uv run --no-sync`; Prettier uses `pnpm exec prettier --check`.
 
 Tooling-only repositories carry a Python tooling manifest and run Rumdl for Markdown. Prettier is required only when TypeScript source is present.

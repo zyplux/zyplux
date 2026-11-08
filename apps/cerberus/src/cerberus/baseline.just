@@ -33,6 +33,7 @@ typecheck:
 
 # Lint and format both workspaces with autofix.
 lint:
+    pnpm run lint:workflows
     pnpm run lint:fix
     pnpm run format
     uv run rumdl check --fix
