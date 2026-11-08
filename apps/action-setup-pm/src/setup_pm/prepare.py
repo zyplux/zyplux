@@ -32,23 +32,34 @@ def load_node_versions(workspace: Path) -> tuple[str, str]:
     return pnpm_version, validate_version(runtime["version"], "devEngines.runtime.version")
 
 
-def build_setup_plan(workspace: Path, *, uv_version: str) -> dict[str, str]:
-    for name in ("package.json", "pnpm-lock.yaml", "pyproject.toml", "uv.lock"):
+def build_setup_plan(workspace: Path, *, uv_version: str, package_managers: str = "pnpm uv") -> dict[str, str]:
+    managers = set(package_managers.split())
+    if not managers or managers - {"pnpm", "uv"}:
+        message = "package-managers must select pnpm, uv, or both"
+        raise ValueError(message)
+    manifests = []
+    if "pnpm" in managers:
+        manifests.extend(("package.json", "pnpm-lock.yaml"))
+    if "uv" in managers:
+        manifests.extend(("pyproject.toml", "uv.lock"))
+    for name in manifests:
         if not (workspace / name).is_file():
             message = f"{name} is required"
             raise FileNotFoundError(message)
-    pnpm_version, node_version = load_node_versions(workspace)
-    return {
-        "pnpm-version": pnpm_version,
-        "node-version": node_version,
-        "uv-version": validate_version(uv_version, "uv-version"),
-    }
+    plan = {}
+    if "pnpm" in managers:
+        pnpm_version, node_version = load_node_versions(workspace)
+        plan.update({"pnpm-version": pnpm_version, "node-version": node_version})
+    if "uv" in managers:
+        plan["uv-version"] = validate_version(uv_version, "uv-version")
+    return plan
 
 
 def main() -> None:
     plan = build_setup_plan(
         Path(os.environ["GITHUB_WORKSPACE"]),
         uv_version=os.environ["UV_VERSION"],
+        package_managers=os.environ["PACKAGE_MANAGERS"],
     )
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as stream:
         stream.writelines(f"{name}={version}\n" for name, version in plan.items())
