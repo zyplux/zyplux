@@ -5,6 +5,7 @@
 ### Minor Changes
 
 - Pair story criteria with tests in suite or domain folders, and require unique test filenames across the repository.
+- Require GitHub Actions workflow linting in CI and local lint gates, including configuration-only repositories.
 
 ### Patch Changes
 

@@ -34,9 +34,14 @@ typecheck:
 
 # Lint and format both workspaces with autofix.
 lint:
+    @just lint-workflows
     @just lint-ts
     @just lint-md
     @just lint-py
+
+# Lint GitHub Actions workflows.
+lint-workflows:
+    pnpm run lint:workflows
 
 # Lint TypeScript and format Prettier-supported files with autofix.
 lint-ts:

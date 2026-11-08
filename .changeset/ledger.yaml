@@ -165,6 +165,7 @@ zyplux-cerberus@0.29.0:
   intents:
     - current-analysis-tools
     - flat-story-suites
+    - quick-mails-throw
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -185,6 +186,10 @@ zyplux-clipy@0.2.1:
   dir: apps/clipy
   intents:
     - python-runtime-upgrades
+zyplux-config-to-kv@1.0.1:
+  dir: apps/action-config-to-kv
+  intents:
+    - big-pumas-run
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

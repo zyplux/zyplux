@@ -23,6 +23,8 @@ jobs:
       pending: ${{ steps.plan.outputs.pending }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - id: plan
         uses: ./apps/action-airlock
         with:

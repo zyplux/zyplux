@@ -29,6 +29,7 @@ _PY_CI = (
     f"  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
     "      - uses: actions/checkout@v7\n"
     "      - uses: ./apps/action-setup-pm\n"
+    "      - run: pnpm run lint:workflows\n"
     "      - run: uv run --no-sync vulture\n"
     "      - run: uv run --no-sync rumdl check\n"
     "      - run: uv run --no-sync ruff check\n"
@@ -40,6 +41,7 @@ _TS_CI = (
     f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
     "      - uses: actions/checkout@v7\n"
     "      - uses: ./apps/action-setup-pm\n"
+    "      - run: pnpm run lint:workflows\n"
     "      - run: pnpm run knip\n"
     "      - run: pnpm run typecheck\n"
     "      - run: pnpm run lint\n"
@@ -119,6 +121,7 @@ def test_8_3_3_fails_when_the_required_python_steps_run_out_of_canonical_order(
         f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n"
         "      - uses: ./apps/action-setup-pm\n"
+        "      - run: pnpm run lint:workflows\n"
         "      - run: uv run --no-sync pyrefly check\n"
         "      - run: uv run --no-sync vulture\n"
         "      - run: uv run --no-sync rumdl check\n"
@@ -146,6 +149,7 @@ def test_8_4_1_passes_a_ts_ci_workflow_that_runs_every_required_step_in_order(
     ("ci", "missing_step"),
     [
         (_TS_CI.replace("      - run: pnpm run knip\n", ""), "pnpm run knip"),
+        (_TS_CI.replace("      - run: pnpm run lint:workflows\n", ""), "pnpm run lint:workflows"),
         (_TS_CI.replace("pnpm exec prettier", "pnpx prettier"), "prettier --check"),
     ],
 )
@@ -163,6 +167,7 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
         f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n"
         "      - uses: ./apps/action-setup-pm\n"
+        "      - run: pnpm run lint:workflows\n"
         "      - run: pnpm run typecheck\n"
         "      - run: pnpm run knip\n"
         "      - run: pnpm run lint\n"
@@ -172,7 +177,8 @@ def test_8_4_3_fails_when_the_required_ts_steps_run_out_of_canonical_order(
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [
         fail(
-            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
+            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', "
+            "'pnpm run lint:workflows', 'pnpm run knip', "
             "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']",
         )
     ]
@@ -204,19 +210,20 @@ def test_8_5_1_fails_when_a_required_step_appears_only_in_a_comment(
 def test_8_5_2_requires_canonical_commands_at_command_boundaries(
     run_ci_sequence: RunCiSequence, command: str, fail: MakeFinding
 ) -> None:
-    ci = _TS_CI.replace("pnpm run lint", command)
+    ci = _TS_CI.replace("pnpm run lint\n", command + "\n")
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [fail("ts ci is missing `pnpm run lint`")]
 
 
 def test_8_5_3_checks_order_using_the_canonical_invocation(run_ci_sequence: RunCiSequence, fail: MakeFinding) -> None:
-    ci = _TS_CI.replace("pnpm run lint", "pnpm run lint:mermaid").replace(
+    ci = _TS_CI.replace("pnpm run lint\n", "pnpm run lint:mermaid\n").replace(
         "      - run: pnpm run test", "      - run: pnpm run lint\n      - run: pnpm run test"
     )
     result = run_ci_sequence(ts=True, ci=ci)
     assert result.findings == [
         fail(
-            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', 'pnpm run knip', "
+            "ts ci steps run out of canonical order; expected ['pnpm install --frozen-lockfile', "
+            "'pnpm run lint:workflows', 'pnpm run knip', "
             "'pnpm run typecheck', 'pnpm run lint', 'prettier --check', 'pnpm run test']"
         )
     ]
@@ -247,19 +254,22 @@ def test_8_5_4_requires_one_canonical_command_per_ci_step(run_ci_sequence: RunCi
 def test_8_5_5_rejects_skipped_background_or_chained_commands(
     run_ci_sequence: RunCiSequence, command: str, fail: MakeFinding
 ) -> None:
-    result = run_ci_sequence(ts=True, ci=_TS_CI.replace("pnpm run lint", command))
+    result = run_ci_sequence(ts=True, ci=_TS_CI.replace("pnpm run lint\n", command + "\n"))
     assert result.findings == [fail("ts ci is missing `pnpm run lint`")]
 
 
-@pytest.mark.parametrize("missing", ["", "rumdl check"])
+@pytest.mark.parametrize("missing", ["", "rumdl check", "pnpm run lint:workflows"])
 def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
     run_check_with_files: RunCheckWithFiles, missing: str, fail: MakeFinding, sequence_pass: Finding
 ) -> None:
     ci = (
         f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
         "      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
+        "      - run: pnpm run lint:workflows\n"
     )
-    if not missing:
+    if missing == "pnpm run lint:workflows":
+        ci = ci.replace("      - run: pnpm run lint:workflows\n", "")
+    if missing != "rumdl check":
         ci += "      - run: uv run --no-sync rumdl check\n"
     result = run_check_with_files(
         CHECK_ID,
@@ -269,7 +279,8 @@ def test_8_6_1_requires_install_and_markdown_checks_for_tooling_only_manifests(
             ".github/workflows/ci.yml": _CI_HEADER + ci,
         },
     )
-    assert result.findings == ([fail(f"python ci is missing `{missing}`")] if missing else [sequence_pass])
+    language = "ts" if missing.startswith("pnpm") else "python"
+    assert result.findings == ([fail(f"{language} ci is missing `{missing}`")] if missing else [sequence_pass])
 
 
 def test_8_6_2_requires_python_quality_steps_for_stub_only_packages(
@@ -300,7 +311,8 @@ def test_8_6_3_requires_typescript_quality_steps_for_executable_tool_configurati
             + (
                 f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
                 "      - uses: actions/checkout@v7\n"
-                "      - uses: ./apps/action-setup-pm\n      - run: pnpm exec prettier --check .\n"
+                "      - uses: ./apps/action-setup-pm\n      - run: pnpm run lint:workflows\n"
+                "      - run: pnpm exec prettier --check .\n"
             ),
         },
     )
@@ -321,6 +333,7 @@ def test_8_6_4_does_not_require_prettier_for_javascript_tool_configuration(
             + (
                 f"jobs:\n  ci:\n    if: {_DRAFT_GUARD}\n{_JOB_CONCURRENCY}    steps:\n"
                 "      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
+                "      - run: pnpm run lint:workflows\n"
             ),
         },
     )
@@ -349,7 +362,11 @@ def test_8_7_1_accepts_both_locked_installs_from_the_shared_action(
     run_ci_sequence: RunCiSequence, sequence_pass: Finding, action: str
 ) -> None:
     ci = _TS_CI.replace("./apps/action-setup-pm", action)
-    ci += _PY_CI.split("      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n", 1)[1]
+    ci += _PY_CI.split(
+        "      - uses: actions/checkout@v7\n      - uses: ./apps/action-setup-pm\n"
+        "      - run: pnpm run lint:workflows\n",
+        1,
+    )[1]
     result = run_ci_sequence(ts=True, python=True, ci=ci)
     assert result.findings == [sequence_pass]
 
@@ -383,11 +400,19 @@ def test_8_7_2_requires_the_shared_action_even_with_a_manual_frozen_install(
 def test_8_7_3_requires_shared_setup_before_quality_checks(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, install: str
 ) -> None:
-    ci = _TS_CI.replace("      - uses: ./apps/action-setup-pm\n", install)
+    ci = _TS_CI.replace("      - uses: ./apps/action-setup-pm\n      - run: pnpm run lint:workflows\n", install)
     ci += "      - uses: ./apps/action-setup-pm\n"
+    "      - run: pnpm run lint:workflows\n"
     assert run_ci_sequence(ts=True, ci=ci).findings == [
         fail(f"ts ci is missing `{step}`")
-        for step in ("pnpm run knip", "pnpm run typecheck", "pnpm run lint", "prettier --check", "pnpm run test")
+        for step in (
+            "pnpm run lint:workflows",
+            "pnpm run knip",
+            "pnpm run typecheck",
+            "pnpm run lint",
+            "prettier --check",
+            "pnpm run test",
+        )
     ]
 
 
@@ -552,7 +577,7 @@ def test_8_8_5_requires_workflow_cancellation_for_the_same_pull_request(
 def test_8_8_6_requires_successful_unconditional_checks_inside_the_guarded_job(
     run_ci_sequence: RunCiSequence, fail: MakeFinding, setting: str
 ) -> None:
-    ci = _TS_CI.replace("run: pnpm run lint", f"run: pnpm run lint\n        {setting}")
+    ci = _TS_CI.replace("run: pnpm run lint\n", f"run: pnpm run lint\n        {setting}\n")
     assert run_ci_sequence(ts=True, ci=ci).findings == [fail("ts ci is missing `pnpm run lint`")]
 
 
