@@ -1,4 +1,4 @@
-# 2 Worker bootstrap
+# 2. [Worker bootstrap](test_2_bootstrap.py)
 
 ## 2.1 Only declared bootstrap endpoints are selected
 

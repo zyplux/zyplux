@@ -36,7 +36,7 @@ TITLE_DRIFT_MESSAGE = (
 
 
 def _needs_story_tests_message(package: str) -> str:
-    return f"{package}: exposes a public interface but has no tests/**/stories/**/*.md user-story tests"
+    return f"{package}: exposes a public interface but has no user-story tests"
 
 
 NEEDS_STORY_TESTS_MESSAGE = _needs_story_tests_message(".")
@@ -280,8 +280,8 @@ def test_15_3_3_passes_a_workspace_member_with_torn_out_story_tests(
     files = {
         "pyproject.toml": _PY_UV_WORKSPACE_APPS,
         "apps/widget/pyproject.toml": _PY_SCRIPTS_PYPROJECT,
-        "tests/widget/stories/1_widget.md": _linked("test_1_widget.py"),
-        "tests/widget/stories/test_1_widget.py": PY_TEST,
+        "tests/widget/1_widget.md": _linked("test_1_widget.py"),
+        "tests/widget/test_1_widget.py": PY_TEST,
     }
     assert run_check_with_files(PY_CHECK_ID, files).findings == [ok(OK_MESSAGE)]
 
@@ -292,3 +292,33 @@ def test_15_8_1_checks_each_domain_independently(run_check_with_files: RunCheckW
         files[f"tests/stories/{domain}/1_widget.md"] = _linked("test_1_widget.py")
         files[f"tests/stories/{domain}/test_1_widget.py"] = PY_TEST
     assert run_check_with_files(PY_CHECK_ID, files).findings == [ok(OK_MESSAGE)]
+
+
+def test_15_8_2_does_not_pair_story_criteria_across_workspace_owners(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    files = {
+        "pyproject.toml": _PY_UV_WORKSPACE_APPS,
+        "apps/widget/pyproject.toml": _PY_PLAIN_PYPROJECT,
+        "apps/gadget/pyproject.toml": _PY_PLAIN_PYPROJECT,
+        "tests/widget/1_widget.md": _linked("test_1_widget.py"),
+        "tests/gadget/test_1_widget.py": PY_TEST,
+    }
+    assert run_check_with_files(PY_CHECK_ID, files).findings == [
+        fail("tests/gadget: story test(s) with no matching ### header: 1.1.1, 1.1.2"),
+        fail("tests/widget: story-doc ### header(s) with no matching test: 1.1.1, 1.1.2"),
+    ]
+
+
+def test_15_8_3_rejects_duplicate_test_basenames_but_not_duplicate_fixture_names(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    files = {
+        "tests/api/test_widget.py": "",
+        "tests/admin/test_widget.py": "",
+        "tests/api/conftest.py": "",
+        "tests/admin/conftest.py": "",
+    }
+    assert run_check_with_files("unique_test_names", files).findings == [
+        fail("duplicate test basename test_widget.py: tests/admin/test_widget.py, tests/api/test_widget.py")
+    ]

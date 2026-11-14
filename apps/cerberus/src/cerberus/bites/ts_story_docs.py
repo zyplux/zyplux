@@ -5,6 +5,7 @@ from collections import Counter
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
+from cerberus.bites.story_files import PY_TEST, TS_TEST, find_title_target, list_story_sources
 from cerberus.graph.parse import parse_typescript
 from cerberus.ts_syntax import node_text, string_literal, walk_nodes
 
@@ -115,23 +116,36 @@ def _criteria(content: str) -> list[str]:
     return [heading for heading in headings if not any(other.startswith(f"{heading}.") for other in headings)]
 
 
-def _link_doc(repo: Repo, ctx: Context, res: CheckResult, path: str, files: dict[str, str]) -> list[str]:
+def _render_title(title: re.Match[str], files: dict[str, str]) -> str:
+    section, label = title.group(1, 2)
+    plain = re.sub(r"^\[(.+)\]\([^)]+\)$", r"\1", label)
+    return f"# {section}. [{plain}]({files[section]})"
+
+
+def _check_doc(repo: Repo, ctx: Context, res: CheckResult, path: str, files: dict[str, str]) -> list[str]:
     content = ctx.file(repo, path) or ""
+    try:
+        criteria = _criteria(content)
+    except ValueError as err:
+        res.fail(f"{path}: {err}")
+        return []
+    if not criteria:
+        res.fail(f"{path}: no numbered or prefixed story criteria")
     title = _TITLE.search(content)
-    if title is not None and title.group(1) in files:
-        plain = re.sub(r"^\[(.+)\]\([^)]+\)$", r"\1", title.group(2))
-        linked = f"# {title.group(1)}. [{plain}]({files[title.group(1)]})"
-        rendered = content[: title.start()] + linked + content[title.end() :]
-        if rendered != content:
-            if ctx.fix:
-                ctx.write_file(repo, path, rendered)
-            else:
-                res.fail(f"{path}: story header links are stale; run with --fix")
-    criteria = _criteria(content)
-    if title is not None:
-        misplaced = [criterion for criterion in criteria if not criterion.startswith(f"{title.group(1)}.")]
-        if misplaced:
-            res.fail(f"{path}: story criteria filed in the wrong section doc: {', '.join(misplaced)}")
+    if title is None:
+        target = find_title_target(content)
+        if target and target not in files.values():
+            res.fail(f"{path}: story title links to an unmatched test: {target}")
+        return criteria
+    section = title.group(1)
+    misplaced = [criterion for criterion in criteria if not criterion.startswith(f"{section}.")]
+    if misplaced:
+        res.fail(f"{path}: story criteria filed in the wrong section doc: {', '.join(misplaced)}")
+    if section in files and (linked := _render_title(title, files)) != title.group():
+        if ctx.fix:
+            ctx.write_file(repo, path, content[: title.start()] + linked + content[title.end() :])
+        else:
+            res.fail(f"{path}: story header links are stale; run with --fix")
     return criteria
 
 
@@ -150,38 +164,55 @@ def _check_ids(directory: str, criteria: list[str], test_ids: list[str], res: Ch
         res.fail(f"{directory}: story tests require numbered or prefixed criterion IDs and documentation")
 
 
-def _check_group(repo: Repo, ctx: Context, res: CheckResult, directory: str, paths: list[str]) -> int:
-    tests = [path for path in paths if not path.endswith(".md")]
-    if not tests:
-        return 0
-    criteria: list[str] = []
-    test_ids: list[str] = []
-    files: dict[str, str] = {}
-    for path in tests:
-        ids = _test_ids(path, ctx.file(repo, path) or "")
-        test_ids.extend(ids)
-        for section in {story_id.split(".", 1)[0] for story_id in ids}:
-            if section in files and files[section] != PurePosixPath(path).name:
-                res.fail(f"{directory}: section {section} occurs in multiple story test files")
-            files[section] = PurePosixPath(path).name
+def _list_docs(repo: Repo, ctx: Context, paths: list[str]) -> dict[str, str]:
+    docs: dict[str, str] = {}
     for path in paths:
-        if path.endswith(".md"):
-            criteria.extend(_link_doc(repo, ctx, res, path, files))
-    _check_ids(directory, criteria, test_ids, res)
+        if not path.endswith(".md"):
+            continue
+        content = ctx.file(repo, path) or ""
+        target = find_title_target(content)
+        if TS_TEST.fullmatch(target) or (not PY_TEST.fullmatch(target) and _HEADER.search(content)):
+            docs[path] = target
+    return docs
+
+
+def _get_sections(res: CheckResult, tests: dict[str, list[str]]) -> dict[str, str]:
+    files: dict[str, str] = {}
+    for path, ids in tests.items():
+        name = PurePosixPath(path).name
+        for section in {story_id.split(".", 1)[0] for story_id in ids}:
+            if section in files and files[section] != name:
+                res.fail(f"{path}: section {section} occurs in multiple story test files")
+            files[section] = name
+    return files
+
+
+def _check_group(repo: Repo, ctx: Context, res: CheckResult, directory: str, paths: list[str]) -> int:
+    docs = _list_docs(repo, ctx, paths)
+    linked = set(docs.values())
+    tests = {
+        path: ids
+        for path in paths
+        if TS_TEST.fullmatch(PurePosixPath(path).name)
+        and ((ids := _test_ids(path, ctx.file(repo, path) or "")) or PurePosixPath(path).name in linked)
+    }
+    for path, ids in tests.items():
+        if not ids:
+            res.fail(f"{path}: no numbered or prefixed story test IDs")
+    if tests or docs:
+        files = _get_sections(res, tests)
+        criteria = [criterion for path in docs for criterion in _check_doc(repo, ctx, res, path, files)]
+        _check_ids(directory, criteria, [story_id for ids in tests.values() for story_id in ids], res)
     return len(tests)
 
 
 def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     groups: dict[str, list[str]] = {}
-    for path in ctx.paths(repo):
-        parts = PurePosixPath(path).parts
-        if "stories" not in parts[:-1] or "node_modules" in parts:
+    for path in list_story_sources(repo, ctx):
+        if PY_TEST.fullmatch(PurePosixPath(path).name):
             continue
-        if path.endswith((".md", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")):
-            groups.setdefault(PurePosixPath(path).parent.as_posix(), []).append(path)
-    checked = 0
-    for directory, paths in sorted(groups.items()):
-        checked += _check_group(repo, ctx, res, directory, paths)
+        groups.setdefault(PurePosixPath(path).parent.as_posix(), []).append(path)
+    checked = sum(_check_group(repo, ctx, res, directory, paths) for directory, paths in sorted(groups.items()))
     if not res.problems:
         if checked:
             res.ok(f"{checked} TypeScript story files pair with criteria in their own directories")

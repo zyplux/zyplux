@@ -1,4 +1,4 @@
-# 1 Workspace setup
+# 1. [Workspace setup](test_1_setup_plan.py)
 
 ## 1.1 Reading workspace pins
 

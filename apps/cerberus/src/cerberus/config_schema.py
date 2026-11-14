@@ -96,6 +96,7 @@ CONFIG_SCHEMA = create_model(
     consistent_workspace_project_references=(BiteSettings, None),
     no_worker_filesystem_imports=(BiteSettings, None),
     pnpm_release_age=(BiteSettings, None),
+    unique_test_names=(BiteSettings, None),
     story_tests_lockstep_py=(BiteSettings, None),
     story_tests_lockstep_ts=(BiteSettings, None),
     cli_py_test_seam=(BiteSettings, None),

@@ -19,3 +19,5 @@
 ### 35.2.3 rejects criteria in the wrong document and split sections
 
 ### 35.2.4 distinguishes criterion lists from prose under an unnumbered heading
+
+### 35.2.5 detects a missing partner in a flat suite

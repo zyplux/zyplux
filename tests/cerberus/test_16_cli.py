@@ -460,7 +460,7 @@ def test_16_14_1_bite_settings_match_module_names(bite_module_names: dict[str, s
 
 
 def test_16_14_2_local_overrides_use_bite_names_and_explain_each_setting(bite_module_names: dict[str, str]) -> None:
-    local = (Path(__file__).resolve().parents[3] / "cerberus.toml").read_text()
+    local = (Path(__file__).resolve().parents[2] / "cerberus.toml").read_text()
     assert tomllib.loads(local).keys() <= bite_module_names.keys()
     assignments = re.finditer(r"(?m)^[ \t]*(?:\"[^\"\n]+\"|'[^'\n]+'|[\w.-]+)[ \t]*=", local)
     undocumented = []

@@ -9,27 +9,25 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cerberus import workspaces
+from cerberus.bites.story_files import PY_STORY, PY_TEST, TS_TEST, find_title_target, list_story_sources
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Iterator
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
-
-PY_TEST_NAME = re.compile(r"^test_(\d+)_[^/]+\.py$")
 
 _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _APOSTROPHE = re.compile(r"'")
 _NON_WORD = re.compile(r"[^\w\s]")
 
-_STORIES_PATH_PARTS = 2  # a stories-dir path is at least "<dir>/stories/<file>"
 _DOC_NAME = re.compile(r"^\d+[_-][^/]+\.md$")  # `_` (Python docs) or `-` (TypeScript docs, kebab-case)
+_PY_DOC_NAME = re.compile(r"^\d+_[^/]+\.md$")
 _LEADING_NUMBER = re.compile(r"^\d+")
 _DOC_TITLE = re.compile(r"^# (\d+)\. (.+)$")
 _STORY_HEADER = re.compile(r"^## (\d+\.\d+) (.+)$")
 _CRITERION_HEADER = re.compile(r"^### (\d+(?:\.\d+)+) (.+)$")
 _LINKED_TITLE = re.compile(r"^\[(?P<title>.+)\]\((?P<target>[^)]+)\)$")
-_PY_ANY_TEST = re.compile(r"^test_.+\.py$")
 
 
 @dataclass(frozen=True)
@@ -43,16 +41,6 @@ class StoryTest:
 class Header:
     story_id: str
     title: str
-
-
-@dataclass(frozen=True)
-class Language:
-    name: str
-    manifest_name: str
-    own_test_name: re.Pattern[str]
-    collect_tests: Callable[[list[str], Callable[[str], str | None]], dict[str, StoryTest]]
-    package_dirs: Callable[[Repo, Context, list[str]], list[str]]
-    needs_story_tests: Callable[[str, Repo, Context, list[str]], bool]
 
 
 @dataclass(frozen=True)
@@ -81,13 +69,15 @@ def _strip_link(rest: str) -> str:
 
 
 def parse_headers(doc: str) -> dict[str, Header]:
-    headers: dict[str, Header] = {}
+    return {header.story_id: header for header in _iter_headers(doc)}
+
+
+def _iter_headers(doc: str) -> Iterator[Header]:
     for line in doc.splitlines():
         header = _CRITERION_HEADER.match(line)
         if header:
             story_id, rest = header.group(1), header.group(2)
-            headers[story_id] = Header(story_id, _strip_link(rest))
-    return headers
+            yield Header(story_id, _strip_link(rest))
 
 
 def _section_files(tests: dict[str, StoryTest]) -> dict[str, str]:
@@ -127,25 +117,26 @@ def split_id_and_title(func_name: str) -> tuple[str, str]:
     return ".".join(tokens[:cut]), " ".join(tokens[cut:])
 
 
-def _read_sources(test_paths: list[str], read: Callable[[str], str | None]) -> Iterator[tuple[str, str]]:
-    for path in sorted(test_paths):
-        content = read(path)
-        if content is not None:
-            yield path, content
-
-
-def collect_py_tests(test_paths: list[str], read: Callable[[str], str | None]) -> dict[str, StoryTest]:
+def _collect_tests(repo: Repo, ctx: Context, res: CheckResult, paths: list[str]) -> dict[str, StoryTest]:
     tests: dict[str, StoryTest] = {}
-    for path, content in _read_sources(test_paths, read):
+    for path in sorted(paths):
         try:
-            tree = ast.parse(content)
+            tree = ast.parse(ctx.file(repo, path) or "")
         except SyntaxError:
+            res.fail(f"{path}: could not parse story tests")
             continue
+        count = 0
         for node in tree.body:
-            if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                story_id, title = split_id_and_title(node.name)
-                if story_id:
-                    tests[story_id] = StoryTest(story_id, title, path.rsplit("/", 1)[-1])
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.name.startswith("test_"):
+                continue
+            story_id, title = split_id_and_title(node.name)
+            if story_id:
+                count += 1
+                if story_id in tests:
+                    res.fail(f"{path}: duplicate story test ID {story_id}")
+                tests[story_id] = StoryTest(story_id, title, path.rsplit("/", 1)[-1])
+        if not count:
+            res.fail(f"{path}: no numbered story test IDs")
     return tests
 
 
@@ -161,7 +152,7 @@ def under_package(path: str, package: str) -> bool:
     return any(path.startswith(prefix) for prefix in _package_prefixes(package))
 
 
-def _py_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
+def list_python_packages(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     content = ctx.file(repo, "pyproject.toml")
     if content is None:
         return []
@@ -180,7 +171,7 @@ def _py_package_dirs(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
     return [package for package in packages if ctx.config.source_oracle.classify_directory(package).needs_tests]
 
 
-def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
+def _needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
     manifest_path = f"{package}/pyproject.toml" if package else "pyproject.toml"
     content = ctx.file(repo, manifest_path)
     if content is not None:
@@ -190,27 +181,37 @@ def _py_needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[st
             project = None
         if isinstance(project, dict) and project.get("scripts"):
             return True
-    return any(under_package(path, package) and _PY_ANY_TEST.match(path.rsplit("/", 1)[-1]) for path in paths)
+    return any(under_package(path, package) and PY_TEST.fullmatch(path.rsplit("/", 1)[-1]) for path in paths)
 
 
-PY = Language("Python", "pyproject.toml", PY_TEST_NAME, collect_py_tests, _py_package_dirs, _py_needs_story_tests)
+def list_python_stories(package: str, paths: list[str]) -> list[str]:
+    return [path for path in paths if under_package(path, package) and PY_STORY.fullmatch(path.rsplit("/", 1)[-1])]
 
 
-def _grouped_by_stories_dir(paths: list[str], name: re.Pattern[str]) -> dict[str, list[str]]:
-    dirs: dict[str, list[str]] = {}
+def _list_python_docs(repo: Repo, ctx: Context, paths: list[str], tests: list[str]) -> dict[str, str]:
+    test_dirs = {path.rpartition("/")[0] for path in tests}
+    docs: dict[str, str] = {}
     for path in paths:
-        parts = path.split("/")
-        if len(parts) < _STORIES_PATH_PARTS or "stories" not in parts[:-1] or "node_modules" in parts:
+        directory, _, name = path.rpartition("/")
+        if not name.endswith(".md") or (content := ctx.file(repo, path)) is None:
             continue
-        if name.match(parts[-1]):
-            dirs.setdefault("/".join(parts[:-1]), []).append(path)
-    return dirs
+        target = find_title_target(content)
+        if PY_TEST.fullmatch(target) or (
+            not TS_TEST.fullmatch(target)
+            and _DOC_NAME.fullmatch(name)
+            and (directory in test_dirs or _PY_DOC_NAME.fullmatch(name))
+        ):
+            docs[path] = content
+    return docs
 
 
-def _headers_of(group: _Group) -> dict[str, Header]:
+def _headers_of(res: CheckResult, group: _Group) -> dict[str, Header]:
     headers: dict[str, Header] = {}
-    for content in group.docs.values():
-        headers.update(parse_headers(content))
+    for path, content in group.docs.items():
+        for header in _iter_headers(content):
+            if header.story_id in headers:
+                res.fail(f"{path}: duplicate story criterion {header.story_id}")
+            headers[header.story_id] = header
     return headers
 
 
@@ -256,45 +257,46 @@ def _check_header_links(res: CheckResult, ctx: Context, repo: Repo, group: _Grou
 
 
 def _check_group(res: CheckResult, ctx: Context, repo: Repo, group: _Group) -> None:
-    headers = _headers_of(group)
+    headers = _headers_of(res, group)
+    for section in {story_id.split(".")[0] for story_id in group.tests}:
+        if len({test.file for test in group.tests.values() if test.story_id.startswith(f"{section}.")}) > 1:
+            res.fail(f"{group.directory}: section {section} occurs in multiple story test files")
+    if group.docs and not headers:
+        res.fail(f"{group.directory}: no numbered story criteria")
     _check_presence(res, group, headers)
     _check_title_drift(res, group, headers)
     _check_own_section(res, group)
     _check_header_links(res, ctx, repo, group)
 
 
-def run_story_check(repo: Repo, ctx: Context, res: CheckResult, language: Language) -> None:
+def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     paths = ctx.paths(repo)
-    packages = language.package_dirs(repo, ctx, paths)
+    packages = list_python_packages(repo, ctx, paths)
     if not packages:
-        res.skip(f"no {language.name} packages")
+        res.skip("no Python packages")
         return
 
-    doc_dirs = _grouped_by_stories_dir(paths, _DOC_NAME)
-    own_dirs = _grouped_by_stories_dir(paths, language.own_test_name)
-    all_story_dirs = set(doc_dirs) | set(own_dirs)
-
-    def read(path: str) -> str | None:
-        return ctx.file(repo, path)
-
-    did_something = False
+    sources = list_story_sources(repo, ctx)
+    did_check = False
     for package in sorted(packages):
-        owned = sorted(d for d in all_story_dirs if under_package(d, package))
-        if not owned:
-            if language.needs_story_tests(package, repo, ctx, paths):
-                res.fail(
-                    f"{package or '.'}: exposes a public interface but has no tests/**/stories/**/*.md user-story tests"
-                )
-                did_something = True
+        tests = list_python_stories(package, sources)
+        docs = _list_python_docs(repo, ctx, [path for path in sources if under_package(path, package)], tests)
+        directories = {path.rpartition("/")[0] for path in (*docs, *tests)}
+        if not directories:
+            if _needs_story_tests(package, repo, ctx, paths):
+                res.fail(f"{package or '.'}: exposes a public interface but has no user-story tests")
+                did_check = True
             continue
 
-        did_something = True
-        for directory in owned:
-            docs = {path: content for path in doc_dirs.get(directory, []) if (content := read(path)) is not None}
-            tests = language.collect_tests(own_dirs.get(directory, []), read)
-            _check_group(res, ctx, repo, _Group(directory, docs, tests))
+        did_check = True
+        for directory in sorted(directories):
+            local_docs = {path: content for path, content in docs.items() if path.rpartition("/")[0] == directory}
+            local_tests = _collect_tests(
+                repo, ctx, res, [path for path in tests if path.rpartition("/")[0] == directory]
+            )
+            _check_group(res, ctx, repo, _Group(directory, local_docs, local_tests))
 
-    if not did_something:
-        res.skip(f"no {language.name} package needs story-based tests")
+    if not did_check:
+        res.skip("no Python package needs story-based tests")
     elif not res.problems:
         res.ok("every story criterion has a matching, title-matched test")

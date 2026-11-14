@@ -45,6 +45,10 @@
   dir: packages/eslint-config
   intents:
     - purple-insects-deliver
+'@zyplux/eslint-config@0.12.5':
+  dir: packages/eslint-config
+  intents:
+    - resolve-suite-fixtures
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
@@ -61,6 +65,10 @@ totchef@0.0.10:
   dir: apps/totchef
   intents:
     - neat-waves-jam
+totchef@0.0.11:
+  dir: apps/totchef
+  intents:
+    - python-runtime-upgrades
 zyplux-airlock@2.0.0:
   dir: apps/airlock
   intents:
@@ -94,6 +102,10 @@ zyplux-airlock@2.2.3:
   dir: apps/airlock
   intents:
     - fast-seas-stay
+zyplux-airlock@2.2.4:
+  dir: apps/airlock
+  intents:
+    - python-runtime-upgrades
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -148,6 +160,11 @@ zyplux-cerberus@0.28.0:
     - great-rivers-deny
     - kind-mice-flow
     - old-tools-fail
+zyplux-cerberus@0.29.0:
+  dir: apps/cerberus
+  intents:
+    - current-analysis-tools
+    - flat-story-suites
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -164,6 +181,10 @@ zyplux-clipy@0.2.0:
   dir: apps/clipy
   intents:
     - neat-rivers-smile
+zyplux-clipy@0.2.1:
+  dir: apps/clipy
+  intents:
+    - python-runtime-upgrades
 zyplux-setup-pm@1.0.1:
   dir: apps/action-setup-pm
   intents:

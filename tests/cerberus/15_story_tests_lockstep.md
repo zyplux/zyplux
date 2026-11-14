@@ -45,3 +45,7 @@
 ## 15.8 grouping stories by domain
 
 ### 15.8.1 checks each domain independently
+
+### 15.8.2 does not pair story criteria across workspace owners
+
+### 15.8.3 rejects duplicate test basenames but not duplicate fixture names

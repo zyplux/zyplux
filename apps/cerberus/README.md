@@ -63,7 +63,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `consistent_workspace_project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
 | `no_worker_filesystem_imports` | content | First-party Worker runtime imports avoid filesystem builtins |
 | `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
-| `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
+| `unique_test_names`           | content     | Executable test filenames are unique across the repository                           |
+| `story_tests_lockstep_py`      | content     | Python story criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
 | `lib_py_test_seam`             | content     | Libraries' story tests import only their root module                                |
@@ -142,3 +143,7 @@ Worker traversal covers first-party static imports and literal dynamic imports. 
 Side-effect detection checks registration and initialization in workspace source modules against package-relative `sideEffects` paths. Packages publishing compiled files use patterns that also cover their compiled modules. The check cannot prove an arbitrary dependency graph pure.
 
 Vitest coverage resolves exported literal objects and local constants, including `defineConfig` and its direct-return callbacks, without executing configuration code. Every metric meets the configured floor, and collection is enabled through `test.coverage.enabled: true` or the root test script's coverage flag.
+
+## Story tests
+
+Keep each story document beside its test file in the suite or domain folder. Give test files descriptive, unique names across the repository. Criterion IDs are local to the directory. Link the Markdown title to the test file so either side can be checked even when its partner is missing. Python stories use a numbered `test_<section>_<subject>.py` filename and numbered criterion headings that match test function names. TypeScript stories use numbered or prefixed Vitest criterion titles. Ordinary component tests and unrelated Markdown can share the same folder.

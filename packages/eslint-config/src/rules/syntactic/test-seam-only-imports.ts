@@ -65,9 +65,11 @@ export const testSeamOnlyImports = createRule<Options, MessageId>({
         : path.resolve(context.languageOptions.parserOptions.tsconfigRootDir ?? context.cwd, testApi);
     const isSuiteApi = (specifier: string) => {
       if (specifier === 'vitest') return true;
-      if (testApi === undefined && specifier === '#fixtures')
-        return domain === 'stories' || !directory.split(path.sep).includes('stories');
       const resolved = resolve(specifier);
+      if (testApi === undefined && specifier === '#fixtures' && resolved !== undefined) {
+        const fixtureDirectory = path.dirname(resolved);
+        return directory === fixtureDirectory || directory === path.join(fixtureDirectory, 'stories');
+      }
       const target = specifier.endsWith('.js')
         ? `${specifier.slice(0, -'.js'.length)}.ts`
         : path.extname(specifier) === ''

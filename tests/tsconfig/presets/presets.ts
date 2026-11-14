@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as z from 'zod';
 
-const configDir = fileURLToPath(new URL('../../../../packages/tsconfig', import.meta.url));
+const configDir = fileURLToPath(new URL('../../../packages/tsconfig', import.meta.url));
 const TsconfigSchema = z.object({ compilerOptions: LooseRecordSchema });
 const EmitPolicySchema = z.object({
   declarationMap: z.boolean(),

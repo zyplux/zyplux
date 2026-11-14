@@ -8,7 +8,7 @@ import { mkdir, symlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const utilDir = fileURLToPath(new URL('../../../../packages/util-ts', import.meta.url));
+const utilDir = fileURLToPath(new URL('../../../packages/util-ts', import.meta.url));
 
 export const verifyUtilPackage = async (tempDir: TempDir) => {
   const archive = path.join(tempDir.path, 'util.tgz');
