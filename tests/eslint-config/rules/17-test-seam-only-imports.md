@@ -2,12 +2,12 @@
 
 ## 17.1 allowing the seam import
 
-1. allows describe, expect, and test from the fixtures alias
+1. allows describe, expect, and test from the suite API
 2. allows a variant test aliased to test
-3. allows a type-only import from the fixtures alias
-4. allows a mixed type and value import from the fixtures alias
+3. allows a type-only import from the suite API
+4. allows a mixed type and value import from the suite API
 
-## 17.2 flagging any module beyond the fixtures alias
+## 17.2 flagging any module beyond the suite API
 
 1. flags a node builtin
 2. flags a third-party module
@@ -22,8 +22,8 @@
 
 1. flags another named value beyond the seam vocabulary
 2. flags a helper renamed to test
-3. flags a default import of the fixtures alias
-4. flags a namespace import of the fixtures alias
+3. flags a default import of the suite API
+4. flags a namespace import of the suite API
 
 ## 17.4 scoping the rule to tests in the shipped config
 
@@ -33,7 +33,7 @@ The shipped config covers `.test.ts` and `.test.tsx` throughout the repository.
 
 ## 17.5 using a local domain module
 
-Domain stories import their test API from the module named after their directory: `stories/api` uses `./api.ts`. Helpers and subject packages remain behind that test API.
+Domain stories import their test API from the module named after their directory: `tests/api` uses `./api.ts`. Helpers and subject packages remain behind that test API.
 
 ### 17.5.1 allows the module named after the story directory
 

@@ -11,7 +11,7 @@
 import ast
 from typing import TYPE_CHECKING
 
-from project_paths import STORIES_DIR
+from project_paths import TESTS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -52,7 +52,7 @@ def _walk_runtime(tree: ast.AST) -> Iterator[ast.AST]:
 
 def _import_bearing_story_tests() -> set[str]:
     bearing = set()
-    for path in STORIES_DIR.glob("test_*.py"):
+    for path in TESTS.glob("test_[0-9]*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         if any(
             isinstance(node, (ast.Import, ast.ImportFrom)) and not _is_type_checking_flag_import(node)
@@ -86,7 +86,7 @@ def test_story_tests_use_fixtures_only() -> None:
 
 def test_act_and_assert_fixtures_touch_only_the_public_cli() -> None:
     for name in PUBLIC_ONLY_FIXTURES:
-        modules = _totchef_imports((STORIES_DIR / name).read_text(encoding="utf-8"))
+        modules = _totchef_imports((TESTS / name).read_text(encoding="utf-8"))
         leaked = sorted(module for module in modules if module != PUBLIC_CLI_IMPORT)
         assert not leaked, (
             f"{name} reaches totchef internals {leaked}; the act/assert layers must operate totchef "

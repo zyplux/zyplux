@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from totchef.cook_base import CookResult
     from totchef.recipe_types import RecipeConfig, RecipeValue
 
-CHEZMOI_COOK = (Path(__file__).resolve().parents[3] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
+CHEZMOI_COOK = (Path(__file__).resolve().parents[2] / "apps/totchef/examples/totchef_cooks/chezmoi_cook.py").read_text()
 
 GIT_NEEDS_INSTALL = (
     "git:\n  Installed: (none)\n  Candidate: 1:2.40\n  Version table:\n     1:2.40 500\n"

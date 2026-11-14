@@ -177,6 +177,8 @@ min_coverage = 90
 
 [pnpm_release_age]
 
+[unique_test_names]
+
 [story_tests_lockstep_py]
 
 [story_tests_lockstep_ts]

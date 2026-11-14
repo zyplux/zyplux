@@ -17,7 +17,7 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CONTAINER_DIR = Path(__file__).parent / "container"
 CONTAINERFILE = CONTAINER_DIR / "Containerfile"
 IGNOREFILE = CONTAINER_DIR / ".containerignore"

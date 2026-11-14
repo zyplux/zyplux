@@ -13,8 +13,8 @@ import type { PrintedConfig } from '#test-contracts';
 
 import { ParserOptionsSchema, PrintedConfigSchema, ResolvedConfigSchema } from '#test-contracts';
 export type ZypluxConfig = ReturnType<typeof zyplux>;
-const eslintConfigDir = fileURLToPath(new URL('../../../../packages/eslint-config/', import.meta.url));
-const rulesSnapshotUrl = new URL('../../../../packages/eslint-config/rules.json', import.meta.url);
+const eslintConfigDir = fileURLToPath(new URL('../../../packages/eslint-config/', import.meta.url));
+const rulesSnapshotUrl = new URL('../../../packages/eslint-config/rules.json', import.meta.url);
 const isAbsolutePath = (candidate: string) => path.isAbsolute(candidate);
 
 const tsconfigRootDirs = (config: ZypluxConfig) =>

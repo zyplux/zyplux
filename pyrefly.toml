@@ -25,9 +25,9 @@ search-path = [
     "apps/clipy/src",
     "apps/totchef/src",
     "apps/token_stats/src",
-    "tests/cerberus/stories",
-    "tests/clipy/stories",
+    "tests/cerberus",
+    "tests/clipy",
     "tests/totchef/project",
-    "tests/totchef/stories",
-    "tests/token_stats/stories",
+    "tests/totchef",
+    "tests/token_stats",
 ]

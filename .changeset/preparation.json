@@ -1,46 +1,175 @@
 {
   "format": 2,
-  "tags": ["setup-pm-v1.2.0"],
+  "tags": [
+    "action-airlock-v2.2.4",
+    "airlock-v2.2.4",
+    "cerberus-v0.29.0",
+    "clipy-v0.2.1",
+    "eslint-config-v0.12.5",
+    "totchef-v0.0.11"
+  ],
   "intents": {
-    ".changeset/heavy-bears-film.md": "---\n\"zyplux-setup-pm\": minor\n---\n\nAllow callers to select pnpm, uv, or both toolchains while preserving locked dependency installation.\n"
+    ".changeset/current-analysis-tools.md": "---\n\"zyplux-cerberus\": patch\n---\n\nUpdate Fallow to 3.42.0 and jscpd to 5.4.3.\n",
+    ".changeset/flat-story-suites.md": "---\n\"zyplux-cerberus\": minor\n---\n\nPair story criteria with tests in suite or domain folders, and require unique test filenames across the repository.\n",
+    ".changeset/python-runtime-upgrades.md": "---\n\"zyplux-airlock\": patch\n\"zyplux-clipy\": patch\n\"totchef\": patch\n---\n\nUpdate the minimum versions of runtime dependencies.\n",
+    ".changeset/resolve-suite-fixtures.md": "---\n\"@zyplux/eslint-config\": patch\n---\n\nResolve fixture aliases against the suite API regardless of where story tests are stored.\n"
   },
   "files": {
     ".changeset/ledger.yaml": {
       "before": {},
       "after": {
-        "zyplux-setup-pm@1.2.0": {
-          "dir": "apps/action-setup-pm",
-          "intents": ["heavy-bears-film"]
+        "@zyplux/eslint-config@0.12.5": {
+          "dir": "packages/eslint-config",
+          "intents": ["resolve-suite-fixtures"]
+        },
+        "totchef@0.0.11": {
+          "dir": "apps/totchef",
+          "intents": ["python-runtime-upgrades"]
+        },
+        "zyplux-airlock@2.2.4": {
+          "dir": "apps/airlock",
+          "intents": ["python-runtime-upgrades"]
+        },
+        "zyplux-cerberus@0.29.0": {
+          "dir": "apps/cerberus",
+          "intents": ["current-analysis-tools", "flat-story-suites"]
+        },
+        "zyplux-clipy@0.2.1": {
+          "dir": "apps/clipy",
+          "intents": ["python-runtime-upgrades"]
         }
       },
       "created": false
     },
-    "apps/action-setup-pm/CHANGELOG.md": {
+    "apps/airlock/CHANGELOG.md": {
       "before": {},
       "after": {
-        "## 1.2.0": "## 1.2.0\n\n### Minor Changes\n\n- Allow callers to select pnpm, uv, or both toolchains while preserving locked dependency installation.\n\n"
+        "## 2.2.4": "## 2.2.4\n\n### Patch Changes\n\n- Update the minimum versions of runtime dependencies.\n\n"
       },
       "created": false
     },
-    "apps/action-setup-pm/package.json": {
+    "apps/airlock/package.json": {
       "before": {
-        "version": "1.1.0"
+        "version": "2.2.3"
       },
       "after": {
-        "version": "1.2.0"
+        "version": "2.2.4"
       },
       "created": false
     },
-    "apps/action-setup-pm/pyproject.toml": {
+    "apps/airlock/pyproject.toml": {
       "before": {
         "project": {
-          "version": "1.1.0"
+          "version": "2.2.3"
         }
       },
       "after": {
         "project": {
-          "version": "1.2.0"
+          "version": "2.2.4"
         }
+      },
+      "created": false
+    },
+    "apps/cerberus/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 0.29.0": "## 0.29.0\n\n### Minor Changes\n\n- Pair story criteria with tests in suite or domain folders, and require unique test filenames across the repository.\n\n### Patch Changes\n\n- Update Fallow to 3.42.0 and jscpd to 5.4.3.\n\n"
+      },
+      "created": false
+    },
+    "apps/cerberus/package.json": {
+      "before": {
+        "version": "0.28.0"
+      },
+      "after": {
+        "version": "0.29.0"
+      },
+      "created": false
+    },
+    "apps/cerberus/pyproject.toml": {
+      "before": {
+        "project": {
+          "version": "0.28.0"
+        }
+      },
+      "after": {
+        "project": {
+          "version": "0.29.0"
+        }
+      },
+      "created": false
+    },
+    "apps/clipy/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 0.2.1": "## 0.2.1\n\n### Patch Changes\n\n- Update the minimum versions of runtime dependencies.\n\n"
+      },
+      "created": false
+    },
+    "apps/clipy/package.json": {
+      "before": {
+        "version": "0.2.0"
+      },
+      "after": {
+        "version": "0.2.1"
+      },
+      "created": false
+    },
+    "apps/clipy/pyproject.toml": {
+      "before": {
+        "project": {
+          "version": "0.2.0"
+        }
+      },
+      "after": {
+        "project": {
+          "version": "0.2.1"
+        }
+      },
+      "created": false
+    },
+    "apps/totchef/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 0.0.11": "## 0.0.11\n\n### Patch Changes\n\n- Update the minimum versions of runtime dependencies.\n\n"
+      },
+      "created": false
+    },
+    "apps/totchef/package.json": {
+      "before": {
+        "version": "0.0.10"
+      },
+      "after": {
+        "version": "0.0.11"
+      },
+      "created": false
+    },
+    "apps/totchef/pyproject.toml": {
+      "before": {
+        "project": {
+          "version": "0.0.10"
+        }
+      },
+      "after": {
+        "project": {
+          "version": "0.0.11"
+        }
+      },
+      "created": false
+    },
+    "packages/eslint-config/CHANGELOG.md": {
+      "before": {},
+      "after": {
+        "## 0.12.5": "## 0.12.5\n\n### Patch Changes\n\n- Resolve fixture aliases against the suite API regardless of where story tests are stored.\n\n"
+      },
+      "created": false
+    },
+    "packages/eslint-config/package.json": {
+      "before": {
+        "version": "0.12.4"
+      },
+      "after": {
+        "version": "0.12.5"
       },
       "created": false
     }

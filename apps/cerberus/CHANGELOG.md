@@ -1,5 +1,15 @@
 # zyplux-cerberus
 
+## 0.29.0
+
+### Minor Changes
+
+- Pair story criteria with tests in suite or domain folders, and require unique test filenames across the repository.
+
+### Patch Changes
+
+- Update Fallow to 3.42.0 and jscpd to 5.4.3.
+
 ## 0.28.0
 
 ### Minor Changes

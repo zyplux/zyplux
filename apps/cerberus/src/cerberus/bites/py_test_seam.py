@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cerberus.bites import story_docs
+from cerberus.bites.story_files import list_story_sources
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -169,17 +170,6 @@ def _type_checking_exempt_ids(tree: ast.AST) -> set[int]:
     return exempt
 
 
-def _story_test_files(package: str, paths: list[str]) -> list[str]:
-    files = []
-    for path in paths:
-        parts = path.split("/")
-        if len(parts) < _MIN_PATH_SEGMENTS or "stories" not in parts[:-1]:
-            continue
-        if story_docs.PY_TEST_NAME.match(parts[-1]) and story_docs.under_package(path, package):
-            files.append(path)
-    return sorted(files)
-
-
 def _is_package_relative(module: str, root: str) -> bool:
     return module == root or module.startswith(f"{root}.")
 
@@ -212,7 +202,7 @@ class Seam:
     def load_manifest(self, package: str) -> dict[str, Any]:
         return _parse_toml(self.ctx.file(self.repo, _manifest_path(package)))
 
-    def check_package(self, res: CheckResult, package: str) -> None:
+    def check_package(self, res: CheckResult, package: str, stories: list[str]) -> None:
         manifest = self.load_manifest(package)
         root = resolve_root_module(package, manifest, self.paths)
         if root is None:
@@ -221,7 +211,7 @@ class Seam:
 
         root_dir = _root_module_dir(package, self.paths, root)
         pkg_seam = _PackageSeam(package, root, root_dir, frozenset({root}) | _script_modules(manifest))
-        for story_file in _story_test_files(package, self.paths):
+        for story_file in sorted(stories):
             self._check_story_file(res, story_file, pkg_seam)
 
     def _check_story_file(self, res: CheckResult, story_file: str, pkg_seam: _PackageSeam) -> None:
@@ -306,7 +296,7 @@ LIBRARIES = SeamGroup(
 
 def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup) -> None:
     paths = ctx.paths(repo)
-    packages = story_docs.PY.package_dirs(repo, ctx, paths)
+    packages = story_docs.list_python_packages(repo, ctx, paths)
     if not packages:
         res.skip("no Python packages")
         return
@@ -317,8 +307,9 @@ def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup)
         res.skip(f"no {group.label}")
         return
 
+    sources = list_story_sources(repo, ctx)
     for package in sorted(members):
-        seam.check_package(res, package)
+        seam.check_package(res, package, story_docs.list_python_stories(package, sources))
 
     if not res.problems:
         res.ok(group.ok_message)

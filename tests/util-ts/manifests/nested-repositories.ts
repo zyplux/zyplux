@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
+export const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 
 const NESTED_REPO_MANIFESTS = { 'service-a': 'package.json', 'service-b': 'pyproject.toml' } as const;
 

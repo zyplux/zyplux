@@ -6,22 +6,16 @@ type Case = [shape: string, code: string];
 
 describe('17.1 allowing the seam import', () => {
   test.for<Case>([
-    [
-      '1 allows describe, expect, and test from the fixtures alias',
-      "import { describe, expect, test } from '#fixtures';",
-    ],
-    ['2 allows a variant test aliased to test', "import { describe, expect, test } from '#fixtures';"],
-    ['3 allows a type-only import from the fixtures alias', "import type { ShellFake } from '#fixtures';"],
-    [
-      '4 allows a mixed type and value import from the fixtures alias',
-      "import { test, type TempDir } from '#fixtures';",
-    ],
+    ['1 allows describe, expect, and test from the suite API', "import { describe, expect, test } from './rules.ts';"],
+    ['2 allows a variant test aliased to test', "import { describe, expect, test } from './rules.ts';"],
+    ['3 allows a type-only import from the suite API', "import type { ShellFake } from './rules.ts';"],
+    ['4 allows a mixed type and value import from the suite API', "import { test, type TempDir } from './rules.ts';"],
   ])('17.1.%s', ([, code], { lintRule }) => {
-    expect(lintRule(code)).toReportNothing();
+    expect(lintRule(code, { filename: 'rules/17-test-seam-only-imports.test.ts' })).toReportNothing();
   });
 });
 
-describe('17.2 flagging any module beyond the fixtures alias', () => {
+describe('17.2 flagging any module beyond the suite API', () => {
   test.for<Case>([
     ['1 flags a node builtin', "import path from 'node:path';"],
     ['2 flags a third-party module', "import * as z from 'zod';"],
@@ -32,18 +26,18 @@ describe('17.2 flagging any module beyond the fixtures alias', () => {
     ['7 flags a re-export of a relative file path', "export * from './helpers';"],
     ['8 flags a dynamic import of a workspace package', "export const load = () => import('@zyplux/util');"],
   ])('17.2.%s', ([, code], { lintRule }) => {
-    expect(lintRule(code)).toReport('moduleOutsideSeam');
+    expect(lintRule(code, { filename: 'rules/17-test-seam-only-imports.test.ts' })).toReport('moduleOutsideSeam');
   });
 });
 
 describe('17.3 flagging value bindings beyond describe, expect, and test', () => {
   test.for<Case>([
-    ['1 flags another named value beyond the seam vocabulary', "import { storyMatchers } from '#fixtures';"],
-    ['2 flags a helper renamed to test', "import { helper as test } from '#fixtures';"],
-    ['3 flags a default import of the fixtures alias', "import fixtures from '#fixtures';"],
-    ['4 flags a namespace import of the fixtures alias', "import * as fixtures from '#fixtures';"],
+    ['1 flags another named value beyond the seam vocabulary', "import { storyMatchers } from './rules.ts';"],
+    ['2 flags a helper renamed to test', "import { helper as test } from './rules.ts';"],
+    ['3 flags a default import of the suite API', "import fixtures from './rules.ts';"],
+    ['4 flags a namespace import of the suite API', "import * as fixtures from './rules.ts';"],
   ])('17.3.%s', ([, code], { lintRule }) => {
-    expect(lintRule(code)).toReport('bindingOutsideSeam');
+    expect(lintRule(code, { filename: 'rules/17-test-seam-only-imports.test.ts' })).toReport('bindingOutsideSeam');
   });
 });
 
@@ -59,7 +53,7 @@ describe('17.5 using a local domain module', () => {
   test('17.5.1 allows the module named after the story directory', ({ lintRule }) => {
     expect(
       lintRule("import { describe, expect, test } from './api.ts';", {
-        filename: 'stories/api/1-contract.test.ts',
+        filename: 'api/1-contract.test.ts',
       }),
     ).toReportNothing();
   });
@@ -67,25 +61,25 @@ describe('17.5 using a local domain module', () => {
   test('17.5.2 allows fixture types and aliases of actual API bindings', ({ lintRule }) => {
     expect(
       lintRule("import { type Api, describe as suite, test } from './api.ts';", {
-        filename: 'stories/api/1-contract.test.ts',
+        filename: 'api/1-contract.test.ts',
       }),
     ).toReportNothing();
   });
 
   test('17.5.3 flags a helper imported directly into a domain story', ({ lintRule }) => {
-    expect(
-      lintRule("import { runScenario } from './helpers.ts';", { filename: 'stories/api/1-contract.test.ts' }),
-    ).toReport('moduleOutsideSeam');
+    expect(lintRule("import { runScenario } from './helpers.ts';", { filename: 'api/1-contract.test.ts' })).toReport(
+      'moduleOutsideSeam',
+    );
   });
 
   test('17.5.4 flags extra value bindings from a domain module', ({ lintRule }) => {
-    expect(
-      lintRule("import { runScenario } from './api.ts';", { filename: 'stories/api/1-contract.test.ts' }),
-    ).toReport('bindingOutsideSeam');
+    expect(lintRule("import { runScenario } from './api.ts';", { filename: 'api/1-contract.test.ts' })).toReport(
+      'bindingOutsideSeam',
+    );
   });
 
   test('17.5.5 flags a module named after a parent domain', ({ lintRule }) => {
-    expect(lintRule("import { test } from './api.ts';", { filename: 'stories/api/admin/1-contract.test.ts' })).toReport(
+    expect(lintRule("import { test } from './api.ts';", { filename: 'api/admin/1-contract.test.ts' })).toReport(
       'moduleOutsideSeam',
     );
   });
@@ -93,7 +87,7 @@ describe('17.5 using a local domain module', () => {
   test('17.5.6 flags dynamic imports of a domain helper', ({ lintRule }) => {
     expect(
       lintRule("export const load = () => import('./helpers.ts');", {
-        filename: 'stories/api/1-contract.test.ts',
+        filename: 'api/1-contract.test.ts',
       }),
     ).toReport('moduleOutsideSeam');
   });

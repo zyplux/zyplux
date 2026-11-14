@@ -1,4 +1,4 @@
-# 1 Config publication
+# 1. [Config publication](test_1_publication.py)
 
 ## 1.1 Publishes validator snapshot without reading secret values
 

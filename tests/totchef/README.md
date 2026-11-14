@@ -1,4 +1,4 @@
-# stories
+# Totchef tests
 
 The numbered `<n>_<section>.md` docs describe `totchef` strictly from the **user's
 point of view** — what someone running `totchef` (or authoring a recipe, or extending

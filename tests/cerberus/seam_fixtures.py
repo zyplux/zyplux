@@ -6,7 +6,7 @@ and, for cli apps, `cerberus.cli`'s public surface — see that module's
 docstring for the exact rule. Only `test_*.py` story files are scanned, and
 their `if TYPE_CHECKING:` imports are exempt (mirroring how the TS seam check
 trusts an alias target's own imports), so this module — re-exported by
-`conftest.py`, the same layout as `tests/totchef/stories` — is the one
+`conftest.py`, the same layout as `tests/totchef` — is the one
 sanctioned place a story test's internal-access needs get satisfied. Story
 tests import this module's type aliases and double classes only under
 `TYPE_CHECKING`, for annotations.
