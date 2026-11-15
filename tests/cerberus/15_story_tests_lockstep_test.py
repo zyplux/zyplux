@@ -351,3 +351,37 @@ def test_15_8_5_rejects_case_ids_that_are_duplicate_or_belong_to_another_file(
         fail("tests/admin/2_dashboard_test.py:1: test case must start with 2. followed by a number"),
         fail("tests/api/a2-widget.test.ts:1: duplicate test case ID a2.2"),
     ]
+
+
+def test_15_8_6_checks_pytest_cases_and_ignores_helpers(run_check_with_files: RunCheckWithFiles) -> None:
+    files = {
+        "tests/2_dashboard_test.py": """\
+def test_2_1_shows_dashboard():
+    def test_helper(): pass
+
+class Dashboard:
+    def test_helper(self): pass
+
+class TestDashboard:
+    def test_2_2_loads_widgets(self): pass
+""",
+    }
+    assert not run_check_with_files("unique_test_ids", files).problems
+
+
+def test_15_8_7_checks_aliased_and_extended_vitest_cases(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    files = {
+        "tests/2-dashboard.test.ts": """\
+import { test as scenario } from 'vitest';
+const dashboard = scenario.extend<{ count: number }>({ count: 3 });
+scenario('unnumbered', () => {});
+dashboard('2.1 shows the dashboard', () => {});
+dashboard.skip('2.1 duplicate', () => {});
+""",
+    }
+    assert run_check_with_files("unique_test_ids", files).findings == [
+        fail("tests/2-dashboard.test.ts:3: test case must start with 2. followed by a number"),
+        fail("tests/2-dashboard.test.ts:5: duplicate test case ID 2.1"),
+    ]

@@ -53,3 +53,7 @@
 ### 15.8.4 allows bare and prefixed IDs in the same repo
 
 ### 15.8.5 rejects case IDs that are duplicate or belong to another file
+
+### 15.8.6 checks pytest cases and ignores helpers
+
+### 15.8.7 checks aliased and extended Vitest cases

@@ -9,20 +9,33 @@ from cerberus.graph.parse import parse_typescript
 from cerberus.ts_syntax import node_text, string_literal, walk_nodes
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
     from tree_sitter import Node
 
 _PY_TEST_NAME = re.compile(rf"test_({FILE_ID}(?:_[0-9]+)+)_(.+)")
 _TS_CASE_ID = re.compile(rf"^({CASE_ID})(?=\s|$)")
-_TS_TEST_CALL = re.compile(r"(?:test|it)(?:\.(?:concurrent|each|fails|for|only|runIf|sequential|skip|skipIf|todo))*")
+_TS_TEST_MODIFIERS = re.compile(r"(?:\.(?:concurrent|each|fails|for|only|runIf|sequential|skip|skipIf|todo))*")
 _TS_TEST_FACTORIES = (".each", ".for", ".runIf", ".skipIf")
 
 
-def list_python_tests(content: str) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
-    for node in ast.walk(ast.parse(content)):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+def _list_pytest_cases(body: list[ast.stmt]) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+    for node in body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
             yield node
+        elif (
+            isinstance(node, ast.ClassDef)
+            and node.name.startswith("Test")
+            and not any(
+                isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name in {"__init__", "__new__"}
+                for member in node.body
+            )
+        ):
+            yield from _list_pytest_cases(node.body)
+
+
+def list_python_tests(content: str) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+    return _list_pytest_cases(ast.parse(content).body)
 
 
 def split_python_test_name(name: str) -> tuple[str, str]:
@@ -72,7 +85,32 @@ def _expand_titles(call: Node, function: Node, title: str) -> list[str]:
     return titles
 
 
-def _test_titles(call: Node) -> list[str]:
+def _list_test_bindings(nodes: Iterable[Node]) -> set[str]:
+    bindings = {"test", "it"}
+    for node in nodes:
+        if node.type == "import_specifier":
+            name = node.child_by_field_name("name")
+            alias = node.child_by_field_name("alias")
+            if name is not None and node_text(name) in {"test", "it"} and alias is not None:
+                bindings.add(node_text(alias))
+        elif node.type == "variable_declarator":
+            name = node.child_by_field_name("name")
+            value = node.child_by_field_name("value")
+            if name is None or name.type != "identifier" or value is None:
+                continue
+            if value.type == "call_expression":
+                function = value.child_by_field_name("function")
+                if function is None or not (callee := node_text(function)).endswith(".extend"):
+                    continue
+                source = callee.removesuffix(".extend")
+            else:
+                source = node_text(value)
+            if source in bindings:
+                bindings.add(node_text(name))
+    return bindings
+
+
+def _test_titles(call: Node, bindings: set[str]) -> list[str]:
     function = call.child_by_field_name("function")
     arguments = call.child_by_field_name("arguments")
     if function is None or arguments is None:
@@ -81,8 +119,13 @@ def _test_titles(call: Node) -> list[str]:
     callee_node = function.child_by_field_name("function") if is_factory_call else function
     if callee_node is None:
         return []
-    callee = node_text(callee_node)
-    if not _TS_TEST_CALL.fullmatch(callee) or callee.endswith(_TS_TEST_FACTORIES) != is_factory_call:
+    callee, dot, suffix = node_text(callee_node).partition(".")
+    modifiers = dot + suffix
+    if (
+        callee not in bindings
+        or not _TS_TEST_MODIFIERS.fullmatch(modifiers)
+        or modifiers.endswith(_TS_TEST_FACTORIES) != is_factory_call
+    ):
         return []
     title = string_literal(arguments.named_children[0]) if arguments.named_children else None
     return _expand_titles(call, function, title) if title is not None else [""]
@@ -90,8 +133,10 @@ def _test_titles(call: Node) -> list[str]:
 
 def list_typescript_cases(path: str, content: str) -> Iterator[tuple[int, str]]:
     root = parse_typescript(path, content).root_node
-    for node in walk_nodes(root):
+    nodes = tuple(walk_nodes(root))
+    bindings = _list_test_bindings(nodes)
+    for node in nodes:
         if node.type == "call_expression":
-            for title in _test_titles(node):
+            for title in _test_titles(node, bindings):
                 match = _TS_CASE_ID.match(title)
                 yield node.start_point.row + 1, match.group(1) if match else ""
