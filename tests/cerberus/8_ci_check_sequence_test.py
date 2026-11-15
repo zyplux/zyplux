@@ -599,14 +599,28 @@ def test_8_8_8_rejects_workflow_concurrency_even_with_guarded_job_concurrency(
     assert result.findings == [fail("ci.yml must put concurrency on the guarded ci job, not the workflow")]
 
 
-@pytest.mark.parametrize("eslint_option", ["--cache", "--fix"])
+@pytest.mark.parametrize(
+    ("lint_script", "eslint_command", "is_valid"),
+    [
+        ("lint:eslint", "eslint . --cache", True),
+        ("lint:eslint", "eslint . --fix", False),
+        ("lint", "eslint . --cache", True),
+        ("lint", "eslint . --cache || true", False),
+        ("lint", "echo eslint .", False),
+    ],
+)
 def test_8_5_7_verifies_typecheck_and_lint_in_pnpm_scripts(
-    run_check_with_files: RunCheckWithFiles, sequence_pass: Finding, fail: MakeFinding, eslint_option: str
+    run_check_with_files: RunCheckWithFiles,
+    fail: MakeFinding,
+    lint_script: str,
+    eslint_command: str,
+    *,
+    is_valid: bool,
 ) -> None:
     ci = _TS_CI.replace("pnpm run typecheck\n", "pnpm run typecheck:ts --force\n").replace(
-        "pnpm run lint\n", "pnpm run lint:eslint\n"
+        "pnpm run lint\n", f"pnpm run {lint_script}\n"
     )
-    scripts = {"typecheck:ts": "pnpm --filter email run build && tsc -b", "lint:eslint": f"eslint . {eslint_option}"}
+    scripts = {"typecheck:ts": "pnpm --filter email run build && tsc --build", lint_script: eslint_command}
     result = run_check_with_files(
         CHECK_ID,
         {
@@ -616,6 +630,4 @@ def test_8_5_7_verifies_typecheck_and_lint_in_pnpm_scripts(
         },
     )
 
-    assert result.findings == (
-        [sequence_pass] if eslint_option == "--cache" else [fail("ts ci is missing `pnpm run lint`")]
-    )
+    assert result.problems == ([] if is_valid else [fail("ts ci is missing `pnpm run lint`")])

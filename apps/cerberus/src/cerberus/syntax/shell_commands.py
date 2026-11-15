@@ -22,7 +22,7 @@ _SCRIPT_TOOLS = {
     "format": ("prettier", "--write"),
     "lint": ("eslint", "."),
     "lint:fix": ("eslint", ".", "--fix"),
-    "typecheck": ("tsc", "-b"),
+    "typecheck": ("tsc",),
 }
 _PNPM_BINARIES = {command[0] for command in _SCRIPT_TOOLS.values()}
 
@@ -51,7 +51,9 @@ def matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) ->
         return False
     match required, command:
         case ("pnpm", "run", script, *options), ("pnpm", "exec", *invocation) if script in _SCRIPT_TOOLS:
-            if script == "lint" and {"--fix", "--fix-dry-run"}.intersection(invocation):
+            if (script == "lint" and {"--fix", "--fix-dry-run"}.intersection(invocation)) or (
+                script == "typecheck" and not {"-b", "--build"}.intersection(invocation)
+            ):
                 return False
             command = tuple(invocation)
             required = (*_SCRIPT_TOOLS[script], *options)
@@ -135,9 +137,12 @@ def _list_and_commands(node: Node) -> list[tuple[str, ...]]:
 def expand_pnpm_command(
     command: tuple[str, ...], scripts: dict[str, str], ancestors: frozenset[str] = frozenset()
 ) -> Iterator[tuple[str, ...]]:
-    yield command
     match command:
-        case ("pnpm", "run", name, *args) if name in scripts and name not in ancestors:
+        case ("pnpm", "run", name, *args) if name in scripts:
+            if name not in _SCRIPT_TOOLS:
+                yield command
+            if name in ancestors:
+                return
             root = get_shell_parser().parse(scripts[name].encode()).root_node
             if root.has_error or len(root.children) != 1:
                 return
@@ -147,6 +152,8 @@ def expand_pnpm_command(
             for child in commands:
                 invocation = ("pnpm", "exec", *child) if child[0] in _PNPM_BINARIES else child
                 yield from expand_pnpm_command(invocation, scripts, ancestors | {name})
+        case _:
+            yield command
 
 
 def list_shell_commands(script: str) -> list[tuple[str, ...]]:

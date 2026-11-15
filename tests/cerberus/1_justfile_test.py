@@ -603,22 +603,22 @@ def test_1_10_15_rejects_pyrefly_warning_threshold_overrides(run_justfile_check:
 
 
 @requires_just
-@pytest.mark.parametrize("has_masked_failure", [False, True])
+@pytest.mark.parametrize(
+    ("masked_tool", "missing_command"),
+    [("", ""), ("ruff", "uv run ruff check --fix"), ("eslint", "pnpm run lint:fix")],
+)
 def test_1_10_16_follows_pnpm_scripts_when_they_preserve_failures(
-    run_check_with_files: RunCheckWithFiles, *, has_masked_failure: bool
+    run_check_with_files: RunCheckWithFiles, masked_tool: str, missing_command: str
 ) -> None:
     lint_recipe = CONFORMING.split("\nlint:\n", 1)[1].split("\n\n", 1)[0]
-    command = "uv run ruff check --fix"
-    if has_masked_failure:
-        command += " || true"
     scripts = {
         "lint": (
-            "pnpm run lint:workflows && pnpm run lint:eslint --fix && pnpm run format:prettier "
+            "pnpm run lint:workflows && pnpm run lint:fix && pnpm run format:prettier "
             "&& uv run rumdl check --fix && uv run rumdl fmt && pnpm run lint:python && uv run ruff format"
         ),
-        "lint:eslint": "eslint . --cache",
+        "lint:fix": "eslint . --fix" + (" || true" if masked_tool == "eslint" else ""),
         "format:prettier": "prettier --write .",
-        "lint:python": command,
+        "lint:python": "uv run ruff check --fix" + (" || true" if masked_tool == "ruff" else ""),
         "typecheck": "pnpm run typecheck:ts && uv run pyrefly check",
         "typecheck:ts": "tsc -b",
     }
@@ -632,5 +632,5 @@ def test_1_10_16_follows_pnpm_scripts_when_they_preserve_failures(
     )
 
     assert [finding.message for finding in result.problems] == (
-        ["recipe `lint` must run `uv run ruff check --fix` without masking its failure"] if has_masked_failure else []
+        [f"recipe `lint` must run `{missing_command}` without masking its failure"] if missing_command else []
     )
