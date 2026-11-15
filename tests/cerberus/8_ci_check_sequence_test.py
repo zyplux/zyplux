@@ -1,6 +1,7 @@
 # @story
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
@@ -596,3 +597,25 @@ def test_8_8_8_rejects_workflow_concurrency_even_with_guarded_job_concurrency(
     ci = _CI_HEADER + "concurrency: ci-${{ github.ref }}\n" + _TS_CI
     result = run_check_with_files(CHECK_ID, {"package.json": "{}", ".github/workflows/ci.yml": ci})
     assert result.findings == [fail("ci.yml must put concurrency on the guarded ci job, not the workflow")]
+
+
+@pytest.mark.parametrize("eslint_option", ["--cache", "--fix"])
+def test_8_5_7_verifies_typecheck_and_lint_in_pnpm_scripts(
+    run_check_with_files: RunCheckWithFiles, sequence_pass: Finding, fail: MakeFinding, eslint_option: str
+) -> None:
+    ci = _TS_CI.replace("pnpm run typecheck\n", "pnpm run typecheck:ts --force\n").replace(
+        "pnpm run lint\n", "pnpm run lint:eslint\n"
+    )
+    scripts = {"typecheck:ts": "pnpm --filter email run build && tsc -b", "lint:eslint": f"eslint . {eslint_option}"}
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            "app.ts": "console.log(1);",
+            "package.json": json.dumps({"scripts": scripts}),
+            ".github/workflows/ci.yml": _CI_HEADER + ci,
+        },
+    )
+
+    assert result.findings == (
+        [sequence_pass] if eslint_option == "--cache" else [fail("ts ci is missing `pnpm run lint`")]
+    )

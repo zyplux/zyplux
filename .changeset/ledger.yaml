@@ -167,6 +167,10 @@ zyplux-cerberus@0.29.0:
     - flat-story-suites
     - quick-mails-throw
     - unique-test-ids
+zyplux-cerberus@0.29.1:
+  dir: apps/cerberus
+  intents:
+    - silly-birds-move
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:

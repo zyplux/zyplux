@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.29.1
+
+### Patch Changes
+
+- Verify required lint and typecheck commands inside pnpm scripts.
+
 ## 0.29.0
 
 ### Minor Changes

@@ -188,6 +188,10 @@ Shell helpers start with `set -euo pipefail` and contain no other `set` commands
 
 ### 1.10.15 rejects pyrefly warning threshold overrides
 
+### 1.10.16 follows pnpm scripts when they preserve failures
+
+A recipe can delegate to nested package scripts. Required tools inside a script must run in order and propagate their failures.
+
 ## 1.11 requiring the clean recipe to run cz clean
 
 A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the

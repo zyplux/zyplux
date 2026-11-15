@@ -9,7 +9,13 @@ from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.syntax.shell_commands import list_required_commands, list_shell_commands, matches_tool_command
+from cerberus.syntax.shell_commands import (
+    expand_pnpm_command,
+    list_required_commands,
+    list_shell_commands,
+    matches_tool_command,
+    read_pnpm_scripts,
+)
 from cerberus.toolchain import justfile_parser
 from cerberus.toolchain.source_languages import can_run_command, has_source
 
@@ -182,10 +188,15 @@ def _load_baseline() -> justfile_parser.Justfile:
 def _check_tool_commands(jf: justfile_parser.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     baseline = _load_baseline()
     manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
+    scripts = read_pnpm_scripts(ctx.file(repo, "package.json") or "{}")
     for recipe in ctx.config.check_pipeline:
         if recipe not in jf.recipes:
             continue
-        actual = _list_tool_commands(jf, recipe, repo, ctx)
+        actual = [
+            command
+            for invocation in _list_tool_commands(jf, recipe, repo, ctx)
+            for command in expand_pnpm_command(invocation, scripts)
+        ]
         required = [
             args
             for args in list_required_commands(baseline.bodies.get(recipe, ""), manifests)
