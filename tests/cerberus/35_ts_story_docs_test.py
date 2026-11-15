@@ -24,8 +24,8 @@ def test_35_1_2_pairs_colocated_ui_stories_without_product_basename_assumptions(
     run_check_with_files: RunCheckWithFiles,
 ) -> None:
     files = {
-        "apps/dashboard/tests/stories/1-ui.md": "## 1.1 rendering\n### 1.1.1 renders a button\n",
-        "apps/dashboard/tests/stories/1-ui.test.ts": '// @story\ntest("1.1.1 renders a button", () => {});',
+        "apps/dashboard/components/a1-button.md": "# a1. [Button](a1-button.test.ts)\n## a1.1 renders a button\n",
+        "apps/dashboard/components/a1-button.test.ts": '// @story\ntest("a1.1 renders a button", () => {});',
     }
     assert not run_check_with_files("story_tests_lockstep_ts", files).problems
 
@@ -109,15 +109,16 @@ def test_35_1_4_pairs_grouped_criterion_ranges(
 
 
 @pytest.mark.parametrize("keep_doc", [True, False])
+@pytest.mark.parametrize("directory", ["tests/api", "apps/dashboard/components"])
 def test_35_2_5_detects_a_missing_partner_in_a_flat_suite(
-    run_check_with_files: RunCheckWithFiles, *, keep_doc: bool
+    run_check_with_files: RunCheckWithFiles, directory: str, *, keep_doc: bool
 ) -> None:
     files = {
-        "tests/api/README.md": "# API\n",
-        "tests/api/helper.test.ts": 'test("ordinary component", () => {});',
+        f"{directory}/README.md": "# API\n",
+        f"{directory}/helper.test.ts": 'test("ordinary component", () => {});',
     }
     if keep_doc:
-        files["tests/api/contracts.md"] = "# 1. [Contracts](api-contract.test.ts)\n## 1.1 validates a request\n"
+        files[f"{directory}/contracts.md"] = "# 1. [Contracts](api-contract.test.ts)\n## 1.1 validates a request\n"
     else:
-        files["tests/api/api-contract.test.ts"] = '// @story\ntest("1.1 validates a request", () => {});'
+        files[f"{directory}/api-contract.test.ts"] = '// @story\ntest("1.1 validates a request", () => {});'
     assert run_check_with_files("story_tests_lockstep_ts", files).problems

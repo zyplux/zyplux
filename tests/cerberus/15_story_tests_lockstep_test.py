@@ -385,3 +385,41 @@ dashboard.skip('2.1 duplicate', () => {});
         fail("tests/2-dashboard.test.ts:3: test case must start with 2. followed by a number"),
         fail("tests/2-dashboard.test.ts:5: duplicate test case ID 2.1"),
     ]
+
+
+def test_15_8_8_ignores_shadowed_vitest_bindings(run_check_with_files: RunCheckWithFiles, fail: MakeFinding) -> None:
+    files = {
+        "tests/2-dashboard.test.ts": """\
+import { describe, it, test, vi } from 'vitest';
+const run = (it: () => void) => it();
+describe('dashboard', () => {
+  const it = vi.fn();
+  it();
+  test('2.1 shows dashboard', () => { const it = vi.fn(); it(); });
+});
+it('2.1 duplicate', () => {});
+""",
+    }
+    assert run_check_with_files("unique_test_ids", files).findings == [
+        fail("tests/2-dashboard.test.ts:8: duplicate test case ID 2.1"),
+    ]
+
+
+def test_15_8_9_checks_numeric_parameterized_case_ids(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
+    files = {
+        "tests/a2-dashboard.test.ts": """\
+test.each([8, 9])('a2.%i with input %i', () => {});
+test.for(['one', 'two'])('a2.4.%# with row %s', () => {});
+test.for(['one', 'two'])('a2.5.%$ with row %s', () => {});
+test('a2.9 duplicate', () => {});
+test('a2.4.0 duplicate', () => {});
+test('a2.5.2 duplicate', () => {});
+""",
+    }
+    assert run_check_with_files("unique_test_ids", files).findings == [
+        fail("tests/a2-dashboard.test.ts:4: duplicate test case ID a2.9"),
+        fail("tests/a2-dashboard.test.ts:5: duplicate test case ID a2.4.0"),
+        fail("tests/a2-dashboard.test.ts:6: duplicate test case ID a2.5.2"),
+    ]

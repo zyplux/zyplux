@@ -150,4 +150,6 @@ Vitest coverage resolves exported literal objects and local constants, including
 
 Test files start with a repo-wide ID made of a number and up to two optional lowercase letters. For example, use `2_subject_test.py` for Python and `a2-subject.test.ts` for TypeScript. Both bare and prefixed IDs share the same namespace. Start a pytest function with `test_2_1_` or a Vitest title with `a2.1` to identify its case.
 
+Use a literal case ID in each Vitest title. Table-driven cases can format one part of the ID from a literal row or the row index.
+
 A story test starts with `# @story` in Python or `// @story` in TypeScript. Keep the story document beside its test, link the Markdown title to the test file, and use the same case IDs in the criterion headings.

@@ -20,15 +20,22 @@ TITLE_LINK = re.compile(r"^# [^\n]*\[[^\n]+\]\(([^)\n]+)\)", re.MULTILINE)
 
 def list_story_sources(repo: Repo, ctx: Context) -> list[str]:
     oracle = ctx.config.source_oracle
-    return [
-        path
-        for path in ctx.paths(repo)
-        if "node_modules" not in PurePosixPath(path).parts
-        and (
-            (path.endswith(".md") and oracle.classify_directory(PurePosixPath(path).parent.as_posix()).is_test)
-            or (is_test_name(PurePosixPath(path).name) and oracle.is_test_file(path))
-        )
-    ]
+    paths = []
+    for path in ctx.paths(repo):
+        source = PurePosixPath(path)
+        if "node_modules" in source.parts:
+            continue
+        if is_test_name(source.name) and oracle.is_test_file(path):
+            paths.append(path)
+        if source.suffix != ".md":
+            continue
+        if oracle.classify_directory(source.parent.as_posix()).is_test:
+            paths.append(path)
+            continue
+        target = find_title_target(ctx.file(repo, path) or "")
+        if is_test_name(target) and oracle.is_test_file(source.with_name(target).as_posix()):
+            paths.append(path)
+    return paths
 
 
 def is_test_name(name: str) -> bool:

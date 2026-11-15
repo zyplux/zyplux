@@ -57,3 +57,7 @@
 ### 15.8.6 checks pytest cases and ignores helpers
 
 ### 15.8.7 checks aliased and extended Vitest cases
+
+### 15.8.8 ignores shadowed Vitest bindings
+
+### 15.8.9 checks numeric parameterized case IDs
