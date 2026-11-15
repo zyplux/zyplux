@@ -26,10 +26,10 @@ jobs:
       - run: pnpm run lint:workflows
       - run: pnpm run knip
       - run: uv run --no-sync vulture
-      - run: pnpm run typecheck
+      - run: pnpm run typecheck:ts
       - run: uv run --no-sync rumdl check
       - run: uv run --no-sync rumdl fmt --check
-      - run: pnpm run lint
+      - run: pnpm run lint:eslint
       - run: pnpm run lint:mermaid
       - run: pnpm exec prettier --check .
       - run: uv run --no-sync ruff check
