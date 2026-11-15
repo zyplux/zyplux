@@ -4,12 +4,15 @@
 
 ### Minor Changes
 
-- Pair story criteria with tests in suite or domain folders, and require unique test filenames across the repository.
+- Pair story criteria with tests in suite or domain folders.
+
 - Require GitHub Actions workflow linting in CI and local lint gates, including configuration-only repositories.
+
+- Require unique test IDs across Python and TypeScript, with optional suite letters. Name Python files with _test.py and mark documented test files with @story.
 
 ### Patch Changes
 
-- Update Fallow to 3.42.0 and jscpd to 5.4.3.
+- Update Fallow to 3.43.0 and jscpd to 5.4.3.
 
 ## 0.28.0
 

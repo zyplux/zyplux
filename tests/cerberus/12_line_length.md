@@ -1,4 +1,4 @@
-# 12. [Requiring ruff and prettier to agree on line length](test_12_line_length.py)
+# 12. [Requiring ruff and prettier to agree on line length](12_line_length_test.py)
 
 ## 12.1 requiring at least one of ruff or prettier to be configured
 

@@ -1,4 +1,4 @@
-# 25. [Building a dependency graph of a repo's own source](test_25_graph.py)
+# 25. [Building a dependency graph of a repo's own source](25_graph_test.py)
 
 ## 25.1 connecting files through their imports
 

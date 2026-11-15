@@ -1,4 +1,4 @@
-# 22. [Keeping zyplux-published artifacts at their latest release](test_22_zyplux_deps_latest.py)
+# 22. [Keeping zyplux-published artifacts at their latest release](22_zyplux_deps_latest_test.py)
 
 The org publishes npm packages under `@zyplux/`, PyPI distributions named `zyplux-*`, and container images under `ghcr.io/zyplux/`. The `zyplux_deps_latest` bite (`apps/cerberus/src/cerberus/bites/zyplux_deps_latest_bite.py`) detects usages by namespace and compares resolved and pinned versions from lockfiles, justfiles and workflows against the latest published release through Airlock's shared registry client (`apps/airlock/src/airlock/registries.py`). Lag findings point at `just upgrade`.
 

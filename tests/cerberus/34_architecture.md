@@ -1,4 +1,4 @@
-# 34. [Enforcing shared package architecture](test_34_architecture.py)
+# 34. [Enforcing shared package architecture](34_architecture_test.py)
 
 ## 34.1 public exports
 

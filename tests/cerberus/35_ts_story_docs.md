@@ -1,4 +1,4 @@
-# 35. [Pairing TypeScript stories within each suite](test_35_ts_story_docs.py)
+# 35. [Pairing TypeScript stories within each suite](35_ts_story_docs_test.py)
 
 ## 35.1 discovering independent suites
 

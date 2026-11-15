@@ -1,4 +1,4 @@
-# 33. [Classifying production and test source](test_33_source_scope.py)
+# 33. [Classifying production and test source](33_source_scope_test.py)
 
 ## 33.1 sharing repository source classification
 

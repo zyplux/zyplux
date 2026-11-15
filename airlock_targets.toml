@@ -18,7 +18,7 @@ hash = "sha256:7095622604b1adc02db128797f43657e05bb742cb4c33529b9af3e3c87b86857"
 
 [eslint-config]
 manifest = "packages/eslint-config/package.json"
-hash = "sha256:v2:13febe2e3fbe89d1a13ec9a1768613710f6bb6e7a3757491219cfbca0b4e74ef"
+hash = "sha256:v2:839ad9c26322fadfd05968d8fd9bd9c19e13e3a227f07043b98b6e74d5a8b065"
 depends_on = ["util"]
 
 [tsconfig]
@@ -40,7 +40,7 @@ depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:v2:86b63d793512b23cc8d4c45bced82b43f9795290dd79ac6922c776f5128ead81"
+hash = "sha256:v2:6610b49cef064ef5ee6392897c4a9516de2b262a77e3b611752259f22cb603e8"
 depends_on = ["airlock"]
 
 [totchef]
@@ -49,7 +49,7 @@ hash = "sha256:v2:b62af65bbfcb3d0f82f9c2bd445f72578995caea850385573abce11d01370f
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:v2:8122b05ef0992ef54dc6192999f14788741f65fb6cd6c62e947693cb5958c898"
+hash = "sha256:v2:c9ae25fd16dcebf31465201e6a81356024f33ae2f9db000fd281facfa62ff226"
 depends_on = ["airlock", "cerberus"]
 
 [config-to-kv]

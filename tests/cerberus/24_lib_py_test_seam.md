@@ -1,4 +1,4 @@
-# 24. [Enforcing the Python library test seam](test_24_lib_py_test_seam.py)
+# 24. [Enforcing the Python library test seam](24_lib_py_test_seam_test.py)
 
 ## 24.1 scoping the check to libraries
 

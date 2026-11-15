@@ -1,4 +1,4 @@
-# 16. [Linting a repo checkout from the command line](test_16_cli.py)
+# 16. [Linting a repo checkout from the command line](16_cli_test.py)
 
 ## 16.1 linting from the root command
 

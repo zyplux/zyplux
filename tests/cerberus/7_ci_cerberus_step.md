@@ -1,4 +1,4 @@
-# 7. [Requiring a ci workflow to run cerberus](test_7_ci_cerberus_step.py)
+# 7. [Requiring a ci workflow to run cerberus](7_ci_cerberus_step_test.py)
 
 ## 7.1 recognizing a working cerberus step in ci
 

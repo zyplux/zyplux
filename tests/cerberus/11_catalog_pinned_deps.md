@@ -1,4 +1,4 @@
-# 11. [Requiring workspace dependencies to pin via catalog: or workspace](test_11_catalog_pinned_deps.py)
+# 11. [Requiring workspace dependencies to pin via catalog: or workspace](11_catalog_pinned_deps_test.py)
 
 ## 11.1 scoping the scan to pnpm workspaces
 

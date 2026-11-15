@@ -1,4 +1,4 @@
-# 3. [Requiring a working ci workflow](test_3_ci_workflow_gate.py)
+# 3. [Requiring a working ci workflow](3_ci_workflow_gate_test.py)
 
 ## 3.1 requiring the workflow file to exist and parse cleanly
 

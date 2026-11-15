@@ -1,4 +1,4 @@
-# 14. [Requiring a published target's version to be bumped whenever its release contents change](test_14_release_surface_version_bump.py)
+# 14. [Requiring a published target's version to be bumped whenever its release contents change](14_release_surface_version_bump_test.py)
 
 ## 14.1 validating release targets and versions
 

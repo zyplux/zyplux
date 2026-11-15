@@ -1,4 +1,4 @@
-# 4. [Keeping workflows on the workspace toolchain](test_4_workflow_toolchain_only.py)
+# 4. [Keeping workflows on the workspace toolchain](4_workflow_toolchain_only_test.py)
 
 ## 4.1 flagging workflows that install extra tools
 

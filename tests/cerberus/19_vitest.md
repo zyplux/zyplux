@@ -1,4 +1,4 @@
-# 19. [Requiring a vitest coverage floor of at least 90%](test_19_vitest.py)
+# 19. [Requiring a vitest coverage floor of at least 90%](19_vitest_test.py)
 
 ## 19.1 scoping the coverage checks to repos with a root vitest config
 

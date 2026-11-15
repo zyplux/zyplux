@@ -166,6 +166,7 @@ zyplux-cerberus@0.29.0:
     - current-analysis-tools
     - flat-story-suites
     - quick-mails-throw
+    - unique-test-ids
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:

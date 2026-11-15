@@ -1,4 +1,4 @@
-# 17. [Reading a repo checkout](test_17_source.py)
+# 17. [Reading a repo checkout](17_source_test.py)
 
 ## 17.1 identifying the repo behind a checkout
 

@@ -1,4 +1,4 @@
-# 36. [Release readiness](test_36_release_readiness.py)
+# 36. [Release readiness](36_release_readiness_test.py)
 
 ## 36.1 checking the selected repository
 

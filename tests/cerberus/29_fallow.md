@@ -1,4 +1,4 @@
-# 29. [Banning dead code and complexity offenders via fallow](test_29_fallow.py)
+# 29. [Banning dead code and complexity offenders via fallow](29_fallow_test.py)
 
 ## 29.1 scoping the check
 

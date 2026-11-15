@@ -1,4 +1,4 @@
-# 41. [Validating source classification](test_41_source_oracle.py)
+# 41. [Validating source classification](41_source_oracle_test.py)
 
 ## 41.1 configuring category globs
 

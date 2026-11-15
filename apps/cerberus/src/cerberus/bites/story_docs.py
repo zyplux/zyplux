@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
-import ast
 import re
 import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cerberus import workspaces
-from cerberus.bites.story_files import PY_STORY, PY_TEST, TS_TEST, find_title_target, list_story_sources
+from cerberus.bites.case_ids import list_python_tests, split_python_test_name
+from cerberus.bites.story_files import (
+    CASE_ID,
+    FILE_ID,
+    PY_TEST,
+    TS_TEST,
+    find_title_target,
+    has_story_marker,
+    list_story_sources,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -21,12 +29,11 @@ _CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 _APOSTROPHE = re.compile(r"'")
 _NON_WORD = re.compile(r"[^\w\s]")
 
-_DOC_NAME = re.compile(r"^\d+[_-][^/]+\.md$")  # `_` (Python docs) or `-` (TypeScript docs, kebab-case)
-_PY_DOC_NAME = re.compile(r"^\d+_[^/]+\.md$")
-_LEADING_NUMBER = re.compile(r"^\d+")
-_DOC_TITLE = re.compile(r"^# (\d+)\. (.+)$")
-_STORY_HEADER = re.compile(r"^## (\d+\.\d+) (.+)$")
-_CRITERION_HEADER = re.compile(r"^### (\d+(?:\.\d+)+) (.+)$")
+_DOC_NAME = re.compile(rf"^({FILE_ID})[_-][^/]+\.md$")
+_PY_DOC_NAME = re.compile(rf"^{FILE_ID}_[^/]+\.md$")
+_DOC_TITLE = re.compile(rf"^# ({FILE_ID})\. (.+)$")
+_STORY_HEADER = re.compile(rf"^## ({FILE_ID}\.[0-9]+) (.+)$")
+_CRITERION_HEADER = re.compile(rf"^### ({CASE_ID}) (.+)$")
 _LINKED_TITLE = re.compile(r"^\[(?P<title>.+)\]\((?P<target>[^)]+)\)$")
 
 
@@ -109,27 +116,17 @@ def render_linked_doc(doc: str, tests: dict[str, StoryTest]) -> str:
     return "".join(rendered)
 
 
-def split_id_and_title(func_name: str) -> tuple[str, str]:
-    tokens = func_name.removeprefix("test_").split("_")
-    cut = 0
-    while cut < len(tokens) and tokens[cut].isdigit():
-        cut += 1
-    return ".".join(tokens[:cut]), " ".join(tokens[cut:])
-
-
 def _collect_tests(repo: Repo, ctx: Context, res: CheckResult, paths: list[str]) -> dict[str, StoryTest]:
     tests: dict[str, StoryTest] = {}
     for path in sorted(paths):
         try:
-            tree = ast.parse(ctx.file(repo, path) or "")
+            names = [node.name for node in list_python_tests(ctx.file(repo, path) or "")]
         except SyntaxError:
             res.fail(f"{path}: could not parse story tests")
             continue
         count = 0
-        for node in tree.body:
-            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.name.startswith("test_"):
-                continue
-            story_id, title = split_id_and_title(node.name)
+        for name in names:
+            story_id, title = split_python_test_name(name)
             if story_id:
                 count += 1
                 if story_id in tests:
@@ -184,8 +181,14 @@ def _needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str])
     return any(under_package(path, package) and PY_TEST.fullmatch(path.rsplit("/", 1)[-1]) for path in paths)
 
 
-def list_python_stories(package: str, paths: list[str]) -> list[str]:
-    return [path for path in paths if under_package(path, package) and PY_STORY.fullmatch(path.rsplit("/", 1)[-1])]
+def list_python_stories(repo: Repo, ctx: Context, package: str, paths: list[str]) -> list[str]:
+    return [
+        path
+        for path in paths
+        if under_package(path, package)
+        and PY_TEST.fullmatch(path.rsplit("/", 1)[-1])
+        and has_story_marker(ctx.file(repo, path) or "")
+    ]
 
 
 def _list_python_docs(repo: Repo, ctx: Context, paths: list[str], tests: list[str]) -> dict[str, str]:
@@ -238,8 +241,8 @@ def _check_title_drift(res: CheckResult, group: _Group, headers: dict[str, Heade
 def _check_own_section(res: CheckResult, group: _Group) -> None:
     for doc_path, content in sorted(group.docs.items()):
         name = doc_path.rsplit("/", 1)[-1]
-        leading = _LEADING_NUMBER.match(name)
-        section = leading.group() if leading else name
+        leading = _DOC_NAME.fullmatch(name)
+        section = leading.group(1) if leading else name
         strays = sorted(story_id for story_id in parse_headers(content) if story_id.split(".")[0] != section)
         if strays:
             res.fail(f"{doc_path}: story header(s) filed in the wrong section doc: {', '.join(strays)}")
@@ -279,7 +282,7 @@ def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     sources = list_story_sources(repo, ctx)
     did_check = False
     for package in sorted(packages):
-        tests = list_python_stories(package, sources)
+        tests = list_python_stories(repo, ctx, package, sources)
         docs = _list_python_docs(repo, ctx, [path for path in sources if under_package(path, package)], tests)
         directories = {path.rpartition("/")[0] for path in (*docs, *tests)}
         if not directories:

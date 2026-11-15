@@ -1,4 +1,4 @@
-# 27. [Governing knip configuration](test_27_knip.py)
+# 27. [Governing knip configuration](27_knip_test.py)
 
 ## 27.1 scoping the check
 

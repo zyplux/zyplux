@@ -5,84 +5,23 @@ from collections import Counter
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.bites.story_files import PY_TEST, TS_TEST, find_title_target, list_story_sources
-from cerberus.graph.parse import parse_typescript
-from cerberus.ts_syntax import node_text, string_literal, walk_nodes
+from cerberus.bites.case_ids import list_typescript_cases
+from cerberus.bites.story_files import (
+    CASE_ID,
+    FILE_ID,
+    PY_TEST,
+    TS_TEST,
+    find_title_target,
+    has_story_marker,
+    list_story_sources,
+)
 
 if TYPE_CHECKING:
-    from tree_sitter import Node
-
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
 
-_ID = re.compile(r"^([a-zA-Z0-9]*\d+(?:\.\d+)+)\b")
-_HEADER = re.compile(
-    r"^#{2,6} ([a-zA-Z0-9]*\d+(?:\.\d+)+)(?:[\u2013-]([a-zA-Z0-9]*\d+(?:\.\d+)+))? (.+)$", re.MULTILINE
-)
-_TITLE = re.compile(r"^# ([a-zA-Z0-9]*\d+)\. (.+)$", re.MULTILINE)
-
-
-def _find_table(call: Node, name: str) -> Node | None:
-    parent = call.parent
-    while parent is not None:
-        for declaration in parent.named_children:
-            if declaration.type != "lexical_declaration":
-                continue
-            for binding in declaration.named_children:
-                identifier = binding.child_by_field_name("name")
-                value = binding.child_by_field_name("value")
-                if (
-                    identifier is not None
-                    and node_text(identifier) == name
-                    and value is not None
-                    and value.type == "array"
-                ):
-                    return value
-        parent = parent.parent
-    return None
-
-
-def _test_titles(call: Node) -> list[str]:
-    function = call.child_by_field_name("function")
-    arguments = call.child_by_field_name("arguments")
-    if function is None or arguments is None or not arguments.named_children:
-        return []
-    root = node_text(function).split(".", 1)[0].strip()
-    if root not in {"test", "it"}:
-        return []
-    title = string_literal(arguments.named_children[0])
-    if title is None:
-        return []
-    if "%s" not in title.split(" ", 1)[0]:
-        return [title]
-    arrays = [node for node in walk_nodes(function) if node.type == "array"]
-    if not arrays:
-        arrays = [
-            table
-            for node in walk_nodes(function)
-            if node.type == "identifier" and (table := _find_table(call, node_text(node))) is not None
-        ]
-    if not arrays:
-        return []
-    titles = []
-    for row in arrays[0].named_children:
-        cell = row.named_children[0] if row.type == "array" and row.named_children else row
-        label = string_literal(cell)
-        if label is not None:
-            titles.append(title.replace("%s", label, 1))
-    return titles
-
-
-def _test_ids(path: str, content: str) -> list[str]:
-    ids = []
-    root = parse_typescript(path, content).root_node
-    for node in walk_nodes(root):
-        if node.type != "call_expression":
-            continue
-        titles = _test_titles(node)
-        matches = [match.group(1) for title in titles if (match := _ID.match(title)) is not None]
-        ids.extend(dict.fromkeys(matches))
-    return ids
+_HEADER = re.compile(rf"^#{{2,6}} ({CASE_ID})(?:[\u2013-]({CASE_ID}))? (.+)$", re.MULTILINE)
+_TITLE = re.compile(rf"^# ({FILE_ID})\. (.+)$", re.MULTILINE)
 
 
 def _expand_heading(header: re.Match[str]) -> list[str]:
@@ -190,12 +129,14 @@ def _get_sections(res: CheckResult, tests: dict[str, list[str]]) -> dict[str, st
 def _check_group(repo: Repo, ctx: Context, res: CheckResult, directory: str, paths: list[str]) -> int:
     docs = _list_docs(repo, ctx, paths)
     linked = set(docs.values())
-    tests = {
-        path: ids
-        for path in paths
-        if TS_TEST.fullmatch(PurePosixPath(path).name)
-        and ((ids := _test_ids(path, ctx.file(repo, path) or "")) or PurePosixPath(path).name in linked)
-    }
+    tests = {}
+    for path in paths:
+        name = PurePosixPath(path).name
+        if not TS_TEST.fullmatch(name):
+            continue
+        content = ctx.file(repo, path) or ""
+        if name in linked or has_story_marker(content):
+            tests[path] = [case_id for _, case_id in list_typescript_cases(path, content) if case_id]
     for path, ids in tests.items():
         if not ids:
             res.fail(f"{path}: no numbered or prefixed story test IDs")

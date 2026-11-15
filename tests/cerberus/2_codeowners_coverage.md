@@ -1,4 +1,4 @@
-# 2. [Requiring CODEOWNERS to cover /.github/](test_2_codeowners_coverage.py)
+# 2. [Requiring CODEOWNERS to cover /.github/](2_codeowners_coverage_test.py)
 
 ## 2.1 requiring a codeowners file with ownership rules to exist
 

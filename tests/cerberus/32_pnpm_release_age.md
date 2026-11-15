@@ -1,4 +1,4 @@
-# 32. [Enforcing pnpm's release-age quarantine](test_32_pnpm_release_age.py)
+# 32. [Enforcing pnpm's release-age quarantine](32_pnpm_release_age_test.py)
 
 ## 32.1 scoping the policy to pnpm workspaces
 

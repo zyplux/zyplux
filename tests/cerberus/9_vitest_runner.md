@@ -1,4 +1,4 @@
-# 9. [Requiring vitest as the sole test runner for TypeScript](test_9_vitest_runner.py)
+# 9. [Requiring vitest as the sole test runner for TypeScript](9_vitest_runner_test.py)
 
 ## 9.1 scoping the check to repos with test tooling to configure
 

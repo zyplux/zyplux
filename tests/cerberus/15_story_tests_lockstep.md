@@ -1,4 +1,4 @@
-# 15. [Requiring Python packages to back their public interface with story tests](test_15_story_tests_lockstep.py)
+# 15. [Requiring Python packages to back their public interface with story tests](15_story_tests_lockstep_test.py)
 
 ## 15.1 scoping the check to real workspace packages
 
@@ -48,4 +48,8 @@
 
 ### 15.8.2 does not pair story criteria across workspace owners
 
-### 15.8.3 rejects duplicate test basenames but not duplicate fixture names
+### 15.8.3 rejects duplicate file IDs across languages
+
+### 15.8.4 allows bare and prefixed IDs in the same repo
+
+### 15.8.5 rejects case IDs that are duplicate or belong to another file

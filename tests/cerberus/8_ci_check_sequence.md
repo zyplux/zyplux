@@ -1,4 +1,4 @@
-# 8. [Requiring ci.yml to run the canonical check sequence](test_8_ci_check_sequence.py)
+# 8. [Requiring ci.yml to run the canonical check sequence](8_ci_check_sequence_test.py)
 
 ## 8.1 scoping the check to repos with a js or python manifest
 

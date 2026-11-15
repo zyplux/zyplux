@@ -1,4 +1,4 @@
-# 26. [Explaining and querying a built dependency graph](test_26_graph-explore.py)
+# 26. [Explaining and querying a built dependency graph](26_graph_explore_test.py)
 
 ## 26.1 explaining a single node
 

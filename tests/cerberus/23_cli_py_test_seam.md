@@ -1,4 +1,4 @@
-# 23. [Enforcing the Python cli test seam](test_23_cli_py_test_seam.py)
+# 23. [Enforcing the Python cli test seam](23_cli_py_test_seam_test.py)
 
 ## 23.1 scoping the check to cli apps
 

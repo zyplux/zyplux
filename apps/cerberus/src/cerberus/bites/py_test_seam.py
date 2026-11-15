@@ -309,7 +309,7 @@ def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup)
 
     sources = list_story_sources(repo, ctx)
     for package in sorted(members):
-        seam.check_package(res, package, story_docs.list_python_stories(package, sources))
+        seam.check_package(res, package, story_docs.list_python_stories(repo, ctx, package, sources))
 
     if not res.problems:
         res.ok(group.ok_message)

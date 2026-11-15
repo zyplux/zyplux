@@ -1,4 +1,4 @@
-# 1. [Requiring repos to ship a conformant justfile](test_1_justfile.py)
+# 1. [Requiring repos to ship a conformant justfile](1_justfile_test.py)
 
 The checker validates recipe names, aliases, pipeline order, managed-tool runners, cleanup, and whitespace using `just --dump`. The packaged `baseline.just` is a starting template; application recipes may add parameters, modules, and commands.
 

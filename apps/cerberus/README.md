@@ -65,7 +65,7 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `consistent_workspace_project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
 | `no_worker_filesystem_imports` | content | First-party Worker runtime imports avoid filesystem builtins |
 | `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
-| `unique_test_names`           | content     | Executable test filenames are unique across the repository                           |
+| `unique_test_ids`             | content     | Test file IDs are unique across languages and case IDs match their files               |
 | `story_tests_lockstep_py`      | content     | Python story criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
@@ -148,4 +148,6 @@ Vitest coverage resolves exported literal objects and local constants, including
 
 ## Story tests
 
-Keep each story document beside its test file in the suite or domain folder. Give test files descriptive, unique names across the repository. Criterion IDs are local to the directory. Link the Markdown title to the test file so either side can be checked even when its partner is missing. Python stories use a numbered `test_<section>_<subject>.py` filename and numbered criterion headings that match test function names. TypeScript stories use numbered or prefixed Vitest criterion titles. Ordinary component tests and unrelated Markdown can share the same folder.
+Test files start with a repo-wide ID made of a number and up to two optional lowercase letters. For example, use `2_subject_test.py` for Python and `a2-subject.test.ts` for TypeScript. Both bare and prefixed IDs share the same namespace. Start a pytest function with `test_2_1_` or a Vitest title with `a2.1` to identify its case.
+
+A story test starts with `# @story` in Python or `// @story` in TypeScript. Keep the story document beside its test, link the Markdown title to the test file, and use the same case IDs in the criterion headings.

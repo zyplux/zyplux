@@ -1,4 +1,4 @@
-# 6. [Requiring a strict, unrelaxed pyrefly config](test_6_pyrefly.py)
+# 6. [Requiring a strict, unrelaxed pyrefly config](6_pyrefly_test.py)
 
 ## 6.1 scoping the check to python repos with source
 

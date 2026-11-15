@@ -1,4 +1,4 @@
-# 30. [Keeping cerberus's npm tool pins at the latest release](test_30_tool_pins_latest.py)
+# 30. [Keeping cerberus's npm tool pins at the latest release](30_tool_pins_latest_test.py)
 
 Cerberus runs jscpd and fallow at exact versions pinned in its `tool_pins` module (`apps/cerberus/src/cerberus/tool_pins.py`). The `tool_pins_latest` bite requires the newest stable version eligible under pnpm's one-day release quarantine, within npm's `latest` release line. It runs in the repository carrying the pin source; consumers receive updated pins through Cerberus releases.
 

@@ -1,4 +1,4 @@
-# 42. [Validating Cerberus configuration](test_42_cerberus_schema.py)
+# 42. [Validating Cerberus configuration](42_cerberus_schema_test.py)
 
 ## 42.1 checking repository overrides
 

@@ -1,4 +1,4 @@
-# 40. [Using source testability](test_40_testing_scope.py)
+# 40. [Using source testability](40_testing_scope_test.py)
 
 ## 40.1 applying category policy to existing checks
 
