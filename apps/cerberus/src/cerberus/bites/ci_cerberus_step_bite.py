@@ -1,3 +1,5 @@
+"""Require CI to run Cerberus."""
+
 from __future__ import annotations
 
 import re
@@ -5,8 +7,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.toolchain import workflow_steps
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -19,7 +21,7 @@ _CERBERUS_CALL = re.compile(r"\bcerberus\b")
 
 
 def _runs_cerberus(doc: object) -> bool:
-    return any(_CERBERUS_CALL.search(command) for command in workflow.run_commands(doc))
+    return any(_CERBERUS_CALL.search(command) for command in workflow_steps.run_commands(doc))
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import ast
-import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from cerberus.bites import story_docs
-from cerberus.bites.story_files import list_story_sources
+from cerberus.story_tests.python_story_discovery import (
+    list_python_story_tests,
+    list_testable_python_packages,
+    load_package_manifest,
+)
+from cerberus.story_tests.story_source_discovery import list_story_sources
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,20 +21,6 @@ if TYPE_CHECKING:
 
 _INIT_PY_SUFFIX = "/__init__.py"
 _MIN_PATH_SEGMENTS = 2  # a package-relative match needs at least "<name>/<file>"
-
-
-def _parse_toml(content: str | None) -> dict[str, Any]:
-    if content is None:
-        return {}
-    try:
-        data = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _manifest_path(package: str) -> str:
-    return f"{package}/pyproject.toml" if package else "pyproject.toml"
 
 
 def _project_scripts(manifest: dict[str, Any]) -> dict[str, str]:
@@ -200,7 +189,7 @@ class Seam:
         return cls(repo, ctx, paths)
 
     def load_manifest(self, package: str) -> dict[str, Any]:
-        return _parse_toml(self.ctx.file(self.repo, _manifest_path(package)))
+        return load_package_manifest(self.repo, self.ctx, package)
 
     def check_package(self, res: CheckResult, package: str, stories: list[str]) -> None:
         manifest = self.load_manifest(package)
@@ -296,7 +285,7 @@ LIBRARIES = SeamGroup(
 
 def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup) -> None:
     paths = ctx.paths(repo)
-    packages = story_docs.list_python_packages(repo, ctx, paths)
+    packages = list_testable_python_packages(repo, ctx, paths)
     if not packages:
         res.skip("no Python packages")
         return
@@ -309,7 +298,7 @@ def run_seam_check(repo: Repo, ctx: Context, res: CheckResult, group: SeamGroup)
 
     sources = list_story_sources(repo, ctx)
     for package in sorted(members):
-        seam.check_package(res, package, story_docs.list_python_stories(repo, ctx, package, sources))
+        seam.check_package(res, package, list_python_story_tests(repo, ctx, package, sources))
 
     if not res.problems:
         res.ok(group.ok_message)

@@ -1,14 +1,8 @@
-"""Exact versions of the npm tools cerberus runs via `pnpx`.
-
-The pins live in source rather than `cerberus.toml` so no repo overlay can
-drift a tool version away from the org: every cerberus release carries them
-frozen, and consumers get a new tool version only through a new release.
-The `tool_pins_latest` bite compares these pins against npm's newest quarantine-eligible releases in the
-repo that carries this file, so a lagging pin fails that repo's gate — the
-fix is bumping the pin here and releasing cerberus.
-"""
+"""Define pnpm's release quarantine and the exact versions of tools run through pnpx."""
 
 from __future__ import annotations
+
+RELEASE_AGE_MINUTES = 1440
 
 NPM_TOOL_PINS: dict[str, str] = {
     "jscpd": "5.4.3",

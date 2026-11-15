@@ -1,3 +1,5 @@
+"""Match TypeScript story criteria to Vitest cases in the same directory."""
+
 from __future__ import annotations
 
 import re
@@ -5,8 +7,8 @@ from collections import Counter
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.bites.case_ids import list_typescript_cases
-from cerberus.bites.story_files import (
+from cerberus.story_tests.discover_test_cases import list_typescript_cases
+from cerberus.story_tests.story_source_discovery import (
     CASE_ID,
     FILE_ID,
     PY_TEST,

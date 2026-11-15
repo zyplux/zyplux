@@ -1,3 +1,5 @@
+"""Run external commands with captured output and explicit executable lookup."""
+
 from __future__ import annotations
 
 import shutil

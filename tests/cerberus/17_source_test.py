@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import Repo
-    from cerberus.source import GitHistoryUnavailableError, LocalSource
+    from cerberus.repository.source_files import GitHistoryUnavailableError, LocalSource
 
 requires_git = pytest.mark.skipif(shutil.which("git") is None, reason="requires the `git` binary on PATH")
 

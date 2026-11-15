@@ -1,3 +1,5 @@
+"""Register bites in execution order and track retired bite IDs."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -45,7 +47,7 @@ if TYPE_CHECKING:
 
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo, Scope
-    from cerberus.stacks import Language
+    from cerberus.toolchain.source_languages import Language
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,5 @@
+"""Read justfile recipes, aliases and bodies through just's JSON dump."""
+
 from __future__ import annotations
 
 import json
@@ -7,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from cerberus import proc
+from cerberus.toolchain import subprocess_runner
 
 
 class JustfileError(RuntimeError):
@@ -62,8 +64,8 @@ def parse(content: str) -> Justfile:
         path.write_text(content)
         _materialize_module_stubs(content, Path(tmp).resolve())
         try:
-            completed = proc.run(["just", "-f", str(path), "--dump", "--dump-format", "json"])
-        except proc.ToolNotFoundError as err:
+            completed = subprocess_runner.run(["just", "-f", str(path), "--dump", "--dump-format", "json"])
+        except subprocess_runner.ToolNotFoundError as err:
             raise JustfileError(str(err)) from err
     if completed.returncode != 0:
         raise JustfileError(completed.stderr.strip() or "just --dump failed")
@@ -75,8 +77,3 @@ def parse(content: str) -> Justfile:
         recipes[name] = [dep["recipe"] for dep in spec.get("dependencies", [])]
         bodies[name] = _join_body(spec.get("body"))
     return Justfile(recipes=recipes, aliases=aliases, bodies=bodies)
-
-
-def is_subsequence(needle: list[str], haystack: list[str]) -> bool:
-    it = iter(haystack)
-    return all(item in it for item in needle)

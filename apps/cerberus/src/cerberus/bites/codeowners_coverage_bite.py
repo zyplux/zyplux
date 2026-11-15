@@ -1,3 +1,5 @@
+"""Check that CODEOWNERS covers the GitHub configuration directory."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

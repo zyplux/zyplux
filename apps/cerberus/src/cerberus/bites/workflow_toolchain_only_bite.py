@@ -1,3 +1,5 @@
+"""Require shared package-manager setup and guard workflow tool installations."""
+
 from __future__ import annotations
 
 import re
@@ -5,8 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.syntax.shell_commands import strip_comment_lines
+from cerberus.toolchain import workflow_steps
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -53,7 +56,7 @@ def _check_step(name: str, step: dict[str, Any], allowed: set[str], res: CheckRe
     script = step.get("run")
     if isinstance(script, str):
         for pattern in _INSTALL_COMMANDS:
-            hit = pattern.search(workflow.strip_comment_lines(script))
+            hit = pattern.search(strip_comment_lines(script))
             if hit is not None:
                 res.fail(f"{name}: installs a tool with `{hit.group(0).strip()}`")
                 break
@@ -65,7 +68,7 @@ def _scan_workflow(name: str, content: str, allowed: set[str], res: CheckResult)
     except yaml.YAMLError as err:
         res.error(f"{name}: not valid YAML ({err})")
         return
-    for step in workflow.job_steps(doc):
+    for step in workflow_steps.job_steps(doc):
         _check_step(name, step, allowed, res)
 
 

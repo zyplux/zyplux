@@ -1,3 +1,5 @@
+"""Resolve Python import references to repository files."""
+
 from __future__ import annotations
 
 import posixpath

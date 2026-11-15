@@ -1,3 +1,5 @@
+"""Classify repository paths by configured source roots and nesting rules."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

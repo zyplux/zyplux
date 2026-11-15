@@ -1,3 +1,5 @@
+"""Require TypeScript typechecking through project references."""
+
 from __future__ import annotations
 
 import json

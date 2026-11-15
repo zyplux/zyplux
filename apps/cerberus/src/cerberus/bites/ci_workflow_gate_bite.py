@@ -1,3 +1,5 @@
+"""Require a pull-request CI workflow with the expected check name."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

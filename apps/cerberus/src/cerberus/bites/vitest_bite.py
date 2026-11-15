@@ -1,3 +1,5 @@
+"""Check that test scripts and TypeScript test imports use Vitest."""
+
 from __future__ import annotations
 
 import re
@@ -5,10 +7,11 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from cerberus import workflow
 from cerberus.graph.parse import extract
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.package_test_script import parse_test_script
+from cerberus.syntax.shell_commands import strip_comment_lines
+from cerberus.toolchain import workflow_steps
+from cerberus.workspaces.npm_packages import parse_test_script
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -31,7 +34,7 @@ def _is_manifest(path: str) -> bool:
 
 
 def _invokes_bun_test_runner(script: str) -> bool:
-    return any(_BUN_TEST_RUNNER.search(line) for line in workflow.strip_comment_lines(script).splitlines())
+    return any(_BUN_TEST_RUNNER.search(line) for line in strip_comment_lines(script).splitlines())
 
 
 def _check_sources(repo: Repo, ctx: Context, res: CheckResult) -> None:
@@ -63,7 +66,7 @@ def _check_workflows(repo: Repo, ctx: Context, res: CheckResult) -> None:
             doc = yaml.safe_load(content)
         except yaml.YAMLError:
             continue
-        if any(_invokes_bun_test_runner(command) for command in workflow.run_commands(doc)):
+        if any(_invokes_bun_test_runner(command) for command in workflow_steps.run_commands(doc)):
             res.fail(f"{name} runs bun's test runner; use `vitest run`")
 
 

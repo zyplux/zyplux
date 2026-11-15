@@ -1,9 +1,4 @@
-"""Workspace membership from the repo's own manifests — pnpm workspace globs
-(pnpm-workspace.yaml `packages`) and uv `[tool.uv.workspace] members` in
-pyproject.toml — for checks that scope an analysis to workspace-registered
-code. Manifest decode errors propagate so each check can report them as its
-own targeted finding.
-"""
+"""Resolve pnpm and uv workspace membership from manifest globs."""
 
 from __future__ import annotations
 
@@ -21,7 +16,6 @@ if TYPE_CHECKING:
     from cerberus.model import Repo
 
 _SUBTREE_SUFFIX = "/**"
-RELEASE_AGE_MINUTES = 1440
 
 
 def ts_member_globs(repo: Repo, ctx: Context) -> list[str]:

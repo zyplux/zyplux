@@ -1,12 +1,4 @@
-"""The `zyplux_deps_latest` bite: org-published artifacts must be consumed at their latest release.
-
-Artifacts are detected by namespace — `@zyplux/` on npm, `zyplux-*` on PyPI,
-`ghcr.io/zyplux/` on GHCR — so newly published packages are covered without
-touching cerberus. Consumption is read from resolved/pinned versions
-(lockfiles, `==` pins, image tags), never from declared ranges; workspace-local
-members are the repo's own code and are ignored. There is deliberately no
-`--fix`: bumping is `just upgrade`'s job.
-"""
+"""Compare resolved Zyplux package and image versions with their registry releases."""
 
 from __future__ import annotations
 

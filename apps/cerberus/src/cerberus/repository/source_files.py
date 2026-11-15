@@ -1,11 +1,13 @@
+"""Read checkout files, workflows and historical Git revisions for bites."""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 from typing import Protocol
 
-from cerberus import proc
 from cerberus.model import Repo
+from cerberus.toolchain import subprocess_runner
 
 
 class GitHistoryUnavailableError(RuntimeError):
@@ -49,7 +51,7 @@ class LocalSource:
     def _list_git_paths(self) -> list[str] | None:
         """Existing tracked and untracked files using Git's standard exclusions."""
         try:
-            result = proc.run([
+            result = subprocess_runner.run([
                 "git",
                 "-C",
                 str(self.root),
@@ -59,7 +61,7 @@ class LocalSource:
                 "--exclude-standard",
                 "-z",
             ])
-        except proc.ToolNotFoundError:
+        except subprocess_runner.ToolNotFoundError:
             return None
         if result.returncode != 0:
             return None
@@ -67,8 +69,8 @@ class LocalSource:
 
     def _git(self, args: list[str]) -> str:
         try:
-            result = proc.run(["git", "-C", str(self.root), *args])
-        except proc.ToolNotFoundError as exc:
+            result = subprocess_runner.run(["git", "-C", str(self.root), *args])
+        except subprocess_runner.ToolNotFoundError as exc:
             raise GitHistoryUnavailableError(str(exc)) from exc
         if result.returncode != 0:
             raise GitHistoryUnavailableError(result.stderr.strip() or f"git {args[0]} failed")

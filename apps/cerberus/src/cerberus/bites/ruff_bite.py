@@ -1,12 +1,14 @@
+"""Check standalone Ruff settings, rule selection and allowed overrides."""
+
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
 
-from cerberus import proc
-from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.stacks import has_source
+from cerberus.syntax.toml_tables import parse_toml
+from cerberus.toolchain import python_tool_config, subprocess_runner
+from cerberus.toolchain.source_languages import has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -34,7 +36,7 @@ class _RuleCodes:
 
     def canonical(self, selector: str) -> str:
         if self._by_name is None:
-            rules = json.loads(proc.run(_RULE_LISTING_ARGV).stdout)
+            rules = json.loads(subprocess_runner.run(_RULE_LISTING_ARGV).stdout)
             self._by_name = {rule["name"]: rule["code"] for rule in rules}
         return self._by_name.get(selector, selector)
 
@@ -94,7 +96,7 @@ def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] |
         else:
             res.skip(f"no Python source or {PATH}")
         return None
-    config = py_tool_config.parse_toml(content)
+    config = parse_toml(content)
     if config is None:
         res.error(f"could not parse {PATH}")
     return config
@@ -102,7 +104,7 @@ def _load_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str, Any] |
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="ruff") is None:
+    if python_tool_config.load_pyproject(repo, ctx, res, standalone_tool="ruff") is None:
         return res
 
     config = _load_config(repo, ctx, res)
@@ -116,7 +118,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     try:
         _check_ignore(lint, ctx.config.ruff_sanctioned_ignore, codes, res)
         _check_per_file_ignores(lint, ctx.config.ruff_sanctioned_test_ignore, codes, res)
-    except (proc.ToolNotFoundError, json.JSONDecodeError) as exc:
+    except (subprocess_runner.ToolNotFoundError, json.JSONDecodeError) as exc:
         res.error(f"could not resolve the rule names in {PATH} to their codes: {exc}")
         return res
 

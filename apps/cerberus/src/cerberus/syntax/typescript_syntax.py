@@ -1,24 +1,15 @@
+"""Read TypeScript string literals and JSONC configuration."""
+
 from __future__ import annotations
 
 import json
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-
-    from tree_sitter import Node
-
 from cerberus.graph.parse import parse_typescript
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
 
-
-def walk_nodes(node: Node) -> Iterator[Node]:
-    yield node
-    for child in node.named_children:
-        yield from walk_nodes(child)
-
-
-def node_text(node: Node) -> str:
-    return node.text.decode() if node.text is not None else ""
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 
 def string_literal(node: Node | None) -> str | None:
@@ -26,7 +17,7 @@ def string_literal(node: Node | None) -> str | None:
         return None
     if any(child.type == "template_substitution" for child in node.named_children):
         return None
-    return node_text(node)[1:-1]
+    return get_node_text(node)[1:-1]
 
 
 def parse_jsonc(content: str) -> dict[str, Any]:

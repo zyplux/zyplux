@@ -1,3 +1,5 @@
+"""Build, load and explore Python and TypeScript dependency graphs."""
+
 from __future__ import annotations
 
 from cerberus.graph.build import build

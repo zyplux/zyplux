@@ -1,25 +1,4 @@
-"""knip config governance: settings live in standalone files, never inline in
-`package.json`, the way `ruff.toml` and `.rumdl.toml` do. An optional
-`knip.json` may set only the configured `allowed_customizations`, each drawn
-from its shared allowance — `ignoreBinaries` for system tools JS/TS scripts
-shell out to (deliberately not npm dependencies), `ignoreDependencies` for
-packages knip cannot see consumed. Knip's defaults are the baseline.
-
-`knip.prod.json` enforces one rule: a production export earns its place only
-by being consumed by other production code, never by tests alone.
-`includeEntryExports` puts a workspace's own `exports["."]` surface under
-scrutiny instead of trusting it as public API, and `ignoreWorkspaces` drops
-every member outside `[source_oracle.types.prod].roots` — test harnesses, dev
-tooling — so an export only they reach reads as unused. Any glob spelling
-will do: what is checked is the members it resolves to — every non-production
-workspace dropped, no production one with it. Published packages are the exception
-and opt out of `includeEntryExports` one by one — exactly the npm-kind targets
-in `airlock_targets.toml`, whose consumers live outside this repo.
-
-Each config uses the shared allowances independently: production may omit
-exemptions for tools and dependencies used only outside its graph. It may set
-`"exclude": ["catalog"]`, since the base pass checks the complete catalog.
-"""
+"""Validate Knip configuration and enforce production export and workspace scope."""
 
 from __future__ import annotations
 
@@ -29,9 +8,9 @@ from typing import TYPE_CHECKING, Any
 import yaml
 from airlock.targets import parse_manifest
 
-from cerberus import workspaces
 from cerberus.model import CheckResult, Scope
-from cerberus.stacks import has_source
+from cerberus.toolchain.source_languages import has_source
+from cerberus.workspaces import workspace_members
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -151,9 +130,9 @@ def _check_ignore_workspaces(repo: Repo, ctx: Context, parsed: dict[str, Any], r
     if not isinstance(globs, list) or not all(isinstance(glob, str) for glob in globs):
         res.fail(f'{PROD_CONFIG} "ignoreWorkspaces" must be a JSON array of workspace globs')
         return
-    members = workspaces.ts_member_dirs(repo, ctx, ctx.paths(repo))
+    members = workspace_members.ts_member_dirs(repo, ctx, ctx.paths(repo))
     production = {m for m in members if not m or ctx.config.source_oracle.is_production_file(f"{m}/{PACKAGE_JSON}")}
-    dropped = {member for member in members if workspaces.matches_globs(member, globs)}
+    dropped = {member for member in members if workspace_members.matches_globs(member, globs)}
     kept = sorted(set(members) - dropped - production)
     dropped_production = sorted(dropped & production)
     if ctx.fix and (kept or dropped_production):

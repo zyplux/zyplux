@@ -1,3 +1,5 @@
+"""Load Cerberus defaults and apply the repository configuration."""
+
 from __future__ import annotations
 
 import tomllib

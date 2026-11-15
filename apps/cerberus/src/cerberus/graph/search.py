@@ -1,3 +1,5 @@
+"""Rank graph nodes by matching paths and symbols to search text."""
+
 from __future__ import annotations
 
 import math

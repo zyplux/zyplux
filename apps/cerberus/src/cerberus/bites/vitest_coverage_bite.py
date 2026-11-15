@@ -1,3 +1,5 @@
+"""Check that the Vitest configuration enforces the coverage floor."""
+
 from __future__ import annotations
 
 import re
@@ -5,9 +7,10 @@ from typing import TYPE_CHECKING
 
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import CheckResult, Scope
-from cerberus.package_test_script import parse_test_script
-from cerberus.shell_commands import get_shell_parser, list_command_args
-from cerberus.ts_syntax import node_text, string_literal, walk_nodes
+from cerberus.syntax.shell_commands import get_shell_parser, list_command_args
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
+from cerberus.syntax.typescript_syntax import string_literal
+from cerberus.workspaces.npm_packages import parse_test_script
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -31,7 +34,7 @@ def _list_bindings(root: Node) -> tuple[dict[str, Node], set[str]]:
             for binding in declaration.named_children:
                 name, initializer = binding.child_by_field_name("name"), binding.child_by_field_name("value")
                 if name is not None and name.type == "identifier" and initializer is not None:
-                    bindings[node_text(name)] = initializer
+                    bindings[get_node_text(name)] = initializer
         if (
             declaration.type == "import_statement"
             and string_literal(declaration.child_by_field_name("source")) in {"vitest/config", "vite"}
@@ -41,10 +44,10 @@ def _list_bindings(root: Node) -> tuple[dict[str, Node], set[str]]:
                 if (
                     specifier.type == "import_specifier"
                     and not any(child.type == "type" for child in specifier.children)
-                    and node_text(specifier.child_by_field_name("name") or specifier) == "defineConfig"
+                    and get_node_text(specifier.child_by_field_name("name") or specifier) == "defineConfig"
                 ):
                     helpers.add(
-                        node_text(
+                        get_node_text(
                             specifier.child_by_field_name("alias") or specifier.child_by_field_name("name") or specifier
                         )
                     )
@@ -57,7 +60,7 @@ def _resolve_literal(
     if node is None:
         return None
     if node.type in {"identifier", "shorthand_property_identifier"}:
-        name = node_text(node)
+        name = get_node_text(node)
         return None if name in active else _resolve_literal(bindings.get(name), bindings, helpers, active | {name})
     if node.type in {"parenthesized_expression", "satisfies_expression", "as_expression"}:
         return _resolve_literal(node.named_children[0], bindings, helpers, active)
@@ -65,8 +68,8 @@ def _resolve_literal(
         callee, arguments = node.child_by_field_name("function"), node.child_by_field_name("arguments")
         if (
             callee is not None
-            and node_text(callee) in helpers
-            and node_text(callee) not in bindings
+            and get_node_text(callee) in helpers
+            and get_node_text(callee) not in bindings
             and arguments is not None
             and len(arguments.named_children) == 1
         ):
@@ -85,7 +88,7 @@ def _resolve_config(node: Node | None, bindings: dict[str, Node], helpers: set[s
         body, parameters = node.child_by_field_name("body"), node.child_by_field_name("parameters")
         shadowed = (
             frozenset(
-                node_text(parameter)
+                get_node_text(parameter)
                 for parameter in walk_nodes(parameters)
                 if parameter.type in {"identifier", "shorthand_property_identifier_pattern"}
             )
@@ -100,7 +103,7 @@ def _resolve_config(node: Node | None, bindings: dict[str, Node], helpers: set[s
                 else None
             )
         if body is not None and any(
-            reference.type in {"identifier", "shorthand_property_identifier"} and node_text(reference) in shadowed
+            reference.type in {"identifier", "shorthand_property_identifier"} and get_node_text(reference) in shadowed
             for reference in walk_nodes(body)
         ):
             body = None
@@ -125,9 +128,9 @@ def _resolve_fields(
             key, initializer = field.child_by_field_name("key"), field.child_by_field_name("value")
             if key is None or initializer is None or key.type == "computed_property_name":
                 return None
-            fields[string_literal(key) or node_text(key)] = initializer
+            fields[string_literal(key) or get_node_text(key)] = initializer
         elif field.type == "shorthand_property_identifier":
-            fields[node_text(field)] = field
+            fields[get_node_text(field)] = field
         elif field.type != "comment":
             return None
     return fields
@@ -190,8 +193,10 @@ def _check_config(path: str, content: str, floor: int, script: str, res: CheckRe
         threshold = _resolve_literal(metrics.get(key), bindings, helpers)
         if threshold is None or threshold.type != "number":
             res.fail(f"{path} coverage.thresholds has no literal `{key}`; must be set to at least {floor}")
-        elif float(node_text(threshold)) < floor:
-            res.fail(f"{path} coverage.thresholds.{key} is {float(node_text(threshold))}, below the required {floor}")
+        elif float(get_node_text(threshold)) < floor:
+            res.fail(
+                f"{path} coverage.thresholds.{key} is {float(get_node_text(threshold))}, below the required {floor}"
+            )
     enabled = _resolve_literal(fields.get("enabled"), bindings, helpers)
     if not _enables_coverage(script, configured=enabled is not None and enabled.type == "true"):
         res.fail(f"{path}: enable coverage with test.coverage.enabled: true or the root test script's --coverage flag")

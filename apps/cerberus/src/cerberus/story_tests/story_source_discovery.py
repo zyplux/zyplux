@@ -1,3 +1,5 @@
+"""Locate story test sources and their linked Markdown files."""
+
 from __future__ import annotations
 
 import re

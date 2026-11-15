@@ -3,20 +3,23 @@
 from __future__ import annotations
 
 import re
-import tomllib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from cerberus import workspaces
-from cerberus.bites.case_ids import list_python_tests, split_python_test_name
-from cerberus.bites.story_files import (
+from cerberus.story_tests.discover_test_cases import list_python_tests, split_python_test_name
+from cerberus.story_tests.python_story_discovery import (
+    is_under_package,
+    list_python_story_tests,
+    list_testable_python_packages,
+    load_package_manifest,
+)
+from cerberus.story_tests.story_source_discovery import (
     CASE_ID,
     FILE_ID,
     PY_TEST,
     TS_TEST,
     find_file_id,
     find_title_target,
-    has_story_marker,
     list_story_sources,
 )
 
@@ -138,58 +141,11 @@ def _collect_tests(repo: Repo, ctx: Context, res: CheckResult, paths: list[str])
     return tests
 
 
-def _package_prefixes(package: str) -> list[str]:
-    """Where a package's own files may live: co-located, or torn out to a top-level tests/<basename>/."""
-    if not package:
-        return [""]
-    basename = package.rsplit("/", 1)[-1]
-    return [f"{package}/", f"tests/{basename}/"]
-
-
-def under_package(path: str, package: str) -> bool:
-    return any(path.startswith(prefix) for prefix in _package_prefixes(package))
-
-
-def list_python_packages(repo: Repo, ctx: Context, paths: list[str]) -> list[str]:
-    content = ctx.file(repo, "pyproject.toml")
-    if content is None:
-        return []
-    try:
-        data = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return []
-    tool = data.get("tool")
-    uv = tool.get("uv") if isinstance(tool, dict) else None
-    workspace = uv.get("workspace") if isinstance(uv, dict) else None
-    if isinstance(workspace, dict):
-        members = [g for g in workspace.get("members", []) if isinstance(g, str)]
-        packages = workspaces.member_dirs(paths, members, "pyproject.toml")
-    else:
-        packages = [""] if isinstance(data.get("project"), dict) else []
-    return [package for package in packages if ctx.config.source_oracle.classify_directory(package).needs_tests]
-
-
 def _needs_story_tests(package: str, repo: Repo, ctx: Context, paths: list[str]) -> bool:
-    manifest_path = f"{package}/pyproject.toml" if package else "pyproject.toml"
-    content = ctx.file(repo, manifest_path)
-    if content is not None:
-        try:
-            project = tomllib.loads(content).get("project")
-        except tomllib.TOMLDecodeError:
-            project = None
-        if isinstance(project, dict) and project.get("scripts"):
-            return True
-    return any(under_package(path, package) and PY_TEST.fullmatch(path.rsplit("/", 1)[-1]) for path in paths)
-
-
-def list_python_stories(repo: Repo, ctx: Context, package: str, paths: list[str]) -> list[str]:
-    return [
-        path
-        for path in paths
-        if under_package(path, package)
-        and PY_TEST.fullmatch(path.rsplit("/", 1)[-1])
-        and has_story_marker(ctx.file(repo, path) or "")
-    ]
+    project = load_package_manifest(repo, ctx, package).get("project")
+    if isinstance(project, dict) and project.get("scripts"):
+        return True
+    return any(is_under_package(path, package) and PY_TEST.fullmatch(path.rsplit("/", 1)[-1]) for path in paths)
 
 
 def _list_python_docs(repo: Repo, ctx: Context, paths: list[str], tests: list[str]) -> dict[str, str]:
@@ -278,7 +234,7 @@ def _check_group(res: CheckResult, ctx: Context, repo: Repo, group: _Group) -> N
 
 def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     paths = ctx.paths(repo)
-    packages = list_python_packages(repo, ctx, paths)
+    packages = list_testable_python_packages(repo, ctx, paths)
     if not packages:
         res.skip("no Python packages")
         return
@@ -286,8 +242,8 @@ def run_story_check(repo: Repo, ctx: Context, res: CheckResult) -> None:
     sources = list_story_sources(repo, ctx)
     did_check = False
     for package in sorted(packages):
-        tests = list_python_stories(repo, ctx, package, sources)
-        docs = _list_python_docs(repo, ctx, [path for path in sources if under_package(path, package)], tests)
+        tests = list_python_story_tests(repo, ctx, package, sources)
+        docs = _list_python_docs(repo, ctx, [path for path in sources if is_under_package(path, package)], tests)
         directories = {path.rpartition("/")[0] for path in (*docs, *tests)}
         if not directories:
             if _needs_story_tests(package, repo, ctx, paths):

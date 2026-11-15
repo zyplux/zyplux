@@ -1,11 +1,13 @@
+"""Resolve TypeScript path aliases through tsconfig inheritance."""
+
 from __future__ import annotations
 
 import posixpath
 from typing import TYPE_CHECKING, Any
 
-from cerberus.architecture import list_packages
 from cerberus.graph.resolve_ts import resolve
-from cerberus.ts_syntax import parse_jsonc
+from cerberus.syntax.typescript_syntax import parse_jsonc
+from cerberus.workspaces.npm_packages import list_packages
 
 if TYPE_CHECKING:
     from cerberus.context import Context

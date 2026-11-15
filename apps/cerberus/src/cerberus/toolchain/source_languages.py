@@ -1,3 +1,5 @@
+"""Use source file extensions to determine which language-specific tools apply."""
+
 from __future__ import annotations
 
 from pathlib import PurePosixPath

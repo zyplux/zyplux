@@ -1,11 +1,14 @@
+"""Enforce the pytest coverage floor for Python projects that need tests."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cerberus.bites import py_tool_config
-from cerberus.bites.py_tool_config import PYPROJECT
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.stacks import has_source
+from cerberus.syntax.toml_tables import parse_toml
+from cerberus.toolchain import python_tool_config
+from cerberus.toolchain.python_tool_config import PYPROJECT
+from cerberus.toolchain.source_languages import has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -24,11 +27,11 @@ def _fail_under(config: dict[str, Any]) -> object:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    pyproject = py_tool_config.load_pyproject(repo, ctx, res)
+    pyproject = python_tool_config.load_pyproject(repo, ctx, res)
     if pyproject is None:
         return res
 
-    config = py_tool_config.parse_toml(pyproject)
+    config = parse_toml(pyproject)
     if config is None:
         res.error(f"could not parse {PYPROJECT}")
         return res

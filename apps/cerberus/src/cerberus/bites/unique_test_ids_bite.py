@@ -1,12 +1,14 @@
+"""Require repo-wide unique test identifiers across Python and JavaScript suites."""
+
 from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.bites.case_ids import list_python_tests, list_typescript_cases, split_python_test_name
-from cerberus.bites.story_files import PY_TEST, find_file_id, is_test_name, list_story_sources
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.story_tests.discover_test_cases import list_python_tests, list_typescript_cases, split_python_test_name
+from cerberus.story_tests.story_source_discovery import PY_TEST, find_file_id, is_test_name, list_story_sources
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

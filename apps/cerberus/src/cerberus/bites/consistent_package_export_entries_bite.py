@@ -1,12 +1,15 @@
+"""Check that workspace source exports match their published entries."""
+
 from __future__ import annotations
 
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.architecture import build_export_map, list_source_targets, run_package_policy
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import Scope
-from cerberus.ts_syntax import node_text, string_literal, walk_nodes
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
+from cerberus.syntax.typescript_syntax import string_literal
+from cerberus.workspaces.npm_package_exports import build_export_map, list_source_targets, run_package_policy
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -24,7 +27,7 @@ def _get_property(node: Node | None, name: str) -> Node | None:
     if node is not None and node.type == "object":
         for property_node in node.named_children:
             key = property_node.child_by_field_name("key")
-            if key is not None and (string_literal(key) or node_text(key)) == name:
+            if key is not None and (string_literal(key) or get_node_text(key)) == name:
                 return property_node.child_by_field_name("value")
     return None
 
@@ -40,7 +43,7 @@ def _find_router_entry(package: PackageInfo, repo: Repo, ctx: Context) -> str | 
         if node.type != "call_expression":
             continue
         function = node.child_by_field_name("function")
-        if function is None or node_text(function) != "tanstackStart":
+        if function is None or get_node_text(function) != "tanstackStart":
             continue
         arguments = node.child_by_field_name("arguments")
         options = next(iter(arguments.named_children), None) if arguments is not None else None

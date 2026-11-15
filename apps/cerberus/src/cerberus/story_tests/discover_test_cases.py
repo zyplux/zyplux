@@ -1,12 +1,15 @@
+"""Extract test cases and criterion IDs from Python and Vitest sources."""
+
 from __future__ import annotations
 
 import ast
 import re
 from typing import TYPE_CHECKING
 
-from cerberus.bites.story_files import CASE_ID, FILE_ID
 from cerberus.graph.parse import parse_typescript
-from cerberus.ts_syntax import node_text, string_literal, walk_nodes
+from cerberus.story_tests.story_source_discovery import CASE_ID, FILE_ID
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
+from cerberus.syntax.typescript_syntax import string_literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -71,7 +74,7 @@ def _find_table(call: Node, name: str) -> Node | None:
                 value = binding.child_by_field_name("value")
                 if (
                     identifier is not None
-                    and node_text(identifier) == name
+                    and get_node_text(identifier) == name
                     and value is not None
                     and value.type == "array"
                 ):
@@ -89,7 +92,7 @@ def _expand_titles(call: Node, function: Node, title: str) -> list[str]:
         arrays = [
             table
             for node in walk_nodes(function)
-            if node.type == "identifier" and (table := _find_table(call, node_text(node))) is not None
+            if node.type == "identifier" and (table := _find_table(call, get_node_text(node))) is not None
         ]
     if not arrays:
         return [""]
@@ -99,8 +102,8 @@ def _expand_titles(call: Node, function: Node, title: str) -> list[str]:
         cell = row.named_children[0] if row.type == "array" and row.named_children else row
         if specifier in {"%#", "%$"}:
             label = str(index + (specifier == "%$"))
-        elif cell.type == "number" and node_text(cell).isdecimal():
-            label = node_text(cell)
+        elif cell.type == "number" and get_node_text(cell).isdecimal():
+            label = get_node_text(cell)
         else:
             label = string_literal(cell)
             if specifier != "%s" and label is not None and not label.isdecimal():
@@ -113,12 +116,12 @@ def _find_test_source(node: Node | None) -> str:
     if node is None:
         return ""
     if node.type in {"identifier", "member_expression"}:
-        return node_text(node)
+        return get_node_text(node)
     function = node.child_by_field_name("function")
     if (
         function is not None
         and (method := function.child_by_field_name("property")) is not None
-        and node_text(method) == "extend"
+        and get_node_text(method) == "extend"
     ):
         return _find_test_source(function.child_by_field_name("object"))
     return ""
@@ -132,14 +135,14 @@ def _bind_test_imports(statement: Node, bindings: set[str]) -> None:
     is_vitest = string_literal(statement.child_by_field_name("source")) == "vitest"
     for node in walk_nodes(statement):
         if node.type == "namespace_import" and node.named_children:
-            namespace = node_text(node.named_children[0])
+            namespace = get_node_text(node.named_children[0])
             _forget_test_binding(bindings, namespace)
             if is_vitest:
                 bindings.update((f"{namespace}.test", f"{namespace}.it"))
         elif node.type == "import_specifier" and (name := node.child_by_field_name("name")) is not None:
-            local = node_text(node.child_by_field_name("alias") or name)
+            local = get_node_text(node.child_by_field_name("alias") or name)
             _forget_test_binding(bindings, local)
-            if node_text(name) in {"test", "it"}:
+            if get_node_text(name) in {"test", "it"}:
                 bindings.add(local)
 
 
@@ -153,12 +156,12 @@ def _list_test_bindings(scope: Node, inherited: set[str]) -> set[str]:
                 name = declaration.child_by_field_name("name")
                 if name is not None and name.type == "identifier":
                     is_test = _find_test_source(declaration.child_by_field_name("value")) in bindings
-                    local = node_text(name)
+                    local = get_node_text(name)
                     _forget_test_binding(bindings, local)
                     if is_test:
                         bindings.add(local)
         elif statement.type == "function_declaration" and (name := statement.child_by_field_name("name")) is not None:
-            _forget_test_binding(bindings, node_text(name))
+            _forget_test_binding(bindings, get_node_text(name))
     return bindings
 
 
@@ -171,7 +174,7 @@ def _test_titles(call: Node, bindings: set[str]) -> list[str]:
     callee_node = function.child_by_field_name("function") if is_factory_call else function
     if callee_node is None:
         return []
-    callee = _TS_TEST_CALL.fullmatch(node_text(callee_node))
+    callee = _TS_TEST_CALL.fullmatch(get_node_text(callee_node))
     if not callee or callee[1] not in bindings or callee[2].endswith(_TS_TEST_FACTORIES) != is_factory_call:
         return []
     title = string_literal(arguments.named_children[0]) if arguments.named_children else None
@@ -182,7 +185,7 @@ def _list_typescript_cases(node: Node, bindings: set[str]) -> Iterator[tuple[int
     parameters = node.child_by_field_name("parameters") or node.child_by_field_name("parameter")
     if parameters is not None:
         names = {
-            node_text(parameter)
+            get_node_text(parameter)
             for parameter in walk_nodes(parameters)
             if parameter.type in {"identifier", "shorthand_property_identifier_pattern"}
         }

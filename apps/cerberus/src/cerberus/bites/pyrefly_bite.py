@@ -1,11 +1,14 @@
+"""Require strict standalone Pyrefly settings for source and tests."""
+
 from __future__ import annotations
 
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
-from cerberus.bites import py_tool_config
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.stacks import SOURCE_SUFFIXES, has_source
+from cerberus.syntax.toml_tables import parse_toml
+from cerberus.toolchain import python_tool_config
+from cerberus.toolchain.source_languages import SOURCE_SUFFIXES, has_source
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -107,7 +110,7 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
     if content is None:
         res.fail(f'no {PATH} at repo root (org requires `preset = "{REQUIRED_PRESET}"`)')
         return None
-    config = py_tool_config.parse_toml(content)
+    config = parse_toml(content)
     if config is None:
         res.error(f"could not parse {PATH}")
         return None
@@ -120,7 +123,7 @@ def _load_strict_config(repo: Repo, ctx: Context, res: CheckResult) -> dict[str,
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    if py_tool_config.load_pyproject(repo, ctx, res, standalone_tool="pyrefly") is None:
+    if python_tool_config.load_pyproject(repo, ctx, res, standalone_tool="pyrefly") is None:
         return res
 
     production_roots, test_roots = _python_roots(ctx.paths(repo), ctx.config.source_oracle)

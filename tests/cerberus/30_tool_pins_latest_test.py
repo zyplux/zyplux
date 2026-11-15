@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 CHECK_ID = "tool_pins_latest"
 
-_PIN_SOURCE = "apps/cerberus/src/cerberus/tool_pins.py"
+_PIN_SOURCE = "apps/cerberus/src/cerberus/toolchain/pnpm_policy.py"
 _PIN_OWNER_FILES = {_PIN_SOURCE: "", "package.json": "{}"}
 
 

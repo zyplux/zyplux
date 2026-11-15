@@ -1,6 +1,10 @@
+"""Extract job steps and shell scripts from parsed GitHub Actions workflows."""
+
 from __future__ import annotations
 
 from typing import Any
+
+from cerberus.syntax.shell_commands import strip_comment_lines
 
 
 def job_steps(doc: object) -> list[dict[str, Any]]:
@@ -16,10 +20,6 @@ def job_steps(doc: object) -> list[dict[str, Any]]:
         if isinstance(job_step_list, list):
             steps.extend(step for step in job_step_list if isinstance(step, dict))
     return steps
-
-
-def strip_comment_lines(script: str) -> str:
-    return "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("#"))
 
 
 def run_commands(doc: object) -> list[str]:

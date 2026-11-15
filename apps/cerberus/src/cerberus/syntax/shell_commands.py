@@ -1,3 +1,5 @@
+"""Extract commands and arguments from shell scripts used by checks."""
+
 from __future__ import annotations
 
 import shlex
@@ -7,12 +9,16 @@ from typing import TYPE_CHECKING
 import tree_sitter_bash
 from tree_sitter import Language, Parser
 
-from cerberus.ts_syntax import node_text, walk_nodes
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from tree_sitter import Node
+
+
+def strip_comment_lines(script: str) -> str:
+    return "\n".join(line for line in script.splitlines() if not line.lstrip().startswith("#"))
 
 
 @cache
@@ -23,7 +29,7 @@ def get_shell_parser() -> Parser:
 def list_command_args(command: Node) -> tuple[str, ...]:
     words = [*command.children_by_field_name("name"), *command.children_by_field_name("argument")]
     try:
-        return tuple(shlex.split(node_text(word))[0] for word in words)
+        return tuple(shlex.split(get_node_text(word))[0] for word in words)
     except ValueError, IndexError:
         return ()
 

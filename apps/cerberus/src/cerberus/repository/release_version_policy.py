@@ -1,3 +1,5 @@
+"""Compare release inputs and versions with published and target-branch baselines."""
+
 from __future__ import annotations
 
 import os
@@ -11,7 +13,7 @@ from airlock.registries import has_package_artifacts, is_published
 from airlock.targets import build_release_target, parse_manifest, parse_package, parse_stable_version, resolve_repo_path
 
 from cerberus.model import Finding, Status
-from cerberus.source import GitHistoryUnavailableError
+from cerberus.repository.source_files import GitHistoryUnavailableError
 
 if TYPE_CHECKING:
     from airlock.contracts import ReleaseTarget, TargetSpec

@@ -1,29 +1,16 @@
-"""Shared machinery for checks on Python tool configs (ruff, pyrefly, pytest).
-
-Each of those checks starts the same way: the repo counts as Python only when
-a root `pyproject.toml` exists, and the org keeps lint/type tool config in a
-standalone `<tool>.toml` — never embedded under `[tool.<name>]` in
-`pyproject.toml`.
-"""
+"""Load project metadata and check that Python tool settings are standalone."""
 
 from __future__ import annotations
 
-import tomllib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
+from cerberus.syntax.toml_tables import parse_toml
 
 if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import CheckResult, Repo
 
 PYPROJECT = "pyproject.toml"
-
-
-def parse_toml(content: str) -> dict[str, Any] | None:
-    try:
-        parsed = tomllib.loads(content)
-    except tomllib.TOMLDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else {}
 
 
 def load_pyproject(repo: Repo, ctx: Context, res: CheckResult, *, standalone_tool: str | None = None) -> str | None:

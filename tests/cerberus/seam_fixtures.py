@@ -1,9 +1,9 @@
 """Trusted seam boundary for cerberus's own story tests.
 
-`cerberus.bites.py_test_seam` forbids a story test file from importing
+`cerberus.story_tests.python_test_imports` forbids a story test file from importing
 `cerberus` internals beyond the root package's public surface
 and, for cli apps, `cerberus.cli`'s public surface — see that module's
-docstring for the exact rule. Only `test_*.py` story files are scanned, and
+docstring for the exact rule. Only Python story test files are scanned, and
 their `if TYPE_CHECKING:` imports are exempt (mirroring how the TS seam check
 trusts an alias target's own imports), so this module — re-exported by
 `conftest.py`, the same layout as `tests/totchef` — is the one
@@ -16,7 +16,7 @@ Every fixture below hands back either a ready-made value (a `Repo`, a built
 (`ok`/`fail`/`skip`/`error` build a `Finding` of that status), or an internal
 class/enum itself (`Status`, `Scope`) as a fixture return value — never as
 something a story test would need a runtime `import` statement to reach.
-Checks are always selected by their id STRING (`bites.BY_ID[check_id]`), so
+Checks are always selected by their id STRING (`bite_registry.BY_ID[check_id]`), so
 a story test never names — and therefore never imports — the check submodule
 it exercises.
 """
@@ -34,10 +34,11 @@ import httpx
 import pytest
 from airlock import proc as airlock_proc
 from airlock import registries
-from cerberus import bites, config, context, proc, tool_pins
+from cerberus import bite_registry, config, context
 from cerberus.graph import search as _graph_search
 from cerberus.model import CheckResult, Finding, Repo, Scope, Status
-from cerberus.source import GitHistoryUnavailableError, LocalSource
+from cerberus.repository.source_files import GitHistoryUnavailableError, LocalSource
+from cerberus.toolchain import pnpm_policy, subprocess_runner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -83,7 +84,7 @@ def make_context() -> MakeContext:
 @pytest.fixture
 def run_check() -> RunCheck:
     def _run(check_id: str, repo: Repo, ctx: Context) -> CheckResult:
-        return bites.BY_ID[check_id].run(repo, ctx)
+        return bite_registry.BY_ID[check_id].run(repo, ctx)
 
     return _run
 
@@ -161,9 +162,9 @@ def register_fake_check(monkeypatch: pytest.MonkeyPatch) -> RegisterFakeCheck:
     """Swap a registered check's `run` callable for a fake, keeping its id/summary/scope."""
 
     def _register(check_id: str, run: Callable[[Repo, Context], CheckResult]) -> None:
-        original = bites.BY_ID[check_id]
-        fake = bites.Check(original.id, original.summary, original.scope, run)
-        monkeypatch.setitem(bites.BY_ID, check_id, fake)
+        original = bite_registry.BY_ID[check_id]
+        fake = bite_registry.Check(original.id, original.summary, original.scope, run)
+        monkeypatch.setitem(bite_registry.BY_ID, check_id, fake)
 
     return _register
 
@@ -225,7 +226,7 @@ def no_git(monkeypatch: pytest.MonkeyPatch) -> None:
     def find_nothing(_tool: str) -> str | None:
         return None
 
-    monkeypatch.setattr(proc.shutil, "which", find_nothing)
+    monkeypatch.setattr(subprocess_runner.shutil, "which", find_nothing)
 
 
 @pytest.fixture
@@ -235,22 +236,22 @@ def rumdl_canonical() -> str:
 
 @pytest.fixture
 def bite_module_names() -> dict[str, str]:
-    return {check.id: check.run.__module__.rsplit(".", 1)[-1].removesuffix("_bite") for check in bites.ALL}
+    return {check.id: check.run.__module__.rsplit(".", 1)[-1].removesuffix("_bite") for check in bite_registry.ALL}
 
 
 @pytest.fixture
 def known_check_ids() -> tuple[str, ...]:
-    return tuple(bites.BY_ID)
+    return tuple(bite_registry.BY_ID)
 
 
 @pytest.fixture
 def npm_tool_pins() -> dict[str, str]:
-    return dict(tool_pins.NPM_TOOL_PINS)
+    return dict(pnpm_policy.NPM_TOOL_PINS)
 
 
 @pytest.fixture
 def npm_tool_spec() -> NpmToolSpec:
-    return tool_pins.format_spec
+    return pnpm_policy.format_spec
 
 
 def _strip_pin(spec: str) -> str:
@@ -260,7 +261,7 @@ def _strip_pin(spec: str) -> str:
 
 @dataclass
 class FakeProc:
-    """An in-memory double for `cerberus.proc`'s single subprocess boundary.
+    """An in-memory double for `cerberus.toolchain.subprocess_runner`'s single subprocess boundary.
 
     Outcomes are served per tool — the program a `pnpx <tool> ...` invocation
     launches, or `argv[0]` itself for direct invocations; a version-pinned
@@ -327,7 +328,7 @@ class FakeProc:
     def run(self, argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
         self.calls.append((list(argv), cwd))
         if argv[0] in self.missing:
-            raise proc.ToolNotFoundError(argv[0])
+            raise subprocess_runner.ToolNotFoundError(argv[0])
         self._snapshot_config_file(argv)
         launched = argv[1:] if argv[0] == "pnpx" and len(argv) > 1 else argv
         launched_tool = _strip_pin(launched[0])
@@ -342,7 +343,7 @@ class FakeProc:
 @pytest.fixture
 def fake_proc(monkeypatch: pytest.MonkeyPatch) -> FakeProc:
     fake = FakeProc()
-    monkeypatch.setattr(proc, "run", fake.run)
+    monkeypatch.setattr(subprocess_runner, "run", fake.run)
     return fake
 
 
