@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.workspaces.npm_packages import load_workspace_manifest
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -50,12 +51,7 @@ def _uncataloged(label: str, manifest: dict[str, Any]) -> list[str]:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    root = ctx.file(repo, "package.json")
-    if root is None:
-        res.skip("no package.json")
-        return res
-    if ctx.file(repo, "pnpm-workspace.yaml") is None:
-        res.skip("not a workspace")
+    if load_workspace_manifest(repo, ctx, res) is None:
         return res
 
     for path in _manifest_paths(ctx.paths(repo)):

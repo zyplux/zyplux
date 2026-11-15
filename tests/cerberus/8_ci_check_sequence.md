@@ -40,6 +40,10 @@
 
 ### 8.5.6 rejects pyrefly warning threshold overrides
 
+### 8.5.7 verifies typecheck and lint in pnpm scripts
+
+Dedicated package scripts can run the TypeScript compiler and ESLint. The CI lint step must use ESLint in check mode.
+
 ## 8.6 selecting steps from source files
 
 ### 8.6.1 requires install and markdown checks for tooling only manifests

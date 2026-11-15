@@ -1,4 +1,19 @@
 pre-commit:
-  commands:
-    stats:
+  piped: true
+  jobs:
+    - name: prettier
+      run: pnpm exec prettier --check --ignore-unknown -- {staged_files}
+    - name: ruff-check
+      glob: '*.{py,pyi,ipynb}'
+      run: uv run ruff check --no-fix --force-exclude -- {staged_files}
+    - name: ruff-format
+      glob: '*.{py,pyi,ipynb}'
+      run: uv run ruff format --check --force-exclude -- {staged_files}
+    - name: rumdl-check
+      glob: '*.{md,markdown,mdx}'
+      run: uv run rumdl check --no-cache -- {staged_files}
+    - name: rumdl-format
+      glob: '*.{md,markdown,mdx}'
+      run: uv run rumdl fmt --check -- {staged_files}
+    - name: stats
       run: uv run clipy stats --staged && git add -- line_and_token_stats.md

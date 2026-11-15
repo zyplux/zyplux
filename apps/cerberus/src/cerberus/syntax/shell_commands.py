@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shlex
 from functools import cache
 from typing import TYPE_CHECKING
@@ -15,6 +16,17 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from tree_sitter import Node
+
+
+_SCRIPT_TOOLS = {
+    "format": ("prettier", "--write"),
+    "lint": ("eslint", "."),
+    "lint:fix": ("eslint", ".", "--fix"),
+    "typecheck": ("tsc",),
+}
+_PNPM_BINARIES = {command[0] for command in _SCRIPT_TOOLS.values()}
+_ESLINT_FIX_FLAGS = {"--fix", "--fix-dry-run"}
+_ENABLED_ESLINT_FIX_FLAGS = {f"{flag}=true": flag for flag in _ESLINT_FIX_FLAGS}
 
 
 def strip_comment_lines(script: str) -> str:
@@ -39,6 +51,14 @@ def matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) ->
         return False
     if "pyrefly" in required and any(arg.partition("=")[0] == "--min-severity" for arg in command):
         return False
+    match required, command:
+        case ("pnpm", "run", script, *options), ("pnpm", "exec", *invocation) if script in _SCRIPT_TOOLS:
+            command = tuple(_ENABLED_ESLINT_FIX_FLAGS.get(arg, arg) for arg in invocation)
+            if (script == "lint" and _ESLINT_FIX_FLAGS.intersection(command)) or (
+                script == "typecheck" and not {"-b", "--build"}.intersection(command)
+            ):
+                return False
+            required = (*_SCRIPT_TOOLS[script], *options)
     if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
         return False
     if required[:3] == ("pnpm", "run", "knip") and ("--config" in command) != ("--config" in required):
@@ -90,6 +110,53 @@ def list_required_commands(script: str, manifests: frozenset[str]) -> list[tuple
     if root.has_error:
         return []
     return [args for args in _list_commands(root, manifests) if args]
+
+
+def read_pnpm_scripts(manifest: str) -> dict[str, str]:
+    try:
+        package = json.loads(manifest)
+    except ValueError:
+        return {}
+    scripts = package.get("scripts") if isinstance(package, dict) else None
+    if not isinstance(scripts, dict):
+        return {}
+    return {name: script for name, script in scripts.items() if isinstance(script, str)}
+
+
+def _list_and_commands(node: Node) -> list[tuple[str, ...]]:
+    children = [child for child in node.children if child.type != "comment"]
+    match node.type, children:
+        case "program", [statement]:
+            return _list_and_commands(statement)
+        case "command", _:
+            args = list_command_args(node)
+            return [args] if args and args[0] not in {"exit", "return", "exec", "set", "trap"} else []
+        case "list", [left, operator, right] if operator.type == "&&":
+            before = _list_and_commands(left)
+            after = _list_and_commands(right)
+            return before + after if before and after else []
+        case _:
+            return []
+
+
+def expand_pnpm_command(
+    command: tuple[str, ...], scripts: dict[str, str], ancestors: frozenset[str] = frozenset()
+) -> Iterator[tuple[str, ...]]:
+    match command:
+        case ("pnpm", "run", name, *args) if name in scripts:
+            if name not in _SCRIPT_TOOLS:
+                yield command
+            if name in ancestors:
+                return
+            source = f"{scripts[name]} {shlex.join(args)}"
+            root = get_shell_parser().parse(source.encode()).root_node
+            if root.has_error:
+                return
+            for child in _list_and_commands(root):
+                invocation = ("pnpm", "exec", *child) if child[0] in _PNPM_BINARIES else child
+                yield from expand_pnpm_command(invocation, scripts, ancestors | {name})
+        case _:
+            yield command
 
 
 def list_shell_commands(script: str) -> list[tuple[str, ...]]:

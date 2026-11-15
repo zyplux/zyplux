@@ -1,6 +1,7 @@
 # @story
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -599,3 +600,44 @@ def test_1_10_15_rejects_pyrefly_warning_threshold_overrides(run_justfile_check:
     assert [finding.message for finding in result.problems] == [
         "recipe `typecheck` must run `uv run pyrefly check` without masking its failure"
     ]
+
+
+@requires_just
+@pytest.mark.parametrize(
+    ("masked_tool", "missing_command"),
+    [
+        ("", ""),
+        ("ruff", "uv run ruff check --fix"),
+        ("eslint", "pnpm run lint:fix"),
+        ("eslint comment", "pnpm run lint:fix"),
+    ],
+)
+def test_1_10_16_follows_pnpm_scripts_when_they_preserve_failures(
+    run_check_with_files: RunCheckWithFiles, masked_tool: str, missing_command: str
+) -> None:
+    lint_recipe = CONFORMING.split("\nlint:\n", 1)[1].split("\n\n", 1)[0]
+    scripts = {
+        "lint": (
+            "pnpm run lint:workflows && pnpm run lint:fix && pnpm run format:prettier "
+            "&& uv run rumdl check --fix && uv run rumdl fmt && pnpm run lint:python && uv run ruff format"
+        ),
+        "lint:fix": "pnpm run lint:eslint --fix",
+        "lint:eslint": "eslint ."
+        + {"eslint": " || true", "eslint comment": " # Forwarded arguments land here"}.get(masked_tool, ""),
+        "format:prettier": "prettier --write .",
+        "lint:python": "uv run ruff check --fix" + (" || true" if masked_tool == "ruff" else ""),
+        "typecheck": "pnpm run typecheck:ts && uv run pyrefly check",
+        "typecheck:ts": "tsc -b",
+    }
+    result = run_check_with_files(
+        CHECK_ID,
+        {
+            **WORKSPACE_MANIFESTS,
+            "package.json": json.dumps({"scripts": scripts}),
+            "justfile": CONFORMING.replace(lint_recipe, "    pnpm run lint").replace("    uv run pyrefly check\n", ""),
+        },
+    )
+
+    assert [finding.message for finding in result.problems] == (
+        [f"recipe `lint` must run `{missing_command}` without masking its failure"] if missing_command else []
+    )

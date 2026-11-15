@@ -23,6 +23,8 @@ _TSC_P_PKG = '{"scripts": {"typecheck": "tsc --noEmit -p tsconfig.json"}}'
 _FANOUT_PKG = '{"scripts": {"typecheck": "tsc -p . && pnpm -r typecheck"}}'
 _TSB_PKG = '{"scripts": {"typecheck": "tsc -b"}}'
 _TSBUILD_PKG = '{"scripts": {"typecheck": "tsc --build"}}'
+_COMMENTED_TSB_PKG = '{"scripts": {"typecheck": "tsc -b # Build project references"}}'
+_DELEGATED_PKG = '{"scripts": {"typecheck": "pnpm run typecheck:ts && uv run pyrefly check", "typecheck:ts": "tsc -b"}}'
 
 
 @pytest.fixture
@@ -66,8 +68,10 @@ def test_10_2_1_fails_when_the_typecheck_script_is_missing_or_blank(
     [
         (_TSC_P_PKG, "tsc --noEmit -p tsconfig.json"),
         (_FANOUT_PKG, "tsc -p . && pnpm -r typecheck"),
+        ('{"scripts": {"typecheck": "echo tsc -b"}}', "echo tsc -b"),
+        ('{"scripts": {"typecheck": "tsc -b & # background"}}', "tsc -b & # background"),
     ],
-    ids=["single_project", "per_package_fanout"],
+    ids=["single_project", "per_package_fanout", "mention_only", "background_with_comment"],
 )
 def test_10_2_2_fails_when_the_typecheck_script_does_not_build_via_project_references(
     run_ts_project_references: RunTsProjectReferences, manifest: str, script: str, fail: MakeFinding
@@ -76,7 +80,11 @@ def test_10_2_2_fails_when_the_typecheck_script_does_not_build_via_project_refer
     assert result.findings == [fail(f"`typecheck` must run `tsc -b` (project references); found `{script}`")]
 
 
-@pytest.mark.parametrize("manifest", [_TSB_PKG, _TSBUILD_PKG], ids=["tsc -b", "tsc --build"])
+@pytest.mark.parametrize(
+    "manifest",
+    [_TSB_PKG, _TSBUILD_PKG, _DELEGATED_PKG, _COMMENTED_TSB_PKG],
+    ids=["tsc -b", "tsc --build", "delegated", "commented"],
+)
 def test_10_2_3_passes_when_the_typecheck_script_builds_via_project_references(
     run_ts_project_references: RunTsProjectReferences, manifest: str, ok: MakeFinding
 ) -> None:

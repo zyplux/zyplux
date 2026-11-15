@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, Any
 import yaml
 
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.syntax.shell_commands import get_shell_parser, list_command_args, matches_tool_command
+from cerberus.syntax.shell_commands import (
+    expand_pnpm_command,
+    get_shell_parser,
+    list_command_args,
+    matches_tool_command,
+    read_pnpm_scripts,
+)
 from cerberus.toolchain import workflow_steps
 from cerberus.toolchain.source_languages import can_run_command
 
@@ -206,7 +212,13 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     cfg = ctx.config
-    commands = [command for step in steps[setup_index:] for command in _parse_step_commands(step)]
+    scripts = read_pnpm_scripts(ctx.file(repo, "package.json") or "{}")
+    commands = [
+        command
+        for step in steps[setup_index:]
+        for invocation in _parse_step_commands(step)
+        for command in expand_pnpm_command(invocation, scripts)
+    ]
 
     if has_ts:
         _verify_sequence(

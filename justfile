@@ -30,34 +30,14 @@ knip:
 # Type-check both workspaces: tsc for .ts, pyrefly for .py.
 typecheck:
     pnpm run typecheck
-    uv run pyrefly check
 
 # Lint and format both workspaces with autofix.
 lint:
-    @just lint-workflows
-    @just lint-ts
-    @just lint-md
-    @just lint-py
+    pnpm run lint
 
-# Lint GitHub Actions workflows.
-lint-workflows:
-    pnpm run lint:workflows
-
-# Lint TypeScript and format Prettier-supported files with autofix.
-lint-ts:
-    pnpm run lint:fix
+# Format both workspaces.
+format:
     pnpm run format
-
-# Lint and format Markdown, including Mermaid validation.
-lint-md:
-    pnpm run lint:mermaid
-    uv run rumdl check --fix --no-cache
-    uv run rumdl fmt
-
-# Lint and format Python with autofix.
-lint-py:
-    uv run ruff check --fix
-    uv run ruff format
 
 # Run available JavaScript tests, then Python tests; pytest exit code 5 means no tests were collected.
 test:

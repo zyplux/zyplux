@@ -10,13 +10,24 @@ from cerberus.workspaces.workspace_members import ts_member_dirs
 
 if TYPE_CHECKING:
     from cerberus.context import Context
-    from cerberus.model import Repo
+    from cerberus.model import CheckResult, Repo
 
 
 @dataclass(frozen=True)
 class PackageInfo:
     directory: str
     manifest: dict[str, Any]
+
+
+def load_workspace_manifest(repo: Repo, ctx: Context, check: CheckResult) -> str | None:
+    manifest = ctx.file(repo, "package.json")
+    if manifest is None:
+        check.skip("no package.json")
+        return None
+    if ctx.file(repo, "pnpm-workspace.yaml") is None:
+        check.skip("not a workspace")
+        return None
+    return manifest
 
 
 def list_packages(repo: Repo, ctx: Context) -> dict[str, PackageInfo]:
