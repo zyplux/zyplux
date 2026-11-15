@@ -97,8 +97,8 @@ def test_15_3_1_passes_a_python_workspace_member_with_colocated_story_tests(
     files = {
         "pyproject.toml": _PY_UV_WORKSPACE_APPS,
         "apps/widget/pyproject.toml": _PY_SCRIPTS_PYPROJECT,
-        "apps/widget/tests/stories/1_widget.md": _linked("1_widget_test.py"),
-        "apps/widget/tests/stories/1_widget_test.py": PY_TEST,
+        "apps/widget/components/widget.md": _linked("1_widget_test.py"),
+        "apps/widget/components/1_widget_test.py": PY_TEST,
     }
     result = run_check_with_files(PY_CHECK_ID, files)
     assert result.findings == [ok(OK_MESSAGE)]
@@ -346,16 +346,22 @@ def test_15_8_5_rejects_case_ids_that_are_duplicate_or_belong_to_another_file(
     files = {
         "tests/api/a2-widget.test.ts": 'test("a2.2 shows a widget", () => {}); test("a2.2 duplicate", () => {});',
         "tests/admin/2_dashboard_test.py": "def test_a2_2_shows_the_dashboard(): pass\n",
+        "tests/3-empty.test.ts": "export {};\n",
     }
     assert run_check_with_files("unique_test_ids", files).findings == [
+        fail("tests/3-empty.test.ts: no test cases found for ID 3"),
         fail("tests/admin/2_dashboard_test.py:1: test case must start with 2. followed by a number"),
         fail("tests/api/a2-widget.test.ts:1: duplicate test case ID a2.2"),
     ]
 
 
-def test_15_8_6_checks_pytest_cases_and_ignores_helpers(run_check_with_files: RunCheckWithFiles) -> None:
+def test_15_8_6_checks_pytest_cases_and_ignores_helpers(
+    run_check_with_files: RunCheckWithFiles, fail: MakeFinding
+) -> None:
     files = {
         "tests/2_dashboard_test.py": """\
+from unittest import TestCase as Suite
+
 def test_2_1_shows_dashboard():
     def test_helper(): pass
 
@@ -364,9 +370,14 @@ class Dashboard:
 
 class TestDashboard:
     def test_2_2_loads_widgets(self): pass
+
+class DashboardChecks(Suite):
+    def test_unnumbered(self): pass
 """,
     }
-    assert not run_check_with_files("unique_test_ids", files).problems
+    assert run_check_with_files("unique_test_ids", files).findings == [
+        fail("tests/2_dashboard_test.py:13: test case must start with 2. followed by a number"),
+    ]
 
 
 def test_15_8_7_checks_aliased_and_extended_vitest_cases(
@@ -375,15 +386,18 @@ def test_15_8_7_checks_aliased_and_extended_vitest_cases(
     files = {
         "tests/2-dashboard.test.ts": """\
 import { test as scenario } from 'vitest';
+import * as vitest from 'vitest';
 const dashboard = scenario.extend<{ count: number }>({ count: 3 });
 scenario('unnumbered', () => {});
 dashboard('2.1 shows the dashboard', () => {});
 dashboard.skip('2.1 duplicate', () => {});
+vitest.test.skip('2.1 duplicate namespace', () => {});
 """,
     }
     assert run_check_with_files("unique_test_ids", files).findings == [
-        fail("tests/2-dashboard.test.ts:3: test case must start with 2. followed by a number"),
-        fail("tests/2-dashboard.test.ts:5: duplicate test case ID 2.1"),
+        fail("tests/2-dashboard.test.ts:4: test case must start with 2. followed by a number"),
+        fail("tests/2-dashboard.test.ts:6: duplicate test case ID 2.1"),
+        fail("tests/2-dashboard.test.ts:7: duplicate test case ID 2.1"),
     ]
 
 

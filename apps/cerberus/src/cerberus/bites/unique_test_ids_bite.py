@@ -32,6 +32,8 @@ def _check_cases(res: CheckResult, path: str, file_id: str, cases: Iterator[tupl
         elif case_id in seen:
             res.fail(f"{path}:{line}: duplicate test case ID {case_id}")
         seen.add(case_id)
+    if not seen:
+        res.fail(f"{path}: no test cases found for ID {file_id}")
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:

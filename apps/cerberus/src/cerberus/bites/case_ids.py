@@ -16,27 +16,41 @@ if TYPE_CHECKING:
 _PY_TEST_NAME = re.compile(rf"test_({FILE_ID}(?:_[0-9]+)+)_(.+)")
 _TS_CASE_ID = re.compile(rf"^({CASE_ID})(?=\s|$)")
 _TS_ID_PLACEHOLDER = re.compile(r"%[sdif#$]")
-_TS_TEST_MODIFIERS = re.compile(r"(?:\.(?:concurrent|each|fails|for|only|runIf|sequential|skip|skipIf|todo))*")
+_TS_TEST_CALL = re.compile(
+    r"([\w$]+(?:\.(?:test|it))?)((?:\.(?:concurrent|each|fails|for|only|runIf|sequential|skip|skipIf|todo))*)"
+)
 _TS_TEST_FACTORIES = (".each", ".for", ".runIf", ".skipIf")
 
 
-def _list_pytest_cases(body: list[ast.stmt]) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
+def _list_unittest_bases(body: list[ast.stmt]) -> set[str]:
+    bases = set()
+    for node in body:
+        if isinstance(node, ast.Import):
+            bases.update(f"{alias.asname or alias.name}.TestCase" for alias in node.names if alias.name == "unittest")
+        elif isinstance(node, ast.ImportFrom) and node.module == "unittest" and node.level == 0:
+            bases.update(alias.asname or alias.name for alias in node.names if alias.name == "TestCase")
+    return bases
+
+
+def _list_pytest_cases(
+    body: list[ast.stmt], unittest_bases: set[str]
+) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
     for node in body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
             yield node
-        elif (
-            isinstance(node, ast.ClassDef)
-            and node.name.startswith("Test")
-            and not any(
+        elif isinstance(node, ast.ClassDef):
+            is_unittest = any(ast.unparse(base) in unittest_bases for base in node.bases)
+            is_pytest = node.name.startswith("Test") and not any(
                 isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name in {"__init__", "__new__"}
                 for member in node.body
             )
-        ):
-            yield from _list_pytest_cases(node.body)
+            if is_unittest or is_pytest:
+                yield from _list_pytest_cases(node.body, unittest_bases)
 
 
 def list_python_tests(content: str) -> Iterator[ast.FunctionDef | ast.AsyncFunctionDef]:
-    return _list_pytest_cases(ast.parse(content).body)
+    body = ast.parse(content).body
+    return _list_pytest_cases(body, _list_unittest_bases(body))
 
 
 def split_python_test_name(name: str) -> tuple[str, str]:
@@ -98,7 +112,7 @@ def _expand_titles(call: Node, function: Node, title: str) -> list[str]:
 def _find_test_source(node: Node | None) -> str:
     if node is None:
         return ""
-    if node.type == "identifier":
+    if node.type in {"identifier", "member_expression"}:
         return node_text(node)
     function = node.child_by_field_name("function")
     if (
@@ -110,15 +124,23 @@ def _find_test_source(node: Node | None) -> str:
     return ""
 
 
+def _forget_test_binding(bindings: set[str], name: str) -> None:
+    bindings.difference_update((name, f"{name}.test", f"{name}.it"))
+
+
 def _bind_test_imports(statement: Node, bindings: set[str]) -> None:
+    is_vitest = string_literal(statement.child_by_field_name("source")) == "vitest"
     for node in walk_nodes(statement):
-        if node.type != "import_specifier" or (name := node.child_by_field_name("name")) is None:
-            continue
-        local = node_text(node.child_by_field_name("alias") or name)
-        if node_text(name) in {"test", "it"}:
-            bindings.add(local)
-        else:
-            bindings.discard(local)
+        if node.type == "namespace_import" and node.named_children:
+            namespace = node_text(node.named_children[0])
+            _forget_test_binding(bindings, namespace)
+            if is_vitest:
+                bindings.update((f"{namespace}.test", f"{namespace}.it"))
+        elif node.type == "import_specifier" and (name := node.child_by_field_name("name")) is not None:
+            local = node_text(node.child_by_field_name("alias") or name)
+            _forget_test_binding(bindings, local)
+            if node_text(name) in {"test", "it"}:
+                bindings.add(local)
 
 
 def _list_test_bindings(scope: Node, inherited: set[str]) -> set[str]:
@@ -130,13 +152,13 @@ def _list_test_bindings(scope: Node, inherited: set[str]) -> set[str]:
             for declaration in statement.named_children:
                 name = declaration.child_by_field_name("name")
                 if name is not None and name.type == "identifier":
-                    source = _find_test_source(declaration.child_by_field_name("value"))
-                    if source in bindings:
-                        bindings.add(node_text(name))
-                    else:
-                        bindings.discard(node_text(name))
+                    is_test = _find_test_source(declaration.child_by_field_name("value")) in bindings
+                    local = node_text(name)
+                    _forget_test_binding(bindings, local)
+                    if is_test:
+                        bindings.add(local)
         elif statement.type == "function_declaration" and (name := statement.child_by_field_name("name")) is not None:
-            bindings.discard(node_text(name))
+            _forget_test_binding(bindings, node_text(name))
     return bindings
 
 
@@ -149,13 +171,8 @@ def _test_titles(call: Node, bindings: set[str]) -> list[str]:
     callee_node = function.child_by_field_name("function") if is_factory_call else function
     if callee_node is None:
         return []
-    callee, dot, suffix = node_text(callee_node).partition(".")
-    modifiers = dot + suffix
-    if (
-        callee not in bindings
-        or not _TS_TEST_MODIFIERS.fullmatch(modifiers)
-        or modifiers.endswith(_TS_TEST_FACTORIES) != is_factory_call
-    ):
+    callee = _TS_TEST_CALL.fullmatch(node_text(callee_node))
+    if not callee or callee[1] not in bindings or callee[2].endswith(_TS_TEST_FACTORIES) != is_factory_call:
         return []
     title = string_literal(arguments.named_children[0]) if arguments.named_children else None
     return _expand_titles(call, function, title) if title is not None else [""]
@@ -169,7 +186,7 @@ def _list_typescript_cases(node: Node, bindings: set[str]) -> Iterator[tuple[int
             for parameter in walk_nodes(parameters)
             if parameter.type in {"identifier", "shorthand_property_identifier_pattern"}
         }
-        bindings = bindings.difference(names)
+        bindings = {binding for binding in bindings if binding.partition(".")[0] not in names}
     if node.type in {"program", "statement_block"}:
         bindings = _list_test_bindings(node, bindings)
     if node.type == "call_expression" and (titles := _test_titles(node, bindings)):

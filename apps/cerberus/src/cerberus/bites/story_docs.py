@@ -14,6 +14,7 @@ from cerberus.bites.story_files import (
     FILE_ID,
     PY_TEST,
     TS_TEST,
+    find_file_id,
     find_title_target,
     has_story_marker,
     list_story_sources,
@@ -241,8 +242,11 @@ def _check_title_drift(res: CheckResult, group: _Group, headers: dict[str, Heade
 def _check_own_section(res: CheckResult, group: _Group) -> None:
     for doc_path, content in sorted(group.docs.items()):
         name = doc_path.rsplit("/", 1)[-1]
-        leading = _DOC_NAME.fullmatch(name)
-        section = leading.group(1) if leading else name
+        heading = _DOC_NAME.fullmatch(name) or _DOC_TITLE.fullmatch(content.partition("\n")[0])
+        section = heading[1] if heading else find_file_id(find_title_target(content))
+        if section is None:
+            res.fail(f"{doc_path}: identify the story section in the filename, title, or linked test")
+            continue
         strays = sorted(story_id for story_id in parse_headers(content) if story_id.split(".")[0] != section)
         if strays:
             res.fail(f"{doc_path}: story header(s) filed in the wrong section doc: {', '.join(strays)}")
