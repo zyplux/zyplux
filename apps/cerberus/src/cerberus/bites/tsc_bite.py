@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from cerberus.model import CheckResult, Repo, Scope
 from cerberus.syntax.shell_commands import expand_pnpm_command, matches_tool_command, read_pnpm_scripts
+from cerberus.workspaces.npm_packages import load_workspace_manifest
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -28,13 +29,8 @@ def _has_tsconfig(paths: list[str]) -> bool:
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    root = ctx.file(repo, "package.json")
+    root = load_workspace_manifest(repo, ctx, res)
     if root is None:
-        res.skip("no package.json")
-        return res
-
-    if ctx.file(repo, "pnpm-workspace.yaml") is None:
-        res.skip("not a workspace")
         return res
     if not _has_tsconfig(ctx.paths(repo)):
         res.skip("no tsconfig")
