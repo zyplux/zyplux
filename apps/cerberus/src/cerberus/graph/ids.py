@@ -1,3 +1,5 @@
+"""Build stable identifiers for graph files and symbols."""
+
 from __future__ import annotations
 
 import posixpath

@@ -1,12 +1,16 @@
+"""Check that package side-effect declarations preserve registration and initialization."""
+
 from __future__ import annotations
 
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.architecture import build_export_map, is_library, list_targets, run_package_policy
 from cerberus.graph.parse import parse_typescript
 from cerberus.model import Scope
-from cerberus.ts_syntax import node_text, string_literal
+from cerberus.syntax.tree_sitter_nodes import get_node_text
+from cerberus.syntax.typescript_syntax import string_literal
+from cerberus.workspaces.npm_package_exports import build_export_map, list_targets, run_package_policy
+from cerberus.workspaces.npm_packages import is_library
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -54,9 +58,9 @@ def _is_commonjs_export(node: Node | None) -> bool:
     member = node.child_by_field_name("property") or node.child_by_field_name("index")
     if receiver is None or member is None or member.type not in {"property_identifier", "string", "number"}:
         return False
-    if node_text(receiver) == "module":
-        return (string_literal(member) or node_text(member)) == "exports"
-    return node_text(receiver) == "exports" or _is_commonjs_export(receiver)
+    if get_node_text(receiver) == "module":
+        return (string_literal(member) or get_node_text(member)) == "exports"
+    return get_node_text(receiver) == "exports" or _is_commonjs_export(receiver)
 
 
 def _executes_export(node: Node) -> bool:
@@ -83,7 +87,7 @@ def _executes_statement(node: Node, functions: dict[str, Node], active: frozense
         return False
     if node.type == "call_expression":
         callee = node.child_by_field_name("function")
-        name = node_text(callee) if callee is not None else ""
+        name = get_node_text(callee) if callee is not None else ""
         function = functions.get(name)
         if function is not None and name not in active:
             body = function.child_by_field_name("body")
@@ -99,7 +103,7 @@ def _executes_initialization(root: Node) -> bool:
         if declaration.type == "function_declaration":
             name = declaration.child_by_field_name("name")
             if name is not None:
-                functions[node_text(name)] = declaration
+                functions[get_node_text(name)] = declaration
         for binding in declaration.named_children:
             name, initializer = binding.child_by_field_name("name"), binding.child_by_field_name("value")
             if (
@@ -107,7 +111,7 @@ def _executes_initialization(root: Node) -> bool:
                 and initializer is not None
                 and initializer.type in {"arrow_function", "function_expression"}
             ):
-                functions[node_text(name)] = initializer
+                functions[get_node_text(name)] = initializer
     return _executes_statement(root, functions)
 
 

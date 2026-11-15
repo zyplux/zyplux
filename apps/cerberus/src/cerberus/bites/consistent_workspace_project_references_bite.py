@@ -1,11 +1,13 @@
+"""Check TypeScript project references against compiled workspace dependencies."""
+
 from __future__ import annotations
 
 import posixpath
 from typing import TYPE_CHECKING
 
-from cerberus.architecture import list_dependencies, list_packages
 from cerberus.model import CheckResult, Scope
-from cerberus.ts_syntax import parse_jsonc
+from cerberus.syntax.typescript_syntax import parse_jsonc
+from cerberus.workspaces.npm_packages import list_dependencies, list_packages
 
 if TYPE_CHECKING:
     from cerberus.context import Context

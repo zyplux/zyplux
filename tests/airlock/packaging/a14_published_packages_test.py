@@ -1,0 +1,55 @@
+# @story
+from __future__ import annotations
+
+import subprocess
+import tomllib
+import zipfile
+from pathlib import Path
+
+from cli_fixture import REPO_ROOT
+
+
+def test_a14_1_1_passes_publint_for_every_built_npm_archive(tmp_path: Path) -> None:
+    declarations = tomllib.loads((REPO_ROOT / "airlock_targets.toml").read_text(encoding="utf-8"))
+    for target in declarations.values():
+        manifest = Path(target["manifest"])
+        if manifest.suffix == ".json" and target.get("kind", "npm") == "npm":
+            directory = REPO_ROOT / manifest.parent
+            subprocess.run(
+                ["pnpm", "pack", "--out", str(tmp_path / f"{directory.name}.tgz")], cwd=directory, check=True
+            )
+
+
+def test_a14_1_2_installs_airlock_from_its_python_wheel(tmp_path: Path) -> None:
+    subprocess.run(
+        ["uv", "build", "--package", "zyplux-airlock", "--out-dir", str(tmp_path)], cwd=REPO_ROOT, check=True
+    )
+    wheel = next(tmp_path.glob("*.whl"))
+    project = tomllib.loads((REPO_ROOT / "apps/airlock/pyproject.toml").read_text(encoding="utf-8"))
+    [backend] = project["build-system"]["requires"]
+    assert backend.startswith("uv_build==")
+    with zipfile.ZipFile(wheel) as archive:
+        metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/WHEEL"))
+        assert f"Generator: uv {backend.removeprefix('uv_build==')}\n" in archive.read(metadata).decode()
+    command = ["uv", "run", "--isolated", "--no-project", "--with", str(wheel), "airlock"]
+    execution = subprocess.run([*command, "--version"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    assert execution.stdout.strip() == project["project"]["version"]
+    help_page = subprocess.run([*command, "--help"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    assert all(command in help_page.stdout for command in ("prepare", "plan", "publish"))
+    execution = subprocess.run([*command, "plan"], cwd=tmp_path, text=True, capture_output=True, check=False)
+    assert execution.returncode == 1
+    assert "error: command failed" in execution.stderr
+    assert "Traceback" not in execution.stderr
+
+
+def test_a14_1_3_starts_cerberus_with_its_declared_runtime_dependencies(tmp_path: Path) -> None:
+    for package in ("zyplux-airlock", "zyplux-cerberus"):
+        subprocess.run(["uv", "build", "--package", package, "--out-dir", str(tmp_path)], cwd=REPO_ROOT, check=True)
+    command = ["uv", "run", "--isolated", "--no-project"]
+    for wheel in sorted(tmp_path.glob("*.whl")):
+        command.extend(["--with", str(wheel)])
+    execution = subprocess.run(
+        [*command, "cerberus", "version"], cwd=tmp_path, text=True, capture_output=True, check=True
+    )
+    project = tomllib.loads((REPO_ROOT / "apps/cerberus/pyproject.toml").read_text(encoding="utf-8"))
+    assert execution.stdout.strip() == project["project"]["version"]

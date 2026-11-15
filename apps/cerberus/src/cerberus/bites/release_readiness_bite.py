@@ -1,3 +1,5 @@
+"""Validate prepared release versions, notes and fingerprints."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

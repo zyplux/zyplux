@@ -1,3 +1,5 @@
+"""Build a source dependency graph and compute its communities and central nodes."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
@@ -10,6 +12,7 @@ from cerberus.graph.model import Edge, GraphResult, Node
 if TYPE_CHECKING:
     from cerberus.context import Context
     from cerberus.model import Repo
+    from cerberus.workspaces.npm_packages import PackageInfo
 
 _GOD_NODE_LIMIT = 10
 _TS_SUFFIXES = (".ts", ".tsx")
@@ -23,7 +26,7 @@ def _resolve_targets(
     path: str,
     extracted: parse.Extracted,
     known_files: frozenset[str],
-    package_index: dict[str, resolve_ts.PackageInfo],
+    package_index: dict[str, PackageInfo],
 ) -> list[str]:
     if path.endswith(".py"):
         targets = (resolve_python.resolve(path, ref, known_files) for ref in extracted.py_imports)

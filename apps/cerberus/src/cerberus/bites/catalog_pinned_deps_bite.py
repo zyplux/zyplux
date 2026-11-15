@@ -1,3 +1,5 @@
+"""Require workspace dependencies to use pnpm catalog or workspace references."""
+
 from __future__ import annotations
 
 import json

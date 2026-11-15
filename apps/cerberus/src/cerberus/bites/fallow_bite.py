@@ -1,8 +1,4 @@
-"""Run pinned Fallow analyses with Cerberus-owned configuration.
-
-Reports use files because large pnpx stdout reports can be truncated by the
-subprocess pipe chain. Oversized findings are saved under .reports/.
-"""
+"""Run pinned Fallow analyses for dead code, cycles and complexity."""
 
 from __future__ import annotations
 
@@ -14,8 +10,9 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus import proc, tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
+from cerberus.toolchain import pnpm_policy, subprocess_runner
+from cerberus.workspaces import workspace_members
 
 if TYPE_CHECKING:
     import subprocess
@@ -163,7 +160,7 @@ def _record_dead_code(res: CheckResult, ctx: Context, analysis: _Analysis, *, ve
     outcome, report = analysis.outcome, analysis.report
     if outcome.returncode == 0:
         return
-    rerun_hint = f"run `{runner} {tool_pins.format_spec('fallow')} dead-code` locally for details"
+    rerun_hint = f"run `{runner} {pnpm_policy.format_spec('fallow')} dead-code` locally for details"
     issue_count = report.get("total_issues") if report is not None else None
     if report is None or issue_count is None:
         res.fail(f"fallow dead-code exited {outcome.returncode}; {rerun_hint}")
@@ -186,7 +183,7 @@ def _record_complexity(res: CheckResult, ctx: Context, analysis: _Analysis, *, r
     if report is None or not offenders:
         res.fail(
             f"fallow health exited {outcome.returncode};"
-            f" run `{runner} {tool_pins.format_spec('fallow')} health` locally for details"
+            f" run `{runner} {pnpm_policy.format_spec('fallow')} health` locally for details"
         )
         return
     header = _health_status_line(report) or f"fallow found {len(offenders)} functions above its complexity thresholds"
@@ -199,7 +196,7 @@ def _record_complexity(res: CheckResult, ctx: Context, analysis: _Analysis, *, r
 
 def _packageless_member_dirs(repo: Repo, ctx: Context) -> list[str]:
     repo_root = ctx.source.root.resolve()
-    members = workspaces.member_paths(repo_root, workspaces.ts_member_globs(repo, ctx))
+    members = workspace_members.member_paths(repo_root, workspace_members.ts_member_globs(repo, ctx))
     return [m.relative_to(repo_root).as_posix() for m in members if not (m / "package.json").is_file()]
 
 
@@ -234,20 +231,21 @@ def _run_analyses(ctx: Context, ignored_dirs: list[str]) -> dict[str, _Analysis]
         config_path.write_text(json.dumps(shield_config))
         flags = [*_SHARED_FLAGS, "--root", str(ctx.source.root.resolve()), "--config", str(config_path)]
         for analysis in ("dead-code", "health"):
+            # The pnpx subprocess chain can truncate large reports written to stdout.
             report_path = Path(shield_dir) / f"{analysis}-report.json"
             coverage_flags: list[str] = []
             if analysis == "health" and ctx.config.fallow_rules["complexity-crap"] != "off":
                 coverage_flags = ["--coverage", str(coverage_path)]
             argv = [
                 "pnpx",
-                tool_pins.format_spec("fallow"),
+                pnpm_policy.format_spec("fallow"),
                 analysis,
                 *flags,
                 *coverage_flags,
                 "--output-file",
                 str(report_path),
             ]
-            outcome = proc.run(argv, cwd=Path(shield_dir))
+            outcome = subprocess_runner.run(argv, cwd=Path(shield_dir))
             analyses[analysis] = _Analysis(outcome, _load_report(report_path))
     return analyses
 
@@ -265,7 +263,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     except yaml.YAMLError as exc:
         res.error(f"pnpm-workspace.yaml is not valid YAML: {exc}")
         return res
-    except proc.ToolNotFoundError as exc:
+    except subprocess_runner.ToolNotFoundError as exc:
         res.error(str(exc))
         return res
     _record_dead_code(res, ctx, analyses["dead-code"], verbose=ctx.verbose, runner="pnpx")

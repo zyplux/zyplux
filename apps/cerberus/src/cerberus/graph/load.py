@@ -1,3 +1,5 @@
+"""Load a JSON dependency graph for exploration."""
+
 from __future__ import annotations
 
 import json

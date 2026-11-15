@@ -1,11 +1,13 @@
+"""Check pnpm's release quarantine and the Zyplux package exemption."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 import yaml
 
-from cerberus import workspaces
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.toolchain import pnpm_policy
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -31,8 +33,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         return res
 
     workspace: dict[object, object] = workspace if isinstance(workspace, dict) else {}
-    if workspace.get("minimumReleaseAge") != workspaces.RELEASE_AGE_MINUTES:
-        res.fail(f"minimumReleaseAge must be {workspaces.RELEASE_AGE_MINUTES} minutes")
+    if workspace.get("minimumReleaseAge") != pnpm_policy.RELEASE_AGE_MINUTES:
+        res.fail(f"minimumReleaseAge must be {pnpm_policy.RELEASE_AGE_MINUTES} minutes")
     if workspace.get("minimumReleaseAgeExcludePrune") is not True:
         res.fail("minimumReleaseAgeExcludePrune must be true")
 

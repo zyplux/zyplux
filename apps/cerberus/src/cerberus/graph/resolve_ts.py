@@ -1,21 +1,18 @@
+"""Resolve TypeScript imports against files, package exports and aliases."""
+
 from __future__ import annotations
 
 import json
 import posixpath
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from cerberus.workspaces.npm_packages import PackageInfo
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 _TS_SUFFIXES = (".ts", ".tsx")
 _EXPORT_TARGET_KEYS = {"import", "default"}
-
-
-@dataclass(frozen=True)
-class PackageInfo:
-    directory: str
-    manifest: dict[str, Any]
 
 
 def build_package_index(paths: list[str], read: Callable[[str], str | None]) -> dict[str, PackageInfo]:

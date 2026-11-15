@@ -1,5 +1,11 @@
 # zyplux-clipy
 
+## 0.2.1
+
+### Patch Changes
+
+- Update the minimum versions of runtime dependencies.
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,3 +1,5 @@
+"""Validate the repository justfile's recipes, aliases and check pipeline."""
+
 from __future__ import annotations
 
 import re
@@ -6,10 +8,10 @@ from importlib import resources
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus import justfile
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.shell_commands import list_required_commands, list_shell_commands, matches_tool_command
-from cerberus.stacks import can_run_command, has_source
+from cerberus.syntax.shell_commands import list_required_commands, list_shell_commands, matches_tool_command
+from cerberus.toolchain import justfile_parser
+from cerberus.toolchain.source_languages import can_run_command, has_source
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -99,7 +101,7 @@ def _check_recipes(recipes: Iterable[str], expected: Iterable[str], kind: str, r
             res.fail(f"missing {kind}recipe `{name}`")
 
 
-def _list_recipe_calls(jf: justfile.Justfile, recipe: str) -> list[str]:
+def _list_recipe_calls(jf: justfile_parser.Justfile, recipe: str) -> list[str]:
     calls = list(jf.recipes.get(recipe, []))
     for args in list_required_commands(jf.bodies.get(recipe, ""), frozenset()):
         match args:
@@ -110,10 +112,12 @@ def _list_recipe_calls(jf: justfile.Justfile, recipe: str) -> list[str]:
     return calls
 
 
-def _calc_execution_order(jf: justfile.Justfile, recipe: str, ancestors: frozenset[str] = frozenset()) -> list[str]:
+def _calc_execution_order(
+    jf: justfile_parser.Justfile, recipe: str, ancestors: frozenset[str] = frozenset()
+) -> list[str]:
     if recipe in ancestors:
         message = f"recursive just invocation in recipe `{recipe}`"
-        raise justfile.JustfileError(message)
+        raise justfile_parser.JustfileError(message)
     order = []
     for target in _list_recipe_calls(jf, recipe):
         order.extend(_calc_execution_order(jf, target, ancestors | {recipe}))
@@ -128,11 +132,11 @@ def _normalize_tool_args(args: tuple[str, ...]) -> tuple[str, ...]:
 
 
 def _list_tool_commands(
-    jf: justfile.Justfile, recipe: str, repo: Repo, ctx: Context, ancestors: frozenset[str] = frozenset()
+    jf: justfile_parser.Justfile, recipe: str, repo: Repo, ctx: Context, ancestors: frozenset[str] = frozenset()
 ) -> list[tuple[str, ...]]:
     if recipe in ancestors:
         message = f"recursive just invocation in recipe `{recipe}`"
-        raise justfile.JustfileError(message)
+        raise justfile_parser.JustfileError(message)
     manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
     commands = []
     for target in jf.recipes.get(recipe, []):
@@ -171,11 +175,11 @@ def _list_script_commands(script: str, repo: Repo, ctx: Context, ancestors: froz
 
 
 @cache
-def _load_baseline() -> justfile.Justfile:
-    return justfile.parse(resources.files("cerberus").joinpath("baseline.just").read_text())
+def _load_baseline() -> justfile_parser.Justfile:
+    return justfile_parser.parse(resources.files("cerberus").joinpath("baseline.just").read_text())
 
 
-def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _check_tool_commands(jf: justfile_parser.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     baseline = _load_baseline()
     manifests = frozenset(path for path in ("package.json", "pyproject.toml") if ctx.file(repo, path) is not None)
     for recipe in ctx.config.check_pipeline:
@@ -198,7 +202,7 @@ def _check_tool_commands(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
                 res.fail(f"recipe `{recipe}` must run its required tools in baseline order")
 
 
-def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _check_local_cerberus_run(jf: justfile_parser.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     if "check" not in jf.recipes:
         return
     commands = _list_tool_commands(jf, "check", repo, ctx)
@@ -206,7 +210,7 @@ def _check_local_cerberus_run(jf: justfile.Justfile, repo: Repo, ctx: Context, r
         res.fail("no recipe reachable from `check` runs cerberus; add `uv run cerberus --fix` to `check`'s pipeline")
 
 
-def _check_clean_uses_cz(jf: justfile.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
+def _check_clean_uses_cz(jf: justfile_parser.Justfile, repo: Repo, ctx: Context, res: CheckResult) -> None:
     if "clean" not in jf.recipes:
         return
     commands = _list_tool_commands(jf, "clean", repo, ctx)
@@ -214,7 +218,12 @@ def _check_clean_uses_cz(jf: justfile.Justfile, repo: Repo, ctx: Context, res: C
         res.fail("`clean` recipe does not run `cz clean`; replace hardcoded find/rm with `cz clean`")
 
 
-def _check_pipeline(jf: justfile.Justfile, pipeline: tuple[str, ...], cfg: Config, res: CheckResult) -> None:
+def _is_subsequence(pipeline: tuple[str, ...], steps: list[str]) -> bool:
+    remaining = iter(steps)
+    return all(step in remaining for step in pipeline)
+
+
+def _check_pipeline(jf: justfile_parser.Justfile, pipeline: tuple[str, ...], cfg: Config, res: CheckResult) -> None:
     marker = tuple(cfg.default_recipe_marker.split())
     if "default" in jf.recipes and not any(
         args[: len(marker)] == marker for args in list_required_commands(jf.bodies.get("default", ""), frozenset())
@@ -222,7 +231,7 @@ def _check_pipeline(jf: justfile.Justfile, pipeline: tuple[str, ...], cfg: Confi
         res.fail(f"`default` recipe should run `{cfg.default_recipe_marker}`")
     if "check" in jf.recipes:
         deps = _calc_execution_order(jf, "check")[:-1]
-        if not justfile.is_subsequence(list(pipeline), deps):
+        if not _is_subsequence(pipeline, deps):
             res.fail(f"`check` steps {deps} must contain {list(pipeline)} in order")
 
 
@@ -237,8 +246,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     content = ctx.file(repo, "justfile") or content
 
     try:
-        jf = justfile.parse(content)
-    except justfile.JustfileError as err:
+        jf = justfile_parser.parse(content)
+    except justfile_parser.JustfileError as err:
         res.error(f"could not parse justfile: {err}")
         return res
 
@@ -259,11 +268,11 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         _check_pipeline(jf, pipeline, cfg, res)
         _check_tool_commands(jf, repo, ctx, res)
         _check_local_cerberus_run(jf, repo, ctx, res)
-    except justfile.JustfileError as err:
+    except justfile_parser.JustfileError as err:
         res.fail(str(err))
     try:
         _check_clean_uses_cz(jf, repo, ctx, res)
-    except justfile.JustfileError as err:
+    except justfile_parser.JustfileError as err:
         res.fail(str(err))
 
     for recipe, tool in _bare_tool_calls(jf.bodies, cfg.wrapped_tools):

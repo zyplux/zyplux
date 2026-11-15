@@ -1,3 +1,5 @@
+"""Check rumdl configuration against the shared Markdown rules."""
+
 from __future__ import annotations
 
 import tomllib

@@ -1,0 +1,241 @@
+# 1. [Requiring repos to ship a conformant justfile](1_justfile_test.py)
+
+The checker validates recipe names, aliases, pipeline order, managed-tool runners, cleanup, and whitespace using `just --dump`. The packaged `baseline.just` is a starting template; application recipes may add parameters, modules, and commands.
+
+## 1.1 requiring a present, fully conforming justfile
+
+A repo either has a justfile that satisfies every rule below, or the check
+reports why it doesn't — starting with whether a justfile exists at all.
+
+### 1.1.1 passes a fully conforming justfile
+
+The packaged baseline satisfies every structural rule.
+
+### 1.1.2 fails when the repo has no justfile at its root
+
+When `ctx.file` returns no content for `justfile`, the check fails immediately
+with a "no justfile at repo root" style finding and never attempts to parse
+anything.
+
+### 1.1.3 errors when the justfile cannot be parsed
+
+A justfile that `just` itself rejects (e.g. a recipe line with no colon)
+produces an error finding that starts with "could not parse justfile:",
+rather than a pass or an ordinary failure.
+
+## 1.2 keeping aliases and recipes conformant
+
+Every recipe needs a short alias (`i`, `k`, `tc`, `l`, `t`, `c`, `p`, `pr`,
+plus the recommended `u`/`ui`), and every pipeline recipe needs to exist under
+its own name (`default`, `install`, `knip`, `typecheck`, `lint`, `test`,
+`check`, `push`, `push-ready`, plus the recommended `upgrade`,
+`upgrade-interactive`, `clean`). An alias that exists but points at the wrong
+recipe is treated the same as a missing one.
+
+### 1.2.1 fails when a required alias is missing or targets the wrong recipe
+
+Dropping one of the required aliases (e.g. `alias k := knip`), or repointing
+one at the wrong recipe (e.g. `alias k := lint`), fails the check.
+
+### 1.2.2 fails when a required recipe is missing
+
+Dropping one of the required recipes (e.g. the `default` or `lint` recipe)
+from an otherwise conforming justfile fails the check.
+
+### 1.2.3 fails when a recommended alias or recipe is missing
+
+Dropping a recommended alias (e.g. `alias ui := upgrade-interactive`) or a
+recommended recipe (e.g. the `clean` recipe) from an otherwise conforming
+justfile fails the check.
+
+## 1.3 ordering the check recipe pipeline
+
+The `check` recipe must run `install`, `knip`, `typecheck`, `lint`, and `test` in order through dependencies or recipe calls in its body. Other steps may be interleaved.
+
+### 1.3.1 fails when the check recipe runs its steps out of order
+
+Reordering the `check` recipe's dependencies (e.g. running `lint` before
+`knip`/`typecheck`) so the required pipeline steps no longer appear in the
+configured order fails the check.
+
+### 1.3.2 passes when extra steps are interleaved between the pipeline steps
+
+The pipeline steps only have to appear in order, not contiguously: a `check`
+recipe that interleaves an extra step (e.g. `build`) between the configured
+pipeline steps passes the pipeline check.
+
+## 1.4 requiring the default recipe to list available commands
+
+When a justfile defines a `default` recipe, its body must run the configured
+discovery command (`just --list`) so that running bare `just` shows
+contributors what's available, instead of silently doing something else.
+
+### 1.4.1 fails when the default recipe does not list available commands
+
+A `default` recipe whose body never calls `just --list` fails the check, even
+when every other rule is satisfied.
+
+## 1.5 requiring managed tools to run through their wrapper
+
+Managed tools (`ruff`, `rumdl`, `pytest`, `eslint`, ...) must never be invoked
+bare in a recipe body, because a bare call relies on an ambient install
+instead of the project's `uv run`/`pnpx` wrapper.
+
+### 1.5.1 fails and names the tool when a recipe calls it directly
+
+A recipe body that leads with a managed tool's own command (e.g. `lint:` running
+`rumdl check` instead of `pnpm run lint`) fails the check, and the failure
+message names the offending tool.
+
+## 1.6 keeping recipe lines free of trailing whitespace
+
+Recipe lines must not carry trailing spaces or tabs.
+
+### 1.6.1 fails when a recipe line has trailing whitespace
+
+A justfile whose custom-section recipe line ends in trailing spaces fails
+the check, naming the offending line number.
+
+### 1.6.2 strips trailing whitespace when run with fix
+
+Running the check with `--fix` rewrites the justfile with the trailing
+whitespace removed and reports no findings against it.
+
+## 1.7 handling justfiles that use interpolation
+
+Recipe bodies may embed `{{ variable }}` interpolation; the check must
+evaluate such justfiles the same as plain ones instead of tripping over the
+interpolation fragments that `just --dump` emits.
+
+### 1.7.1 passes a conforming justfile whose recipes use interpolation
+
+A conforming justfile extended with a variable assignment and a recipe whose
+body interpolates that variable (and the recipe's own arguments) still passes
+with no findings.
+
+## 1.8 parsing justfiles that declare modules
+
+A justfile may split recipes into modules with `mod` statements (e.g. zyp-vps
+declares `mod infra 'infra/justfile'`). Module recipes are namespaced
+(`infra::deploy`) and outside the org rules, but `just --dump` refuses to run
+when a module's source file is missing — so the parser must satisfy every
+`mod` statement instead of erroring out and leaving the whole justfile
+unchecked.
+
+### 1.8.1 passes a conforming justfile that declares modules
+
+A conforming justfile extended with explicit-path, bare, and optional module declarations parses and passes with no findings, including names containing hyphens such as `member-idp`.
+
+### 1.8.2 errors instead of crashing on a module with a degenerate path
+
+A module whose declared path is empty (`mod infra ''`) resolves to the
+justfile's own directory — stubbing it out is a harmless no-op, `just` rejects
+the circular import, and the check reports the usual "could not parse
+justfile:" error finding instead of raising.
+
+## 1.9 requiring the check pipeline to run cerberus locally
+
+CI-only enforcement lets local drift accumulate between pushes, so the local
+gate must self-verify: some recipe reachable from `check` (or `check` itself)
+has to run cerberus.
+
+### 1.9.1 fails when no recipe in the check pipeline runs cerberus
+
+A justfile whose `check` pipeline never invokes cerberus in any reachable
+recipe body fails the check with a finding that names the missing cerberus
+run.
+
+### 1.9.2 counts a cerberus run in the check recipe body itself
+
+A justfile that runs cerberus from the `check` recipe's own body instead of a
+dependency like the `cerberus` recipe earns no cerberus-run finding.
+
+### 1.9.3 does not count a mere mention of cerberus
+
+The check recognizes commands starting with `uv run cerberus`. Mentions in comments or arguments do not count.
+
+## 1.10 supporting application recipes
+
+### 1.10.1 accepts application recipes without rewriting them
+
+### 1.10.2 accepts ordered recipe calls in a parameterized check body
+
+### 1.10.3 rejects a body pipeline that skips a required step
+
+### 1.10.4 follows nested recipe calls without counting comments or echo arguments
+
+### 1.10.5 rejects recursive body calls
+
+### 1.10.6 rejects skipped background or masked gate steps
+
+### 1.10.7 requires real failure preserving tool calls
+
+### 1.10.8 rejects empty quality recipes
+
+### 1.10.9 follows shell install helpers
+
+### 1.10.10 rejects reversed test runners
+
+### 1.10.11 requires both knip graphs
+
+### 1.10.12 requires a real failure preserving cerberus run
+
+### 1.10.13 ignores tool names inside quoted text
+
+### 1.10.14 requires canonical helper options
+
+Shell helpers start with `set -euo pipefail` and contain no other `set` commands.
+
+### 1.10.15 rejects pyrefly warning threshold overrides
+
+## 1.11 requiring the clean recipe to run cz clean
+
+A hardcoded `find`/`rm` pipeline drifts from repo to repo and from the
+directories each language tool actually produces, so the `clean` recipe must
+delegate to `cz clean` (`apps/cz`), which reads the answer from each repo's
+own `.gitignore` instead of a hand-maintained list.
+
+### 1.11.1 fails when the clean recipe does not invoke cz clean
+
+A `clean` recipe whose body runs a hardcoded `rm`/`find` pipeline instead of
+`cz clean` fails the check, even though the recipe itself is present.
+
+### 1.11.2 passes when the clean recipe runs cz clean via pnpm run
+
+The baseline's own invocation style, `pnpm run cz clean {{ flags }}`, satisfies
+the check.
+
+### 1.11.3 passes when the clean recipe invokes cz clean directly
+
+A `clean` recipe that calls the installed `cz clean` binary directly, without
+`pnpm run`, also satisfies the check.
+
+### 1.11.4 does not count a mere mention of cz clean
+
+The words `cz clean` inside a shell comment or as an argument to an unrelated
+command (`echo "cz clean is nice"`) are not an invocation: only `cz clean` in
+command position, or carried immediately after a runner (`pnpm`, `pnpx`),
+satisfies the check.
+
+### 1.11.5 does not count a runner wrapping an unrelated command
+
+A runner segment that happens to be followed by the words `cz clean` later on
+without actually invoking them (`pnpm run echo cz clean`, which runs `echo`)
+is not a `cz clean` invocation: only the exact shapes the org's repos use —
+`cz clean`, `pnpm run cz clean`, `pnpx cz clean` — satisfy the check.
+
+## 1.12 delegating upgrades to cz
+
+### 1.12.1 delegates both upgrade modes to cz
+
+The canonical recipes keep `just u` and `just ui` as the stable interface while `cz upgrade` owns toolchain, JavaScript, and Python dependency updates for every repository.
+
+## 1.13 running available test workspaces
+
+### 1.13.1 runs present workspaces sequentially and preserves failures
+
+The test recipe runs JavaScript tests when `package.json` exists, then Python tests when `pyproject.toml` exists. An empty pytest suite succeeds; other runner failures stop the recipe. A directory without either manifest fails.
+
+## 1.16 selecting recipes from source files
+
+### 1.16.1 requires application recipes when python stubs are present

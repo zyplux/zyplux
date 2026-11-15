@@ -1,3 +1,5 @@
+"""Define the repositories, findings and results shared by Cerberus checks."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cerberus.bites import py_test_seam
 from cerberus.model import CheckResult, Scope
+from cerberus.story_tests import python_test_imports
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -18,5 +18,5 @@ SCOPE = Scope.CONTENT
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    py_test_seam.run_seam_check(repo, ctx, res, py_test_seam.LIBRARIES)
+    python_test_imports.run_seam_check(repo, ctx, res, python_test_imports.LIBRARIES)
     return res

@@ -1,3 +1,5 @@
+"""Validate the repository configuration against the Cerberus schema."""
+
 from __future__ import annotations
 
 import tomllib

@@ -1,0 +1,125 @@
+# @story
+from __future__ import annotations
+
+import json
+import runpy
+from typing import TYPE_CHECKING
+
+import pytest
+from setup_pm import prepare
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+@pytest.fixture
+def workspace(tmp_path: Path) -> Path:
+    (tmp_path / "package.json").write_text(
+        json.dumps({
+            "packageManager": "pnpm@12.14.0",
+            "devEngines": {"runtime": {"name": "node", "version": "26.12.1"}},
+        })
+    )
+    for name in ("pnpm-lock.yaml", "pyproject.toml", "uv.lock"):
+        (tmp_path / name).touch()
+    return tmp_path
+
+
+def test_p1_1_1_prepares_both_toolchains_from_workspace_pins(workspace: Path) -> None:
+    plan = prepare.build_setup_plan(workspace, uv_version="0.13.4")
+    assert plan == {
+        "pnpm-version": "12.14.0",
+        "node-version": "26.12.1",
+        "uv-version": "0.13.4",
+    }
+
+
+@pytest.mark.parametrize("name", ["package.json", "pnpm-lock.yaml", "pyproject.toml", "uv.lock"])
+def test_p1_2_1_requires_both_workspaces_and_lockfiles_before_bootstrapping(workspace: Path, name: str) -> None:
+    (workspace / name).unlink()
+    with pytest.raises(FileNotFoundError, match=f"{name} is required"):
+        prepare.build_setup_plan(workspace, uv_version="0.13.4")
+
+
+@pytest.mark.parametrize("version", ["latest", "^12.14.0", "12", "12.14.0\ninjected=true", 12, None])
+def test_p1_2_2_requires_exact_versions_for_executable_cache_keys(version: object) -> None:
+    with pytest.raises(ValueError, match="must pin an exact stable version"):
+        prepare.validate_version(version, "tool")
+
+
+@pytest.mark.parametrize("manager", ["npm@12.0.0", 12])
+def test_p1_2_3_requires_a_pnpm_package_manager(workspace: Path, manager: object) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] = manager
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="must declare packageManager"):
+        prepare.load_node_versions(workspace)
+
+
+def test_p1_2_4_requires_a_node_runtime(workspace: Path) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["devEngines"]["runtime"]["name"] = "bun"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=r"must declare Node\.js"):
+        prepare.load_node_versions(workspace)
+
+
+def test_p1_2_5_rejects_package_manager_integrity_suffixes(workspace: Path) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] += "+sha512.integrity"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="must pin an exact stable version"):
+        prepare.load_node_versions(workspace)
+
+
+def test_p1_3_1_writes_github_action_outputs(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    action_output = workspace / "action-output"
+    monkeypatch.setenv("GITHUB_WORKSPACE", str(workspace))
+    monkeypatch.setenv("GITHUB_OUTPUT", str(action_output))
+    monkeypatch.setenv("UV_VERSION", "0.13.4")
+    monkeypatch.setenv("PACKAGE_MANAGERS", "pnpm uv")
+    runpy.run_path(prepare.__file__, run_name="__main__")
+    assert action_output.read_text().splitlines() == [
+        "pnpm-version=12.14.0",
+        "node-version=26.12.1",
+        "uv-version=0.13.4",
+    ]
+
+
+@pytest.mark.parametrize("version", ["10.32.0", "11.0.0", "11.0.9"])
+def test_p1_2_6_rejects_pnpm_without_runtime_install_control(workspace: Path, version: str) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] = f"pnpm@{version}"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match=r"pnpm 11\.1\.0 or newer"):
+        prepare.load_node_versions(workspace)
+
+
+def test_p1_1_2_accepts_the_minimum_supported_pnpm(workspace: Path) -> None:
+    manifest = json.loads((workspace / "package.json").read_text())
+    manifest["packageManager"] = "pnpm@11.1.0"
+    (workspace / "package.json").write_text(json.dumps(manifest))
+    assert prepare.load_node_versions(workspace) == ("11.1.0", "26.12.1")
+
+
+@pytest.mark.parametrize("manager", ["uv", "pnpm"])
+def test_p1_1_3_prepares_only_the_selected_package_manager(workspace: Path, manager: str) -> None:
+    unused = ("package.json", "pnpm-lock.yaml") if manager == "uv" else ("pyproject.toml", "uv.lock")
+    for name in unused:
+        (workspace / name).unlink()
+    plan = prepare.build_setup_plan(workspace, uv_version="0.13.4", package_managers=manager)
+    expected = (
+        {"uv-version": "0.13.4"}
+        if manager == "uv"
+        else {
+            "pnpm-version": "12.14.0",
+            "node-version": "26.12.1",
+        }
+    )
+    assert plan == expected
+
+
+@pytest.mark.parametrize("managers", ["", "npm", "pnpm uv typo"])
+def test_p1_2_7_rejects_unknown_or_empty_package_manager_selection(workspace: Path, managers: str) -> None:
+    with pytest.raises(ValueError, match="package-managers must select"):
+        prepare.build_setup_plan(workspace, uv_version="0.13.4", package_managers=managers)

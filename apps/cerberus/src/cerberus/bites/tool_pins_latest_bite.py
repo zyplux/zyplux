@@ -1,12 +1,4 @@
-"""Freshness guard for the npm tool versions pinned in `cerberus.tool_pins`:
-compares each pin against npm's newest quarantine-eligible stable release so a frozen pin cannot rot
-unnoticed. The check bites only in the repo that carries the pin source —
-that is the one place the fix (bump the pin, dogfood it through the gate,
-release cerberus) can happen; consumer repos get the new pins through
-`zyplux_deps_latest` forcing them onto the latest cerberus, so they skip.
-A failed lookup is reported as an error, never a silent pass, and there is
-no `--fix`: a tool version change under the gate deserves a human eye.
-"""
+"""Check the source pins against npm releases eligible under the pnpm quarantine."""
 
 from __future__ import annotations
 
@@ -16,8 +8,8 @@ from typing import TYPE_CHECKING
 from airlock import registries
 from airlock.errors import RELEASE_ERRORS
 
-from cerberus import tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
+from cerberus.toolchain import pnpm_policy
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -27,7 +19,7 @@ ID = "tool_pins_latest"
 SUMMARY = "the npm tool versions pinned in cerberus source are the newest quarantine-eligible releases"
 SCOPE = Scope.CONTENT
 
-_PIN_SOURCE_SUFFIX = "src/cerberus/tool_pins.py"
+_PIN_SOURCE_SUFFIX = "src/cerberus/toolchain/pnpm_policy.py"
 
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
@@ -36,9 +28,9 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     if pin_source is None:
         res.skip("no cerberus tool pins source in the repo")
         return res
-    for tool, pinned in sorted(tool_pins.NPM_TOOL_PINS.items()):
+    for tool, pinned in sorted(pnpm_policy.NPM_TOOL_PINS.items()):
         try:
-            latest = registries.fetch_latest_npm(tool, minimum_age=timedelta(minutes=workspaces.RELEASE_AGE_MINUTES))
+            latest = registries.fetch_latest_npm(tool, minimum_age=timedelta(minutes=pnpm_policy.RELEASE_AGE_MINUTES))
         except RELEASE_ERRORS as err:
             res.error(f"could not determine the latest `{tool}`: {err}")
             continue

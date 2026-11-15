@@ -24,7 +24,7 @@ Each factory wraps the original, so the module stays fully live until a fake ins
 
 ## Use
 
-Each story domain has a named fixture module, such as `stories/repositories/repositories.ts`. Extend a base with the subjects that its tests need:
+Each story domain has a named fixture module, such as `repositories/repositories.ts`. Extend a base with the subjects that its tests need:
 
 ```ts
 import { runPushBranch } from '@example/app';

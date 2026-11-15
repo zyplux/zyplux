@@ -1,9 +1,11 @@
+"""Provide repository access and cache file reads across bites."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from cerberus.source import LocalSource, RepoSource
+from cerberus.repository.source_files import LocalSource, RepoSource
 
 if TYPE_CHECKING:
     from collections.abc import Callable

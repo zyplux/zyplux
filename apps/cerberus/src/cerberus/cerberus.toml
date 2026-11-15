@@ -37,6 +37,7 @@ wrapped_tools = [
 [ci_check_sequence.required]
 ts = [
     "pnpm install --frozen-lockfile",
+    "pnpm run lint:workflows",
     "pnpm run knip",
     "pnpm run typecheck",
     "pnpm run lint",
@@ -176,6 +177,8 @@ min_coverage = 90
 [no_worker_filesystem_imports]
 
 [pnpm_release_age]
+
+[unique_test_ids]
 
 [story_tests_lockstep_py]
 

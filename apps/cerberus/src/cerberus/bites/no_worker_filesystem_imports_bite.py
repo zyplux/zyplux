@@ -1,15 +1,18 @@
+"""Detect filesystem imports reachable from Wrangler Worker entry points."""
+
 from __future__ import annotations
 
 import tomllib
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
-from cerberus.architecture import list_packages
 from cerberus.graph.parse import parse_typescript
 from cerberus.graph.resolve_ts import resolve
 from cerberus.model import CheckResult, Scope
-from cerberus.ts_syntax import node_text, parse_jsonc, string_literal, walk_nodes
-from cerberus.tsconfig import load_paths
+from cerberus.syntax.tree_sitter_nodes import get_node_text, walk_nodes
+from cerberus.syntax.typescript_syntax import parse_jsonc, string_literal
+from cerberus.workspaces.npm_packages import list_packages
+from cerberus.workspaces.tsconfig_paths import load_paths
 
 if TYPE_CHECKING:
     from tree_sitter import Node
@@ -47,11 +50,11 @@ def _runtime_specifiers(path: str, content: str) -> tuple[list[tuple[str, int]],
             if bindings and all(any(child.type == "type" for child in binding.children) for binding in bindings):
                 continue
             source = node.child_by_field_name("source")
-        elif node.type == "call_expression" and node_text(node.child_by_field_name("function") or node) in {
+        elif node.type == "call_expression" and get_node_text(node.child_by_field_name("function") or node) in {
             "import",
             "require",
         }:
-            is_require = node_text(node.child_by_field_name("function") or node) == "require"
+            is_require = get_node_text(node.child_by_field_name("function") or node) == "require"
             arguments = node.child_by_field_name("arguments")
             source = arguments.named_children[0] if arguments is not None and arguments.named_children else None
             if string_literal(source) is None:

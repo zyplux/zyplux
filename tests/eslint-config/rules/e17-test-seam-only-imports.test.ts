@@ -1,0 +1,95 @@
+// @story
+import { describe, expect, test } from './rules.ts';
+
+test.override({ ruleName: 'test-seam-only-imports' });
+
+type Case = [shape: string, code: string];
+
+describe('e17.1 allowing the seam import', () => {
+  test.for<Case>([
+    ['1 allows describe, expect, and test from the suite API', "import { describe, expect, test } from './rules.ts';"],
+    ['2 allows a variant test aliased to test', "import { describe, expect, test } from './rules.ts';"],
+    ['3 allows a type-only import from the suite API', "import type { ShellFake } from './rules.ts';"],
+    ['4 allows a mixed type and value import from the suite API', "import { test, type TempDir } from './rules.ts';"],
+  ])('e17.1.%s', ([, code], { lintRule }) => {
+    expect(lintRule(code, { filename: 'rules/e17-test-seam-only-imports.test.ts' })).toReportNothing();
+  });
+});
+
+describe('e17.2 flagging any module beyond the suite API', () => {
+  test.for<Case>([
+    ['1 flags a node builtin', "import path from 'node:path';"],
+    ['2 flags a third-party module', "import * as z from 'zod';"],
+    ['3 flags a type-only import from a third-party module', "import type { Linter } from 'eslint';"],
+    ['4 flags a workspace package import', "import { normalizeRepoUrl } from '@zyplux/util';"],
+    ['5 flags a workspace package subpath import', "import { IdSchema } from '@zyplux/util/contracts';"],
+    ['6 flags a side-effect import of a relative file path', "import '../src/setup';"],
+    ['7 flags a re-export of a relative file path', "export * from './helpers';"],
+    ['8 flags a dynamic import of a workspace package', "export const load = () => import('@zyplux/util');"],
+  ])('e17.2.%s', ([, code], { lintRule }) => {
+    expect(lintRule(code, { filename: 'rules/e17-test-seam-only-imports.test.ts' })).toReport('moduleOutsideSeam');
+  });
+});
+
+describe('e17.3 flagging value bindings beyond describe, expect, and test', () => {
+  test.for<Case>([
+    ['1 flags another named value beyond the seam vocabulary', "import { storyMatchers } from './rules.ts';"],
+    ['2 flags a helper renamed to test', "import { helper as test } from './rules.ts';"],
+    ['3 flags a default import of the suite API', "import fixtures from './rules.ts';"],
+    ['4 flags a namespace import of the suite API', "import * as fixtures from './rules.ts';"],
+  ])('e17.3.%s', ([, code], { lintRule }) => {
+    expect(lintRule(code, { filename: 'rules/e17-test-seam-only-imports.test.ts' })).toReport('bindingOutsideSeam');
+  });
+});
+
+describe('e17.4 scoping the rule to tests in the shipped config', () => {
+  test('e17.4.1 enables the rule for test files inside and outside stories', ({ zyplux }) => {
+    const config = zyplux();
+    const entries = config.filter(entry => entry.rules?.['@zyplux/test-seam-only-imports'] !== undefined);
+    expect(entries.map(entry => entry.files)).toEqual([['**/*.test.{ts,tsx}']]);
+  });
+});
+
+describe('e17.5 using a local domain module', () => {
+  test('e17.5.1 allows the module named after the story directory', ({ lintRule }) => {
+    expect(
+      lintRule("import { describe, expect, test } from './api.ts';", {
+        filename: 'api/1-contract.test.ts',
+      }),
+    ).toReportNothing();
+  });
+
+  test('e17.5.2 allows fixture types and aliases of actual API bindings', ({ lintRule }) => {
+    expect(
+      lintRule("import { type Api, describe as suite, test } from './api.ts';", {
+        filename: 'api/1-contract.test.ts',
+      }),
+    ).toReportNothing();
+  });
+
+  test('e17.5.3 flags a helper imported directly into a domain story', ({ lintRule }) => {
+    expect(lintRule("import { runScenario } from './helpers.ts';", { filename: 'api/1-contract.test.ts' })).toReport(
+      'moduleOutsideSeam',
+    );
+  });
+
+  test('e17.5.4 flags extra value bindings from a domain module', ({ lintRule }) => {
+    expect(lintRule("import { runScenario } from './api.ts';", { filename: 'api/1-contract.test.ts' })).toReport(
+      'bindingOutsideSeam',
+    );
+  });
+
+  test('e17.5.5 flags a module named after a parent domain', ({ lintRule }) => {
+    expect(lintRule("import { test } from './api.ts';", { filename: 'api/admin/1-contract.test.ts' })).toReport(
+      'moduleOutsideSeam',
+    );
+  });
+
+  test('e17.5.6 flags dynamic imports of a domain helper', ({ lintRule }) => {
+    expect(
+      lintRule("export const load = () => import('./helpers.ts');", {
+        filename: 'api/1-contract.test.ts',
+      }),
+    ).toReport('moduleOutsideSeam');
+  });
+});

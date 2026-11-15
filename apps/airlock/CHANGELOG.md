@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.4
+
+### Patch Changes
+
+- Update the minimum versions of runtime dependencies.
+
 ## 2.2.3
 
 ### Patch Changes

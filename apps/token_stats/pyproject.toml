@@ -9,7 +9,7 @@ dependencies = [
     "pathspec>=1.1.1",
     "polars>=2.1.0",
     "tiktoken>=0.14.0",
-    "typer>=0.28.0",
+    "typer>=0.29.1",
 ]
 
 [project.scripts]

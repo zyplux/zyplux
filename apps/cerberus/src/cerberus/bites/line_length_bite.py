@@ -1,3 +1,5 @@
+"""Check that Ruff and Prettier share the required line length."""
+
 from __future__ import annotations
 
 import re

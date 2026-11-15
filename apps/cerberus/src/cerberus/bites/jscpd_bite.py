@@ -1,16 +1,4 @@
-"""Copy-paste duplication cap: cerberus itself runs jscpd over the repo's
-workspace-registered code and enforces the configured threshold
-(`[jscpd] threshold` in cerberus.toml, default 0.1%) against every
-language's duplicated-token percentage from jscpd's json report — not just
-the aggregate total. Cerberus owns the whole jscpd invocation: the file
-selection pattern and ignore globs come from `[jscpd] pattern` and
-`ignore` in cerberus.toml, scan roots come from the repo's own workspace
-manifests (pnpm workspace globs, uv `[tool.uv.workspace] members`), the
-subprocess runs with its cwd outside the repo so repo-local jscpd config
-(`.jscpd.json`, package.json `jscpd`) can never leak in, and jscpd itself
-runs at the exact version pinned in `cerberus.tool_pins` so every run
-measures with the same tool.
-"""
+"""Check copy-paste duplication per language over workspace sources."""
 
 from __future__ import annotations
 
@@ -23,8 +11,9 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus import proc, tool_pins, workspaces
 from cerberus.model import CheckResult, Scope
+from cerberus.toolchain import pnpm_policy, subprocess_runner
+from cerberus.workspaces import workspace_members
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -46,15 +35,15 @@ class _LanguageStat:
 
 def _scan_roots(repo: Repo, ctx: Context) -> list[Path]:
     repo_root = ctx.source.root.resolve()
-    globs = [*workspaces.ts_member_globs(repo, ctx), *workspaces.uv_member_globs(repo, ctx)]
-    members = workspaces.member_paths(repo_root, globs)
+    globs = [*workspace_members.ts_member_globs(repo, ctx), *workspace_members.uv_member_globs(repo, ctx)]
+    members = workspace_members.member_paths(repo_root, globs)
     return members or [repo_root]
 
 
 def _selection_argv(ctx: Context) -> list[str]:
     return [
         "pnpx",
-        tool_pins.format_spec("jscpd"),
+        pnpm_policy.format_spec("jscpd"),
         "--pattern",
         ctx.config.jscpd_pattern,
         "--ignore",
@@ -108,6 +97,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
     except tomllib.TOMLDecodeError as exc:
         res.error(f"pyproject.toml is not valid TOML: {exc}")
         return res
+    # A working directory outside the checkout isolates jscpd from repo-local configuration.
     with tempfile.TemporaryDirectory(prefix="cerberus-jscpd-") as report_dir:
         argv = [
             *_selection_argv(ctx),
@@ -120,8 +110,8 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
             *scan_roots,
         ]
         try:
-            outcome = proc.run(argv, cwd=Path(report_dir))
-        except proc.ToolNotFoundError as exc:
+            outcome = subprocess_runner.run(argv, cwd=Path(report_dir))
+        except subprocess_runner.ToolNotFoundError as exc:
             res.error(str(exc))
             return res
         if outcome.returncode != 0:

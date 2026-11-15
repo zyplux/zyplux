@@ -1,9 +1,11 @@
+"""Check that TypeScript story criteria and Vitest test IDs agree."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cerberus.bites import ts_story_docs
 from cerberus.model import CheckResult, Repo, Scope
+from cerberus.story_tests import typescript_story_docs
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -15,5 +17,5 @@ SCOPE = Scope.CONTENT
 
 def run(repo: Repo, ctx: Context) -> CheckResult:
     res = CheckResult(ID, repo.name)
-    ts_story_docs.run_story_check(repo, ctx, res)
+    typescript_story_docs.run_story_check(repo, ctx, res)
     return res

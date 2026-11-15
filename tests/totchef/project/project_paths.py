@@ -28,4 +28,3 @@ def find_zyplux_root() -> Path:
 REPO_ROOT = find_zyplux_root()
 SRC = REPO_ROOT / "apps" / "totchef" / "src"
 TESTS = REPO_ROOT / "tests" / "totchef"
-STORIES_DIR = TESTS / "stories"

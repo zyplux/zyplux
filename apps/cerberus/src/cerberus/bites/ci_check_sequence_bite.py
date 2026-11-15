@@ -1,13 +1,15 @@
+"""Check that CI skips drafts, sets up the toolchain and runs checks in order."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from cerberus import workflow
 from cerberus.model import CheckResult, Repo, Scope
-from cerberus.shell_commands import get_shell_parser, list_command_args, matches_tool_command
-from cerberus.stacks import can_run_command
+from cerberus.syntax.shell_commands import get_shell_parser, list_command_args, matches_tool_command
+from cerberus.toolchain import workflow_steps
+from cerberus.toolchain.source_languages import can_run_command
 
 if TYPE_CHECKING:
     from cerberus.context import Context
@@ -198,7 +200,7 @@ def run(repo: Repo, ctx: Context) -> CheckResult:
         _validate_draft_events(doc, job, res)
     if job is None or res.problems:
         return res
-    steps = workflow.job_steps({"jobs": {"ci": job}})
+    steps = workflow_steps.job_steps({"jobs": {"ci": job}})
     setup_index = _validate_setup(steps, res)
     if setup_index is None:
         return res

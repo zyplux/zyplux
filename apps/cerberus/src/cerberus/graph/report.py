@@ -1,3 +1,5 @@
+"""Serialize dependency graph results to JSON."""
+
 from __future__ import annotations
 
 import json

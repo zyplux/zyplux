@@ -1,3 +1,5 @@
+"""Describe incoming and outgoing connections for a matching graph node."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

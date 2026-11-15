@@ -1,3 +1,5 @@
+"""Extract Python and TypeScript imports and symbols with Tree-sitter."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

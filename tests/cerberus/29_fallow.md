@@ -1,0 +1,97 @@
+# 29. [Banning dead code and complexity offenders via fallow](29_fallow_test.py)
+
+## 29.1 scoping the check
+
+### 29.1.1 skips repos with no package.json without running fallow
+
+## 29.2 enforcing fallow's dead-code verdict
+
+### 29.2.1 passes when both fallow analyses exit clean
+
+### 29.2.2 runs fallow dead code and health non-interactively from a shielded cwd against the repo root
+
+### 29.2.3 fails with the issue count when fallow dead-code reports issues
+
+### 29.2.4 errors when pnpx is not on PATH
+
+## 29.3 enforcing fallow's complexity thresholds
+
+### 29.3.1 fails listing each function fallow health flags above its thresholds
+
+### 29.3.2 fails listing only the metrics fallow reported when coverage data is absent
+
+Each analysis writes its report to a file via fallow's own `--output-file` rather than being read off stdout: relaying a large JSON report through the `pnpx` -> fallow subprocess pipe chain has been observed to truncate silently at a pipe-buffer-sized boundary on real-world repos, and a truncated report is unparseable JSON — indistinguishable, without this fix, from a genuine fallow crash. The rerun-hint fallback stays reserved for that genuine-crash case: a fallow exit with no readable report on disk at all.
+
+### 29.3.3 falls back to the rerun hint only when fallow crashes without writing a report
+
+## 29.4 surfacing fallow's health status line
+
+### 29.4.1 reports fallow's health status line on a clean run
+
+### 29.4.2 leaves the detail unset on failure so the status line appears only in the fail line
+
+## 29.5 owning fallow's configuration
+
+Tests are as load-bearing as production code, so the cerberus-owned config also switches off fallow's default duplicate ignores (`**/*.test.*` and friends) — no fallow analysis run under cerberus ever skips test files.
+
+### 29.5.1 shields fallow behind a cerberus-owned config ignoring workspace dirs without a package.json
+
+### 29.5.2 leaves out workspace dirs the manifest excludes
+
+### 29.5.3 errors when the pnpm workspace manifest is not valid YAML instead of crashing
+
+### 29.5.4 switches off fallow's default duplicate ignores so test files count
+
+## 29.6 itemizing dead-code issues in verbose runs
+
+By default a dead-code failure reports only the issue count and defers to a local rerun; in verbose mode the check itemizes each issue from fallow's own report — its category, location, and name — so the rerun is unnecessary.
+
+### 29.6.1 fails itemizing each dead-code issue with its category and location in verbose mode
+
+### 29.6.2 keeps the count-and-rerun-hint failure without verbose
+
+Fallow's report envelope carries several sibling fields alongside the actual issue-category arrays (`entry_points`, `workspace_diagnostics`, `next_steps`, and other run metadata); itemization only walks the real categories, and it names each entry by whichever field fallow actually uses for that category (`export_name`, `package_name`, or a `parent_name`/`member_name` pair), not just `name`.
+
+### 29.6.3 itemizes a dependency by its real field name and ignores envelope metadata
+
+## 29.7 running fallow at the version pinned in cerberus source
+
+A bare `pnpx fallow` floats to npm's latest and drifts per machine; the check invokes the exact version pinned in cerberus's `tool_pins` module, so every run — local or CI, any repo — analyzes with the same tool.
+
+### 29.7.1 invokes fallow at the pinned version
+
+## 29.8 capping inline itemization size for oversized reports
+
+Itemizing every offender inline is unreadable past a screenful, so both analyses cap how many lines they print: below the cap, itemization stays inline exactly as before; past it, the check stops itemizing and instead persists the already-parsed report to a gitignored `.reports/` directory under the repo root, failing with a single line that points at the file it wrote. Dead-code's `--verbose` gate still decides whether it itemizes at all — a non-verbose dead-code failure stays a bare count and rerun hint, and never writes a report, regardless of size.
+
+### 29.8.1 itemizes complexity offenders inline up to the cap
+
+### 29.8.2 persists the full health report and points to it once offenders exceed the cap
+
+### 29.8.3 itemizes dead-code issues inline up to the cap in verbose mode
+
+### 29.8.4 persists the full dead-code report and points to it once issues exceed the cap in verbose mode
+
+### 29.8.5 never persists a dead-code report without verbose even past the cap
+
+## 29.9 using measured test coverage
+
+### 29.9.1 passes measured Istanbul coverage only to the health analysis
+
+### 29.9.2 rejects missing coverage without falling back to other inputs
+
+### 29.9.3 disables CRAP without requiring coverage
+
+### 29.9.4 keeps source complexity failures when CRAP is off
+
+### 29.9.5 passes repository rule overrides to both analyses
+
+## 29.10 registering repository analysis inputs
+
+### 29.10.1 registers explicit runtime entry points in both analyses
+
+### 29.10.2 rejects missing or external runtime entry points
+
+### 29.10.3 rejects a coverage report outside the repository
+
+### 29.10.4 supports a repository specific coverage report path

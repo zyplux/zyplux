@@ -1,3 +1,5 @@
+"""Expose commands for running bites, classifying sources and exploring dependency graphs."""
+
 from __future__ import annotations
 
 import json
@@ -13,13 +15,13 @@ from rich.console import Console
 from rich.table import Table
 from typer.core import TyperGroup
 
-from cerberus import __version__, bites, config, context
+from cerberus import __version__, bite_registry, config, context
 from cerberus.graph import build as build_graph
 from cerberus.graph import explain_text, query_text
 from cerberus.graph import load as load_graph
 from cerberus.graph import write as write_graph
 from cerberus.model import CheckResult, Repo, Scope, Status
-from cerberus.stacks import has_source
+from cerberus.toolchain.source_languages import has_source
 
 if TYPE_CHECKING:
     import networkx as nx
@@ -66,25 +68,25 @@ CheckOpt = Annotated[list[str] | None, typer.Option("--check", help="Limit to na
 class _UnknownCheckError(typer.BadParameter):
     def __init__(self, check_id: str) -> None:
         message = (
-            f"retired bite `{check_id}`; use {bites.RETIRED[check_id]}"
-            if check_id in bites.RETIRED
-            else f"unknown bite `{check_id}` (known: {', '.join(bites.BY_ID)})"
+            f"retired bite `{check_id}`; use {bite_registry.RETIRED[check_id]}"
+            if check_id in bite_registry.RETIRED
+            else f"unknown bite `{check_id}` (known: {', '.join(bite_registry.BY_ID)})"
         )
         super().__init__(message)
 
 
-def _select_checks(only: list[str] | None) -> list[bites.Check]:
+def _select_checks(only: list[str] | None) -> list[bite_registry.Check]:
     if not only:
-        return list(bites.ALL)
+        return list(bite_registry.ALL)
     selected = []
     for cid in only:
-        if cid not in bites.BY_ID:
+        if cid not in bite_registry.BY_ID:
             raise _UnknownCheckError(cid)
-        selected.append(bites.BY_ID[cid])
+        selected.append(bite_registry.BY_ID[cid])
     return selected
 
 
-def _run_check(check: bites.Check, repo: Repo, ctx: Context) -> CheckResult:
+def _run_check(check: bite_registry.Check, repo: Repo, ctx: Context) -> CheckResult:
     try:
         if check.languages and not any(has_source(repo, ctx, language) for language in check.languages):
             skipped = CheckResult(check.id, repo.name)
@@ -119,7 +121,7 @@ def list_checks() -> None:
         Scope.CONTENT: "content",
         Scope.GIT_HISTORY: "git-history",
     }
-    for chk in bites.ALL:
+    for chk in bite_registry.ALL:
         table.add_row(chk.id, scope_label[chk.scope], chk.summary)
     console.print(table)
 
@@ -156,7 +158,7 @@ def lint(
     selected = _select_checks(check)
     ctx = context.local_context(config.load(), path, fix=fix, verbose=verbose, config_path=config_path)
     repo = ctx.repos()[0]
-    schema_result = _run_check(bites.BY_ID["cerberus_schema"], repo, ctx)
+    schema_result = _run_check(bite_registry.BY_ID["cerberus_schema"], repo, ctx)
     if schema_result.problems:
         _render_lint(repo, [schema_result], verbose=verbose)
         raise typer.Exit(code=1)

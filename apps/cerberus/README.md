@@ -6,9 +6,11 @@ The repository guard and shared source classifier. Verifies invariants for zyplu
 
 - [`uv`](https://docs.astral.sh/uv/) and Python 3.14
 
-The `justfile` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd` and `fallow` bites run their tools via `pnpx` at exact versions pinned in [`tool_pins.py`](src/cerberus/tool_pins.py), so every cerberus release measures with the same tools everywhere; `pnpm` must be on PATH.
+The `justfile` bite shells out to `just`, which ships with the package (via [`rust-just`](https://pypi.org/project/rust-just/)) — no separate install. The `jscpd` and `fallow` bites run their tools via `pnpx` at exact versions pinned in [`pnpm_policy.py`](src/cerberus/toolchain/pnpm_policy.py), so every cerberus release measures with the same tools everywhere; `pnpm` must be on PATH.
 
 Source checks use tracked and unignored files: TypeScript checks require `.ts`, `.tsx`, `.mts` or `.cts` files, and Python checks require `.py` or `.pyi` files. Executable TypeScript tool configuration counts as source. Manifests used only to install tooling do not require application lint, typecheck or test steps. Ruff, Knip, Pyrefly and pytest configuration stays optional without source; supplied configuration must satisfy the same invariants. Package metadata, dependency, CI and Markdown checks still apply.
+
+Every repository with a package manifest runs `pnpm run lint:workflows` in CI and its local lint recipe, including configuration-only repositories. The script runs actionlint with locked ShellCheck and Pyflakes integrations.
 
 CI uses one unquoted canonical command with literal arguments per `run` step. Python tool calls use `uv run --no-sync`; Prettier uses `pnpm exec prettier --check`.
 
@@ -63,7 +65,8 @@ A repo switches a bite off with `off = true` in that bite's `cerberus.toml` tabl
 | `consistent_workspace_project_references` | content | Workspace TypeScript projects reference their compiled dependencies once |
 | `no_worker_filesystem_imports` | content | First-party Worker runtime imports avoid filesystem builtins |
 | `pnpm_release_age` | content | pnpm waits one day before installing new third-party releases; only `@zyplux/*` packages may be exempt |
-| `story_tests_lockstep_py`      | content     | `tests/**/stories/**/*.md` criteria have a matching, title-matched pytest test          |
+| `unique_test_ids`             | content     | Test file IDs are unique across languages and case IDs match their files               |
+| `story_tests_lockstep_py`      | content     | Python story criteria have a matching, title-matched pytest test          |
 | `story_tests_lockstep_ts`      | content     | Each TypeScript story directory pairs numeric or prefixed criterion IDs with tests          |
 | `cli_py_test_seam`             | content     | CLI apps' story tests import only their root module or cli entry module              |
 | `lib_py_test_seam`             | content     | Libraries' story tests import only their root module                                |
@@ -131,7 +134,7 @@ Python callers use `load_source_oracle(repo_root).classify(relative_path)` from 
 
 `zyplux_deps_latest` queries npm, PyPI, and GHCR at lint time; a failed lookup is reported as an error, never a silent pass. It has no `--fix` — run `just upgrade` to catch up.
 
-`tool_pins_latest` requires the newest stable jscpd/fallow versions eligible under pnpm's one-day release quarantine. It runs only in the repo carrying `tool_pins.py`; consumers receive updated pins through Cerberus releases.
+`tool_pins_latest` requires the newest stable jscpd/fallow versions eligible under pnpm's one-day release quarantine. It runs only in the repo carrying `pnpm_policy.py`; consumers receive updated pins through Cerberus releases.
 
 ## Package and source checks
 
@@ -142,3 +145,11 @@ Worker traversal covers first-party static imports and literal dynamic imports. 
 Side-effect detection checks registration and initialization in workspace source modules against package-relative `sideEffects` paths. Packages publishing compiled files use patterns that also cover their compiled modules. The check cannot prove an arbitrary dependency graph pure.
 
 Vitest coverage resolves exported literal objects and local constants, including `defineConfig` and its direct-return callbacks, without executing configuration code. Every metric meets the configured floor, and collection is enabled through `test.coverage.enabled: true` or the root test script's coverage flag.
+
+## Story tests
+
+Test files start with a repo-wide ID made of a number and up to two optional lowercase letters. For example, use `2_subject_test.py` for Python and `a2-subject.test.ts` for TypeScript. Both bare and prefixed IDs share the same namespace. Start a pytest function with `test_2_1_` or a Vitest title with `a2.1` to identify its case.
+
+Use a literal case ID in each Vitest title. Table-driven cases can format one part of the ID from a literal row or the row index.
+
+A story test starts with `# @story` in Python or `// @story` in TypeScript. Keep the story document beside its test, link the Markdown title to the test file, and use the same case IDs in the criterion headings.

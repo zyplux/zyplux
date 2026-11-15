@@ -1,0 +1,405 @@
+"""Trusted seam boundary for cerberus's own story tests.
+
+`cerberus.story_tests.python_test_imports` forbids a story test file from importing
+`cerberus` internals beyond the root package's public surface
+and, for cli apps, `cerberus.cli`'s public surface — see that module's
+docstring for the exact rule. Only Python story test files are scanned, and
+their `if TYPE_CHECKING:` imports are exempt (mirroring how the TS seam check
+trusts an alias target's own imports), so this module — re-exported by
+`conftest.py`, the same layout as `tests/totchef` — is the one
+sanctioned place a story test's internal-access needs get satisfied. Story
+tests import this module's type aliases and double classes only under
+`TYPE_CHECKING`, for annotations.
+
+Every fixture below hands back either a ready-made value (a `Repo`, a built
+`Context`, a `CheckResult` from actually running a check), a factory for one
+(`ok`/`fail`/`skip`/`error` build a `Finding` of that status), or an internal
+class/enum itself (`Status`, `Scope`) as a fixture return value — never as
+something a story test would need a runtime `import` statement to reach.
+Checks are always selected by their id STRING (`bite_registry.BY_ID[check_id]`), so
+a story test never names — and therefore never imports — the check submodule
+it exercises.
+"""
+
+from __future__ import annotations
+
+import subprocess
+from dataclasses import dataclass, field
+from functools import partial
+from pathlib import Path
+from typing import TYPE_CHECKING, Protocol
+from urllib.parse import quote
+
+import httpx
+import pytest
+from airlock import proc as airlock_proc
+from airlock import registries
+from cerberus import bite_registry, config, context
+from cerberus.graph import search as _graph_search
+from cerberus.model import CheckResult, Finding, Repo, Scope, Status
+from cerberus.repository.source_files import GitHistoryUnavailableError, LocalSource
+from cerberus.toolchain import pnpm_policy, subprocess_runner
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from types import ModuleType
+
+    from cerberus.context import Context
+
+type RunCheck = Callable[[str, Repo, Context], CheckResult]
+
+
+class RunCheckWithFiles(Protocol):
+    """Run a check by id against virtual file content, optionally under a repo cerberus.toml overlay."""
+
+    def __call__(self, check_id: str, files: dict[str, str], config_toml: str | None = None) -> CheckResult: ...
+
+
+type RunCheckWithWorkflows = Callable[[str, dict[str, str]], CheckResult]
+type RunCheckOnDisk = Callable[..., CheckResult]
+type MakeContext = Callable[..., Context]
+type RegisterFakeCheck = Callable[[str, Callable[[Repo, Context], CheckResult]], None]
+type MakeFinding = Callable[[str], Finding]
+type NpmToolSpec = Callable[[str], str]
+
+
+@pytest.fixture
+def repo() -> Repo:
+    return Repo("demo")
+
+
+@pytest.fixture
+def ctx() -> Context:
+    return context.local_context(config.load(), Path())
+
+
+@pytest.fixture
+def make_context() -> MakeContext:
+    def _make(root: Path, *, fix: bool = False, verbose: bool = False, config_path: Path | None = None) -> Context:
+        return context.local_context(config.load(config_path, repo_root=root), root, fix=fix, verbose=verbose)
+
+    return _make
+
+
+@pytest.fixture
+def run_check() -> RunCheck:
+    def _run(check_id: str, repo: Repo, ctx: Context) -> CheckResult:
+        return bite_registry.BY_ID[check_id].run(repo, ctx)
+
+    return _run
+
+
+@pytest.fixture
+def run_check_with_files(
+    repo: Repo, ctx: Context, run_check: RunCheck, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> RunCheckWithFiles:
+    """Run a check by id against virtual file content, keyed by repo-relative path.
+
+    A path absent from `files` reads as "file does not exist" (`None`), same as
+    a real repo missing that path. `ctx.paths` is also stubbed to enumerate
+    exactly this `files` mapping's keys, for checks that list a directory
+    (e.g. discovering workspace packages or story-test files) rather than
+    reading one known path. `config_toml` overlays the bundled cerberus
+    defaults, for checks whose verdict a repo may tune.
+    """
+
+    def _run(check_id: str, files: dict[str, str], config_toml: str | None = None) -> CheckResult:
+        def list_paths(_repo: Repo) -> list[str]:
+            return sorted(files)
+
+        def read_file(_repo: Repo, path: str) -> str | None:
+            return files.get(path)
+
+        monkeypatch.setattr(ctx, "paths", list_paths)
+        monkeypatch.setattr(ctx, "file", read_file)
+        if config_toml is not None:
+            overlay = tmp_path / "cerberus.toml"
+            overlay.write_text(config_toml)
+            monkeypatch.setattr(ctx, "config", config.load(overlay))
+        return run_check(check_id, repo, ctx)
+
+    return _run
+
+
+@pytest.fixture
+def run_check_with_workflows(
+    repo: Repo, ctx: Context, run_check: RunCheck, monkeypatch: pytest.MonkeyPatch
+) -> RunCheckWithWorkflows:
+    """Run a check by id against virtual workflow content, keyed by workflow file name."""
+
+    def _run(check_id: str, workflows: dict[str, str]) -> CheckResult:
+        def read_workflows(_repo: Repo) -> dict[str, str]:
+            return workflows
+
+        monkeypatch.setattr(ctx, "workflows", read_workflows)
+        return run_check(check_id, repo, ctx)
+
+    return _run
+
+
+@pytest.fixture
+def run_check_on_disk(tmp_path: Path, make_context: MakeContext, run_check: RunCheck) -> RunCheckOnDisk:
+    """Run a check by id against real files on disk — the `--fix` / real-repo variant.
+
+    Writes `files` (repo-relative path -> content) under a fresh `tmp_path`
+    before running, so a fixing check can rewrite them and the test can then
+    read the result back off disk.
+    """
+
+    def _run(check_id: str, files: dict[str, str], *, fix: bool = False) -> CheckResult:
+        for path, content in files.items():
+            target = tmp_path / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content)
+        disk_ctx = make_context(tmp_path, fix=fix)
+        return run_check(check_id, disk_ctx.repos()[0], disk_ctx)
+
+    return _run
+
+
+@pytest.fixture
+def register_fake_check(monkeypatch: pytest.MonkeyPatch) -> RegisterFakeCheck:
+    """Swap a registered check's `run` callable for a fake, keeping its id/summary/scope."""
+
+    def _register(check_id: str, run: Callable[[Repo, Context], CheckResult]) -> None:
+        original = bite_registry.BY_ID[check_id]
+        fake = bite_registry.Check(original.id, original.summary, original.scope, run)
+        monkeypatch.setitem(bite_registry.BY_ID, check_id, fake)
+
+    return _register
+
+
+@pytest.fixture
+def ok() -> MakeFinding:
+    return partial(Finding, Status.PASS)
+
+
+@pytest.fixture
+def fail() -> MakeFinding:
+    return partial(Finding, Status.FAIL)
+
+
+@pytest.fixture
+def skip() -> MakeFinding:
+    return partial(Finding, Status.SKIP)
+
+
+@pytest.fixture
+def error() -> MakeFinding:
+    return partial(Finding, Status.ERROR)
+
+
+@pytest.fixture
+def status() -> type[Status]:
+    return Status
+
+
+@pytest.fixture
+def check_result() -> type[CheckResult]:
+    return CheckResult
+
+
+@pytest.fixture
+def scope() -> type[Scope]:
+    return Scope
+
+
+@pytest.fixture
+def git_history_unavailable_error() -> type[GitHistoryUnavailableError]:
+    return GitHistoryUnavailableError
+
+
+@pytest.fixture
+def local_source() -> type[LocalSource]:
+    return LocalSource
+
+
+@pytest.fixture
+def graph_search() -> ModuleType:
+    return _graph_search
+
+
+@pytest.fixture
+def no_git(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch away the `git` binary so a story test can exercise the git-unavailable path."""
+
+    def find_nothing(_tool: str) -> str | None:
+        return None
+
+    monkeypatch.setattr(subprocess_runner.shutil, "which", find_nothing)
+
+
+@pytest.fixture
+def rumdl_canonical() -> str:
+    return config.load().rumdl_canonical
+
+
+@pytest.fixture
+def bite_module_names() -> dict[str, str]:
+    return {check.id: check.run.__module__.rsplit(".", 1)[-1].removesuffix("_bite") for check in bite_registry.ALL}
+
+
+@pytest.fixture
+def known_check_ids() -> tuple[str, ...]:
+    return tuple(bite_registry.BY_ID)
+
+
+@pytest.fixture
+def npm_tool_pins() -> dict[str, str]:
+    return dict(pnpm_policy.NPM_TOOL_PINS)
+
+
+@pytest.fixture
+def npm_tool_spec() -> NpmToolSpec:
+    return pnpm_policy.format_spec
+
+
+def _strip_pin(spec: str) -> str:
+    name = spec.rpartition("@")[0]
+    return name or spec
+
+
+@dataclass
+class FakeProc:
+    """An in-memory double for `cerberus.toolchain.subprocess_runner`'s single subprocess boundary.
+
+    Outcomes are served per tool — the program a `pnpx <tool> ...` invocation
+    launches, or `argv[0]` itself for direct invocations; a version-pinned
+    spec (`tool@1.2.3`) is served under the bare tool name. A tool that runs
+    distinct subcommands can be served per subcommand via a `"tool subcommand"`
+    key. `output_files` are written into the directory the invocation names
+    after `--output`, mimicking tools that emit report files there.
+    `serve_report_file` writes to the single file path the invocation names
+    after `--output-file`, mimicking a tool that writes one named report file
+    rather than a directory of them — real fallow does this so a large report
+    never has to cross the subprocess stdout pipe. `config_snapshots` captures
+    the content of the file each invocation names after `--config` — checks
+    write that file into a temp dir that is gone by the time a test can look,
+    so the double reads it at call time.
+    """
+
+    outcomes: dict[str, subprocess.CompletedProcess[str]] = field(default_factory=dict)
+    served_output_files: dict[str, dict[str, str]] = field(default_factory=dict)
+    served_report_files: dict[str, str] = field(default_factory=dict)
+    calls: list[tuple[list[str], Path | None]] = field(default_factory=list)
+    config_snapshots: list[str] = field(default_factory=list)
+    missing: set[str] = field(default_factory=set)
+
+    def serve(
+        self,
+        tool: str,
+        *,
+        returncode: int = 0,
+        stdout: str = "",
+        stderr: str = "",
+        output_files: dict[str, str] | None = None,
+    ) -> None:
+        self.outcomes[tool] = subprocess.CompletedProcess([tool], returncode, stdout, stderr)
+        if output_files is not None:
+            self.served_output_files[tool] = dict(output_files)
+
+    def serve_report_file(self, tool: str, content: str) -> None:
+        self.served_report_files[tool] = content
+
+    def serve_missing(self, tool: str) -> None:
+        self.missing.add(tool)
+
+    def _write_output_files(self, tool: str, argv: list[str]) -> None:
+        files = self.served_output_files.get(tool)
+        if files is None or "--output" not in argv:
+            return
+        out_dir = Path(argv[argv.index("--output") + 1])
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for name, text in files.items():
+            (out_dir / name).write_text(text, encoding="utf-8")
+
+    def _write_report_file(self, tool: str, argv: list[str]) -> None:
+        content = self.served_report_files.get(tool)
+        if content is None or "--output-file" not in argv:
+            return
+        out_path = Path(argv[argv.index("--output-file") + 1])
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(content, encoding="utf-8")
+
+    def _snapshot_config_file(self, argv: list[str]) -> None:
+        if "--config" in argv:
+            self.config_snapshots.append(Path(argv[argv.index("--config") + 1]).read_text(encoding="utf-8"))
+
+    def run(self, argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        self.calls.append((list(argv), cwd))
+        if argv[0] in self.missing:
+            raise subprocess_runner.ToolNotFoundError(argv[0])
+        self._snapshot_config_file(argv)
+        launched = argv[1:] if argv[0] == "pnpx" and len(argv) > 1 else argv
+        launched_tool = _strip_pin(launched[0])
+        subcommand_key = " ".join([launched_tool, *launched[1:2]])
+        tool = subcommand_key if subcommand_key in self.outcomes else launched_tool
+        self._write_output_files(tool, argv)
+        self._write_report_file(tool, argv)
+        outcome = self.outcomes[tool]
+        return subprocess.CompletedProcess(argv, outcome.returncode, outcome.stdout, outcome.stderr)
+
+
+@pytest.fixture
+def fake_proc(monkeypatch: pytest.MonkeyPatch) -> FakeProc:
+    fake = FakeProc()
+    monkeypatch.setattr(subprocess_runner, "run", fake.run)
+    return fake
+
+
+@dataclass
+class FakeRegistry:
+    """Registry responses served through the shared HTTP transport."""
+
+    payloads: dict[tuple[str, str], object] = field(default_factory=dict)
+    requests: list[tuple[str, str]] = field(default_factory=list)
+    request_headers: list[dict[str, str]] = field(default_factory=list)
+
+    def serve_npm(
+        self,
+        package: str,
+        latest: str,
+        *,
+        host: str = "registry.npmjs.org",
+        release_times: dict[str, str] | None = None,
+    ) -> None:
+        encoded = quote(package, safe="")
+        release_times = {latest: "2000-01-01T00:00:00Z"} if release_times is None else release_times
+        self.payloads[host, f"/{encoded}"] = {
+            "dist-tags": {"latest": latest},
+            "versions": {version: {} for version in release_times},
+            "time": release_times,
+        }
+
+    def serve_pypi(self, distribution: str, latest: str) -> None:
+        self.payloads["pypi.org", f"/pypi/{distribution}/json"] = {"info": {"version": latest}}
+
+    def serve_ghcr(self, image: str, tags: list[str]) -> None:
+        self.payloads["ghcr.io", f"/token?service=ghcr.io&scope=repository:{image}:pull"] = {"token": "anonymous"}
+        self.payloads["ghcr.io", f"/v2/{image}/tags/list"] = {"tags": tags}
+
+    def respond(self, request: httpx.Request) -> httpx.Response:
+        host, path = request.url.host, request.url.raw_path.decode()
+        self.requests.append((host, path))
+        self.request_headers.append(dict(request.headers))
+        if (host, path) not in self.payloads:
+            failure = f"https://{host}{path}: connection refused"
+            raise httpx.ConnectError(failure, request=request)
+        return httpx.Response(200, json=self.payloads[host, path], request=request)
+
+
+@pytest.fixture
+def fake_registry(monkeypatch: pytest.MonkeyPatch, fake_proc: FakeProc) -> FakeRegistry:
+    def run(*argv: str) -> str:
+        execution = fake_proc.run(list(argv))
+        if execution.returncode:
+            raise airlock_proc.CommandError(argv, execution)
+        return execution.stdout.strip()
+
+    for name in ("NODE_AUTH_TOKEN", "GH_TOKEN", "GITHUB_TOKEN", "GITHUB_ACTOR"):
+        monkeypatch.delenv(name, raising=False)
+    fake_proc.serve("gh auth", returncode=1)
+    fake = FakeRegistry()
+    monkeypatch.setattr(airlock_proc, "run", run)
+    monkeypatch.setattr(registries.httpx, "Client", partial(httpx.Client, transport=httpx.MockTransport(fake.respond)))
+    return fake

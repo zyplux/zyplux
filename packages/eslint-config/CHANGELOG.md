@@ -1,5 +1,11 @@
 # @zyplux/eslint-config
 
+## 0.12.5
+
+### Patch Changes
+
+- Resolve fixture aliases against the suite API regardless of where story tests are stored.
+
 ## 0.12.4
 
 ### Patch Changes

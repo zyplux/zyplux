@@ -1,9 +1,11 @@
+"""Require a version bump when published release inputs change."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from cerberus.model import CheckResult, Scope
-from cerberus.release_surface import check_release_surface
+from cerberus.repository.release_version_policy import check_release_surface
 
 if TYPE_CHECKING:
     from cerberus.context import Context
