@@ -604,6 +604,9 @@ def test_8_8_8_rejects_workflow_concurrency_even_with_guarded_job_concurrency(
     [
         ("lint:eslint", "eslint . --cache", True),
         ("lint:eslint", "eslint . --fix", False),
+        ("lint:eslint", "eslint . --fix=true", False),
+        ("lint:eslint", "eslint . --fix-dry-run=true", False),
+        ("lint:eslint", "eslint . --fix=false --fix-dry-run=false", True),
         ("lint", "eslint . --cache", True),
         ("lint", "eslint . --cache || true", False),
         ("lint", "echo eslint .", False),

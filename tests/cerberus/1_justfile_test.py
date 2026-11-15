@@ -605,7 +605,12 @@ def test_1_10_15_rejects_pyrefly_warning_threshold_overrides(run_justfile_check:
 @requires_just
 @pytest.mark.parametrize(
     ("masked_tool", "missing_command"),
-    [("", ""), ("ruff", "uv run ruff check --fix"), ("eslint", "pnpm run lint:fix")],
+    [
+        ("", ""),
+        ("ruff", "uv run ruff check --fix"),
+        ("eslint", "pnpm run lint:fix"),
+        ("eslint comment", "pnpm run lint:fix"),
+    ],
 )
 def test_1_10_16_follows_pnpm_scripts_when_they_preserve_failures(
     run_check_with_files: RunCheckWithFiles, masked_tool: str, missing_command: str
@@ -616,7 +621,9 @@ def test_1_10_16_follows_pnpm_scripts_when_they_preserve_failures(
             "pnpm run lint:workflows && pnpm run lint:fix && pnpm run format:prettier "
             "&& uv run rumdl check --fix && uv run rumdl fmt && pnpm run lint:python && uv run ruff format"
         ),
-        "lint:fix": "eslint . --fix" + (" || true" if masked_tool == "eslint" else ""),
+        "lint:fix": "pnpm run lint:eslint --fix",
+        "lint:eslint": "eslint ."
+        + {"eslint": " || true", "eslint comment": " # Forwarded arguments land here"}.get(masked_tool, ""),
         "format:prettier": "prettier --write .",
         "lint:python": "uv run ruff check --fix" + (" || true" if masked_tool == "ruff" else ""),
         "typecheck": "pnpm run typecheck:ts && uv run pyrefly check",

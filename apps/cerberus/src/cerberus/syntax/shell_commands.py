@@ -25,6 +25,8 @@ _SCRIPT_TOOLS = {
     "typecheck": ("tsc",),
 }
 _PNPM_BINARIES = {command[0] for command in _SCRIPT_TOOLS.values()}
+_ESLINT_FIX_FLAGS = {"--fix", "--fix-dry-run"}
+_ENABLED_ESLINT_FIX_FLAGS = {f"{flag}=true": flag for flag in _ESLINT_FIX_FLAGS}
 
 
 def strip_comment_lines(script: str) -> str:
@@ -51,11 +53,11 @@ def matches_tool_command(command: tuple[str, ...], required: tuple[str, ...]) ->
         return False
     match required, command:
         case ("pnpm", "run", script, *options), ("pnpm", "exec", *invocation) if script in _SCRIPT_TOOLS:
-            if (script == "lint" and {"--fix", "--fix-dry-run"}.intersection(invocation)) or (
-                script == "typecheck" and not {"-b", "--build"}.intersection(invocation)
+            command = tuple(_ENABLED_ESLINT_FIX_FLAGS.get(arg, arg) for arg in invocation)
+            if (script == "lint" and _ESLINT_FIX_FLAGS.intersection(command)) or (
+                script == "typecheck" and not {"-b", "--build"}.intersection(command)
             ):
                 return False
-            command = tuple(invocation)
             required = (*_SCRIPT_TOOLS[script], *options)
     if required[:2] in {("uv", "run"), ("pnpm", "run")} and command[:3] != required[:3]:
         return False
@@ -122,7 +124,10 @@ def read_pnpm_scripts(manifest: str) -> dict[str, str]:
 
 
 def _list_and_commands(node: Node) -> list[tuple[str, ...]]:
-    match node.type, node.children:
+    children = [child for child in node.children if child.type != "comment"]
+    match node.type, children:
+        case "program", [statement]:
+            return _list_and_commands(statement)
         case "command", _:
             args = list_command_args(node)
             return [args] if args and args[0] not in {"exit", "return", "exec", "set", "trap"} else []
@@ -143,13 +148,11 @@ def expand_pnpm_command(
                 yield command
             if name in ancestors:
                 return
-            root = get_shell_parser().parse(scripts[name].encode()).root_node
-            if root.has_error or len(root.children) != 1:
+            source = f"{scripts[name]} {shlex.join(args)}"
+            root = get_shell_parser().parse(source.encode()).root_node
+            if root.has_error:
                 return
-            commands = _list_and_commands(root.children[0])
-            if commands:
-                commands[-1] += tuple(args)
-            for child in commands:
+            for child in _list_and_commands(root):
                 invocation = ("pnpm", "exec", *child) if child[0] in _PNPM_BINARIES else child
                 yield from expand_pnpm_command(invocation, scripts, ancestors | {name})
         case _:
