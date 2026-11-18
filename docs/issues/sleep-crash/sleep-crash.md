@@ -57,4 +57,5 @@ systemctl is-enabled nvidia-suspend.service nvidia-resume.service nvidia-hiberna
    ```
 
 2. Reproduce, inspect `/var/crash/` (kdump from `linux-crashdump`).
+
 3. File on Launchpad against `linux` with `journalctl -k -b -1` excerpt.
