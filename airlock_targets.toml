@@ -2,7 +2,7 @@
 
 [airlock]
 manifest = "apps/airlock/pyproject.toml"
-hash = "sha256:v2:d28a7fc1413cf0de8a055566df3b5022e18c24af1e7eaa623ed32b0285af41bb"
+hash = "sha256:v2:d1e40f97ec2cdb484ba609d0bdff2fe33ebb99b455a141d476fc92d574808ee6"
 
 [action-airlock]
 kind = "action"
@@ -18,7 +18,7 @@ hash = "sha256:7095622604b1adc02db128797f43657e05bb742cb4c33529b9af3e3c87b86857"
 
 [eslint-config]
 manifest = "packages/eslint-config/package.json"
-hash = "sha256:v2:839ad9c26322fadfd05968d8fd9bd9c19e13e3a227f07043b98b6e74d5a8b065"
+hash = "sha256:v2:66da6a8fc661e86cf8592d294239f6d3713531984a77e7c037554f042688688b"
 depends_on = ["util"]
 
 [tsconfig]
@@ -31,25 +31,25 @@ hash = "sha256:v2:1f5b1aa461f2c4abbe68e1fea01530f05679921349e98f1c1618d7e82ae586
 
 [spectra]
 manifest = "packages/spectra/package.json"
-hash = "sha256:v2:f9a597731dfbb7259b6d380155a6eb52c4846053e57c20fa8484b204e0a56a3c"
+hash = "sha256:v2:9397e521efde11701713dc9307b50f19a5eeed88fd9b356431c380d7288e25ca"
 
 [cz]
 manifest = "apps/cz/package.json"
-hash = "sha256:v2:be415f04a17f8d6ee32a16513a6a21988c4014411b4bbe654a67da533e6bc9b0"
+hash = "sha256:v2:23220bd55828892f1bbbcd12e38abe85783488e7b562d7ac771bd07f6f331c62"
 depends_on = ["util"]
 
 [cerberus]
 manifest = "apps/cerberus/pyproject.toml"
-hash = "sha256:v2:fb6850341a00144ed4efcf6eabdfef6c57548dcab0a4a66383542082599d2694"
+hash = "sha256:v2:9d563f96a23f22830dbd54d0106be623acef1319d095dd8b6d2e2d34284973a8"
 depends_on = ["airlock"]
 
 [totchef]
 manifest = "apps/totchef/pyproject.toml"
-hash = "sha256:v2:b62af65bbfcb3d0f82f9c2bd445f72578995caea850385573abce11d01370fd7"
+hash = "sha256:v2:9fb4f508fd5b80a6e1f3a07d729af7f6980ef5626296cb6c1c0ab547f7f66ac9"
 
 [clipy]
 manifest = "apps/clipy/pyproject.toml"
-hash = "sha256:v2:c9ae25fd16dcebf31465201e6a81356024f33ae2f9db000fd281facfa62ff226"
+hash = "sha256:v2:98b54f6187c1971f005c036363e465b35a75d3d5ebd9ad2cb4484a702228716b"
 depends_on = ["airlock", "cerberus"]
 
 [config-to-kv]

@@ -6,7 +6,7 @@ RELEASE_AGE_MINUTES = 1440
 
 NPM_TOOL_PINS: dict[str, str] = {
     "jscpd": "5.4.3",
-    "fallow": "3.43.0",
+    "fallow": "3.43.2",
 }
 
 

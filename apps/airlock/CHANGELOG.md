@@ -1,5 +1,11 @@
 # zyplux-airlock
 
+## 2.2.5
+
+### Patch Changes
+
+- Require Typer 0.29.2 or later for the CLI.
+
 ## 2.2.4
 
 ### Patch Changes

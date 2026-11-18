@@ -1,5 +1,11 @@
 # zyplux-cerberus
 
+## 0.29.2
+
+### Patch Changes
+
+- Run Fallow 3.43.2 and require Typer 0.29.2 or later.
+
 ## 0.29.1
 
 ### Patch Changes

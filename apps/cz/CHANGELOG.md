@@ -1,5 +1,11 @@
 # @zyplux/cz
 
+## 1.0.1
+
+### Patch Changes
+
+- Update the Optique CLI parser to 1.3.7.
+
 ## 1.0.0
 
 ### Major Changes

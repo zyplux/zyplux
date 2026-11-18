@@ -33,6 +33,10 @@
   dir: apps/cz
   intents:
     - quiet-melons-rush
+'@zyplux/cz@1.0.1':
+  dir: apps/cz
+  intents:
+    - optique-patch
 '@zyplux/eslint-config@0.12.2':
   dir: packages/eslint-config
   intents:
@@ -49,6 +53,10 @@
   dir: packages/eslint-config
   intents:
     - resolve-suite-fixtures
+'@zyplux/eslint-config@0.12.6':
+  dir: packages/eslint-config
+  intents:
+    - eslint-plugins
 '@zyplux/spectra@0.4.0':
   dir: packages/spectra
   intents:
@@ -57,6 +65,10 @@
   dir: packages/spectra
   intents:
     - purple-insects-deliver
+'@zyplux/spectra@0.4.2':
+  dir: packages/spectra
+  intents:
+    - spawn-options
 '@zyplux/util@0.9.4':
   dir: packages/util-ts
   intents:
@@ -69,6 +81,10 @@ totchef@0.0.11:
   dir: apps/totchef
   intents:
     - python-runtime-upgrades
+totchef@0.0.12:
+  dir: apps/totchef
+  intents:
+    - apt-report
 zyplux-airlock@2.0.0:
   dir: apps/airlock
   intents:
@@ -106,6 +122,10 @@ zyplux-airlock@2.2.4:
   dir: apps/airlock
   intents:
     - python-runtime-upgrades
+zyplux-airlock@2.2.5:
+  dir: apps/airlock
+  intents:
+    - airlock-typer
 zyplux-cerberus@0.25.1:
   dir: apps/cerberus
   intents:
@@ -171,6 +191,10 @@ zyplux-cerberus@0.29.1:
   dir: apps/cerberus
   intents:
     - silly-birds-move
+zyplux-cerberus@0.29.2:
+  dir: apps/cerberus
+  intents:
+    - fallow-3-43-2
 zyplux-clipy@0.1.0:
   dir: apps/clipy
   intents:
@@ -191,6 +215,10 @@ zyplux-clipy@0.2.1:
   dir: apps/clipy
   intents:
     - python-runtime-upgrades
+zyplux-clipy@0.2.2:
+  dir: apps/clipy
+  intents:
+    - clipy-dependencies
 zyplux-config-to-kv@1.0.1:
   dir: apps/action-config-to-kv
   intents:
