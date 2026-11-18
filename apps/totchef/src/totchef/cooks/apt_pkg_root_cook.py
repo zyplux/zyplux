@@ -125,6 +125,11 @@ class AptPkgCook(PackageListCook):
         return {p: (None if (c := self._get_policy(p)["candidate"]) == "(none)" else c) for p in names}
 
     @override
+    def read_report_versions(self, latest: dict[str, str | None]) -> tuple[dict[str, str], dict[str, str | None]]:
+        installed = self.list_installed()
+        return installed, self.find_latest(self.packages)
+
+    @override
     def sync(self, to_install: list[str], to_upgrade: list[str]) -> SyncOutcome:
         nala("update", note="Refreshing apt cache")
         # `nala list --upgradable` exits 1 when nothing matches (grep convention).

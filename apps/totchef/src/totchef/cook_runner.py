@@ -174,7 +174,7 @@ def run_versioned(cook: VersionedCook, section: str, *, dry_run: bool) -> CookRe
     if result.delayed_message:
         logger.info(result.delayed_message)
 
-    installed_after = cook.list_installed()
+    installed_after, latest = cook.read_report_versions(latest)
     rows = [
         _synced_row(
             name,

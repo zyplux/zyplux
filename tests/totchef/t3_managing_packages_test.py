@@ -32,7 +32,7 @@ def test_t3_1_1_apt_pkg_installed_via_nala_full_transaction(
 ) -> None:
     """`[apt_pkg]` installs/upgrades via nala (update, full-upgrade, install, autoremove)."""
     recipe.declares("apt_pkg", packages=["git"])
-    terminal.arrange("apt-cache policy git", POLICY_ABSENT)
+    terminal.arrange("apt-cache policy git", POLICY_ABSENT.replace("1:2.40-1", "1:2.39-1"))
 
     def mark_git_installed() -> None:
         terminal.arrange("apt-cache policy git", POLICY_PRESENT)
@@ -41,7 +41,7 @@ def test_t3_1_1_apt_pkg_installed_via_nala_full_transaction(
 
     report = totchef.up()
 
-    report.assert_shows("apt_pkg.git", "installed")
+    assert 'apt_pkg.git,(none),"1:2.40-1","1:2.40-1",installed' in report.full_table
     report.assert_succeeded()
     terminal.expect_ran("nala update")
     terminal.expect_ran("nala full-upgrade")

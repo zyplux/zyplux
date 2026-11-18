@@ -147,6 +147,10 @@ class VersionedCook(CookBase):
     def find_latest(self, names: list[str]) -> dict[str, str | None]:
         raise NotImplementedError
 
+    def read_report_versions(self, latest: dict[str, str | None]) -> tuple[dict[str, str], dict[str, str | None]]:
+        """Read installed versions after sync and reuse the known upstream versions."""
+        return self.list_installed(), latest
+
     @staticmethod
     def list_reportable(requested: list[str], _installed_after: dict[str, str], /) -> list[str]:
         """Row keys for the post-sync report — requested names by default; overridden by cooks splitting finer items."""
