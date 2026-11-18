@@ -1,5 +1,11 @@
 # zyplux-clipy
 
+## 0.2.2
+
+### Patch Changes
+
+- Require Cerberus 0.29.1 and Typer 0.29.2 or later.
+
 ## 0.2.1
 
 ### Patch Changes

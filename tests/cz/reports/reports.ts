@@ -7,27 +7,36 @@ import path from 'node:path';
 
 import { workspaceTest } from '#workspace-test';
 
+export type DependencyField = 'dependencies' | 'devDependencies' | 'optionalDependencies' | 'peerDependencies';
+
 const createReports = (tempDir: TempDir, shell: ShellFake) => {
-  type Classification = SourceSnapshot[string];
+  type Classification = Partial<Pick<SourceSnapshot[string], 'is_test' | 'kind'>>;
+  type PackageOptions = Partial<Record<DependencyField, Record<string, string>>> & { classification?: Classification };
   const files: SourceSnapshot = {};
   shell.on('git rev-parse --show-toplevel', tempDir.path);
   shell.on('uv run --no-sync cerberus source-oracle', () => JSON.stringify(files));
+
+  const writeFile = (
+    file: string,
+    content: string,
+    root: string,
+    { is_test: isTest = false, kind = 'prod' }: Classification = {},
+  ) => {
+    files[file] = { is_test: isTest, kind, needs_tests: true, root };
+    return tempDir.write(file, content);
+  };
+
   return {
     graph: () => readFile(path.join(tempDir.path, 'WORKSPACE_GRAPH.md'), 'utf8'),
-    write: async (file: string, content: string, classification: Partial<Classification> = {}) => {
-      files[file] = { is_test: false, kind: 'prod', needs_tests: true, root: '.', ...classification };
-      return tempDir.write(file, content);
-    },
-    writePackage: async (
-      directory: string,
-      name: string,
-      dependencies = {},
-      classification: Partial<Classification> = {},
-    ) => {
-      const file = path.posix.join(directory, 'package.json');
-      files[file] = { is_test: false, kind: 'prod', needs_tests: true, root: directory, ...classification };
-      return tempDir.write(file, JSON.stringify({ name, version: '1.0.0', ...dependencies }));
-    },
+    write: (file: string, content: string, classification?: Classification) =>
+      writeFile(file, content, '.', classification),
+    writePackage: (directory: string, name: string, { classification, ...dependencies }: PackageOptions = {}) =>
+      writeFile(
+        path.posix.join(directory, 'package.json'),
+        JSON.stringify({ name, version: '1.0.0', ...dependencies }),
+        directory,
+        classification,
+      ),
   };
 };
 

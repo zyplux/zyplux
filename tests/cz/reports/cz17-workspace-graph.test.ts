@@ -1,10 +1,10 @@
 // @story
-import type { ReportRepo } from './reports.ts';
+import type { DependencyField, ReportRepo } from './reports.ts';
 
 import { describe, expect, test } from './reports.ts';
 
 const seedWorkspaces = async (reports: ReportRepo) => {
-  await reports.writePackage('.', 'root-project', {}, { kind: 'infra' });
+  await reports.writePackage('.', 'root-project', { classification: { kind: 'infra' } });
   await reports.write('pnpm-workspace.yaml', 'packages: ["apps/*", "packages/*", "tests/*"]\n');
   for (const name of ['one', 'two', 'three']) await reports.writePackage(`packages/${name}`, `@acme/${name}`);
 };
@@ -22,14 +22,14 @@ const assertEdge = (report: string, source: string, dependency: string, isType =
 };
 
 describe('cz17.1 reading workspace dependencies', () => {
-  test.for(['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'])(
+  test.for(['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'] satisfies DependencyField[])(
     'cz17.1.1 excludes development workspace dependencies (%s)',
     async (field, { cz, reports }) => {
       await seedWorkspaces(reports);
       await reports.writePackage('apps/server', '@acme/server', {
         [field]: { '@acme/one': 'workspace:*', external: '1' },
       });
-      await reports.writePackage('tests/server', 'server-tests', {}, { is_test: true, kind: 'test' });
+      await reports.writePackage('tests/server', 'server-tests', { classification: { is_test: true, kind: 'test' } });
       await reports.writePackage('unregistered', 'unknown');
       await cz.run('workspace-graph');
       const report = await reports.graph();
@@ -68,7 +68,7 @@ describe('cz17.1 reading workspace dependencies', () => {
   test('cz17.1.3 includes Python requirements and merges dual manifests', async ({ cz, reports }) => {
     await seedWorkspaces(reports);
     await reports.write('pyproject.toml', '[tool.uv.workspace]\nmembers = ["infra/*", "tools/*"]\n', { kind: 'infra' });
-    await reports.writePackage('infra/service', '@acme/service', {}, { kind: 'infra' });
+    await reports.writePackage('infra/service', '@acme/service', { classification: { kind: 'infra' } });
     await reports.write('pnpm-workspace.yaml', 'packages: ["infra/*", "packages/*"]\n');
     await reports.write(
       'infra/service/pyproject.toml',
@@ -85,12 +85,10 @@ describe('cz17.1 reading workspace dependencies', () => {
 
   test('cz17.1.4 includes root projects and excludes development requirements', async ({ cz, reports }) => {
     await seedWorkspaces(reports);
-    await reports.writePackage(
-      '.',
-      'root-project',
-      { devDependencies: { '@acme/one': 'workspace:*' } },
-      { kind: 'infra' },
-    );
+    await reports.writePackage('.', 'root-project', {
+      classification: { kind: 'infra' },
+      devDependencies: { '@acme/one': 'workspace:*' },
+    });
     await reports.write(
       'pyproject.toml',
       '[project]\nname = "root-python"\n[project.optional-dependencies]\nextra = ["Acme_Util"]\n[dependency-groups]\ndev = ["other", {include-group = "extra"}]\n[tool.uv]\ndev-dependencies = ["other"]\n[tool.uv.workspace]\nmembers = ["tools/*"]\n',
@@ -111,7 +109,7 @@ describe('cz17.2 rendering the shared classification', () => {
   test('cz17.2.1 uses oracle categories and excludes demo and test workspaces', async ({ cz, reports }) => {
     await reports.write('pnpm-workspace.yaml', 'packages: ["custom/*"]\n');
     for (const kind of ['prod', 'infra', 'demo', 'docs', 'test', 'artifacts'] as const) {
-      await reports.writePackage(`custom/${kind}`, kind, {}, { is_test: kind === 'test', kind });
+      await reports.writePackage(`custom/${kind}`, kind, { classification: { is_test: kind === 'test', kind } });
     }
     await cz.run('workspace-graph');
     const report = await reports.graph();
@@ -123,7 +121,9 @@ describe('cz17.2 rendering the shared classification', () => {
   test('cz17.2.2 lists foundations and keeps reruns deterministic', async ({ cz, reports }) => {
     await seedWorkspaces(reports);
     for (const name of ['alpha', 'beta', 'gamma'])
-      await reports.writePackage(`apps/${name}`, `@acme/${name}`, { dependencies: { '@acme/one': 'workspace:*' } });
+      await reports.writePackage(`apps/${name}`, `@acme/${name}`, {
+        dependencies: { '@acme/one': 'workspace:*' },
+      });
     await cz.run('workspace-graph');
     const report = await reports.graph();
     expect(report).toContain('## Foundations');

@@ -1,5 +1,11 @@
 # @zyplux/spectra
 
+## 0.4.2
+
+### Patch Changes
+
+- Support options-only spawn calls in the shell fake, including options objects with a length property.
+
 ## 0.4.1
 
 ### Patch Changes

@@ -5,11 +5,11 @@ description = "Profile how differently tokenizers and the native compiler count 
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "numpy>=2.5.4",
+    "numpy>=2.5.5",
     "pathspec>=1.1.1",
     "polars>=2.1.0",
     "tiktoken>=0.14.0",
-    "typer>=0.29.1",
+    "typer>=0.29.2",
 ]
 
 [project.scripts]

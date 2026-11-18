@@ -1,5 +1,11 @@
 # @zyplux/eslint-config
 
+## 0.12.6
+
+### Patch Changes
+
+- Update ESLint plugins, including Unicorn 80 and its options-parameter rule.
+
 ## 0.12.5
 
 ### Patch Changes

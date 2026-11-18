@@ -109,14 +109,20 @@ export const createShellFake = (): ShellFake => {
     return typeof resolved === 'string' ? { exitCode: 0, stdout: resolved } : resolved;
   };
 
-  const spawnFake = (program: string, args: readonly string[] = [], options: SpawnOptions = {}) => {
-    const argv = [...args];
+  const spawnFake = (
+    program: string,
+    ...params: [args: readonly string[], options?: SpawnOptions] | [options?: SpawnOptions]
+  ) => {
+    const [argsOrOptions = {}, spawnOptions = {}] = params;
+    const hasArgs = Array.isArray(argsOrOptions);
+    const argv = hasArgs ? argsOrOptions.map(String) : [];
+    const options = hasArgs ? spawnOptions : argsOrOptions;
     const command = [program, ...argv].join(' ');
-    const overlay = envOverlay(options.env);
+    const overlay = envOverlay('env' in options ? options.env : undefined);
     const call: ShellCall = {
       argv,
       program,
-      ...(typeof options.cwd === 'string' && { cwd: options.cwd }),
+      ...('cwd' in options && typeof options.cwd === 'string' && { cwd: options.cwd }),
       ...(overlay !== undefined && { env: overlay }),
     };
     calls.push(call);

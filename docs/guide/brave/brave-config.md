@@ -30,7 +30,9 @@ That gives you the array of flag-name + variant-index strings the user toggled a
 There's no exported manifest. Two practical options:
 
 - **From the running browser:** load `brave://flags`, open DevTools, and either call `chrome.send('requestExperimentalFeatures')` (handled by Chromium's `FlagsUIHandler`) or scrape the DOM — each `<flags-experiment>` element carries the internal name, description, and the currently-selected option. Easiest if you launch with `--remote-debugging-port=9222` and drive it over CDP from outside the browser.
+
 - **From source:** the canonical list is `chrome/browser/about_flags.cc` plus Brave's additions in `browser/about_flags.cc` in the `brave-core` repo. That's where "default" is actually defined.
+
 - **Pre-captured snapshot:** [`brave-flags-default-dump.json`](brave-flags-default-dump.json) in this directory — DOM scrape of `brave://flags` on a vanilla Brave Linux install (verified unmodified per §2). 685 entries:
 
   ```json

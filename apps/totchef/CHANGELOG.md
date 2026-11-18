@@ -1,5 +1,11 @@
 # totchef
 
+## 0.0.12
+
+### Patch Changes
+
+- Report installed and candidate APT versions from the same post-upgrade lookup.
+
 ## 0.0.11
 
 ### Patch Changes

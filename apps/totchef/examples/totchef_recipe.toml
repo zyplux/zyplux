@@ -158,7 +158,20 @@ update_action = ["self", "update"]
 # which is only on PATH under sudo (cf. find_binary in the uv cook).
 [uv]
 depends_on = ["url.uv"]
-packages = ["ruff", "pyrefly", "graphifyy"]
+packages = ["ruff", "pyrefly", "graphifyy", "zyplux-clipy"]
+# Preserve standalone Clipy scripts installed by this recipe before uv claims their entry points.
+pre_hook = '''
+bin_dir="$(PATH="$PATH:$HOME/.local/bin" uv tool dir --bin)" || exit 0
+[[ "$bin_dir" == "$HOME/.local/bin" ]] || exit 0
+for command in ctop justpty; do
+    file="$bin_dir/$command"
+    [[ -f "$file" && ! -L "$file" ]] || continue
+    case "$command:$(git hash-object --no-filters -- "$file")" in
+        ctop:90c9bda13f8872384a1be68597e93c8ece1b20cf|ctop:340b473301d12c3bfc031a6874d3be1cd9923ec4|ctop:a8297cb3452d6b7dbbefbc939064b127014b333a|justpty:49ec75b56b1b45515dec8cd2f6888bdbdcca58e1)
+            mv --backup=numbered -T -- "$file" "$file.totchef-backup" || exit 0 ;;
+    esac
+done
+'''
 
 [url.pnpm]
 url = "get.pnpm.io/install.sh"
@@ -210,9 +223,6 @@ wanted="$(grep -m1 '^version' "$(dirname "$(dirname "$TOTCHEF_RECIPE")")/pyproje
 desired_state = "ok"
 apply = 'uv tool install --force --reinstall "$(dirname "$(dirname "$TOTCHEF_RECIPE")")"'
 post_hook = 'cfg="${XDG_CONFIG_HOME:-$HOME/.config}/totchef"; mkdir -p "$cfg" && ln -sfn "$TOTCHEF_RECIPE" "$cfg/recipe.toml" && totchef init "$cfg/recipe.toml"'
-
-[local_bin_dir]
-dirs = ["../../../clipy/src/clipy"]
 
 [file.grub_deep_sleep]
 needs_root = true
